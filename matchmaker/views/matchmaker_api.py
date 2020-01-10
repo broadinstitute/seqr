@@ -376,7 +376,7 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
     parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid)
     parsed_result.update({
         'id': result['patient']['id'],
-        'score': result['score']['patient'],
+        'score': result.get('score', {}).get('patient'),
     })
     return parsed_result
 
