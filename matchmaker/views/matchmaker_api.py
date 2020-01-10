@@ -150,8 +150,18 @@ def _search_external_matches(nodes_to_query, patient_data):
                 raise Exception(error_message)
 
             node_results = external_result.json()['results']
-            external_results += node_results
             logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
+            invalid_results = []
+            for result in node_results:
+                if _is_valid_external_result(result):
+                    external_results.append(result)
+                else:
+                    invalid_results.append(result)
+            if invalid_results:
+                error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
+                logger.error(error_message)
+                post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, '{}\n{}'.format(
+                    error_message, '\n'.join([json.dumps(result, sort_keys=True) for result in invalid_results])))
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], e.message, json.dumps(patient_data))
@@ -159,6 +169,16 @@ def _search_external_matches(nodes_to_query, patient_data):
             post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
     return external_results
+
+
+def _is_valid_external_result(result):
+    if not (result.get('patient', {}).get('features') or result.get('patient', {}).get('genomicFeatures')):
+        return False
+    if any((not feature.get('id')) for feature in result['patient'].get('features', [])):
+        return False
+    if any((not feature.get('gene', {}).get('id')) for feature in result['patient'].get('genomicFeatures', [])):
+        return False
+    return True
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
