@@ -63,6 +63,9 @@ PARSED_NEW_MATCH_JSON = {
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
+INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+
 
 class EmailException(Exception):
 
@@ -183,7 +186,7 @@ class MatchmakerAPITest(TestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
@@ -316,6 +319,8 @@ class MatchmakerAPITest(TestCase):
         mock_post_to_slack.assert_has_calls([
             mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
                 json.dumps(expected_patient_body))),
+            mock.call('matchmaker_alerts', 'Received 1 invalid matches from Node B\n{}'.format(
+                json.dumps(INVALID_NEW_MATCH_JSON, sort_keys=True))),
             mock.call('matchmaker_seqr_match', message),
         ])
         mock_email.assert_called_with(
