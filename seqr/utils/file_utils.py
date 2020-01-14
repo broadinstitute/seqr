@@ -19,14 +19,20 @@ def does_file_exist(file_path):
         raise ValueError("This type of file path is not supported: %(file_path)" % locals())
 
 
-def file_iter(file_path):
+def file_iter(file_path, byte_range=None):
     if is_google_bucket_file_path(file_path):
-        for line in google_bucket_file_iter(file_path):
+        for line in google_bucket_file_iter(file_path, byte_range=byte_range):
             yield line
     elif is_local_file_path(file_path):
         with open(file_path) as f:
-            for line in f:
-                yield line
+            if byte_range:
+                f.seek(byte_range[0])
+                while f.tell() < byte_range[1]:
+                    for line in f:
+                        yield line
+            else:
+                for line in f:
+                    yield line
     else:
         raise ValueError("This type of file path is not supported: %(file_path)" % locals())
 
