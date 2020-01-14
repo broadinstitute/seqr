@@ -160,8 +160,6 @@ def _search_external_matches(nodes_to_query, patient_data):
             if invalid_results:
                 error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
                 logger.error(error_message)
-                post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, '{}\n{}'.format(
-                    error_message, '\n'.join([json.dumps(result, sort_keys=True) for result in invalid_results])))
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], e.message, json.dumps(patient_data))
