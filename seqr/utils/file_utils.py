@@ -9,8 +9,6 @@ from seqr.utils.local.local_file_utils import is_local_file_path, get_local_file
 
 logger = logging.getLogger(__name__)
 
-BYTE_CHUNK_SIZE = 1024*64
-
 
 def does_file_exist(file_path):
     if is_google_bucket_file_path(file_path):
