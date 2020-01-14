@@ -348,7 +348,7 @@ COMPOUND_HET_INDEX_VARIANTS = {
     SECOND_INDEX_NAME: {
         'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
     },
-    '{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
+    '{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
 }
 
 INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT]}
@@ -1535,7 +1535,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             sort=['xpos'],
             size=4,
@@ -1554,7 +1554,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             sort=['xpos'],
             size=5,
@@ -1579,7 +1579,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}}],
             sort=['xpos'],
             size=4,
@@ -1686,7 +1686,6 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
-
         gene_counts = get_es_variant_gene_counts(results_model)
 
         self.assertDictEqual(gene_counts, {
@@ -1695,7 +1694,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             size=1,
             gene_count_aggs={

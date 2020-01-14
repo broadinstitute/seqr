@@ -31,7 +31,32 @@ def get_es_client(timeout=30):
     return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
 
 
+def _safe_redis_get(cache_key):
+    try:
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        value = redis_client.get(cache_key)
+        if value:
+            logger.info('Loaded {} from redis'.format(cache_key))
+            return json.loads(value)
+    except Exception as e:
+        logger.warn("Unable to connect to redis host: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+    return None
+
+
+def _safe_redis_set(cache_key, value):
+    try:
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client.set(cache_key, json.dumps(value))
+    except Exception as e:
+        logger.warn("Unable to write to redis: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+
+
 def get_index_metadata(index_name, client):
+    cache_key = 'index_metadata__{}'.format(index_name)
+    cached_metadata = _safe_redis_get(cache_key)
+    if cached_metadata:
+        return cached_metadata
+
     try:
         mappings = client.indices.get_mapping(index=index_name, doc_type=[VARIANT_DOC_TYPE])
     except Exception as e:
@@ -42,6 +67,7 @@ def get_index_metadata(index_name, client):
         variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
+    _safe_redis_set(cache_key, index_metadata)
     return index_metadata
 
 
@@ -66,7 +92,7 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
         num_results_to_use = num_results
         total_results = previous_search_results.get('total_results')
         if load_all:
-            num_results_to_use = total_results or 10000
+            num_results_to_use = total_results or MAX_VARIANTS
         start_index = (page - 1) * num_results_to_use
         end_index = page * num_results_to_use
         if previous_search_results.get('total_results') is not None:
@@ -133,13 +159,7 @@ def get_es_variant_gene_counts(search_model):
 
 def _get_es_variants_for_search(search_model, es_search_cls, process_previous_results, sort=None, aggregate_by_gene=False):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
-    redis_client = None
-    previous_search_results = {}
-    try:
-        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
-        previous_search_results = json.loads(redis_client.get(cache_key) or '{}')
-    except Exception as e:
-        logger.warn("Unable to connect to redis host: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+    previous_search_results = _safe_redis_get(cache_key) or {}
 
     previously_loaded_results, search_kwargs = process_previous_results(previous_search_results)
     if previously_loaded_results is not None:
@@ -161,6 +181,8 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
 
     if genes or intervals or rs_ids or variant_ids:
         es_search.filter_by_location(genes, intervals, rs_ids, variant_ids, search['locus'])
+        if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
+            search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
 
     # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
@@ -179,10 +201,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
 
     variant_results = es_search.search(**search_kwargs)
 
-    try:
-        redis_client.set(cache_key, json.dumps(es_search.previous_search_results))
-    except Exception as e:
-        logger.warn("Unable to write to redis: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+    _safe_redis_set(cache_key, es_search.previous_search_results)
 
     return variant_results, es_search.previous_search_results['total_results']
 
@@ -244,12 +263,15 @@ class BaseEsSearch(object):
         self._no_sample_filters = False
 
     def _set_index_metadata(self):
-        self.index_name = ','.join(self.samples_by_family_index.keys())
+        self.index_name = ','.join(sorted(self.samples_by_family_index.keys()))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
             alias = hashlib.md5(self.index_name).hexdigest()
-            self._client.indices.update_aliases(body={'actions': [
-                {'add': {'indices': self.samples_by_family_index.keys(), 'alias': alias}}
-            ]})
+            cache_key = 'index_alias__{}'.format(alias)
+            if _safe_redis_get(cache_key) != self.index_name:
+                self._client.indices.update_aliases(body={'actions': [
+                    {'add': {'indices': self.samples_by_family_index.keys(), 'alias': alias}}
+                ]})
+                _safe_redis_set(cache_key, self.index_name)
             self.index_name = alias
         self.index_metadata = get_index_metadata(self.index_name, self._client)
 

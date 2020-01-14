@@ -319,8 +319,6 @@ class MatchmakerAPITest(TestCase):
         mock_post_to_slack.assert_has_calls([
             mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
                 json.dumps(expected_patient_body))),
-            mock.call('matchmaker_alerts', 'Received 1 invalid matches from Node B\n{}'.format(
-                json.dumps(INVALID_NEW_MATCH_JSON, sort_keys=True))),
             mock.call('matchmaker_seqr_match', message),
         ])
         mock_email.assert_called_with(
