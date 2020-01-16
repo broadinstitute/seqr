@@ -46,6 +46,7 @@ module.exports = {
    * 1) add entry to webpack.dev.config.js and webpack.prod.config.js (this will be compiled into [name]-[hash].js)
    * 2) add HtmlWebpackPlugin to generate html based on template.ejs
    */
+  mode: 'development',
 
   devtool: 'eval', //'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
 
@@ -98,6 +99,7 @@ module.exports = {
           {
             options: {
               formatter: eslintFormatter,
+              eslintPath: require.resolve('eslint'),
 
             },
             loader: require.resolve('eslint-loader'),
@@ -170,6 +172,10 @@ module.exports = {
               },
             ],
           },
+          {
+            test: /\.(png|woff|woff2|eot|ttf|svg)$/,
+            use: ['url-loader'],
+          },
           // "file" loader makes sure those assets get served by WebpackDevServer.
           // When you `import` an asset, you get its (virtual) filename.
           // In production, they would get copied to the `build` folder.
@@ -193,6 +199,7 @@ module.exports = {
     ],
   },
   plugins: [
+    new webpack.LoaderOptionsPlugin({ options: {} }),
     new WebpackCleanupPlugin(),
 
     new Purify({
