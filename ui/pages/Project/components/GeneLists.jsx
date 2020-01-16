@@ -52,6 +52,7 @@ const LocusListItem = ({ project, locusList, updateLocusLists: onSubmit }) => {
         <DeleteButton
           initialValues={submitValues}
           onSubmit={onSubmit}
+          size="tiny"
           confirmDialog={
             <div className="content">
               Are you sure you want to remove <b>{locusList.name}</b> from this project
