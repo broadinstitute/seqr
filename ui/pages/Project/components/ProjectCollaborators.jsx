@@ -109,7 +109,7 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
     <CollaboratorContainer key={c.username}>
       <Popup
         position="top center"
-        trigger={<Icon link name={c.hasEditPermissions ? 'star' : ''} />}
+        trigger={<Icon link size="small" name={c.hasEditPermissions ? 'star' : ''} />}
         content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
@@ -125,10 +125,12 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
             formFields={EDIT_FIELDS}
             initialValues={c}
             showErrorPanel
+            size="tiny"
           />
           <DeleteButton
             initialValues={c}
             onSubmit={onSubmit}
+            size="tiny"
             confirmDialog={
               <div className="content">
                 Are you sure you want to delete <b>{c.displayName || c.email}</b>. They will still have their user account
