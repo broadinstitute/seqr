@@ -490,70 +490,11 @@ def _get_has_mme_submission_families(project):
 
 
 def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mme, errors, now=timezone.now()):
-    row = {
-        "family_guid": family.guid,
-        "family_id": family.family_id,
-        "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
-        "coded_phenotype": family.coded_phenotype or "",
-        "pubmed_ids": '; '.join(family.pubmed_ids),
-        "analysis_summary": (family.analysis_summary or '').strip('" \n'),
-        "row_id": family.guid,
-        "num_individuals_sequenced": len({sample.individual for sample in samples})
-    }
-    row.update(initial_row)
-
-    t0 = samples[0].loaded_date
-    t0_diff = rdelta.relativedelta(now, t0)
-    t0_months_since_t0 = t0_diff.years * 12 + t0_diff.months
-    row.update({
-        "t0": t0,
-        "t0_copy": t0,
-        "months_since_t0": t0_months_since_t0,
-    })
-    if t0_months_since_t0 < 12:
-        row['analysis_complete_status'] = "first_pass_in_progress"
-
+    row = _get_basic_row(initial_row, family, samples, now)
     if submitted_to_mme:
         row["submitted_to_mme"] = "Y"
 
-    phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in family.individual_set.all() if i.phenotips_data]
-
-    phenotips_individual_expected_inheritance_model = [
-        inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
-    ]
-    if len(phenotips_individual_expected_inheritance_model) == 1:
-        row["expected_inheritance_model"] = phenotips_individual_expected_inheritance_model.pop()
-
-    phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
-    omim_number_initial = next((disorder["id"] for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder), '').replace("MIM:", "")
-    if omim_number_initial:
-        row.update({
-            "omim_number_initial": omim_number_initial,
-            "phenotype_class": "KNOWN",
-        })
-
-    if family.post_discovery_omim_number:
-        row["omim_number_post_discovery"] = family.post_discovery_omim_number
-
-    phenotips_individual_features = [phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
-    category_not_set_on_some_features = False
-    for features_list in phenotips_individual_features:
-        for feature in features_list:
-            if "category" not in feature:
-                category_not_set_on_some_features = True
-                continue
-
-            if feature["observed"].lower() == "yes":
-                hpo_category_id = feature["category"]
-                hpo_category_name = HPO_CATEGORY_NAMES[hpo_category_id]
-                key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-
-                row[key] = "Y"
-            elif feature["observed"].lower() == "no":
-                continue
-            else:
-                raise ValueError("Unexpected value for 'observed' in %s" % (feature,))
-
+    category_not_set_on_some_features = _set_phenotips_data(row, family)
     if category_not_set_on_some_features:
         errors.append("HPO category field not set for some HPO terms in %s" % family)
 
@@ -595,6 +536,78 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
     return rows
 
 
+def _get_basic_row(initial_row, family, samples, now):
+    row = {
+        "family_guid": family.guid,
+        "family_id": family.family_id,
+        "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
+        "coded_phenotype": family.coded_phenotype or "",
+        "pubmed_ids": '; '.join(family.pubmed_ids),
+        "analysis_summary": (family.analysis_summary or '').strip('" \n'),
+        "row_id": family.guid,
+        "num_individuals_sequenced": len({sample.individual for sample in samples})
+    }
+    row.update(initial_row)
+
+    t0 = samples[0].loaded_date
+    t0_diff = rdelta.relativedelta(now, t0)
+    t0_months_since_t0 = t0_diff.years * 12 + t0_diff.months
+    row.update({
+        "t0": t0,
+        "t0_copy": t0,
+        "months_since_t0": t0_months_since_t0,
+    })
+    if t0_months_since_t0 < 12:
+        row['analysis_complete_status'] = "first_pass_in_progress"
+    return row
+
+
+def _set_phenotips_data(row, family):
+    phenotips_individual_data_records = [
+        json.loads(i.phenotips_data) for i in family.individual_set.all() if i.phenotips_data]
+
+    phenotips_individual_expected_inheritance_model = [
+        inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in
+        phenotips_data.get("global_mode_of_inheritance", [])
+    ]
+    if len(phenotips_individual_expected_inheritance_model) == 1:
+        row["expected_inheritance_model"] = phenotips_individual_expected_inheritance_model.pop()
+
+    phenotips_individual_mim_disorders = [
+        phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
+    omim_number_initial = next((disorder["id"] for disorders in phenotips_individual_mim_disorders
+                                for disorder in disorders if "id" in disorder), '').replace("MIM:", "")
+    if omim_number_initial:
+        row.update({
+            "omim_number_initial": omim_number_initial,
+            "phenotype_class": "KNOWN",
+        })
+
+    if family.post_discovery_omim_number:
+        row["omim_number_post_discovery"] = family.post_discovery_omim_number
+
+    phenotips_individual_features = [
+        phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
+    category_not_set_on_some_features = False
+    for features_list in phenotips_individual_features:
+        for feature in features_list:
+            if "category" not in feature:
+                category_not_set_on_some_features = True
+                continue
+
+            if feature["observed"].lower() == "yes":
+                hpo_category_id = feature["category"]
+                hpo_category_name = HPO_CATEGORY_NAMES[hpo_category_id]
+                key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
+
+                row[key] = "Y"
+            elif feature["observed"].lower() == "no":
+                continue
+            else:
+                raise ValueError("Unexpected value for 'observed' in %s" % (feature,))
+    return category_not_set_on_some_features
+
+
 def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, potential_compound_het_genes):
     inheritance_models = set()
 
@@ -608,15 +621,9 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
     if genotypes:
         chrom = variant.saved_variant_json['chrom']
         is_x_linked = "X" in chrom
-        for sample_guid, genotype in genotypes.items():
-            if genotype["numAlt"] == 2 and sample_guid in affected_individual_guids:
-                affected_indivs_with_hom_alt_variants.add(sample_guid)
-            elif genotype["numAlt"] == 1 and sample_guid in affected_individual_guids:
-                affected_indivs_with_het_variants.add(sample_guid)
-            elif genotype["numAlt"] == 2 and sample_guid in unaffected_individual_guids:
-                unaffected_indivs_with_hom_alt_variants.add(sample_guid)
-            elif genotype["numAlt"] == 1 and sample_guid in unaffected_individual_guids:
-                unaffected_indivs_with_het_variants.add(sample_guid)
+        _get_variant_genotypes(
+            genotypes, affected_individual_guids, unaffected_individual_guids, affected_indivs_with_hom_alt_variants,
+            affected_indivs_with_het_variants, unaffected_indivs_with_hom_alt_variants, unaffected_indivs_with_het_variants)
 
     # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
     if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
@@ -646,6 +653,20 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
                 break
     elif len(variant.saved_variant_json['transcripts']) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
         variant.saved_variant_json['mainTranscriptGeneId'] = variant.saved_variant_json['transcripts'].keys()[0]
+
+
+def _get_variant_genotypes(genotypes, affected_individual_guids, unaffected_individual_guids,
+                           affected_indivs_with_hom_alt_variants, affected_indivs_with_het_variants,
+                           unaffected_indivs_with_hom_alt_variants, unaffected_indivs_with_het_variants):
+    for sample_guid, genotype in genotypes.items():
+        if genotype["numAlt"] == 2 and sample_guid in affected_individual_guids:
+            affected_indivs_with_hom_alt_variants.add(sample_guid)
+        elif genotype["numAlt"] == 1 and sample_guid in affected_individual_guids:
+            affected_indivs_with_het_variants.add(sample_guid)
+        elif genotype["numAlt"] == 2 and sample_guid in unaffected_individual_guids:
+            unaffected_indivs_with_hom_alt_variants.add(sample_guid)
+        elif genotype["numAlt"] == 1 and sample_guid in unaffected_individual_guids:
+            unaffected_indivs_with_het_variants.add(sample_guid)
 
 
 def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
@@ -710,57 +731,18 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
             "novel_mendelian_gene": "Y" if any("Novel gene" in name for name in variant_tag_names) else "N",
         })
 
-        if has_known_gene_for_phenotype:
-            row["phenotype_class"] = "KNOWN"
-        elif any(tag in variant_tag_names for tag in [
-            'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
-        ]):
-            row["phenotype_class"] = "NEW"
-        elif any(tag in variant_tag_names for tag in [
-            'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion',
-        ]):
-            row["phenotype_class"] = "EXPAN"
-        elif any(tag in variant_tag_names for tag in [
-            'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
-        ]):
-            row["phenotype_class"] = "UE"
+    if has_tier1 or has_tier2:
+        _set_discovery_details(row, variant_tag_names, variants)
+    elif has_known_gene_for_phenotype:
+        row["phenotype_class"] = "KNOWN"
+        for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
+            row[functional_field] = "KPG"
 
     if not row["submitted_to_mme"] == 'Y':
         if has_tier1 or has_tier2:
             row["submitted_to_mme"] = "N" if row['months_since_t0'] > 7 else "TBD"
         elif has_known_gene_for_phenotype:
             row["submitted_to_mme"] = "KPG"
-
-    if has_tier1 or has_tier2:
-        # Set defaults
-        for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
-            if functional_field == ADDITIONAL_KINDREDS_FIELD:
-                row[functional_field] = "1"
-            elif functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
-                row[functional_field] = "NA"
-            else:
-                row[functional_field] = "N"
-        # Set values
-        for variant in variants:
-            for f in variant.variantfunctionaldata_set.all():
-                functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
-                if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
-                    value = f.metadata
-                    if functional_field == ADDITIONAL_KINDREDS_FIELD:
-                        value = str(int(value) + 1)
-                    elif functional_field == OVERLAPPING_KINDREDS_FIELD:
-                        existing_val = row[functional_field]
-                        if existing_val != 'NA':
-                            value = str(max(int(existing_val), int(value)))
-                    elif row[functional_field] != 'NS':
-                        value = '{} {}'.format(row[functional_field], value)
-                else:
-                    value = 'Y'
-
-                row[functional_field] = value
-    elif has_known_gene_for_phenotype:
-        for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
-            row[functional_field] = "KPG"
 
     row["extras_variant_tag_list"] = []
     for variant in variants:
@@ -769,6 +751,48 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
             (variant_id, gene_id, vt.variant_tag_type.name.lower()) for vt in variant.discovery_tags
         ]
     return row
+
+
+def _set_discovery_details(row, variant_tag_names, variants):
+    if any(tag in variant_tag_names for tag in [
+        'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
+    ]):
+        row["phenotype_class"] = "NEW"
+    elif any(tag in variant_tag_names for tag in [
+        'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion',
+    ]):
+        row["phenotype_class"] = "EXPAN"
+    elif any(tag in variant_tag_names for tag in [
+        'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
+    ]):
+        row["phenotype_class"] = "UE"
+
+    # Set defaults
+    for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
+        if functional_field == ADDITIONAL_KINDREDS_FIELD:
+            row[functional_field] = "1"
+        elif functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
+            row[functional_field] = "NA"
+        else:
+            row[functional_field] = "N"
+    # Set values
+    for variant in variants:
+        for f in variant.variantfunctionaldata_set.all():
+            functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
+            if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
+                value = f.metadata
+                if functional_field == ADDITIONAL_KINDREDS_FIELD:
+                    value = str(int(value) + 1)
+                elif functional_field == OVERLAPPING_KINDREDS_FIELD:
+                    existing_val = row[functional_field]
+                    if existing_val != 'NA':
+                        value = str(max(int(existing_val), int(value)))
+                elif row[functional_field] != 'NS':
+                    value = '{} {}'.format(row[functional_field], value)
+            else:
+                value = 'Y'
+
+            row[functional_field] = value
 
 
 def _update_gene_symbols(rows):
