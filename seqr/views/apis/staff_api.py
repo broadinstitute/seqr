@@ -374,17 +374,13 @@ def get_projects_for_category(request, project_category_name):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def discovery_sheet(request, project_guid):
-    errors = []
-
     project = Project.objects.filter(guid=project_guid).prefetch_related(
         Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
     ).distinct().first()
     if not project:
         raise Exception('Invalid project {}'.format(project_guid))
 
-    loaded_samples_by_project_family = _get_loaded_samples_by_project_family([project])
-    saved_variants_by_project_family = _get_saved_variants_by_project_family([project])
-    rows = _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
+    rows, errors = _generate_rows(project)
 
     return create_json_response({
         'rows': rows,
@@ -414,49 +410,59 @@ def success_story(request, success_story_types):
     })
 
 
-def _get_loaded_samples_by_project_family(projects):
+def _get_loaded_samples_by_family(project):
     loaded_samples = Sample.objects.filter(
-        individual__family__project__in=projects,
+        individual__family__project=project,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         loaded_date__isnull=False
-    ).select_related('individual__family__project').order_by('loaded_date')
+    ).select_related('individual__family').order_by('loaded_date')
 
-    loaded_samples_by_project_family = defaultdict(lambda:  defaultdict(list))
+    loaded_samples_by_family = defaultdict(list)
     for sample in loaded_samples:
         family = sample.individual.family
-        loaded_samples_by_project_family[family.project.guid][family.guid].append(sample)
+        loaded_samples_by_family[family.guid].append(sample)
 
-    return loaded_samples_by_project_family
+    return loaded_samples_by_family
 
 
-def _get_saved_variants_by_project_family(projects):
+def _get_saved_variants_by_family(project):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
         Prefetch('varianttag_set', to_attr='discovery_tags',
                  queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
                  )).prefetch_related('variantfunctionaldata_set').filter(
-        family__project__in=projects,
+        family__project=project,
         varianttag__variant_tag_type__in=tag_types,
     )
 
-    saved_variants_by_project_family =  defaultdict(lambda:  defaultdict(list))
+    saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:
-        saved_variants_by_project_family[saved_variant.family.project.guid][saved_variant.family.guid].append(saved_variant)
+        saved_variants_by_family[saved_variant.family.guid].append(saved_variant)
 
-    return saved_variants_by_project_family
+    return saved_variants_by_family
 
 
-def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors):
+def _get_has_mme_submission_families(project):
+    return {
+        submission.individual.family for submission in MatchmakerSubmission.objects.filter(
+            individual__family__project=project,
+        ).select_related('individual__family')
+    }
+
+
+def _generate_rows(project):
     rows = []
+    errors = []
 
-    loaded_samples_by_family = loaded_samples_by_project_family[project.guid]
-    saved_variants_by_family = saved_variants_by_project_family[project.guid]
+    loaded_samples_by_family = _get_loaded_samples_by_family(project)
+    saved_variants_by_family = _get_saved_variants_by_family(project)
+    mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
-        return []
+        return rows, errors
 
     if "external" in project.name or "reprocessed" in project.name:
         sequencing_approach = "REAN"
@@ -496,7 +502,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
         if t0_months_since_t0 < 12:
             row['analysis_complete_status'] = "first_pass_in_progress"
 
-        submitted_to_mme = any(i.mme_submitted_date for i in family.individual_set.all())
+        submitted_to_mme = family in mme_submission_families
         if submitted_to_mme:
             row["submitted_to_mme"] = "Y"
 
@@ -748,7 +754,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
     _update_gene_symbols(rows)
     _update_initial_omim_numbers(rows)
 
-    return rows
+    return rows, errors
 
 
 def _update_gene_symbols(rows):
