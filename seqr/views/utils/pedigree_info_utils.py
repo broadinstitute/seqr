@@ -67,14 +67,14 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
             header = expected_header_columns
         else:
-            if _is_header_row(','.join(parsed_file[0])):
+            if _is_header_row(header_string):
                 header_row = parsed_file[0]
             else:
                 header_row = next(
                     (row for row in parsed_file[1:] if row[0].startswith('#') and _is_header_row(','.join(row))),
                     ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
                 )
-            header = [field.strip('#') for field in header_row]
+            header = [(field or '').strip('#') for field in header_row]
 
         for i, row in enumerate(rows):
             if len(row) != len(header):
@@ -312,13 +312,11 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
     RENAME_COLUMNS = {
         MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups (https://github.com/macarthur-lab/seqr-private/issues/340)
         MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
         MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
     }
@@ -431,13 +429,16 @@ def _get_datstat_family_notes(row):
     DC = DatstatConstants
 
     def _get_column_val(column):
-        return DC.VALUE_MAP[column][row[column]]
+        val_code = row[column].split(':')[0]
+        if column in DC.VALUE_MAP:
+            return DC.VALUE_MAP[column][val_code]
+        return val_code
 
     def _get_list_column_val(column):
-        return ', '.join([DC.VALUE_MAP[column][raw_val] for raw_val in row[column].split(',')])
+        return ', '.join([DC.VALUE_MAP[column][raw_val.split(':')[0]] for raw_val in row[column].split(',')])
 
     def _has_test(test):
-        return row['TESTS.{}'.format(test)] == DC.YES
+        return _get_column_val('TESTS.{}'.format(test)) == DC.YES
 
     def _test_summary(test, name):
         col_config = DC.TEST_DETAIL_COLUMNS[test]
@@ -456,21 +457,23 @@ def _get_datstat_family_notes(row):
         col_config = DC.get_parent_detail_columns(parent)
 
         def _bool_condition_val(column, yes, no, default, unknown=None):
-            if row[col_config[column]] == DC.YES:
+            column_val = _get_column_val(col_config[column])
+            if column_val == DC.YES:
                 return yes
-            elif row[col_config[column]] == DC.NO:
+            elif column_val == DC.NO:
                 return no
-            elif unknown and row[col_config[column]] == DC.DONT_KNOW:
+            elif unknown and column_val == DC.DONT_KNOW:
                 return unknown
             return default
 
         parent_details = [_bool_condition_val(DC.AFFECTED_KEY, 'affected', 'unaffected', 'unknown affected status')]
-        if row[col_config[DC.AFFECTED_KEY]] == DC.YES:
+        if _get_column_val(col_config[DC.AFFECTED_KEY]) == DC.YES:
             parent_details.append('onset age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
-        parent_details.append('available' if row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES else 'unavailable')
-        if not row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES:
+        can_participate = _get_column_val(col_config[DC.CAN_PARTICIPATE_KEY]) == DC.YES
+        parent_details.append('available' if can_participate else 'unavailable')
+        if not can_participate:
             parent_details.append(_bool_condition_val(DC.DECEASED_KEY, yes='deceased', no='living', unknown='unknown deceased status', default='unspecified deceased status'))
-        if row[col_config[DC.DECEASED_KEY]] == DC.YES:
+        if row[col_config[DC.DECEASED_KEY]] and _get_column_val(col_config[DC.DECEASED_KEY]) == DC.YES:
             parent_details.append(_bool_condition_val(DC.STORED_DNA_KEY, 'sample available', 'sample not available', 'unknown sample availability'))
 
         return ', '.join(parent_details)
@@ -479,7 +482,7 @@ def _get_datstat_family_notes(row):
         col_config = DC.RELATIVE_DETAIL_COLUMNS[relative]
         sex_map = DC.RELATIVE_SEX_MAP[relative]
 
-        if row[col_config[DC.NO_RELATIVES_KEY]] == DC.YES:
+        if _get_column_val(col_config[DC.NO_RELATIVES_KEY]) == DC.YES:
             return 'None'
 
         def _bool_condition_val(val, display, unknown_display):
@@ -502,7 +505,7 @@ def _get_datstat_family_notes(row):
             relatives=divider.join(relatives),
         )
 
-    relationship_code = row[DC.RELATIONSHIP_COLUMN]
+    relationship_code = _get_column_val(DC.RELATIONSHIP_COLUMN)
     clinical_diagnoses = _get_column_val(DC.CLINICAL_DIAGNOSES_COLUMN)
     genetic_diagnoses = _get_column_val(DC.GENETIC_DIAGNOSES_COLUMN)
     doctors_list = json.loads(row[DC.DOCTOR_TYPES_COLUMN])
@@ -558,7 +561,7 @@ def _get_datstat_family_notes(row):
         tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if relationship_code == DC.OTHER_RELATIONSHIP_CODE else '',
-        relationship=DC.RELATIONSHIP_MAP[relationship_code][row[DC.SEX_COLUMN]],
+        relationship=DC.RELATIONSHIP_MAP[relationship_code][_get_column_val(DC.SEX_COLUMN)],
         age=u'Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
@@ -574,16 +577,16 @@ def _get_datstat_family_notes(row):
         genetic_diagnoses_specify=u'; {}'.format(row[DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN]) if genetic_diagnoses == 'Yes' else '',
         website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
         info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
-        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if row[DC.HAS_DOCTOR_COLUMN] == DatstatConstants.YES else 'None',
+        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if _get_column_val(DC.HAS_DOCTOR_COLUMN) == DC.YES else 'None',
         doctors=', '.join(doctors_list).replace('ClinGen', 'Clinical geneticist'),
         other_doctors=u': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
         testing=testing,
-        biopses='None' if (row[DC.NO_BIOPSY_COLUMN] == DC.YES or not row[DC.BIOPSY_COLUMN]) else _get_list_column_val(DC.BIOPSY_COLUMN),
+        biopses='None' if (_get_column_val(DC.NO_BIOPSY_COLUMN) == DC.YES or not row[DC.BIOPSY_COLUMN]) else _get_list_column_val(DC.BIOPSY_COLUMN),
         other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in row[DC.BIOPSY_COLUMN] else '',
         studies=u'Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
             study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=_get_column_val(DC.EXPECTING_RESULTS_COLUMN) if row[DC.EXPECTING_RESULTS_COLUMN] else 'Unspecified',
-        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
+        ) if _get_column_val(DC.HAS_OTHER_STUDIES_COLUMN) == DC.YES else 'No',
         mother=_parent_summary(DC.MOTHER),
         father=_parent_summary(DC.FATHER),
         siblings=_relative_list_summary(DC.SIBLINGS),
@@ -691,7 +694,7 @@ class DatstatConstants:
 
     YES = '1'
     NO = '2'
-    DONT_KNOW = "3"
+    DONT_KNOW = '3'
     YES_NO_UNSURE_MAP = {YES: 'Yes', NO: 'No', DONT_KNOW: 'Unknown/Unsure'}
 
     FAMILY_ID_COLUMN = 'FAMILY_ID'

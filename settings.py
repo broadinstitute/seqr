@@ -286,7 +286,3 @@ MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
-
-# Readviz
-READ_VIZ_BAM_PATH = 'https://broad-seqr'
-READ_VIZ_CRAM_PATH = 'broad-seqr:5000'

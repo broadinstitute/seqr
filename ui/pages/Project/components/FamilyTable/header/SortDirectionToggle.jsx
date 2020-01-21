@@ -18,6 +18,7 @@ const SortDirectionToggle = ({
     circular
     basic
     onClick={() => onChange(-1 * value)}
+    size="small"
     icon={`arrow ${value === 1 ? 'down' : 'up'}`}
   />
 

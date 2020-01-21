@@ -110,7 +110,7 @@ def get_submission_json_for_external_match(submission, score=None):
             'id': submission.submission_id,
             'label': submission.label,
             'contact': {
-                'href': submission.contact_href,
+                'href': submission.contact_href.replace(' ', ''),
                 'name': submission.contact_name,
                 'institution': MME_DEFAULT_CONTACT_INSTITUTION,
             },

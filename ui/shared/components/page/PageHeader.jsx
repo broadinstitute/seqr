@@ -104,7 +104,7 @@ export const PageHeaderLayout = ({
             {entityLinks.map(({ popup, ...linkProps }) =>
               <div key={linkProps.content}>
                 <ButtonLink as={NavLink} {...linkProps} />
-                {popup && <Popup content={popup} trigger={<Icon name="help circle outline" color="grey" />} />}
+                {popup && <Popup content={popup} trigger={<Icon name="question circle outline" color="grey" />} />}
               </div>,
             )}
           </b>

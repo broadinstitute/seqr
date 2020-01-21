@@ -95,7 +95,7 @@ export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectF
   }
   const title = `${analysisGroup ? 'Edit' : 'Create New'} Analysis Group`
   const buttonProps = analysisGroup ?
-    { modalId: `editAnalysisGroup-${analysisGroup.analysisGroupGuid}`, initialValues: analysisGroup } :
+    { modalId: `editAnalysisGroup-${analysisGroup.analysisGroupGuid}`, initialValues: analysisGroup, sie: 'tiny' } :
     { modalId: `createAnalysisGroup-${project.projectGuid}`, initialValues: { projectGuid: project.projectGuid }, editIconName: 'plus' }
 
   const fields = [...FORM_FIELDS]

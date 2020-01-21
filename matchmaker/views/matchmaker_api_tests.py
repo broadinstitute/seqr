@@ -63,6 +63,9 @@ PARSED_NEW_MATCH_JSON = {
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
+INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+
 
 class EmailException(Exception):
 
@@ -182,7 +185,7 @@ class MatchmakerAPITest(TestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
@@ -266,7 +269,7 @@ class MatchmakerAPITest(TestCase):
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)
-        expected_body = json.dumps({
+        expected_patient_body = {
             'patient': {
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
@@ -291,8 +294,8 @@ class MatchmakerAPITest(TestCase):
                     'zygosity': 1
                 }],
             },
-            '_disclaimer': MME_DISCLAIMER,
-        })
+        }
+        expected_body = json.dumps(dict(_disclaimer=MME_DISCLAIMER, **expected_patient_body))
 
         self.assertEqual(responses.calls[0].request.url, 'http://node_a.com/match')
         self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abc')
@@ -313,7 +316,8 @@ class MatchmakerAPITest(TestCase):
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         mock_post_to_slack.assert_has_calls([
-            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)'),
+            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
+                json.dumps(expected_patient_body))),
             mock.call('matchmaker_seqr_match', message),
         ])
         mock_email.assert_called_with(
@@ -445,7 +449,7 @@ class MatchmakerAPITest(TestCase):
                         'alternateBases': 'C',
                         'referenceBases': 'CCACT'
                     },
-                    'zygosity': 0
+                    'zygosity': 2
                 }],
             },
             '_disclaimer': MME_DISCLAIMER,

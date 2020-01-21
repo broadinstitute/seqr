@@ -95,10 +95,10 @@ def add_variants_dataset_handler(request, project_guid):
         if missing_family_individuals:
             raise Exception(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(
+                    ', '.join(sorted(
                         ['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
                          for family, missing_indivs in missing_family_individuals.items()]
-                )))
+                    ))))
 
         inactivate_sample_guids = _update_variant_samples(
             matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path

@@ -108,7 +108,7 @@ from seqr.views.apis.staff_api import \
     get_projects_for_category, \
     success_story, \
     elasticsearch_status, \
-    saved_variants, \
+    saved_variants_page, \
     upload_qc_pipeline_output, \
     mme_details, \
     seqr_stats, \
@@ -251,7 +251,7 @@ api_endpoints = {
     'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
     'staff/elasticsearch_status': elasticsearch_status,
     'staff/matchmaker': mme_details,
-    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
+    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
 

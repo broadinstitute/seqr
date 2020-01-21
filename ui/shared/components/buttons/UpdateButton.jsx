@@ -18,7 +18,7 @@ const UpdateButton = (
         content={buttonText}
         icon={editIconName || 'write'}
         labelPosition={buttonText && 'right'}
-        size={size}
+        size={size || 'small'}
         disabled={disabled}
         floated={buttonFloated}
       />

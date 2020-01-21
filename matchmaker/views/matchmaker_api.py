@@ -150,14 +150,33 @@ def _search_external_matches(nodes_to_query, patient_data):
                 raise Exception(error_message)
 
             node_results = external_result.json()['results']
-            external_results += node_results
             logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
+            invalid_results = []
+            for result in node_results:
+                if _is_valid_external_result(result):
+                    external_results.append(result)
+                else:
+                    invalid_results.append(result)
+            if invalid_results:
+                error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
+                logger.error(error_message)
         except Exception as e:
-            error_message = 'Error searching in {}: {}'.format(node['name'], e.message)
+            error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
+                node['name'], e.message, json.dumps(patient_data))
             logger.error(error_message)
             post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
     return external_results
+
+
+def _is_valid_external_result(result):
+    if not (result.get('patient', {}).get('features') or result.get('patient', {}).get('genomicFeatures')):
+        return False
+    if any((not feature.get('id')) for feature in result['patient'].get('features', [])):
+        return False
+    if any((not feature.get('gene', {}).get('id')) for feature in result['patient'].get('genomicFeatures', [])):
+        return False
+    return True
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -178,14 +197,15 @@ def update_mme_submission(request, submission_guid=None):
             return create_json_response({}, status=400, reason='Gene id is required for genomic features')
         feature = {'gene': {'id': gene_variant['geneId']}}
         if 'numAlt' in gene_variant:
-            feature['zygosity'] = gene_variant['numAlt'] % 2
+            feature['zygosity'] = gene_variant['numAlt']
         if gene_variant.get('pos'):
+            genome_version = gene_variant['genomeVersion']
             feature['variant'] = {
                 'alternateBases': gene_variant['alt'],
                 'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
-                'assembly': GENOME_VERSION_LOOKUP[gene_variant['genomeVersion']],
+                'assembly': GENOME_VERSION_LOOKUP.get(genome_version, genome_version),
             }
         genomic_features.append(feature)
 
@@ -376,7 +396,7 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
     parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid)
     parsed_result.update({
         'id': result['patient']['id'],
-        'score': result['score']['patient'],
+        'score': result.get('score', {}).get('patient'),
     })
     return parsed_result
 

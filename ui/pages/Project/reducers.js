@@ -175,9 +175,11 @@ export const loadMmeMatches = (submissionGuid, search) => {
     const state = getState()
     const submission = state.mmeSubmissionsByGuid[submissionGuid]
     if (submission && (!submission.mmeResultGuids || search)) {
+      const { familyGuid } = state.individualsByGuid[submission.individualGuid]
       dispatch({ type: REQUEST_MME_MATCHES })
       new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${submissionGuid}`,
         (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: true } })
           dispatch({
             type: RECEIVE_DATA,
             updatesById: responseJson,

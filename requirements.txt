@@ -9,7 +9,7 @@ elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
 
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
-pillow==6.2.1                    # required dependency of Djagno ImageField-type database records
+pillow==6.2.2                    # required dependency of Djagno ImageField-type database records
 psycopg2==2.8.4                  # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests
