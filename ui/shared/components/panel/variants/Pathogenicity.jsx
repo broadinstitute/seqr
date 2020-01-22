@@ -75,21 +75,22 @@ const clinvarUrl = (clinvar) => {
 }
 
 const Pathogenicity = ({ variant, user }) => {
-  if (!variant.clinvar.variationId && !variant.clinvar.alleleId && !(user.isStaff && variant.hgmd.class)) {
+  const clinvar = variant.clinvar || {}
+  if (!clinvar.variationId && !clinvar.alleleId && !(user.isStaff && (variant.hgmd || {}).class)) {
     return null
   }
 
   return (
     <span>
-      {variant.clinvar.clinicalSignificance &&
+      {clinvar.clinicalSignificance &&
         <span>
           <b>ClinVar:<HorizontalSpacer width={5} /></b>
           <PathogenicityLink
-            key={variant.clinvar.clinicalSignificance}
-            significance={variant.clinvar.clinicalSignificance}
-            href={clinvarUrl(variant.clinvar)}
+            key={clinvar.clinicalSignificance}
+            significance={clinvar.clinicalSignificance}
+            href={clinvarUrl(clinvar)}
             formatName={snakecaseToTitlecase}
-            goldStars={variant.clinvar.goldStars}
+            goldStars={clinvar.goldStars}
           />
         </span>
       }

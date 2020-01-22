@@ -338,6 +338,7 @@ const rootReducer = combineReducers(Object.assign({
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
+  mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
@@ -355,6 +356,7 @@ const rootReducer = combineReducers(Object.assign({
   newUser: zeroActionsReducer,
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  meta: zeroActionsReducer,
   form: formReducer,
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,

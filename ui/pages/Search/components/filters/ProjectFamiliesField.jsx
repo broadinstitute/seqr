@@ -10,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
@@ -17,6 +18,7 @@ import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { isActiveVariantSample } from 'shared/utils/constants'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getInputProjectsCount } from '../../selectors'
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
@@ -89,7 +91,7 @@ ProjectFamiliesFilterInput.propTypes = {
   onChange: PropTypes.func,
 }
 
-const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, ...props }) => (
+const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, projectSamples, ...props }) => (
   <div>
     <Header>
       <Popup
@@ -98,12 +100,13 @@ const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, ...props
       />
       Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
     </Header>
-    {project.hasNewSearch ? <ProjectFamiliesFilterInput {...props} /> :
-    <Message
-      color="red"
-      header="This search is not enabled for this project"
-      content="Please contact the seqr team to add this functionality"
-    />}
+    {Object.values(projectSamples || {}).some(sample => isActiveVariantSample(sample)) ?
+      <ProjectFamiliesFilterInput {...props} /> :
+      <Message
+        color="red"
+        header="Search is not enabled for this project"
+        content="Please contact the seqr team to add this functionality"
+      />}
     <VerticalSpacer height={10} />
   </div>
 )
@@ -112,6 +115,7 @@ ProjectFamiliesFilterContent.propTypes = {
   project: PropTypes.object,
   removeField: PropTypes.func,
   dispatch: PropTypes.func,
+  projectSamples: PropTypes.object,
 }
 
 const LoadedProjectFamiliesFilter = ({ loading, load, ...props }) =>
@@ -137,6 +141,7 @@ const mapStateToProps = (state, ownProps) => ({
   analysisGroupOptions: getAnalysisGroupOptions(state, ownProps),
   projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
   project: getProjectsByGuid(state)[ownProps.value.projectGuid],
+  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value.projectGuid],
   loading: getSearchContextIsLoading(state),
 })
 

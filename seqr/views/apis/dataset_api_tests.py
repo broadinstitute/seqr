@@ -18,7 +18,6 @@ class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: 98765432101234567890)
-    @mock.patch('seqr.views.apis.dataset_api.update_xbrowse_vcfffiles', lambda *args: args)
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
@@ -161,8 +160,6 @@ class DatasetAPITest(TransactionTestCase):
         self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
         self.assertTrue(response_json['samplesByGuid'][new_sample_guid]['loadedDate'].startswith(today))
 
-        self.assertTrue(Project.objects.get(guid=PROJECT_GUID).has_new_search)
-
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_alignment_table_handler, args=[PROJECT_GUID])
         _check_login(self, url)
@@ -190,9 +187,9 @@ class DatasetAPITest(TransactionTestCase):
             'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
         })
 
-    @mock.patch('seqr.views.utils.dataset_utils.does_google_bucket_file_exist')
-    @mock.patch('seqr.views.utils.dataset_utils.proxy_to_igv')
-    def test_add_alignment_sample(self, mock_igv_proxy, mock_google_bucket_proxy):
+    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
+    @mock.patch('seqr.utils.file_utils.os.path.isfile')
+    def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
         url = reverse(update_individual_alignment_sample, args=['I000001_na19675'])
         _check_login(self, url)
 
@@ -215,15 +212,14 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
 
-        mock_igv_proxy.return_value.content = 'Read error'
-        mock_igv_proxy.return_value.status_code = 400
-        mock_google_bucket_proxy.return_value = False
+        mock_local_file_exists.return_value = False
+        mock_google_bucket_file_exists.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'datasetFilePath': '/readviz/NA19675_new.cram',
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram": Read error')
+        self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram"')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
@@ -233,10 +229,8 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.cram"')
 
         # Send valid request
-        mock_igv_proxy.return_value.status_code = 200
-        mock_igv_proxy.return_value.get.side_effect = lambda \
-            key: 'application/octet-stream' if key == 'Content-Type' else 'gzip'
-        mock_google_bucket_proxy.return_value = True
+        mock_local_file_exists.return_value = True
+        mock_google_bucket_file_exists.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'datasetFilePath': '/readviz/NA19675_new.cram',

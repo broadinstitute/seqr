@@ -1,6 +1,7 @@
 import json
 import jmespath
 from collections import defaultdict
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db import IntegrityError
@@ -205,10 +206,12 @@ VARIANT_EXPORT_DATA = [
 VARIANT_FAMILY_EXPORT_DATA = [
     {'header': 'family_id'},
     {'header': 'tags', 'process': lambda tags: '|'.join([
-        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in sorted(tags or [], key=lambda tag: tag['lastModifiedDate'], reverse=True)
+        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in
+        sorted(tags or [], key=lambda tag: tag['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
     {'header': 'notes', 'process': lambda notes: '|'.join([
-        '{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in sorted(notes or [], key=lambda note: note['lastModifiedDate'], reverse=True)
+        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in
+        sorted(notes or [], key=lambda note: note['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
 ]
 
@@ -500,7 +503,10 @@ def _get_saved_variants(variants, families):
     variants_to_saved_variants = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id[_get_variant_key(**saved_variant)]
+        searched_variant = variants_by_id.get(_get_variant_key(**saved_variant))
+        if not searched_variant:
+            # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
+            continue
         saved_variant.update(searched_variant)
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids

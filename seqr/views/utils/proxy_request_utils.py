@@ -1,15 +1,9 @@
-import os
-import re
 import requests
 from requests.auth import HTTPBasicAuth
 from requests_toolbelt.utils import dump
-from django.http import HttpResponse, StreamingHttpResponse
+from django.http import HttpResponse
 import logging
 import urllib3
-
-from settings import READ_VIZ_CRAM_PATH, READ_VIZ_BAM_PATH
-from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, google_bucket_file_iter, \
-    does_google_bucket_file_exist
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -124,24 +118,6 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     return proxy_response
 
 
-def proxy_to_igv(igv_track_path, params, request=None, **request_kwargs):
-    is_cram = igv_track_path.split('?')[0].endswith('.cram')
-    if is_google_bucket_file_path(igv_track_path):
-        if igv_track_path.endswith('.bam.bai') and not does_google_bucket_file_exist(igv_track_path):
-            igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
-
-        return _stream_google_file(request, igv_track_path)
-    elif is_cram:
-        absolute_path = "/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{0}&options={1}&region={2}".format(
-            igv_track_path, params.get('options', ''), params.get('region', ''))
-        request_kwargs.update({'host': READ_VIZ_CRAM_PATH, 'stream': True})
-    else:
-        absolute_path = os.path.join(READ_VIZ_BAM_PATH, igv_track_path)
-        request_kwargs.update({'auth_tuple': ('xbrowse-bams', 'xbrowse-bams'), 'verify': False})
-
-    return proxy_request(request, absolute_path, **request_kwargs)
-
-
 def _convert_django_META_to_http_headers(request_meta_dict):
     """Converts django request.META dictionary into a dictionary of HTTP headers"""
 
@@ -156,23 +132,3 @@ def _convert_django_META_to_http_headers(request_meta_dict):
     }
 
     return http_headers
-
-
-def _stream_google_file(request, path):
-    # based on https://gist.github.com/dcwatson/cb5d8157a8fa5a4a046e
-    content_type = 'application/octet-stream'
-    range_header = request.META.get('HTTP_RANGE', None)
-    if range_header:
-        range_match = re.compile(r'bytes\s*=\s*(\d+)\s*-\s*(\d*)', re.I).match(range_header)
-        first_byte, last_byte = range_match.groups()
-        first_byte = int(first_byte) if first_byte else 0
-        last_byte = int(last_byte)
-        length = last_byte - first_byte + 1
-        resp = StreamingHttpResponse(
-            google_bucket_file_iter(path, byte_range=(first_byte, last_byte)), status=206, content_type=content_type)
-        resp['Content-Length'] = str(length)
-        resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
-    else:
-        resp = StreamingHttpResponse(google_bucket_file_iter(path), content_type=content_type)
-    resp['Accept-Ranges'] = 'bytes'
-    return resp

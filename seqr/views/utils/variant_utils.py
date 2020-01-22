@@ -2,8 +2,7 @@ import logging
 import redis
 
 from seqr.models import SavedVariant, VariantSearchResults
-from seqr.model_utils import deprecated_retrieve_saved_variants_json
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, InvalidIndexException
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
@@ -40,16 +39,19 @@ def reset_cached_search_results(project):
         if project:
             result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
             for guid in result_guids:
-                keys_to_delete += redis_client.scan_iter(match='search_results__{}*'.format(guid))
+                keys_to_delete += redis_client.keys(pattern='search_results__{}*'.format(guid))
         else:
             keys_to_delete = redis_client.keys(pattern='search_results__*')
-        redis_client.delete(*keys_to_delete)
-        logger.info('Reset {} cached results'.format(len(keys_to_delete)))
+        if keys_to_delete:
+            redis_client.delete(*keys_to_delete)
+            logger.info('Reset {} cached results'.format(len(keys_to_delete)))
+        else:
+            logger.info('No cached results to reset')
     except Exception as e:
         logger.error("Unable to reset cached search results: {}".format(e))
 
 
-def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):
+def _retrieve_saved_variants_json(project, variant_tuples):
     xpos_ref_alt_tuples = []
     xpos_ref_alt_family_tuples = []
     family_id_to_guid = {}
@@ -58,11 +60,8 @@ def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=Fal
         xpos_ref_alt_family_tuples.append((xpos, ref, alt, family.family_id))
         family_id_to_guid[family.family_id] = family.guid
 
-    try:
-        families = project.family_set.filter(guid__in=family_id_to_guid.values())
-        return get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples)
-    except InvalidIndexException:
-        return deprecated_retrieve_saved_variants_json(project, xpos_ref_alt_family_tuples, create_if_missing)
+    families = project.family_set.filter(guid__in=family_id_to_guid.values())
+    return get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples)
 
 
 def _update_saved_variant_json(saved_variant, saved_variant_json):

@@ -17,6 +17,7 @@ PROJECT_GUID = 'R0001_1kg'
 
 class LocusListAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def test_locus_lists(self):
         url = reverse(locus_lists)

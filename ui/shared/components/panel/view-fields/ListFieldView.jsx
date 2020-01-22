@@ -15,7 +15,14 @@ RemovableInput.propTypes = {
 }
 
 const AddElementButton = ({ addElement, addElementLabel }) =>
-  <ButtonLink icon="plus" content={addElementLabel} onClick={() => addElement()} />
+  <ButtonLink
+    icon="plus"
+    content={addElementLabel}
+    onClick={(e) => {
+      e.preventDefault()
+      addElement()
+    }}
+  />
 
 AddElementButton.propTypes = {
   addElementLabel: PropTypes.string,

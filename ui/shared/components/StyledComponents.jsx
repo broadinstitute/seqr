@@ -47,7 +47,7 @@ export const ColoredOutlineLabel = styled(({ color, ...props }) => <Label {...pr
   border-color: ${props => props.color} !important;
 `
 
-export const HelpIcon = styled(Icon).attrs({ name: 'help circle outline', color: 'grey' })`
+export const HelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
   cursor: pointer;
   margin-left: 5px !important;
 `
@@ -70,4 +70,14 @@ export const InlineHeader = styled(({ overrideInline, ...props }) => <Header {..
     display: inline-block !important;
     margin-left: 0.5em !important;
   }
+`
+
+export const SectionHeader = styled.div`
+  padding-top: 8px;
+  padding-bottom: 6px;
+  margin: 8px 0 15px 0;
+  border-bottom: 1px solid #EEE;
+  font-family: 'Lato';
+  font-weight: 300;
+  font-size: 18px; 
 `

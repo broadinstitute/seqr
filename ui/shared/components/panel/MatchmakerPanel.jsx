@@ -26,7 +26,16 @@ const TopAlignedItem = styled(List.Item)`
   vertical-align: top;
 `
 
-const variantSummary = variant => (
+const NoEmphasis = styled.span`
+  color: grey;
+`
+
+const GENOME_VERSION_LOOKUP = {
+  GRCh37: 'hg19',
+  GRCh38: 'hg38',
+}
+
+const variantSummary = (variant, includeGenomeVersion) => (
   <div>
     {variant.chrom}:{variant.pos}
     {variant.alt &&
@@ -35,6 +44,9 @@ const variantSummary = variant => (
         <Icon fitted name="angle right" />
         <SequenceContainer>{variant.alt}</SequenceContainer>
       </span>
+    }
+    {includeGenomeVersion && variant.genomeVersion &&
+      <NoEmphasis>({GENOME_VERSION_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
     }
   </div>
 )
@@ -48,9 +60,9 @@ const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
         {variants.length > 0 && variants[0].pos &&
           <List.List>
-            {variants.map(variant =>
+            {variants.map((variant, i) =>
               <List.Item key={`${variant.pos}-${variant.ref}-${variant.alt}`}>
-                {variantSummary(variant)}
+                {variantSummary(variant, (i + 1 === variants.length))}
               </List.Item>,
             )}
           </List.List>

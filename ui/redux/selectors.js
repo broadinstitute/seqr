@@ -14,6 +14,7 @@ import {
   DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
+  isActiveVariantSample,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -24,6 +25,7 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
+export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
@@ -33,6 +35,7 @@ export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
 export const getUsersByUsername = state => state.usersByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
+export const getVersion = state => state.meta.version
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
@@ -57,6 +60,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.
@@ -67,12 +71,14 @@ export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisG
 export const getSortedIndividualsByFamily = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
-  (familiesByGuid, individualsByGuid) => {
+  getMmeSubmissionsByGuid,
+  (familiesByGuid, individualsByGuid, mmeSubmissionsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
-    const getIndivMmeSort = individual => (
-      individual.mmeDeletedDate ? '2000-01-01' : (individual.mmeSubmittedDate || '1900-01-01')
-    )
+    const getIndivMmeSort = ({ mmeSubmissionGuid }) => {
+      const { deletedDate, createdDate = '1900-01-01' } = mmeSubmissionsByGuid[mmeSubmissionGuid] || {}
+      return deletedDate ? '2000-01-01' : createdDate
+    }
 
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
@@ -97,6 +103,19 @@ export const getFirstSampleByFamily = createSelector(
         [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
       }
     }, {})
+  },
+)
+
+export const getHasActiveVariantSampleByFamily = createSelector(
+  getSortedIndividualsByFamily,
+  getSamplesByGuid,
+  (individualsByFamily, samplesByGuid) => {
+    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+      ...acc,
+      [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
+        sampleGuid => isActiveVariantSample(samplesByGuid[sampleGuid]),
+      )),
+    }), {})
   },
 )
 

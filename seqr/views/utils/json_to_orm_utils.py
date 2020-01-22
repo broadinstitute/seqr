@@ -2,8 +2,6 @@ import logging
 from django.utils import timezone
 
 from seqr.models import Individual
-from seqr.model_utils import update_seqr_model
-from seqr.utils.model_sync_utils import can_edit_family_id, can_edit_individual_id
 from seqr.views.utils.json_utils import _to_snake_case
 
 logger = logging.getLogger(__name__)
@@ -20,7 +18,7 @@ def update_family_from_json(family, json, verbose=False, user=None, allow_unknow
 
     update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
-        immutable_keys=['pedigree_image', 'assigned_analyst'], conditional_edit_keys={'family_id': can_edit_family_id}
+        immutable_keys=['pedigree_image', 'assigned_analyst'],
     )
 
 
@@ -41,7 +39,6 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
     update_model_from_json(
         individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=['phenotips_data', 'filter_flags', 'pop_platform_filters', 'population'],
-        conditional_edit_keys={'individual_id': can_edit_individual_id}
     )
 
 
@@ -55,7 +52,6 @@ def _parse_parent_field(json, individual, parent_key, parent_id_key):
 
 def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, immutable_keys=None, conditional_edit_keys=None):
     immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
-    seqr_update_fields = {}
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
     for json_key, value in json.items():
@@ -74,7 +70,6 @@ def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unkn
             if verbose:
                 model_obj_name = getattr(model_obj, 'guid', None) or model_obj.__name__
                 logger.info("Setting {0}.{1} to {2}".format(model_obj_name, orm_key, value))
-            seqr_update_fields[orm_key] = value
+            setattr(model_obj, orm_key, value)
 
-    if seqr_update_fields:
-        update_seqr_model(model_obj, **seqr_update_fields)
+    model_obj.save()

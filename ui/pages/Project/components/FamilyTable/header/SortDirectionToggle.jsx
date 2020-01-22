@@ -1,15 +1,26 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
+import { Button } from 'semantic-ui-react'
 
-import VerticalArrowToggle from 'shared/components/toggles/VerticalArrowToggle'
+const SortButton = styled(Button)`
+  &.ui.basic.button {
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+`
 
 const SortDirectionToggle = ({
   value,
   onChange,
-}) => <VerticalArrowToggle
-  onClick={() => onChange(-1 * value)}
-  isPointingDown={value === 1}
-/>
+}) =>
+  <SortButton
+    circular
+    basic
+    onClick={() => onChange(-1 * value)}
+    size="small"
+    icon={`arrow ${value === 1 ? 'down' : 'up'}`}
+  />
 
 SortDirectionToggle.propTypes = {
   value: PropTypes.number.isRequired,

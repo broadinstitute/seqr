@@ -15,12 +15,11 @@
 	"is_phenotips_enabled": true,
 	"phenotips_user_id": "1kg",
     "genome_version": "37",
-	"is_mme_enabled": false,
+	"is_mme_enabled": true,
 	"mme_primary_data_owner": "PI",
-    "mme_contact_url": "mailto:test@broadinstitute.org",
+    "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": "1kg",
-	"custom_reference_populations": []
+	"deprecated_project_id": "1kg"
     }
 },
 {
@@ -41,8 +40,7 @@
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": "",
-	"custom_reference_populations": []
+	"deprecated_project_id": ""
     }
 },
 {
@@ -64,8 +62,7 @@
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": "",
-	"custom_reference_populations": []
+	"deprecated_project_id": ""
     }
 },
 {
@@ -346,7 +343,7 @@
         "created_date": "2017-03-12T19:27:08.848Z",
         "created_by": null,
         "last_modified_date": "2017-03-12T22:37:17.555Z",
-        "project": 1,
+        "project": 3,
         "family_id": "12",
         "display_name": "12",
         "description": "",
@@ -382,10 +379,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000001",
         "phenotips_eid": "20161012_131013_744125_NA19675",
-        "phenotips_data": "{\"features\": [{\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0011675\", \"label\": \"Arrhythmia\"}, {\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001674\", \"label\": \"Complete atrioventricular canal defect\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001631\", \"label\": \"Defect in the atrial septum\"}, {\"observed\": \"no\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0001508\", \"label\": \"Failure to thrive\"}, {\"observed\": \"yes\", \"category\": \"HP:0000707\", \"type\": \"phenotype\", \"id\": \"HP:0002011\", \"label\": \"Morphological abnormality of the central nervous system\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001636\", \"label\": \"Tetralogy of Fallot\"}], \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000001\", \"rel\": \"self\"}, \"nonstandard_features\": [], \"sex\": \"M\", \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"specificity\": {\"date\": \"2017-03-13T09:07:49.711Z\", \"score\": 0.7296054396830466, \"server\": \"local-omim\"}, \"last_modification_date\": \"2017-03-13T09:06:58.000Z\", \"id\": \"P0000001\", \"ethnicity\": {\"maternal_ethnicity\": [\"Azerbaijanis\"], \"paternal_ethnicity\": [\"African Americans\"]}, \"family_history\": {\"consanguinity\": true, \"affectedRelatives\": false}, \"rejectedGenes\": [{\"gene\": \"IKBKAP\", \"comments\": \"comments IKBKAP\"}, {\"gene\": \"CCDC102B\", \"comments\": \"comments for CCDC102B\"}], \"date_of_birth\": \"\", \"life_status\": \"alive\", \"reporter\": \"1kg\", \"genes\": [{\"gene\": \"EHBP1L1\", \"comments\": \"comments EHBP1L1\"}, {\"gene\": \"ACY3\", \"comments\": \"comments ACY3\"}], \"date_of_death\": \"\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"prenatal_perinatal_history\": {}, \"date\": \"2017-03-13T02:38:25.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"report_id\": \"P0000001\", \"global_age_of_onset\": [{\"id\": \"HP:0003581\", \"label\": \"Adult onset\"}], \"last_modified_by\": \"1kg\", \"solved\": {\"status\": \"unsolved\"}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"external_id\": \"20161012_131013_744125_NA19675\"}",
-        "mme_id": null,
-        "mme_submitted_data": {"patient": {"id": "NA19675_1_01", "label": "NA19675_1", "contact": {"href": "mailto:matchmaker@broadinstitute.org", "name": "Sam Baxter", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "features": [{"id": "HP:0001252", "observed": "yes"}, {"id": "HP:0001263", "observed": "no"}, {"id": "HP:0012469", "observed": "yes"}], "genomicFeatures": [{"gene": {"id": "ENSG00000186092"}, "variant": {"end": 77027548, "start": 77027549, "assembly": "GRCh38", "referenceName": "14", "alternateBases": "C", "referenceBases": "CCACT"}, "zygosity": 1}]}},
-    "mme_submitted_date": "2018-05-23T09:07:49.719Z"
+        "phenotips_data": "{\"features\": [{\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0011675\", \"label\": \"Arrhythmia\"}, {\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001674\", \"label\": \"Complete atrioventricular canal defect\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001631\", \"label\": \"Defect in the atrial septum\"}, {\"observed\": \"no\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0001508\", \"label\": \"Failure to thrive\"}, {\"observed\": \"yes\", \"category\": \"HP:0000707\", \"type\": \"phenotype\", \"id\": \"HP:0002011\", \"label\": \"Morphological abnormality of the central nervous system\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001636\", \"label\": \"Tetralogy of Fallot\"}], \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000001\", \"rel\": \"self\"}, \"nonstandard_features\": [], \"sex\": \"M\", \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"specificity\": {\"date\": \"2017-03-13T09:07:49.711Z\", \"score\": 0.7296054396830466, \"server\": \"local-omim\"}, \"last_modification_date\": \"2017-03-13T09:06:58.000Z\", \"id\": \"P0000001\", \"ethnicity\": {\"maternal_ethnicity\": [\"Azerbaijanis\"], \"paternal_ethnicity\": [\"African Americans\"]}, \"family_history\": {\"consanguinity\": true, \"affectedRelatives\": false}, \"rejectedGenes\": [{\"gene\": \"IKBKAP\", \"comments\": \"comments IKBKAP\"}, {\"gene\": \"CCDC102B\", \"comments\": \"comments for CCDC102B\"}], \"date_of_birth\": \"\", \"life_status\": \"alive\", \"reporter\": \"1kg\", \"genes\": [{\"gene\": \"EHBP1L1\", \"comments\": \"comments EHBP1L1\"}, {\"gene\": \"ACY3\", \"comments\": \"comments ACY3\"}], \"date_of_death\": \"\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"prenatal_perinatal_history\": {}, \"date\": \"2017-03-13T02:38:25.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"report_id\": \"P0000001\", \"global_age_of_onset\": [{\"id\": \"HP:0003581\", \"label\": \"Adult onset\"}], \"last_modified_by\": \"1kg\", \"solved\": {\"status\": \"unsolved\"}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"external_id\": \"20161012_131013_744125_NA19675\"}"
 }
 },
 {
@@ -410,9 +404,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000002",
         "phenotips_eid": "20161012_131013_752998_NA19678",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000002\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:28.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:27.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_752998_NA19678\", \"id\": \"P0000002\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000002\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000002\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:28.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:27.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_752998_NA19678\", \"id\": \"P0000002\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000002\"}"
     }
 },
 {
@@ -437,9 +429,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000003",
         "phenotips_eid": "20161012_131013_759726_NA19679",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000003\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"F\", \"last_modification_date\": \"2017-03-13T02:38:29.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:28.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_759726_NA19679\", \"id\": \"P0000003\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000003\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000003\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"F\", \"last_modification_date\": \"2017-03-13T02:38:29.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:28.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_759726_NA19679\", \"id\": \"P0000003\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000003\"}"
     }
 },
 {
@@ -464,9 +454,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000004",
         "phenotips_eid": "20161012_131013_767240_HG00731",
-        "phenotips_data": "{\"features\": [{\"observed\": \"yes\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0004325\", \"label\": \"Decreased body weight\"}, {\"observed\": \"no\", \"category\": \"HP:0040064\", \"type\": \"phenotype\", \"id\": \"HP:0006101\", \"label\": \"Finger syndactyly\"}, {\"observed\": \"yes\", \"category\": \"HP:0003011\", \"type\": \"phenotype\", \"id\": \"HP:0001290\", \"label\": \"Generalized hypotonia\"}, {\"observed\": \"yes\", \"category\": \"HP:0000707\", \"type\": \"phenotype\", \"id\": \"HP:0002011\", \"label\": \"Morphological abnormality of the central nervous system\"}, {\"observed\": \"yes\", \"category\": \"HP:0040064\", \"type\": \"phenotype\", \"id\": \"HP:0100258\", \"label\": \"Preaxial polydactyly\"}, {\"observed\": \"yes\", \"category\": \"HP:0000924\", \"type\": \"phenotype\", \"id\": \"HP:0002650\", \"label\": \"Scoliosis\"}, {\"observed\": \"no\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0004322\", \"label\": \"Short stature\"}], \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000004\", \"rel\": \"self\"}, \"nonstandard_features\": [], \"sex\": \"F\", \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"specificity\": {\"date\": \"2017-03-13T09:07:49.921Z\", \"score\": 0.7752964260625449, \"server\": \"local-omim\"}, \"last_modification_date\": \"2017-03-13T02:41:37.000Z\", \"id\": \"P0000004\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"family_history\": {}, \"date_of_birth\": \"\", \"life_status\": \"alive\", \"reporter\": \"1kg\", \"date_of_death\": \"\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"prenatal_perinatal_history\": {}, \"date\": \"2017-03-13T02:38:29.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"report_id\": \"P0000004\", \"last_modified_by\": \"1kg\", \"solved\": {\"status\": \"unsolved\"}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"external_id\": \"20161012_131013_767240_HG00731\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"features\": [{\"observed\": \"yes\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0004325\", \"label\": \"Decreased body weight\"}, {\"observed\": \"no\", \"category\": \"HP:0040064\", \"type\": \"phenotype\", \"id\": \"HP:0006101\", \"label\": \"Finger syndactyly\"}, {\"observed\": \"yes\", \"category\": \"HP:0003011\", \"type\": \"phenotype\", \"id\": \"HP:0001290\", \"label\": \"Generalized hypotonia\"}, {\"observed\": \"yes\", \"category\": \"HP:0000707\", \"type\": \"phenotype\", \"id\": \"HP:0002011\", \"label\": \"Morphological abnormality of the central nervous system\"}, {\"observed\": \"yes\", \"category\": \"HP:0040064\", \"type\": \"phenotype\", \"id\": \"HP:0100258\", \"label\": \"Preaxial polydactyly\"}, {\"observed\": \"yes\", \"category\": \"HP:0000924\", \"type\": \"phenotype\", \"id\": \"HP:0002650\", \"label\": \"Scoliosis\"}, {\"observed\": \"no\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0004322\", \"label\": \"Short stature\"}], \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000004\", \"rel\": \"self\"}, \"nonstandard_features\": [], \"sex\": \"F\", \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"specificity\": {\"date\": \"2017-03-13T09:07:49.921Z\", \"score\": 0.7752964260625449, \"server\": \"local-omim\"}, \"last_modification_date\": \"2017-03-13T02:41:37.000Z\", \"id\": \"P0000004\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"family_history\": {}, \"date_of_birth\": \"\", \"life_status\": \"alive\", \"reporter\": \"1kg\", \"date_of_death\": \"\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"prenatal_perinatal_history\": {}, \"date\": \"2017-03-13T02:38:29.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"report_id\": \"P0000004\", \"last_modified_by\": \"1kg\", \"solved\": {\"status\": \"unsolved\"}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"external_id\": \"20161012_131013_767240_HG00731\"}"
     }
 },
 {
@@ -491,9 +479,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000005",
         "phenotips_eid": "20161012_131013_776107_HG00732",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000005\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:30.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:30.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_776107_HG00732\", \"id\": \"P0000005\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000005\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000005\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:30.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:30.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_776107_HG00732\", \"id\": \"P0000005\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000005\"}"
     }
 },
 {
@@ -518,9 +504,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000006",
         "phenotips_eid": "20161012_131013_783081_HG00733",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000006\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"F\", \"last_modification_date\": \"2017-03-13T02:38:31.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:31.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_783081_HG00733\", \"id\": \"P0000006\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000006\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000006\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"F\", \"last_modification_date\": \"2017-03-13T02:38:31.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:31.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_783081_HG00733\", \"id\": \"P0000006\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000006\"}"
     }
 },
 {
@@ -545,9 +529,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000007",
         "phenotips_eid": "20161012_131013_791340_NA20870",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000007\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:32.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:31.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_791340_NA20870\", \"id\": \"P0000007\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000007\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000007\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:32.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:31.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_791340_NA20870\", \"id\": \"P0000007\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000007\"}"
     }
 },
 {
@@ -572,9 +554,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000008",
         "phenotips_eid": "20161012_131013_799752_NA20872",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000008\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:33.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:32.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_799752_NA20872\", \"id\": \"P0000008\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000008\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000008\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:33.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:32.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_799752_NA20872\", \"id\": \"P0000008\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000008\"}"
     }
 },
 {
@@ -599,9 +579,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000009",
         "phenotips_eid": "20161012_131013_809075_NA20874",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000009\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:33.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:33.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_809075_NA20874\", \"id\": \"P0000009\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000009\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000009\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:33.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:33.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_809075_NA20874\", \"id\": \"P0000009\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000009\"}"
     }
 },
 {
@@ -626,9 +604,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000010",
         "phenotips_eid": "20161012_131013_816701_NA20875",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000010\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:34.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:33.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_816701_NA20875\", \"id\": \"P0000010\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000010\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000010\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:34.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:33.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_816701_NA20875\", \"id\": \"P0000010\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000010\"}"
     }
 },
 {
@@ -653,9 +629,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000011",
         "phenotips_eid": "20161012_131013_823870_NA20876",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000011\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:35.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:34.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_823870_NA20876\", \"id\": \"P0000011\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000011\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000011\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:35.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:34.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_823870_NA20876\", \"id\": \"P0000011\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000011\"}"
     }
 },
 {
@@ -680,9 +654,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000012",
         "phenotips_eid": "20161012_131013_831577_NA20877",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000012\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:36.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:35.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_831577_NA20877\", \"id\": \"P0000012\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000012\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000012\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:36.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:35.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_831577_NA20877\", \"id\": \"P0000012\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000012\"}"
     }
 },
 {
@@ -707,9 +679,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000013",
         "phenotips_eid": "20161012_131013_841939_NA20878",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000013\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:36.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:36.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_841939_NA20878\", \"id\": \"P0000013\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000013\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000013\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:36.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:36.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_841939_NA20878\", \"id\": \"P0000013\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000013\"}"
     }
 },
 {
@@ -734,9 +704,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000014",
         "phenotips_eid": "20161012_131013_850069_NA20881",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000014\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:37.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:37.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_850069_NA20881\", \"id\": \"P0000014\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000014\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000014\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:37.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:37.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_850069_NA20881\", \"id\": \"P0000014\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000014\"}"
     }
 },
 {
@@ -761,10 +729,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000015",
         "phenotips_eid": "20161012_131013_859533_NA20885",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000015\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:39.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:37.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_859533_NA20885\", \"id\": \"P0000015\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000015\"}",
-        "mme_id": null,
-        "mme_submitted_date": "2019-02-05T06:42:55.397Z",
-        "mme_submitted_data": {"patient": {"id": "NA20885", "label": "NA20885", "contact": {"href": "mailto:matchmaker@broadinstitute.org", "name": "Samantha Baxter", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "features": [{"id": "HP:0001249", "label": "Intellectual disability", "observed": "yes"}, {"id": "HP:0001252", "label": "Muscular hypotonia", "observed": "yes"}, {"id": "HP:0000505", "label": "Visual impairment", "observed": "yes"}], "genomicFeatures": [{"gene": {"id": "ENSG00000277258"}, "variant": {"end": 38739601, "start": 38739601, "assembly": "GRCh38", "referenceName": "17", "alternateBases": "A", "referenceBases": "G"}, "zygosity": 1}]}}
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000015\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:39.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:37.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_859533_NA20885\", \"id\": \"P0000015\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000015\"}"
     }
 },
 {
@@ -789,9 +754,7 @@
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000016",
         "phenotips_eid": "20161012_131013_867124_NA20888",
-        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000016\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:40.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:39.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_867124_NA20888\", \"id\": \"P0000016\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000016\"}",
-        "mme_id": null,
-        "mme_submitted_data": null
+        "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000016\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:40.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:39.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_867124_NA20888\", \"id\": \"P0000016\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000016\"}"
     }
 },
 {
@@ -1262,7 +1225,7 @@
         "created_by": null,
         "last_modified_date": "2018-02-23T17:32:23.054Z",
         "saved_variant": 2,
-        "note": "test",
+        "note": "test n\u00f8te",
         "submit_to_clinvar": false,
         "search_parameters": null
     }
@@ -1445,15 +1408,143 @@
         "families": [1, 3, 5]
     }
 },
+{
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 1,
+    "fields": {
+        "individual": 1,
+        "guid": "MS000001_na19675",
+        "created_date": "2018-05-23T09:07:49.719Z",
+        "last_modified_date": "2018-05-23T09:07:49.719Z",
+        "submission_id": "NA19675_1_01",
+        "label": "NA19675_1",
+        "contact_name": "Sam Baxter",
+        "contact_href": "mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org",
+        "features": [
+            {
+                "id": "HP:0001252",
+                "observed": "yes"
+            },
+            {
+                "id": "HP:0001263",
+                "observed": "no"
+            },
+            {
+                "id": "HP:0012469",
+                "observed": "yes"
+            }
+        ],
+        "genomic_features": [
+            {
+                "gene": {
+                    "id": "ENSG00000186092"
+                },
+                "variant": {
+                    "end": 77027548,
+                    "start": 77027549,
+                    "assembly": "GRCh38",
+                    "referenceName": "14",
+                    "alternateBases": "C",
+                    "referenceBases": "CCACT"
+                },
+                "zygosity": 1
+            }
+        ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 2,
+    "fields": {
+        "individual": 15,
+        "guid": "MS000015_na20885",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "NA20885",
+        "label": "NA20885",
+        "contact_name": "Sam Baxter",
+        "contact_href": "mailto:matchmaker@broadinstitute.org",
+        "features": [
+            {
+                "id": "HP:0001252",
+                "label": "Muscular hypotonia",
+                "observed": "yes"
+            },
+            {
+                "id": "HP:0002017",
+                "label": "Nausea and vomiting",
+                "observed": "yes"
+            }
+        ],
+        "genomic_features": [
+            {
+                "gene": {
+                    "id": "ENSG00000227232"
+                },
+                "variant": {
+                    "end": 38739601,
+                    "start": 38739601,
+                    "assembly": "GRCh38",
+                    "referenceName": "17",
+                    "alternateBases": "A",
+                    "referenceBases": "G"
+                },
+                "zygosity": 1
+            }
+        ]
+    }
+},
     {
-    "model": "seqr.matchmakerresult",
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 3,
+    "fields": {
+        "individual": 16,
+        "guid": "MS000016_P0004515",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "P0004515",
+        "label": "P0004515",
+        "contact_name": "Baylor UDN Clinical Site",
+        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
+        "features": [
+            {
+                "observed": "yes",
+                "id": "HP:0012469"
+            },
+            {
+                "observed": "no",
+                "id": "HP:0003273"
+            }
+        ],
+        "genomic_features": [
+            {
+                "gene": {
+                    "id": "ENSG00000186092"
+                }
+            },
+            {
+                "gene": {
+                    "id": "ENSG00000233750"
+                }
+            },
+            {
+                "gene": {
+                    "id": "ENSG00000223972"
+                }
+            }
+        ]
+    }
+},
+
+    {
+    "model": "matchmaker.matchmakerresult",
     "pk": 3552,
     "fields": {
         "guid": "MR0003552_SHE_1006P_1",
         "created_date": "2019-02-12T18:43:56.358Z",
         "created_by": null,
         "last_modified_date": "2019-04-29T17:48:46.367Z",
-        "individual": 1,
+        "submission": 1,
         "result_data": {
             "score": {
                 "patient": 0.5706712016939723
@@ -1502,14 +1593,14 @@
     }
 },
 {
-    "model": "seqr.matchmakerresult",
+    "model": "matchmaker.matchmakerresult",
     "pk": 7228,
     "fields": {
         "guid": "MR0007228_VCGS_FAM50_156",
         "created_date": "2019-04-25T07:19:41.518Z",
         "created_by": null,
         "last_modified_date": "2019-04-29T17:50:03.101Z",
-        "individual": 1,
+        "submission": 1,
         "result_data": {
             "score": {
                 "patient": 1.0
@@ -1540,18 +1631,15 @@
     }
 },
 {
-    "model": "seqr.matchmakerresult",
+    "model": "matchmaker.matchmakerresult",
     "pk": 7229,
     "fields": {
         "guid": "MR0004688_RGP_105_3",
         "created_date": "2019-04-25T07:19:41.518Z",
         "created_by": null,
         "last_modified_date": "2019-04-29T17:50:03.101Z",
-        "individual": 1,
+        "submission": 1,
         "result_data": {
-            "score": {
-                "patient": 1.0
-            },
             "patient": {
                 "contact": {
                     "href": "mailto:j.weiss@vumc.nl",
@@ -1580,7 +1668,7 @@
     }
 },
 {
-    "model": "seqr.matchmakercontactnotes",
+    "model": "matchmaker.matchmakercontactnotes",
     "pk": 1,
     "fields": {
         "guid": "MCN0000001_st_georges,_univers",
@@ -1589,6 +1677,33 @@
         "last_modified_date": "2019-04-29T17:50:03.101Z",
         "institution": "st georges, university of london",
         "comments": "Some additional data about this institution"
+    }
+}, {
+    "model": "matchmaker.matchmakerincomingquery",
+    "pk": 1,
+    "fields": {
+        "guid": "MIQ0000001",
+        "created_date": "2019-04-25T07:19:41.518Z",
+        "institution": "Baylor UDN Clinical Site",
+        "patient_id": null
+    }
+}, {
+    "model": "matchmaker.matchmakerincomingquery",
+    "pk": 2,
+    "fields": {
+        "guid": "MIQ0000002",
+        "created_date": "2019-04-30T07:19:41.518Z",
+        "institution": "Broad Center for Mendelian Genomics",
+        "patient_id": "NA19675"
+    }
+}, {
+    "model": "matchmaker.matchmakerincomingquery",
+    "pk": 3,
+    "fields": {
+        "guid": "MIQ0000003",
+        "created_date": "2019-06-25T07:19:41.518Z",
+        "institution": "Broad Center for Mendelian Genomics",
+        "patient_id": "NA19675"
     }
 }
 ]

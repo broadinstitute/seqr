@@ -26,7 +26,6 @@ fi
 
 # link to persistent disk dir with static files
 mkdir -p /seqr_static_files/generated_files
-ln -s /seqr_static_files/generated_files /seqr_settings/generated_files
 
 # launch django dev server in background
 cd /seqr

@@ -9,8 +9,6 @@ from guardian.shortcuts import assign_perm, remove_perm
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
-from seqr.model_utils import get_or_create_seqr_model, create_seqr_model, delete_seqr_model, \
-    add_xbrowse_project_gene_lists, remove_xbrowse_project_gene_lists
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -62,8 +60,7 @@ def create_locus_list_handler(request):
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
-    locus_list = create_seqr_model(
-        LocusList,
+    locus_list = LocusList.objects.create(
         name=request_json['name'],
         description=request_json.get('description') or '',
         is_public=request_json.get('isPublic') or False,
@@ -106,7 +103,7 @@ def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
     check_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
 
-    delete_seqr_model(locus_list)
+    locus_list.delete()
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
 
 
@@ -118,7 +115,6 @@ def add_project_locus_lists(request, project_guid):
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
         assign_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
-    add_xbrowse_project_gene_lists(project, locus_lists)
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
@@ -133,7 +129,6 @@ def delete_project_locus_lists(request, project_guid):
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
         remove_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
-    remove_xbrowse_project_gene_lists(project, locus_lists)
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
@@ -148,12 +143,10 @@ def _add_locus_list_user_permissions(locus_list):
 
 def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
     # Update genes
-    for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()):
-        delete_seqr_model(locus_list_gene)
+    locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
     for gene_id in genes_by_id.keys():
-        get_or_create_seqr_model(
-            LocusListGene,
+        LocusListGene.objects.get_or_create(
             locus_list=locus_list,
             gene_id=gene_id,
             created_by=user,

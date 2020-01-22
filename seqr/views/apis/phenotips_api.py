@@ -24,15 +24,12 @@ import re
 import requests
 from collections import defaultdict
 
-import settings
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
@@ -40,7 +37,7 @@ from seqr.views.utils.permissions_utils import check_permissions, get_project_an
 from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
     phenotips_patient_url, phenotips_patient_exists
 from seqr.views.utils.proxy_request_utils import proxy_request
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD, PHENOTIPS_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +81,15 @@ def receive_hpo_table_handler(request, project_guid):
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
+    all_hpo_terms = set()
+    for record in json_records:
+        all_hpo_terms.update([feature['id'] for feature in record.get(FEATURES_COLUMN) or []])
+    hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
+
     updates_by_individual_guid = {}
     missing_individuals = []
     unchanged_individuals = []
-    all_hpo_terms = set()
+    invalid_hpo_term_individuals = defaultdict(list)
     for record in json_records:
         family_id = record.get(FAMILY_ID_COLUMN, None)
         individual_id = record.get(INDIVIDUAL_ID_COLUMN)
@@ -99,12 +101,20 @@ def receive_hpo_table_handler(request, project_guid):
             individual_q = individual_q.filter(family__family_id=family_id)
         individual = individual_q.first()
         if individual:
-            features = record.get(FEATURES_COLUMN) or []
-            if individual.phenotips_data and features and \
+            features = []
+            for feature in record.get(FEATURES_COLUMN) or []:
+                hpo_data = hpo_terms.get(feature['id'])
+                if hpo_data:
+                    feature['category'] = hpo_data.category_id
+                    feature['label'] = hpo_data.name
+                    features.append(feature)
+                else:
+                    invalid_hpo_term_individuals[feature['id']].append(individual_id)
+
+            if individual.phenotips_data and \
                     _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
                 unchanged_individuals.append(individual_id)
             else:
-                all_hpo_terms.update([feature['id'] for feature in features])
                 updates_by_individual_guid[individual.guid] = features
         else:
             missing_individuals.append(individual_id)
@@ -113,32 +123,19 @@ def receive_hpo_table_handler(request, project_guid):
         return create_json_response({
             'errors': ['Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(
                 total=len(missing_individuals) + len(unchanged_individuals),
-                missing=' No matching ids found for {} individuals'.format(len(missing_individuals)) if missing_individuals else '',
-                unchanged=' No changes detected for {} individuals'.format(len(unchanged_individuals)) if unchanged_individuals else '',
+                missing=' No matching ids found for {} individuals.'.format(len(missing_individuals)) if missing_individuals else '',
+                unchanged=' No changes detected for {} individuals.'.format(len(unchanged_individuals)) if unchanged_individuals else '',
             )],
             'warnings': []
         }, status=400, reason='Unable to find any matching individuals')
 
-    hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
-    invalid_hpo_terms = set()
-    for features in updates_by_individual_guid.values():
-        for feature in features:
-            hpo_data = hpo_terms.get(feature['id'])
-            if hpo_data:
-                feature['category'] = hpo_data.category_id
-                feature['label'] = hpo_data.name
-            else:
-                invalid_hpo_terms.add(feature['id'])
-    if invalid_hpo_terms:
-        return create_json_response({
-            'errors': [
-                "The following HPO terms were not found in seqr's HPO data: {}".format(', '.join(invalid_hpo_terms))
-            ],
-            'warnings': []
-        }, status=400, reason='Invalid HPO terms')
-
-    info = ['{} individuals will be updated'.format(len(updates_by_individual_guid))]
     warnings = []
+    if invalid_hpo_term_individuals:
+        warnings.append(
+            "The following HPO terms were not found in seqr's HPO data and will not be added: {}".format(
+                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in invalid_hpo_term_individuals.items()])
+            )
+        )
     if missing_individuals:
         warnings.append(
             'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
@@ -155,7 +152,7 @@ def receive_hpo_table_handler(request, project_guid):
         'uploadedFileId': uploaded_file_id,
         'errors': [],
         'warnings': warnings,
-        'info': info,
+        'info': ['{} individuals will be updated'.format(len(updates_by_individual_guid))],
     }
     return create_json_response(response)
 
@@ -247,11 +244,11 @@ def update_individual_hpo_terms(request, individual_guid):
 
     phenotips_patient_id = patient_json['id']
     phenotips_eid = patient_json.get('external_id')
-    update_seqr_model(
-        individual,
-        phenotips_data=json.dumps(patient_json),
-        phenotips_patient_id=phenotips_patient_id,
-        phenotips_eid=phenotips_eid)
+
+    individual.phenotips_data = json.dumps(patient_json)
+    individual.phenotips_patient_id = phenotips_patient_id
+    individual.phenotips_eid = phenotips_eid
+    individual.save()
 
     return create_json_response({
         individual.guid: {
@@ -289,7 +286,9 @@ def _create_patient_if_missing(project, individual):
     _add_user_to_patient(username_read_only, patient_id, allow_edit=False)
     logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
 
-    update_seqr_model(individual, phenotips_patient_id=patient_id, phenotips_eid=individual.guid)
+    individual.phenotips_patient_id = patient_id
+    individual.phenotips_eid = individual.guid
+    individual.save()
 
     return True
 
@@ -298,7 +297,8 @@ def _set_phenotips_patient_id_if_missing(project, individual):
     if individual.phenotips_patient_id:
         return
     patient_json = _get_patient_data(project, individual)
-    update_seqr_model(individual, phenotips_patient_id=patient_json['id'])
+    individual.phenotips_patient_id = patient_json['id']
+    individual.save()
 
 
 def _get_patient_data(project, individual):
@@ -339,7 +339,7 @@ def _add_user_to_patient(username, patient_id, allow_edit=True):
         url,
         http_headers=headers,
         data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        auth_tuple=(PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD),
         expected_status_code=204,
         parse_json_resonse=False,
     )
@@ -369,7 +369,7 @@ def _phenotips_view_handler(request, project_guid, individual_guid, url_template
 
     auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=permission_level)
 
-    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
+    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=PHENOTIPS_SERVER)
 
 
 @login_required
@@ -422,7 +422,7 @@ def proxy_to_phenotips(request):
         phenotips_session.cookies.set(key, value)
 
     http_response = proxy_request(request, url, data=request.body, session=phenotips_session,
-                                  host=settings.PHENOTIPS_SERVER, filter_request_headers=True)
+                                  host=PHENOTIPS_SERVER, filter_request_headers=True)
 
     # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
@@ -439,7 +439,7 @@ def _handle_phenotips_save_request(request, patient_id):
 
     cookie_header = request.META.get('HTTP_COOKIE')
     http_headers = {'Cookie': cookie_header} if cookie_header else {}
-    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=settings.PHENOTIPS_SERVER)
+    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=PHENOTIPS_SERVER)
     if response.status_code != 200:
         logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
             url, response.status_code, response.reason_phrase))
@@ -479,11 +479,10 @@ def _update_individual_phenotips_data(individual, patient_json):
         except ObjectDoesNotExist:
             logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
 
-    update_seqr_model(
-        individual,
-        phenotips_data=json.dumps(patient_json),
-        phenotips_patient_id=patient_json['id'],        # phenotips internal id
-        phenotips_eid=patient_json.get('external_id'))  # phenotips external id
+    individual.phenotips_data = json.dumps(patient_json)
+    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
+    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
+    individual.save()
 
 
 def _get_phenotips_username_and_password(user, project, permissions_level):

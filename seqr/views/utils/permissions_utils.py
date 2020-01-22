@@ -86,3 +86,10 @@ def add_user_to_project(user, project, permission_level=CAN_VIEW):
             project.can_edit_group.user_set.add(user)
 
 
+def check_mme_permissions(submission, user, permission_level=CAN_VIEW):
+    project = submission.individual.family.project
+    check_permissions(project, user, permission_level)
+    if not project.is_mme_enabled:
+        raise PermissionDenied('Matchmaker is not enabled')
+
+

@@ -30,12 +30,12 @@ const ICON_LOOKUP = {
   },
 
   FA: { icon: 'circle' },
-  FN: { icon: 'circle thin' },
+  FN: { icon: 'circle outline' },
   FU: { icon: 'question circle outline' },
 
   UA: { icon: 'square', rotated: true },
   UN: { icon: 'square outline', rotated: true },
-  UU: { icon: 'help' },
+  UU: { icon: 'question' },
 }
 
 const PedigreeIcon = (props) => {

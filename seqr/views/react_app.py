@@ -1,12 +1,12 @@
 import json
 import re
-import urllib
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.core.serializers.json import DjangoJSONEncoder
 from django.template import loader
 from django.http import HttpResponse
 
+from settings import SEQR_VERSION
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 
 
@@ -29,6 +29,8 @@ def no_login_main_app(request, *args, **kwargs):
 
 def _render_app_html(request, initial_json):
     html = loader.render_to_string('app.html')
+    ui_version = re.search('static/app-(.*)\.js', html).group(1)
+    initial_json['meta'] = {'version': '{}-{}'.format(SEQR_VERSION, ui_version)}
 
     html = html.replace(
         "window.initialJSON=null",

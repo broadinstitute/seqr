@@ -2,7 +2,7 @@ import json
 import logging
 import requests
 
-import settings
+from settings import PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD, PHENOTIPS_SERVER
 
 from seqr.views.utils.proxy_request_utils import proxy_request
 
@@ -47,7 +47,7 @@ def create_phenotips_user(username, password):
         url,
         http_headers=headers,
         data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        auth_tuple=(PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD),
         parse_json_resonse=False,
         expected_status_code=[201, 202],
     )
@@ -65,7 +65,7 @@ def create_phenotips_user(username, password):
         'POST',
         url,
         data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        auth_tuple=(PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD),
         parse_json_resonse=False,
         expected_status_code=201,
     )
@@ -96,7 +96,7 @@ def make_phenotips_api_call(
 
     try:
         response = proxy_request(None, url, headers=http_headers or {}, method=method, scheme='http', data=data,
-                                 auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER, verbose=verbose)
+                                 auth_tuple=auth_tuple, host=PHENOTIPS_SERVER, verbose=verbose)
     except requests.exceptions.RequestException as e:
         raise PhenotipsException(e.message)
     if (isinstance(expected_status_code, int) and response.status_code != expected_status_code) or (

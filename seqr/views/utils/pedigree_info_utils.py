@@ -10,7 +10,7 @@ import openpyxl as xl
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-import settings
+from settings import UPLOADED_PEDIGREE_FILE_RECIPIENTS
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
@@ -42,12 +42,12 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
     # parse rows from file
     try:
-        rows = [row for row in parsed_file[1:] if row and not row[0].startswith('#')]
+        rows = [row for row in parsed_file[1:] if row and not (row[0] or '').startswith('#')]
 
-        headers = [parsed_file[0]] + [row for row in parsed_file[1:] if row[0].startswith('#')]
-        header_string = ','.join(headers[0])
+        header_string = str(parsed_file[0])
         is_datstat_upload = 'DATSTAT' in header_string
-        if "do not modify" in header_string.lower() and "Broad" in header_string:
+        is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
+        if is_merged_pedigree_sample_manifest:
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
             rows = rows[2:]
@@ -66,12 +66,15 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
                 raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
 
             header = expected_header_columns
-            is_merged_pedigree_sample_manifest = True
         else:
-            header = next(
-                ([field.strip('#') for field in row] for row in headers if _is_header_row(','.join(row))),
-                ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
-            )
+            if _is_header_row(header_string):
+                header_row = parsed_file[0]
+            else:
+                header_row = next(
+                    (row for row in parsed_file[1:] if row[0].startswith('#') and _is_header_row(','.join(row))),
+                    ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
+                )
+            header = [(field or '').strip('#') for field in header_row]
 
         for i, row in enumerate(rows):
             if len(row) != len(header):
@@ -98,6 +101,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
+        traceback.print_exc()
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -144,7 +148,7 @@ def _convert_fam_file_rows_to_json(rows):
         # parse
         for key, value in row_dict.items():
             key = key.lower()
-            value = value.strip()
+            value = (value or '').strip()
             if key.lower() == JsonConstants.FAMILY_NOTES_COLUMN.lower():
                 json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
             elif "family" in key:
@@ -308,13 +312,11 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
     RENAME_COLUMNS = {
         MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
         MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
         MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
     }
@@ -350,10 +352,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+".xls"
-    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+    sample_manifest_filename = kit_id+".xlsx"
+    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
-    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
+    original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
     if user is not None and project is not None:
         user_email_or_username = user.email or user.username
@@ -379,10 +381,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
-        to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
-            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
+            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')
@@ -427,10 +429,16 @@ def _get_datstat_family_notes(row):
     DC = DatstatConstants
 
     def _get_column_val(column):
-        return DC.VALUE_MAP[column][row[column]]
+        val_code = row[column].split(':')[0]
+        if column in DC.VALUE_MAP:
+            return DC.VALUE_MAP[column][val_code]
+        return val_code
+
+    def _get_list_column_val(column):
+        return ', '.join([DC.VALUE_MAP[column][raw_val.split(':')[0]] for raw_val in row[column].split(',')])
 
     def _has_test(test):
-        return row['TESTS.{}'.format(test)] == DC.YES
+        return _get_column_val('TESTS.{}'.format(test)) == DC.YES
 
     def _test_summary(test, name):
         col_config = DC.TEST_DETAIL_COLUMNS[test]
@@ -449,21 +457,23 @@ def _get_datstat_family_notes(row):
         col_config = DC.get_parent_detail_columns(parent)
 
         def _bool_condition_val(column, yes, no, default, unknown=None):
-            if row[col_config[column]] == DC.YES:
+            column_val = _get_column_val(col_config[column])
+            if column_val == DC.YES:
                 return yes
-            elif row[col_config[column]] == DC.NO:
+            elif column_val == DC.NO:
                 return no
-            elif unknown and row[col_config[column]] == DC.DONT_KNOW:
+            elif unknown and column_val == DC.DONT_KNOW:
                 return unknown
             return default
 
         parent_details = [_bool_condition_val(DC.AFFECTED_KEY, 'affected', 'unaffected', 'unknown affected status')]
-        if row[col_config[DC.AFFECTED_KEY]] == DC.YES:
+        if _get_column_val(col_config[DC.AFFECTED_KEY]) == DC.YES:
             parent_details.append('onset age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
-        parent_details.append('available' if row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES else 'unavailable')
-        if not row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES:
+        can_participate = _get_column_val(col_config[DC.CAN_PARTICIPATE_KEY]) == DC.YES
+        parent_details.append('available' if can_participate else 'unavailable')
+        if not can_participate:
             parent_details.append(_bool_condition_val(DC.DECEASED_KEY, yes='deceased', no='living', unknown='unknown deceased status', default='unspecified deceased status'))
-        if row[col_config[DC.DECEASED_KEY]] == DC.YES:
+        if row[col_config[DC.DECEASED_KEY]] and _get_column_val(col_config[DC.DECEASED_KEY]) == DC.YES:
             parent_details.append(_bool_condition_val(DC.STORED_DNA_KEY, 'sample available', 'sample not available', 'unknown sample availability'))
 
         return ', '.join(parent_details)
@@ -472,7 +482,7 @@ def _get_datstat_family_notes(row):
         col_config = DC.RELATIVE_DETAIL_COLUMNS[relative]
         sex_map = DC.RELATIVE_SEX_MAP[relative]
 
-        if row[col_config[DC.NO_RELATIVES_KEY]] == DC.YES:
+        if _get_column_val(col_config[DC.NO_RELATIVES_KEY]) == DC.YES:
             return 'None'
 
         def _bool_condition_val(val, display, unknown_display):
@@ -495,11 +505,10 @@ def _get_datstat_family_notes(row):
             relatives=divider.join(relatives),
         )
 
-    relationship_code = row[DC.RELATIONSHIP_COLUMN]
+    relationship_code = _get_column_val(DC.RELATIONSHIP_COLUMN)
     clinical_diagnoses = _get_column_val(DC.CLINICAL_DIAGNOSES_COLUMN)
     genetic_diagnoses = _get_column_val(DC.GENETIC_DIAGNOSES_COLUMN)
     doctors_list = json.loads(row[DC.DOCTOR_TYPES_COLUMN])
-    biopsy_split = row[DC.BIOPSY_COLUMN].split(': ')
 
     if _has_test(DC.NONE_TEST):
         testing = 'None'
@@ -552,7 +561,7 @@ def _get_datstat_family_notes(row):
         tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if relationship_code == DC.OTHER_RELATIONSHIP_CODE else '',
-        relationship=DC.RELATIONSHIP_MAP[relationship_code][row[DC.SEX_COLUMN]],
+        relationship=DC.RELATIONSHIP_MAP[relationship_code][_get_column_val(DC.SEX_COLUMN)],
         age=u'Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
@@ -568,16 +577,16 @@ def _get_datstat_family_notes(row):
         genetic_diagnoses_specify=u'; {}'.format(row[DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN]) if genetic_diagnoses == 'Yes' else '',
         website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
         info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
-        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if row[DC.HAS_DOCTOR_COLUMN] == DatstatConstants.YES else 'None',
+        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if _get_column_val(DC.HAS_DOCTOR_COLUMN) == DC.YES else 'None',
         doctors=', '.join(doctors_list).replace('ClinGen', 'Clinical geneticist'),
         other_doctors=u': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
         testing=testing,
-        biopses='None' if 'NONE' in biopsy_split[0] or not biopsy_split[0] else biopsy_split[1],
-        other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in biopsy_split[0] else '',
+        biopses='None' if (_get_column_val(DC.NO_BIOPSY_COLUMN) == DC.YES or not row[DC.BIOPSY_COLUMN]) else _get_list_column_val(DC.BIOPSY_COLUMN),
+        other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in row[DC.BIOPSY_COLUMN] else '',
         studies=u'Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
             study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=_get_column_val(DC.EXPECTING_RESULTS_COLUMN) if row[DC.EXPECTING_RESULTS_COLUMN] else 'Unspecified',
-        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
+        ) if _get_column_val(DC.HAS_OTHER_STUDIES_COLUMN) == DC.YES else 'No',
         mother=_parent_summary(DC.MOTHER),
         father=_parent_summary(DC.FATHER),
         siblings=_relative_list_summary(DC.SIBLINGS),
@@ -685,7 +694,7 @@ class DatstatConstants:
 
     YES = '1'
     NO = '2'
-    DONT_KNOW = "3"
+    DONT_KNOW = '3'
     YES_NO_UNSURE_MAP = {YES: 'Yes', NO: 'No', DONT_KNOW: 'Unknown/Unsure'}
 
     FAMILY_ID_COLUMN = 'FAMILY_ID'
@@ -717,6 +726,7 @@ class DatstatConstants:
     MICROARRAY_RELATIVE_SPEC_COLUMN = 'TESTS_MICROARRAY_RELATIVE_SPEC'
     OTHER_TEST_COLUMN = 'TEST_OTHER_SPECIFY'
     BIOPSY_COLUMN = 'BIOPSY'
+    NO_BIOPSY_COLUMN = 'BIOPSY.NONE'
     OTHER_BIOPSY_COLUMN = 'BIOPSY_OTHER_SPECIFY'
     HAS_OTHER_STUDIES_COLUMN = 'OTHER_GENETIC_STUDIES'
     OTHER_STUDIES_COLUMN = 'OTHER_GENETIC_STUDIES_SPECIFY'
@@ -725,6 +735,11 @@ class DatstatConstants:
     SEX_OPTION_MAP = {'1': 'MALE', '2': 'FEMALE', '3': 'UNKNOWN'}
     ETHNICITY_COLUMN_MAP = {'1': 'Hispanic', '2': 'Not Hispanic', '3': 'Unknown', '4': 'I prefer not to answer'}
     SAMPLE_AVAILABILITY_MAP = {'1': 'available', '2': 'not available', '3': 'availability unknown'}
+    BIOPSY_MAP = {
+        biopsy_type: '{} Biopsy'.format(biopsy_type.replace('_', ' ').title())
+        for biopsy_type in ['MUSCLE', 'BONE_MARROW', 'LIVER', 'HEART', 'SKIN', 'CRANIOFACIAL']
+    }
+    BIOPSY_MAP['OTHER'] = 'Other Tissue Biopsy'
 
     VALUE_MAP = {
         CLINICAL_DIAGNOSES_COLUMN: YES_NO_UNSURE_MAP,
@@ -732,6 +747,7 @@ class DatstatConstants:
         ETHNICITY_COLUMN: ETHNICITY_COLUMN_MAP,
         EXPECTING_RESULTS_COLUMN: YES_NO_UNSURE_MAP,
         SAMPLE_AVAILABILITY_COLUMN: SAMPLE_AVAILABILITY_MAP,
+        BIOPSY_COLUMN: BIOPSY_MAP
     }
 
     OTHER_RELATIONSHIP_CODE = '6'

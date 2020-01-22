@@ -26,17 +26,12 @@ DEPLOYABLE_COMPONENTS = [
     "settings",
     "secrets",
 
-    "cockpit",
-
-    "external-mongo-connector",
     "external-elasticsearch-connector",
 
     "elasticsearch",  # a single elasticsearch instance
-    "mongo",
     "postgres",
     "redis",
     "phenotips",
-    "matchbox",
     "seqr",
     "kibana",
     "nginx",
@@ -49,37 +44,13 @@ DEPLOYABLE_COMPONENTS = [
     "es-kibana",
 ]
 
-
-
-
 DEPLOYMENT_TARGETS = {}
-DEPLOYMENT_TARGETS["minikube"] = [
-    "init-cluster",
-    "settings",
-    "secrets",
-    "mongo",
-
-    "postgres",
-    #"elasticsearch",
-    "external-elasticsearch-connector",
-    "kibana",
-    "redis",
-    "phenotips",
-    "seqr",
-    "pipeline-runner",
-]
-
 DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "init-cluster",
     "settings",
     "secrets",
-    #"cockpit",
-    "external-mongo-connector",
-    "matchbox",
     "nginx",
-
     "postgres",
-    #"elasticsearch",
     "external-elasticsearch-connector",
     "kibana",
     "redis",
@@ -101,17 +72,13 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
 ]
 
 
-
-
 def deploy_init_cluster(settings):
     """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
 
     print_separator("init-cluster")
 
     # initialize the VM
-    if settings["DEPLOY_TO"] == "minikube":
-        _init_cluster_minikube(settings)
-    elif settings["DEPLOY_TO_PREFIX"] == "gcloud":
+    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
         _init_cluster_gcloud(settings)
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
@@ -189,7 +156,8 @@ def deploy_secrets(settings):
         "kubectl create secret generic seqr-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
     ]) % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
@@ -206,9 +174,7 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.json",
     ]) % settings, errors_to_ignore=["already exists"])
 
     account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
@@ -226,37 +192,12 @@ def deploy_secrets(settings):
         ]), errors_to_ignore=["already exists"])
 
 
-def deploy_cockpit(settings):
-    print_separator("cockpit")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
-        #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
-
-    if settings["DEPLOY_TO"] == "minikube":
-        # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-        run(" ".join([
-            "kubectl create clusterrolebinding anon-cluster-admin-binding",
-            "--clusterrole=cluster-admin",
-            "--user=system:anonymous",
-        ]), errors_to_ignore=["already exists"])
-
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
-
-    # print username, password for logging into cockpit
-    run("kubectl config view")
-
-
-def deploy_external_mongo_connector(settings):
-    deploy_external_connector(settings, "mongo")
-
-
 def deploy_external_elasticsearch_connector(settings):
     deploy_external_connector(settings, "elasticsearch")
 
 
 def deploy_external_connector(settings, connector_name):
-    if connector_name not in ["mongo", "elasticsearch"]:
+    if connector_name not in ["elasticsearch"]:
         raise ValueError("Invalid connector name: %s" % connector_name)
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -276,17 +217,6 @@ def deploy_elasticsearch(settings):
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
     deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_mongo(settings):
-    print_separator("mongo")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("mongo", settings)
-
-    docker_build("mongo", settings)
-
-    deploy_pod("mongo", settings, wait_until_pod_is_running=True)
 
 
 def deploy_postgres(settings):
@@ -385,17 +315,6 @@ def deploy_phenotips(settings):
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
         deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_matchbox(settings):
-    print_separator("matchbox")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("matchbox", settings)
-
-    docker_build("matchbox", settings, ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]])
-
-    deploy_pod("matchbox", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_seqr(settings):
@@ -563,7 +482,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
     Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
             indentifying which cluster to deploy these components to
         components (list): The list of component names to deploy (eg. "postgres", "phenotips" - each string must be in
             constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
@@ -606,12 +525,6 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
 
     # make sure all keys are upper-case
     settings = {key.upper(): value for key, value in settings.items()}
-
-    # minikube fix: set IMAGE_PULL_POLICY = "IfNotPresent" if running 'docker build' since it fails for other settings such as 'Always'
-    # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
-    # https://kubernetes.io/docs/setup/minikube/
-    if settings["BUILD_DOCKER_IMAGES"] and deployment_target == "minikube":
-        settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
 
     # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
     if runtime_settings.get("DOCKER_IMAGE_TAG"):
@@ -704,6 +617,7 @@ def _init_cluster_gcloud(settings):
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--no-enable-legacy-authorization",
             "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
@@ -781,7 +695,7 @@ spec:
     #]), is_interactive=True)
 
     # create persistent disks
-    for label in ("postgres", "seqr-static-files"): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+    for label in ("postgres", "seqr-static-files"):
         run(" ".join([
             "gcloud compute disks create",
             "--zone %(GCLOUD_ZONE)s",
@@ -790,68 +704,10 @@ spec:
             ]) % settings, verbose=True, errors_to_ignore=["already exists"])
 
 
-def _init_cluster_minikube(settings):
-    """Checks that minikube is running. If not, either starts and configures minikube, or prints instructions on how
-    to do this.
-    """
-    try:
-        # check that minikube is running
-        status = run("minikube status")
-    except Exception as e:
-        logger.info("minikube status: %s" % str(e))
-
-        if "MINIKUBE_MEMORY" not in settings:
-            settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
-        if "MINIKUBE_NUM_CPUS" not in settings:
-            settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
-
-        minikube_start_command = (
-                                     "minikube start "
-                                     "--kubernetes-version=v1.11.3 "
-                                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                                     "--memory=%(MINIKUBE_MEMORY)s "
-                                     "--cpus=%(MINIKUBE_NUM_CPUS)s "
-                                 ) % settings
-
-        if sys.platform.startswith('darwin'):
-            # MacOSx
-
-            # double-check that there's no minikube instance running
-            run("minikube stop", ignore_all_errors=True)
-            # run("minikube delete", ignore_all_errors=True)
-
-            # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
-            minikube_start_command += " --vm-driver=xhyve "
-            # minikube_start_command +=  " --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount "
-
-            # start minikube
-            logger.info("starting minikube: ")
-            run(minikube_start_command)
-        else:
-            if sys.platform.startswith('linux'):
-                minikube_start_command += " --vm-driver=none "
-            else:
-                minikube_start_command += " --vm-driver=virtualbox "
-
-            logger.info("Please run '%s' and then check that 'minikube status' shows minikube is running" % minikube_start_command)
-            sys.exit(0)  # terminate installation of other components also since minikube isn't running
-
-    # configure docker command
-    run("gcloud auth configure-docker --quiet")
-
-    # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
-    run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
-
-    # set VM max_map_count to the value required for elasticsearch
-    run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
-
-
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
     params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
-
-    docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
 
     docker_tags = set([
         "",
@@ -862,7 +718,7 @@ def docker_build(component_label, settings, custom_build_args=()):
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
-        docker_build_command = docker_command_prefix
+        docker_build_command = ""
         docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
         docker_build_command += (" ".join(custom_build_args) + " ")
         if settings["FORCE_BUILD_DOCKER_IMAGES"]:
@@ -877,7 +733,7 @@ def docker_build(component_label, settings, custom_build_args=()):
     if settings["PUSH_TO_REGISTRY"]:
         for tag in docker_tags:
             docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
-            docker_push_command = docker_command_prefix
+            docker_push_command = ""
             docker_push_command += "docker push %(docker_image_name_with_tag)s" % locals()
             run(docker_push_command, verbose=True)
             logger.info("==> Finished uploading image: %(docker_image_name_with_tag)s" % locals())
@@ -899,7 +755,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
         sleep_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+def delete_pod(component_label, settings, custom_yaml_filename=None):
     deployment_target = settings["DEPLOY_TO"]
 
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
@@ -911,7 +767,7 @@ def delete_pod(component_label, settings, async=False, custom_yaml_filename=None
             ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while is_pod_running(component_label, deployment_target) and not async:
+    while is_pod_running(component_label, deployment_target):
         time.sleep(5)
 
 

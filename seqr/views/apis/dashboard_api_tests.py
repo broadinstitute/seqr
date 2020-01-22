@@ -22,10 +22,10 @@ class DashboardPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'].values()[0].keys()),
-            {'analysisStatusCounts', 'canEdit', 'createdDate', 'deprecatedProjectId', 'description', 'genomeVersion',
-             'hasNewSearch', 'isMmeEnabled', 'isPhenotipsEnabled', 'lastAccessedDate', 'lastModifiedDate',
+            {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
+             'isMmeEnabled', 'isPhenotipsEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids',
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
-             'numVariantTags', 'phenotipsUserId', 'projectGuid', 'projectCategoryGuids', 'sampleTypeCounts',}
+             'numVariantTags', 'phenotipsUserId', 'projectGuid', }
         )
 
     def test_export_projects_table(self):

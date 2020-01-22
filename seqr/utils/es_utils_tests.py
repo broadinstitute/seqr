@@ -348,7 +348,7 @@ COMPOUND_HET_INDEX_VARIANTS = {
     SECOND_INDEX_NAME: {
         'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
     },
-    '{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
+    '{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
 }
 
 INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT]}
@@ -904,6 +904,7 @@ def create_mock_response(search, index=INDEX_NAME):
 @mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
@@ -1076,8 +1077,17 @@ class EsUtilsTest(TestCase):
             'inheritance': {'mode': 'de_novo'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(self.families)
 
+        # Test edge case where searching by inheritance with no affected individuals
+        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model, sort='protein_consequence', num_results=2)
+        self.assertEqual(
+            cm.exception.message, 'Inheritance based search is disabled in families with no affected individuals',
+        )
+
+        # Test successful search
+        results_model.families.set(self.families)
         variants, total_results = get_es_variants(results_model, sort='protein_consequence', num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
@@ -1525,7 +1535,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             sort=['xpos'],
             size=4,
@@ -1544,7 +1554,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             sort=['xpos'],
             size=5,
@@ -1569,7 +1579,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}}],
             sort=['xpos'],
             size=4,
@@ -1676,7 +1686,6 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
-
         gene_counts = get_es_variant_gene_counts(results_model)
 
         self.assertDictEqual(gene_counts, {
@@ -1685,7 +1694,7 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             size=1,
             gene_count_aggs={

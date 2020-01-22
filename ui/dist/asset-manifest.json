@@ -1,12 +1,8 @@
 {
-  "app.css": "app.e8bd734f.css",
-  "app.css.map": "app.e8bd734f.css.map",
-  "app.js": "app-69a56b75.js",
-  "app.js.map": "app-69a56b75.js.map",
-  "flags.png": "flags.9c74e172.png",
-  "icons.eot": "icons.674f50d2.eot",
-  "icons.svg": "icons.912ec66d.svg",
-  "icons.ttf": "icons.b06871f2.ttf",
-  "icons.woff": "icons.fee66e71.woff",
-  "icons.woff2": "icons.af7ae505.woff2"
+  "app.css": "/static/app.753346b8.css",
+  "app.js": "/static/app-a3143112.js",
+  "app.css.map": "/static/app.753346b8.css.map",
+  "app.js.map": "/static/app-a3143112.js.map",
+  "app.html": "/static/app.html",
+  "semantic.min.css": "/static/flags.9c74e172.png"
 }

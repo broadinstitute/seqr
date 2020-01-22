@@ -2,7 +2,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, VariantTagType
-from seqr.model_utils import create_seqr_model
 
 
 class Command(BaseCommand):
@@ -23,4 +22,4 @@ class Command(BaseCommand):
         if VariantTagType.objects.filter(name__iexact=options['name']).filter(Q(project=project) | Q(project__isnull=True)):
             raise CommandError('Tag "{}" already exists for project {}'.format(options['name'], project_name))
 
-        create_seqr_model(VariantTagType, project=project, **tag_options)
+        VariantTagType.objects.create(project=project, **tag_options)

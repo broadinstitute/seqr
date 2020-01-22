@@ -4,7 +4,10 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getSortedIndividualsByFamily, getUser } from 'redux/selectors'
+import { loadSavedVariants } from 'redux/rootReducer'
+import {
+  getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getSavedVariantsIsLoading,
+} from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -12,11 +15,11 @@ import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/Matc
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
-import SortableTable, { SelectableTableFormInput } from 'shared/components/table/SortableTable'
+import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
-import { AFFECTED } from 'shared/utils/constants'
+import { AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
@@ -25,13 +28,13 @@ import {
 import {
   getMatchmakerMatchesLoading,
   getIndividualTaggedVariants,
-  getDefaultMmeSubmissionByIndividual,
-  getMmeResultsByIndividual,
+  getDefaultMmeSubmission,
+  getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
 } from '../selectors'
 
-const BreakWordLink = styled.a`
+const BreakWordLink = styled.a.attrs({ target: '_blank' })`
   word-break: break-all;
 `
 
@@ -39,7 +42,7 @@ const MatchContainer = styled.div`
   word-break: break-all;
 `
 
-const PATIENT_CORE_FIELDS = ['id', 'contact', 'features', 'genomicFeatures']
+const PATIENT_CORE_FIELDS = ['id', 'label', 'contact', 'features', 'genomicFeatures']
 
 const MATCH_STATUS_EDIT_FIELDS = [
   { name: 'weContacted', label: 'We Contacted Host', component: BooleanCheckbox, inline: true },
@@ -70,30 +73,43 @@ const GENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditGenotypesTable = ({ savedVariants, value, onChange }) =>
-  <SelectableTableFormInput
-    idField="variantId"
-    defaultSortColumn="xpos"
-    columns={GENOTYPE_FIELDS}
-    data={savedVariants}
-    value={value}
-    onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
-  />
+const BaseEditGenotypesTable = ({ savedVariants, value, load, loading, familyGuids, onChange }) =>
+  <DataLoader content contentId={familyGuids} load={load} loading={false}>
+    <SelectableTableFormInput
+      idField="variantId"
+      defaultSortColumn="xpos"
+      columns={GENOTYPE_FIELDS}
+      data={savedVariants}
+      value={value}
+      onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
+      loading={loading}
+    />
+  </DataLoader>
 
 BaseEditGenotypesTable.propTypes = {
   savedVariants: PropTypes.array,
   value: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  familyGuids: PropTypes.array,
   onChange: PropTypes.func,
 }
 
 const mapGenotypesStateToProps = (state, ownProps) => {
   const individualGuid = ownProps.meta.form.split('_-_')[0]
+  const { familyGuid } = state.individualsByGuid[individualGuid]
   return {
     savedVariants: getIndividualTaggedVariants(state, { individualGuid }),
+    familyGuids: [familyGuid],
+    loading: getSavedVariantsIsLoading(state),
   }
 }
 
-const EditGenotypesTable = connect(mapGenotypesStateToProps)(BaseEditGenotypesTable)
+const mapGenotypeDispatchToProps = {
+  load: loadSavedVariants,
+}
+
+const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypeDispatchToProps)(BaseEditGenotypesTable)
 
 const PHENOTYPE_FIELDS = [
   { name: 'id', content: 'HPO ID', width: 3 },
@@ -130,17 +146,10 @@ const mapPhenotypeStateToProps = (state, ownProps) => ({
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
 
-const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const CONTACT_URL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const SUBMISSION_EDIT_FIELDS = [
-  { name: 'patient.contact.name', label: 'Contact Name' },
-  {
-    name: 'patient.contact.href',
-    label: 'Contact URL',
-    parse: val => `mailto:${val}`,
-    format: val => val.replace('mailto:', ''),
-    validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
-  },
+  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'contactName' },
+  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
   {
     name: 'geneVariants',
     component: EditGenotypesTable,
@@ -273,15 +282,20 @@ const DISPLAY_FIELDS = [
     verticalAlign: 'top',
     format: (val) => {
       const patientFields = Object.keys(val.patient).filter(k => val.patient[k] && !PATIENT_CORE_FIELDS.includes(k))
+      let displayName = val.id
+      if (val.patient.label) {
+        displayName = val.patient.label
+        patientFields.unshift('id')
+      }
       return patientFields.length ? <Popup
         header="Patient Details"
-        trigger={<MatchContainer>{val.id} <Icon link name="info circle" /></MatchContainer>}
+        trigger={<MatchContainer>{displayName} <Icon link name="info circle" /></MatchContainer>}
         content={patientFields.map(k =>
           <div key={k}>
             <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
           </div>,
         )}
-      /> : <MatchContainer>{val.id}</MatchContainer>
+      /> : <MatchContainer>{displayName}</MatchContainer>
     },
   },
   {
@@ -300,6 +314,11 @@ const DISPLAY_FIELDS = [
       <div>
         <div><b>{patient.contact.institution}</b></div>
         <div>{patient.contact.name}</div>
+        {patient.contact.email &&
+          <div>
+            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+          </div>
+        }
         <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
         <VerticalSpacer height={10} />
         <ContactNotes contact={patient.contact} modalId={patient.id} />
@@ -328,18 +347,18 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults }) =>
+const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {individual.mmeSubmittedData && !individual.mmeDeletedDate ?
+    {mmeSubmission && !mmeSubmission.deletedDate ?
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {individual.mmeSubmittedData.geneVariants.length ?
+            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ?
               <SubmissionGeneVariants
-                geneVariants={individual.mmeSubmittedData.geneVariants}
+                geneVariants={mmeSubmission.geneVariants}
                 modalId="submission"
                 horizontal
               /> : <i>None</i>}
@@ -348,8 +367,8 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {individual.mmeSubmittedData.phenotypes.length ?
-              <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
+            {mmeSubmission.phenotypes && mmeSubmission.phenotypes.length ?
+              <Phenotypes phenotypes={mmeSubmission.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
       </Grid> :
@@ -377,34 +396,34 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
       </div>
     }
     <DataLoader content load={load} loading={false}>
-      {individual.mmeSubmittedDate && !individual.mmeDeletedDate &&
+      {mmeSubmission && !mmeSubmission.deletedDate &&
         <div>
           <ButtonLink
-            disabled={!individual.mmeResultGuids}
+            disabled={loading}
             onClick={searchMme}
             icon="search"
             labelPosition="right"
             content="Search for New Matches"
           />|<HorizontalSpacer width={10} />
           <UpdateButton
-            disabled={!individual.mmeSubmittedData}
+            disabled={loading}
             buttonText="Update Submission"
             modalSize="large"
             modalTitle={`Update Submission for ${individual.displayName}`}
             modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
             confirmDialog="Are you sure you want to update this submission?"
-            initialValues={individual.mmeSubmittedData}
+            initialValues={mmeSubmission}
             formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
             showErrorPanel
           />|<HorizontalSpacer width={10} />
           <DeleteButton
-            disabled={!individual.mmeSubmittedData}
+            disabled={loading}
             onSubmit={onSubmit}
             buttonText="Delete Submission"
             confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
           />
-          <SortableTable
+          <DataTable
             basic="very"
             fixed
             idField="id"
@@ -416,11 +435,11 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
             emptyContent="No matches found"
           />
         </div>}
-      {mmeResults.removed && mmeResults.removed.length > 0 &&
+      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 &&
         <div>
           <VerticalSpacer height={10} />
           <Header dividing disabled size="medium" content="Previous Matches" />
-          <SortableTable
+          <DataTable
             basic="very"
             fixed
             idField="id"
@@ -442,21 +461,23 @@ BaseMatchmakerIndividual.propTypes = {
   onSubmit: PropTypes.func,
   defaultMmeSubmission: PropTypes.object,
   mmeResults: PropTypes.object,
+  mmeSubmission: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   loading: getMatchmakerMatchesLoading(state),
-  defaultMmeSubmission: getDefaultMmeSubmissionByIndividual(state, ownProps)[ownProps.individual.individualGuid],
-  mmeResults: getMmeResultsByIndividual(state, ownProps)[ownProps.individual.individualGuid],
+  defaultMmeSubmission: getDefaultMmeSubmission(state),
+  mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
+  mmeResults: getMmeResultsBySubmission(state, ownProps)[ownProps.individual.mmeSubmissionGuid],
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     load: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, false))
+      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false))
     },
     searchMme: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, true))
+      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
     },
     onSubmit: (values) => {
       return dispatch(updateMmeSubmission({ ...values, individualGuid: ownProps.individual.individualGuid }))

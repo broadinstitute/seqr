@@ -14,7 +14,6 @@ import tempfile
 
 from django.core.files import File
 
-from seqr.model_utils import update_seqr_model, find_matching_xbrowse_model
 from seqr.models import Individual
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
@@ -42,7 +41,8 @@ def _get_parsed_individuals(family, project_guid=None):
     individuals = Individual.objects.filter(family=family)
 
     if len(individuals) < 2:
-        update_seqr_model(family, pedigree_image=None)
+        family.pedigree_image = None
+        family.save()
         return None
 
     # convert individuals to json
@@ -121,14 +121,15 @@ def _update_pedigree_image(family, project_guid=None):
         fam_file.flush()
 
         fam_file_path = fam_file.name
-        haplopainter_command = "perl " + os.path.join(BASE_DIR, "xbrowse_server/base/management/commands/HaploPainter1.043.pl")
+        haplopainter_command = "perl " + os.path.join(BASE_DIR, "seqr/management/commands/HaploPainter1.043.pl")
         haplopainter_command += " -b -outformat png -pedfile {fam_file_path} -family {family_id} -outfile {png_file_path}".format(
             fam_file_path=fam_file_path, family_id=family_id, png_file_path=png_file_path)
         os.system(haplopainter_command)
 
     if not os.path.isfile(png_file_path):
         logger.error("Failed to generated pedigree image for family: %s" % family_id)
-        update_seqr_model(family, pedigree_image=None)
+        family.pedigree_image = None
+        family.save()
         return
 
     _save_pedigree_image_file(family, png_file_path)
@@ -140,13 +141,6 @@ def _save_pedigree_image_file(family, png_file_path):
     with open(png_file_path) as pedigree_image_file:
         family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
         family.save()
-
-    # update deprecated model
-    base_family = find_matching_xbrowse_model(family)
-    if base_family:
-        with open(png_file_path) as pedigree_image_file:
-            base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
-            base_family.save()
 
 
 def _random_string(size=10):

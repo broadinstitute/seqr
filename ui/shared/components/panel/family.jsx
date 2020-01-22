@@ -6,7 +6,14 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getGenesById } from 'redux/selectors'
+import {
+  getProjectsByGuid,
+  getFirstSampleByFamily,
+  getUserOptionsIsLoading,
+  getGenesById,
+  getHasActiveVariantSampleByFamily,
+} from 'redux/selectors'
+import CreateVariantButton from '../buttons/CreateVariantButton'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -40,16 +47,22 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
-const BaseFirstSample = ({ firstFamilySample, compact }) =>
-  <Sample loadedSample={firstFamilySample} hoverDetails={compact ? 'first loaded' : null} />
+const BaseFirstSample = ({ firstFamilySample, compact, hasActiveVariantSample }) =>
+  <Sample
+    loadedSample={firstFamilySample}
+    hoverDetails={compact ? 'first loaded' : null}
+    isOutdated={!hasActiveVariantSample}
+  />
 
 BaseFirstSample.propTypes = {
   firstFamilySample: PropTypes.object,
   compact: PropTypes.bool,
+  hasActiveVariantSample: PropTypes.bool,
 }
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
@@ -223,7 +236,7 @@ DiscoveryGenes.propTypes = {
 
 const Family = (
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, firstFamilySample,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
@@ -265,14 +278,16 @@ const Family = (
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /></SearchLink>
+      <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
       <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
     </div>,
     !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /> Variant Search</SearchLink>
-        {!firstFamilySample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /> Variant Search</SearchLink>
+        {!hasActiveVariantSample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        <VerticalSpacer height={10} />
+        <CreateVariantButton family={family} />
         <VerticalSpacer height={10} />
         {project.isMmeEnabled &&
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
@@ -307,14 +322,14 @@ Family.propTypes = {
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   genesById: PropTypes.object,
-  firstFamilySample: PropTypes.object,
+  hasActiveVariantSample: PropTypes.bool,
 }
 
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
   genesById: getGenesById(state),
-  firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {

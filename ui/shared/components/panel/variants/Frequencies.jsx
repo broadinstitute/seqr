@@ -11,11 +11,12 @@ const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = ({ url, value, variant, genomeVersions = [GENOME_VERSION_37] }) => {
-  let { chrom, pos } = variant
-  if (!genomeVersions.includes(variant.genomeVersion) && genomeVersions.includes(variant.liftedOverGenomeVersion)) {
+const FreqLink = ({ urls, value, variant, queryParams }) => {
+  let { chrom, pos, genomeVersion } = variant
+  if (!urls[genomeVersion] && urls[variant.liftedOverGenomeVersion]) {
     chrom = variant.liftedOverChrom
     pos = variant.liftedOverPos
+    genomeVersion = variant.liftedOverGenomeVersion
   }
 
   const isRegion = parseFloat(value, 10) <= 0
@@ -27,24 +28,26 @@ const FreqLink = ({ url, value, variant, genomeVersions = [GENOME_VERSION_37] })
     coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
   }
 
+  const queryString = (queryParams && queryParams[genomeVersion]) ? `?${queryParams[genomeVersion]}` : ''
+
   return (
-    <a href={`http://${url}/${isRegion ? 'region' : 'variant'}/${coords}`} target="_blank">
+    <a href={`http://${urls[genomeVersion]}/${isRegion ? 'region' : 'variant'}/${coords}${queryString}`} target="_blank">
       {value}
     </a>
   )
 }
 
 FreqLink.propTypes = {
-  url: PropTypes.string.isRequired,
+  urls: PropTypes.object.isRequired,
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
-  genomeVersions: PropTypes.array,
+  queryParams: PropTypes.string,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precision = 2 }) => {
-  const { populations, chrom } = variant
-  const population = populations[field]
-  if (population.af === null) {
+const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, precision = 2 }) => {
+  const { populations = {}, chrom } = variant
+  const population = populations[field] || {}
+  if (population.af === null || population.af === undefined) {
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
@@ -62,12 +65,12 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precis
       {fieldTitle}<HorizontalSpacer width={5} />
       <FreqValue>
         <b>
-          {hasLink ?
+          {urls ?
             <FreqLink
-              url={urls ? urls[variant.genomeVersion || GENOME_VERSION_37] : `${field.split('_')[0]}.broadinstitute.org`}
+              urls={urls}
+              queryParams={queryParams}
               value={value}
               variant={variant}
-              genomeVersions={urls && Object.keys(urls)}
             /> : value
           }
         </b>
@@ -91,20 +94,30 @@ FreqSummary.propTypes = {
   precision: PropTypes.number,
   fieldTitle: PropTypes.string,
   urls: PropTypes.object,
-  hasLink: PropTypes.bool,
+  queryParams: PropTypes.object,
   showAC: PropTypes.bool,
 }
 
 const POPULATIONS = [
   { field: 'callset', fieldTitle: 'This Callset', showAC: true },
   { field: 'g1k', fieldTitle: '1kg WGS' },
-  { field: 'exac', fieldTitle: 'ExAC', hasLink: true },
-  { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', hasLink: true },
-  { field: 'gnomad_genomes', fieldTitle: 'gnomAD genomes', hasLink: true, precision: 3 },
+  {
+    field: 'exac',
+    fieldTitle: 'ExAC',
+    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_37]: 'dataset=exac' },
+  },
+  { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' } },
+  {
+    field: 'gnomad_genomes',
+    fieldTitle: 'gnomAD genomes',
+    precision: 3,
+    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+  },
   {
     field: 'topmed',
     fieldTitle: 'TopMed',
-    hasLink: true,
     precision: 3,
     urls: {
       [GENOME_VERSION_37]: 'bravo.sph.umich.edu/freeze3a/hg19',
@@ -124,7 +137,7 @@ const Frequencies = ({ variant }) => {
   )
 
   return (
-    Object.values(populations).some(pop => pop.ac) ?
+    Object.values(populations || {}).some(pop => pop.ac) ?
       <Popup
         position="top center"
         flowing
