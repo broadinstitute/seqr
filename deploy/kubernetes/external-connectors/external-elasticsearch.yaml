@@ -1,5 +1,4 @@
-# Service that connects to an elasticsearch instance that's running directly on the host machine (in the case of minikube)
-# or generally somewhere else outside this kubernetes cluster
+# Service that connects to an elasticsearch instance running outside this kubernetes cluster
 kind: Service
 apiVersion: v1
 metadata:
