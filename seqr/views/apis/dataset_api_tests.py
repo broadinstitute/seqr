@@ -26,7 +26,6 @@ class DatasetAPITest(TransactionTestCase):
         _check_login(self, url)
 
         # Confirm test DB is as expected
-        self.assertFalse(Project.objects.get(guid=PROJECT_GUID).has_new_search)
         existing_index_sample = Sample.objects.get(sample_id='NA19675', dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         self.assertEqual(existing_index_sample.elasticsearch_index, INDEX_NAME)
         self.assertNotEqual(existing_index_sample.dataset_file_path, 'test_data.vds')

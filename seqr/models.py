@@ -94,10 +94,6 @@ class ModelWithGUID(models.Model):
 
 
 class Project(ModelWithGUID):
-    DISEASE_AREA = [(da.lower().replace(" ", "_"), da) for da in (
-        "Blood", "Cardio", "Kidney", "Muscle", "Neurodev", "Orphan Disease", "Retinal")
-    ]
-
     name = models.TextField()  # human-readable project name
     description = models.TextField(null=True, blank=True)
 
@@ -109,7 +105,6 @@ class Project(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
-    is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     is_mme_enabled = models.BooleanField(default=True)
@@ -117,23 +112,15 @@ class Project(ModelWithGUID):
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
-    is_functional_data_enabled = models.BooleanField(default=False)
-    disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
-
     disable_staff_access = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
-
-    # TODO remove
-    deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
-    has_new_search = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name.strip()
 
     def _compute_guid(self):
-        label = (self.name or self.deprecated_project_id).strip()
-        return 'R%04d_%s' % (self.id, _slugify(str(label)))
+        return 'R%04d_%s' % (self.id, _slugify(str(self)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -178,9 +165,8 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
         json_fields = [
-            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
-            'phenotips_user_id', 'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url',
-            'mme_contact_institution', 'guid'
+            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid'
         ]
 
 

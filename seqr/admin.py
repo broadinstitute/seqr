@@ -25,9 +25,9 @@ for model_class in [
 
     @admin.register(model_class)
     class SpecificModelAdmin(admin.ModelAdmin):
-        search_fields = [field.name for field in model_class._meta.get_fields() if field.name in set([
-            'guid', 'name', 'display_name', 'deprecated_project_id', 'family_id', 'individual_id', 'description'
-        ])]
+        search_fields = [field.name for field in model_class._meta.get_fields() if field.name in {
+            'guid', 'name', 'display_name', 'family_id', 'individual_id', 'description'
+        }]
         list_display = deepcopy(model_class._meta.json_fields if hasattr(model_class._meta, 'json_fields') else search_fields)
         if hasattr(model_class._meta, 'internal_json_fields'):
             list_display = model_class._meta.internal_json_fields + list_display
