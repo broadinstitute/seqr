@@ -88,7 +88,6 @@ RUN git clone -q https://github.com/macarthur-lab/seqr
 WORKDIR /seqr
 
 # install seqr dependencies
-RUN pip install -r deploy/deploy-requirements.txt
 RUN pip install -r requirements.txt
 
 ARG SEQR_SERVICE_PORT
