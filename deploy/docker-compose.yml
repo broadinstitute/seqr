@@ -44,24 +44,12 @@ services:
     image: gcr.io/seqr-project/kibana
     ports:
       - 5601:5601
+    environment:
+      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
+      - ELASTICSEARCH_SERVICE_PORT=9200
     depends_on:
       elasticsearch:
         condition: service_healthy
-
-  #mongo:
-  #  image: gcr.io/seqr-project/mongo
-  #  ports:
-  #    - 27017:27017
-  #  volumes:
-  #    - ./data/mongo:/data/db
-  #    - ./config/ /matchbox_deployment/config
-
-  #matchbox:
-  #  image: gcr.io/seqr-project/matchbox
-  #  ports:
-  #    - 9020:9020
-  #  depends_on:
-  #    - mongo
 
   #phenotips:
   #  image: gcr.io/seqr-project/phenotips
@@ -82,7 +70,6 @@ services:
 
     depends_on:
       - init-postgres
-      #- elasticsearch
+      - elasticsearch
       - redis
-      #- matchbox
       #- phenotips
