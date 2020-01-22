@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Icon, Popup } from 'semantic-ui-react'
+import { Icon, Popup, Table, Header } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
@@ -24,8 +24,8 @@ import {
   FAMILY_ANALYSIS_STATUS_LOOKUP,
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
-import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, ColoredComponent } from '../../StyledComponents'
+import { HorizontalSpacer } from '../../Spacers'
+import { ColoredComponent, NoBorderTable } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -34,32 +34,7 @@ import Family from '../family'
 
 const TagTitle = styled.span`
   font-weight: bolder;
-  margin-right: 5px;
-  vertical-align: top;
-`
-
-const InlineContainer = styled.div`
-  display: inline-block;
-  vertical-align: top;
-  
-  .form {
-    display: inline-block;
-  }
-`
-
-const NoteContainer = styled.div`
-  color: black;
-  white-space: normal;
-  display: inline-block;
-  max-width: calc(100% - 50px);
-  
-  > span {
-    display: flex;
-  }
-`
-
-const VariantLinkContainer = styled(InlineContainer)`
-  float: right;
+  color: #999;
 `
 
 const ColoredLink = ColoredComponent(NavLink)
@@ -145,16 +120,14 @@ const ShortcutTags = ({ variantTagNotes, dispatchUpdateFamilyVariantTags, family
   }
 
   return (
-    <InlineContainer>
-      <ReduxFormWrapper
-        onSubmit={onSubmit}
-        form={`editShorcutTags-${variantId}-${familyGuid}`}
-        initialValues={appliedShortcutTags}
-        closeOnSuccess={false}
-        submitOnChange
-        fields={shortcutTagFields}
-      />
-    </InlineContainer>
+    <ReduxFormWrapper
+      onSubmit={onSubmit}
+      form={`editShorcutTags-${variantId}-${familyGuid}`}
+      initialValues={appliedShortcutTags}
+      closeOnSuccess={false}
+      submitOnChange
+      fields={shortcutTagFields}
+    />
   )
 }
 
@@ -194,20 +167,24 @@ VariantTagField.propTypes = {
 
 const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) => {
   const values = { ...variantTagNotes, ...note }
-  return <TextFieldView
-    noModal
-    showInLine
-    isEditable
-    field="note"
-    modalId={family.familyGuid}
-    modalTitle={`${action} Variant Note for Family ${family.displayName}`}
-    additionalEditFields={VARIANT_NOTE_FIELDS}
-    initialValues={values}
-    idField={note ? 'noteGuid' : 'variantGuids'}
-    deleteConfirm="Are you sure you want to delete this note?"
-    textPopup={note && taggedByPopup(note, 'Note By')}
-    {...props}
-  />
+  return (
+    <div>
+      <TextFieldView
+        noModal
+        showInLine
+        isEditable
+        field="note"
+        modalId={family.familyGuid}
+        modalTitle={`${action} Variant Note for Family ${family.displayName}`}
+        additionalEditFields={VARIANT_NOTE_FIELDS}
+        initialValues={values}
+        idField={note ? 'noteGuid' : 'variantGuids'}
+        deleteConfirm="Are you sure you want to delete this note?"
+        textPopup={note && taggedByPopup(note, 'Note By')}
+        {...props}
+      />
+    </div>
+  )
 }
 
 VariantNoteField.propTypes = {
@@ -220,23 +197,21 @@ VariantNoteField.propTypes = {
 const VariantLink = (
   { variant, family },
 ) =>
-  <VariantLinkContainer>
-    <NavLink
-      to={variant.variantGuid || (variant[0] || {}).variantGuid ?
-        `/project/${family.projectGuid}/saved_variants/variant/${variant.length > 0 ? variant.map(sv => (sv || {}).variantGuid) : variant.variantGuid}` :
-        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
-      }
-      activeStyle={NO_DISPLAY}
-    >
-      <Popup
-        trigger={<Icon name="linkify" link />}
-        content={`Go to the page for this individual variant ${(Array.isArray(variant) ?
-          variant : [variant]).map(v => (v ? `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}` : 'variant')).join(', ')} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
-        position="right center"
-        wide
-      />
-    </NavLink>
-  </VariantLinkContainer>
+  <NavLink
+    to={variant.variantGuid || (variant[0] || {}).variantGuid ?
+      `/project/${family.projectGuid}/saved_variants/variant/${variant.length > 0 ? variant.map(sv => (sv || {}).variantGuid) : variant.variantGuid}` :
+      `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
+    }
+    activeStyle={NO_DISPLAY}
+  >
+    <Popup
+      trigger={<Icon name="linkify" link />}
+      content={`Go to the page for this individual variant ${(Array.isArray(variant) ?
+        variant : [variant]).map(v => (v ? `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}` : 'variant')).join(', ')} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
+      position="right center"
+      wide
+    />
+  </NavLink>
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -248,71 +223,78 @@ const FamilyVariantTags = (
     dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
 ) => (
   family ?
-    <div>
-      {!isCompoundHet &&
-      <InlineContainer>
-        <InlineHeader size="small">
-          Family<HorizontalSpacer width={5} />
-          <PopupWithModal
-            hoverable
-            style={FAMILY_POPUP_STYLE}
-            position="right center"
-            keepInViewPort
-            trigger={
-              <ColoredLink
-                to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
-                color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-              >
-                {family.displayName}
-              </ColoredLink>
-            }
-            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-          />
-        </InlineHeader>
-      </InlineContainer>}
-      <InlineContainer>
-        {isCompoundHet && <VerticalSpacer height={5} />}
-        <div>
-          <TagTitle>Tags:</TagTitle>
-          <HorizontalSpacer width={5} />
+    <NoBorderTable basic="very" compact="very" celled>
+      <Table.Body>
+        <Table.Row verticalAlign="top">
           {!isCompoundHet &&
+          <Table.Cell collapsing rowSpan={2}>
+            <Header size="small">
+              Family<HorizontalSpacer width={5} />
+              <PopupWithModal
+                hoverable
+                style={FAMILY_POPUP_STYLE}
+                position="right center"
+                keepInViewPort
+                trigger={
+                  <ColoredLink
+                    to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+                    color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+                  >
+                    {family.displayName}
+                  </ColoredLink>
+                }
+                content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
+              />
+            </Header>
+          </Table.Cell>}
+          <Table.Cell collapsing textAlign="right">
+            <TagTitle>Tags:</TagTitle>
+          </Table.Cell>
+          {!isCompoundHet &&
+          <Table.Cell collapsing>
             <ShortcutTags
               variantTagNotes={variantTagNotes}
               variantId={variantId}
               familyGuid={family.familyGuid}
               dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
-            />}
-          <VariantTagField
-            field="tags"
-            fieldName="Tags"
-            family={family}
-            variantTagNotes={variantTagNotes}
-            variantId={variantId}
-            tagOptions={projectTagTypes}
-            onSubmit={dispatchUpdateFamilyVariantTags}
-          />
-          <HorizontalSpacer width={5} />
-          {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
-          <span>
-            <TagTitle>Fxnl Data:</TagTitle>
+            />
+          </Table.Cell>}
+          <Table.Cell>
             <VariantTagField
-              field="functionalData"
-              fieldName="Fxnl Data"
+              field="tags"
+              fieldName="Tags"
               family={family}
               variantTagNotes={variantTagNotes}
               variantId={variantId}
-              tagOptions={projectFunctionalTagTypes}
-              editMetadata
-              onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
+              tagOptions={projectTagTypes}
+              onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-          </span>
-          }
-        </div>
-        {isCompoundHet && <VerticalSpacer height={5} />}
-        <div>
-          <TagTitle>Notes:</TagTitle>
-          <NoteContainer>
+            {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            <span>
+              <TagTitle>Fxnl Data:</TagTitle>
+              <VariantTagField
+                field="functionalData"
+                fieldName="Fxnl Data"
+                family={family}
+                variantTagNotes={variantTagNotes}
+                variantId={variantId}
+                tagOptions={projectFunctionalTagTypes}
+                editMetadata
+                onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
+              />
+            </span>
+            }
+          </Table.Cell>
+          <Table.Cell collapsing textAlign="right">
+            {(!Array.isArray(variant) || variantTagNotes) && <VariantLink variant={variant} family={family} />}
+          </Table.Cell>
+        </Table.Row>
+        <Table.Row verticalAlign="top" >
+          <Table.Cell collapsing textAlign="right">
+            <TagTitle>Notes:</TagTitle>
+          </Table.Cell>
+          <Table.Cell colSpan={isCompoundHet ? 2 : 3}>
             {((variantTagNotes || {}).notes || []).map(note =>
               <VariantNoteField
                 key={note.noteGuid}
@@ -334,12 +316,10 @@ const FamilyVariantTags = (
               action="Add"
               onSubmit={dispatchUpdateVariantNote}
             />
-          </NoteContainer>
-        </div>
-        {isCompoundHet && <VerticalSpacer height={5} />}
-      </InlineContainer>
-      {(!Array.isArray(variant) || variantTagNotes) && <VariantLink variant={variant} family={family} />}
-    </div> : null
+          </Table.Cell>
+        </Table.Row>
+      </Table.Body>
+    </NoBorderTable> : null
 )
 
 FamilyVariantTags.propTypes = {
