@@ -23,9 +23,9 @@ class DashboardPageTest(TestCase):
         self.assertSetEqual(
             set(response_json['projectsByGuid'].values()[0].keys()),
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
-             'isMmeEnabled', 'isPhenotipsEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids',
+             'isMmeEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids', 'projectGuid',
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
-             'numVariantTags', 'phenotipsUserId', 'projectGuid', }
+             'numVariantTags', }
         )
 
     def test_export_projects_table(self):

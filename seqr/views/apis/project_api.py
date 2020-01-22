@@ -373,7 +373,6 @@ def _create_project(name, description=None, genome_version=None, user=None):
         'name': name,
         'description': description,
         'created_by': user,
-        'deprecated_project_id': _slugify(name),
     }
     if genome_version:
         project_args['genome_version'] = genome_version
@@ -413,7 +412,6 @@ def _enable_phenotips_for_project(project):
     """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
     have edit permissions for patients in the project).
     """
-    project.is_phenotips_enabled = True
     project.phenotips_user_id = _slugify(project.name)
 
     # view-only user

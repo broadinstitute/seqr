@@ -175,7 +175,7 @@ class Command(BaseCommand):
         logger.info('Successfully updated {} variants'.format(len(es_variants)))
 
         # Update project and sample data
-        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
+        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38})
 
         reset_cached_search_results(project)
 

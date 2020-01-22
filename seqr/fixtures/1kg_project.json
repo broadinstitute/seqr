@@ -12,14 +12,12 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "1kg",
     "genome_version": "37",
 	"is_mme_enabled": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": "1kg"
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {
@@ -35,12 +33,10 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": ""
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {
@@ -56,13 +52,11 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": ""
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {

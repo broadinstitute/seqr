@@ -66,7 +66,7 @@ def _get_project_can_view_query(user, project_field_prefix=''):
 def _get_matching_projects(user, query):
     return _get_matching_objects(
         user, query, Project,
-        filter_fields=['deprecated_project_id', 'name'],
+        filter_fields=['name'],
         get_title=lambda p: p.name,
         get_href=lambda p: '/project/{}/project_page'.format(p.guid),
     )
