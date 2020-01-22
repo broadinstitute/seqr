@@ -125,10 +125,9 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),
             {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
-             'description', 'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus',
+             'description', 'analysisNotes', 'analysisSummary', 'analysisStatus', 'successStoryTypes', 'successStory',
              'pedigreeImage', 'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary',
-             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
-             'successStoryTypes', 'successStory'}
+             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst', }
         )
         self.assertSetEqual(
             set(response_json['individualsByGuid'].values()[0].keys()),
