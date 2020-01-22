@@ -14,7 +14,7 @@ BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.0.3
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
 
-SEQR_SERVICE_NODE_PORT: 30003   # after deployment, seqr will be accessible at http://$(minikube ip):$SEQR_SERVICE_NODE_PORT . Node port range starts at 30000
+SEQR_SERVICE_NODE_PORT: 30003
 
 GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
