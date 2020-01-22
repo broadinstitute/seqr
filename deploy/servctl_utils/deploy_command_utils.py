@@ -754,7 +754,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
         sleep_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+def delete_pod(component_label, settings, custom_yaml_filename=None):
     deployment_target = settings["DEPLOY_TO"]
 
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
@@ -766,7 +766,7 @@ def delete_pod(component_label, settings, async=False, custom_yaml_filename=None
             ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while is_pod_running(component_label, deployment_target) and not async:
+    while is_pod_running(component_label, deployment_target):
         time.sleep(5)
 
 
