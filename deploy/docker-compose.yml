@@ -63,6 +63,8 @@ services:
       - 8000:8000
 
     environment:
+      - SEQR_GIT_BRANCH=docker_compose_for_local_installs
+      - PYTHONPATH=/seqr
       - POSTGRES_SERVICE_HOSTNAME=postgres
       - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
       - PGHOST=postgres
