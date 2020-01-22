@@ -19,8 +19,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command:
-      psql -h postgres -U postgres -c "CREATE DATABASE seqrdb"
+    command: bash -c "
+      psql -h postgres -U postgres -c 'CREATE DATABASE seqrdb';
+      psql -h postgres -U postgres -c 'CREATE DATABASE reference_data_db'"
 
   redis:
     image: gcr.io/seqr-project/redis
