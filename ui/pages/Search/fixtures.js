@@ -36,7 +36,6 @@ export const STATE = {
       analysisNotes: 'added note',
       analysisStatus: 'Rcpc',
       analysisSummary: '',
-      causalInheritanceMode: 'unknown',
       description: '',
       displayName: '1',
       familyGuid: FAMILY_GUID,

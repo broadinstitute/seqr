@@ -209,14 +209,6 @@ class Family(ModelWithGUID):
         ('O', 'Other'),
     )
 
-    CAUSAL_INHERITANCE_MODE_CHOICES = (
-        ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
-        ('u', 'unknown'),
-        ('d', 'dominant'),
-        ('x', 'x-linked recessive'),
-        ('n', 'de novo'),
-    )
-
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
 
     # WARNING: family_id is unique within a project, but not necessarily unique globally.
@@ -240,8 +232,6 @@ class Family(ModelWithGUID):
 
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
-
-    causal_inheritance_mode = models.CharField(max_length=20, default='u', choices=CAUSAL_INHERITANCE_MODE_CHOICES)
 
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
@@ -274,7 +264,7 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
+            'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
         ]
         internal_json_fields = [
@@ -283,7 +273,7 @@ class Family(ModelWithGUID):
         ]
 
 
-# TODO should be an ArrayField directly on family once family fields have audit trail
+# TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/macarthur-lab/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
     family = models.ForeignKey(Family)
 
@@ -588,7 +578,7 @@ class VariantTag(ModelWithGUID):
 
 class VariantNote(ModelWithGUID):
     saved_variants = models.ManyToManyField('SavedVariant')
-    note = models.TextField(null=True, blank=True)
+    note = models.TextField(null=True, blank=True) # TODO should never be null
     submit_to_clinvar = models.BooleanField(default=False)
 
     # these are for context

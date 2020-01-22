@@ -143,7 +143,6 @@ export const STATE1 = {
       analysisNotes: 'added note',
       analysisStatus: 'Rcpc',
       analysisSummary: '',
-      causalInheritanceMode: 'unknown',
       description: '',
       displayName: '1',
       familyGuid: 'F011652_1',
