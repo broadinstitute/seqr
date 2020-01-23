@@ -73,7 +73,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      - SEQR_GIT_BRANCH=7ce6e4066fd7cf6d0bc2dda838c18a1818a9a73f
+      - SEQR_GIT_BRANCH=dev
       - PYTHONPATH=/seqr
       - STATIC_MEDIA_DIR=/seqr_static_files
       - POSTGRES_SERVICE_HOSTNAME=postgres
