@@ -799,6 +799,12 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   type: 'date',
   inline: true,
 }
+export const FLATTEN_COMPOUND_HET_TOGGLE_FIELD = {
+  name: 'flattenCompoundHet',
+  component: InlineToggle,
+  label: 'Unpair',
+  labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
+}
 
 export const PREDICTION_INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
@@ -862,8 +868,8 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+  { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
 ]
 
 // Users

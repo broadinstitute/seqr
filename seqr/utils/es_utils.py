@@ -8,6 +8,7 @@ import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
 import redis
+from itertools import combinations
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, REDIS_SERVICE_HOSTNAME
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
@@ -184,17 +185,19 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
         if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
             search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
 
-    # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-    pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
-    if search.get('annotations'):
-        es_search.filter_by_annotations(search['annotations'], pathogenicity_filter)
-    elif pathogenicity_filter:
-        es_search.filter(pathogenicity_filter)
-
     if search.get('freqs'):
         es_search.filter(_frequency_filter(search['freqs']))
 
-    es_search.filter_by_genotype(search.get('inheritance'), quality_filter=search.get('qualityFilter'))
+    # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
+    pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
+    if not search.get('annotations') and pathogenicity_filter:
+        es_search.filter(pathogenicity_filter)
+
+    # Filter by secondary annotations for compound hets only (not recessive)
+    es_search.filter_by_annot_and_genotype(
+        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+        pathogenicity_filter=pathogenicity_filter)
 
     if aggregate_by_gene:
         es_search.aggregate_by_gene()
@@ -259,6 +262,7 @@ class BaseEsSearch(object):
         self._index_searches = defaultdict(list)
         self._sort = None
         self._allowed_consequences = None
+        self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
         self._no_sample_filters = False
 
@@ -308,7 +312,7 @@ class BaseEsSearch(object):
         if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
 
-    def filter_by_genotype(self, inheritance, quality_filter=None):
+    def filter_by_annot_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity_filter=None):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -324,6 +328,15 @@ class BaseEsSearch(object):
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
+
+        annotations_secondary_search = None
+        if annotations_secondary:
+            annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
+            annotations_filter, _ = _annotations_filter(annotations)
+            annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
+            self._allowed_consequences_secondary = allowed_consequences_secondary
+        if annotations:
+            self.filter_by_annotations(annotations, pathogenicity_filter)
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
@@ -351,7 +364,7 @@ class BaseEsSearch(object):
                 )
 
             if compound_het_q and not has_previous_compound_hets:
-                compound_het_search = self._search.filter(compound_het_q)
+                compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
                 compound_het_search.aggs.bucket(
                     'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES+1
                 ).metric(
@@ -537,6 +550,7 @@ class EsSearch(BaseEsSearch):
         if compound_het_results or self.previous_search_results.get('grouped_results'):
             if compound_het_results:
                 compound_het_results = self._deduplicate_compound_het_results(compound_het_results)
+                compound_het_results = _sort_compound_hets(compound_het_results)
             return self._process_compound_hets(compound_het_results, variant_results, num_results)
         else:
             end_index = num_results * page
@@ -568,21 +582,25 @@ class EsSearch(BaseEsSearch):
             for family_guid, samples_by_id in self.samples_by_family_index[index_name].items()
         }
 
-        variants_by_gene = {}
+        allowed_consequences = self._allowed_consequences
+        allowed_consequences_secondary = self._allowed_consequences_secondary
+
+        compound_het_pairs_by_gene = {}
         for gene_agg in response.aggregations.genes.buckets:
             gene_variants = [self._parse_hit(hit) for hit in gene_agg['vars_by_gene']]
             gene_id = gene_agg['key']
 
-            if gene_id in variants_by_gene:
+            if gene_id in compound_het_pairs_by_gene:
                 continue
 
-            if self._allowed_consequences:
-                # Variants are returned if any transcripts have the filtered consequence, but to be compound het
-                # the filtered consequence needs to be present in at least one transcript in the gene of interest
+            # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+            # the filtered consequence needs to be present in at least one transcript in the gene of interest
+            if allowed_consequences:
                 gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                    variant['transcripts'][gene_id]
+                    transcript['majorConsequence'] in allowed_consequences + (allowed_consequences_secondary or [])
+                    for transcript in variant['transcripts'][gene_id]
                 )]
+
             if len(gene_variants) < 2:
                 continue
 
@@ -609,36 +627,56 @@ class EsSearch(BaseEsSearch):
                 else:
                     variant_ids = [variant['variantId'] for variant in gene_variants]
                     for gene in primary_genes:
-                        if variant_ids == [variant['variantId'] for variant in variants_by_gene.get(gene, [])]:
+                        if variant_ids == [compound_het_pair[0]['variantId'] for compound_het_pair in compound_het_pairs_by_gene.get(gene, [])] and \
+                                variant_ids == [compound_het_pair[1]['variantId'] for compound_het_pair in compound_het_pairs_by_gene.get(gene, [])]:
                             continue
 
-            family_variants = defaultdict(list)
+            family_compound_het_pairs = defaultdict(list)
             for variant in gene_variants:
                 for family_guid in variant['familyGuids']:
-                    family_variants[family_guid].append(variant)
+                    family_compound_het_pairs[family_guid].append(variant)
 
-            for family_guid, variants in family_variants.items():
-                for individual_guid in family_unaffected_individual_guids.get(family_guid, []):
+            for family_guid, variants in family_compound_het_pairs.items():
+                unaffected_individuals_num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
+                                                   for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
+
+                def _is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
-                    is_family_compound_het = any(
-                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in variants)
-                    if not is_family_compound_het:
-                        family_variants[family_guid] = []
-                        break
+                    for unaffected_individual_num_alts in unaffected_individuals_num_alts:
+                        is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1
+                                                      for variant_index in [variant_1_index, variant_2_index])
+                        if not is_valid_for_individual:
+                            return False
+                    return True
 
-            for variant in gene_variants:
-                variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
-                                          if len(family_variants[family_guid]) > 1]
+                valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
+                                      if _is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
+                compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
 
-            gene_variants = [variant for variant in gene_variants if variant['familyGuids']]
+                # remove compound hets pair that only satisfied secondary consequence
+                if allowed_consequences and allowed_consequences_secondary:
+                    compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if any([
+                        any(transcript['majorConsequence'] in allowed_consequences for transcript in
+                            variant['transcripts'][gene_id]) for variant in compound_het_pair])]
+                family_compound_het_pairs[family_guid] = compound_het_pairs
 
-            if gene_variants:
-                variants_by_gene[gene_id] = gene_variants
+            gene_compound_het_pairs = [ch_pair for ch_pairs in family_compound_het_pairs.values() for ch_pair in ch_pairs]
+            for compound_het_pair in gene_compound_het_pairs:
+                for variant in compound_het_pair:
+                    variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
+                                              if len(family_compound_het_pairs[family_guid]) > 0]
+            gene_compound_het_pairs = [compound_het_pair for compound_het_pair in gene_compound_het_pairs
+                                       if compound_het_pair[0]['familyGuids'] and compound_het_pair[1]['familyGuids']]
+            if gene_compound_het_pairs:
+                compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
 
-        total_compound_het_results = sum(len(variants) for variants in variants_by_gene.values())
+        total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
-        return [{k: v} for k, v in variants_by_gene.items()], total_compound_het_results
+        compound_het_results = []
+        for k, compound_het_pairs in compound_het_pairs_by_gene.items():
+            compound_het_results.extend([{k: compound_het_pair} for compound_het_pair in compound_het_pairs])
+        return compound_het_results, total_compound_het_results
 
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
@@ -726,6 +764,7 @@ class EsSearch(BaseEsSearch):
 
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
+
         if self._filtered_variant_ids:
             sorted_new_results = [
                 v for v in sorted_new_results if self._filtered_variant_ids.get(v['variantId']) == v['genomeVersion']
@@ -794,30 +833,43 @@ class EsSearch(BaseEsSearch):
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
         results = {}
-        for variant_group in compound_het_results:
-            gene = variant_group.keys()[0]
-            variants = variant_group[gene]
+        for gene_compound_het_pair in compound_het_results:
+            gene = gene_compound_het_pair.keys()[0]
+            compound_het_pair = gene_compound_het_pair[gene]
             if gene in results:
-                for variant in variants:
-                    existing_index = next(
-                        (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
-                    )
-                    if existing_index is not None:
-                        results[gene][existing_index]['genotypes'].update(variant['genotypes'])
-                        results[gene][existing_index]['familyGuids'] = sorted(
-                            results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                variant_ids = {variant['variantId'] for variant in compound_het_pair}
+                existing_index = next(
+                    (i for i, existing in enumerate(results[gene]) if
+                     {variant['variantId'] for variant in existing} == variant_ids), None,
+                )
+                if existing_index is not None:
+                    existing_compound_het_pair = results[gene][existing_index]
+
+                    def _update_existing_variant(existing_variant, variant):
+                        existing_variant['genotypes'].update(variant['genotypes'])
+                        existing_variant['familyGuids'] = sorted(
+                            existing_variant['familyGuids'] + variant['familyGuids']
                         )
-                        duplicates += 1
+                    if existing_compound_het_pair[0]['variantId'] == compound_het_pair[0]['variantId']:
+                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
+                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     else:
-                        results[gene].append(variant)
+                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[1])
+                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[0])
+                    duplicates += 1
+                else:
+                    results[gene].append(compound_het_pair)
             else:
-                results[gene] = variants
+                results[gene] = [compound_het_pair]
+
+        deduplicated_results = []
+        for gene, compound_het_pairs in results.items():
+            deduplicated_results += [{gene: ch_pair} for ch_pair in compound_het_pairs]
 
         self.previous_search_results['duplicate_doc_count'] = duplicates + self.previous_search_results.get('duplicate_doc_count', 0)
-
         self.previous_search_results['total_results'] -= duplicates
 
-        return [{k: v} for k, v in results.items()]
+        return deduplicated_results
 
     def _process_compound_hets(self, compound_het_results, variant_results, num_results):
         if not self.previous_search_results.get('grouped_results'):
@@ -828,22 +880,24 @@ class EsSearch(BaseEsSearch):
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = sum(len(variants.values()[0]) for variants in grouped_variants + self.previous_search_results['grouped_results'])
+        loaded_result_count = len(grouped_variants + self.previous_search_results['grouped_results'])
 
         # Get requested page of variants
-        flattened_variant_results = []
+        merged_variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
         for variants_group in grouped_variants:
             variants = variants_group.values()[0]
-            flattened_variant_results += variants
+
             if loaded_result_count != self.previous_search_results['total_results']:
                 self.previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
+                merged_variant_results.append(variants)
                 num_compound_hets += 1
             else:
+                merged_variant_results += variants
                 num_single_variants += 1
-            if len(flattened_variant_results) >= num_results:
+            if len(merged_variant_results) >= num_results:
                 break
 
         # Only save non-returned results separately if have not loaded all results
@@ -854,8 +908,7 @@ class EsSearch(BaseEsSearch):
         else:
             self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
             self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
-
-        return flattened_variant_results
+        return merged_variant_results
 
 
 class EsGeneAggSearch(BaseEsSearch):
@@ -1469,12 +1522,18 @@ def _sort_compound_hets(grouped_variants):
 def _get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
+    variant_count = 0
     for i, variants in enumerate(grouped_variants):
+        curr_variant = variants.values()[0]
         if skipped < start_index:
-            skipped += len(variants.values()[0])
+            skipped += 1
         else:
-            variant_results += variants.values()[0]
-        if len(variant_results) + skipped >= end_index:
+            if len(curr_variant) == 1:
+                variant_results += curr_variant
+            else:
+                variant_results.append(curr_variant)
+            variant_count += 1
+        if variant_count + skipped >= end_index:
             return variant_results
     return None
 

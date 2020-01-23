@@ -67,3 +67,4 @@ def _retrieve_saved_variants_json(project, variant_tuples):
 def _update_saved_variant_json(saved_variant, saved_variant_json):
     saved_variant.saved_variant_json = saved_variant_json
     saved_variant.save()
+

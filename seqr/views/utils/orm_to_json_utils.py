@@ -14,7 +14,7 @@ from django.db.models.fields.files import ImageFieldFile
 from guardian.shortcuts import get_objects_for_group
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantFunctionalData, LocusList
+from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, LocusList
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
@@ -43,6 +43,8 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
     if additional_model_fields:
         fields += additional_model_fields
 
+    if 'created_by' in fields:
+        prefetch_related_objects(models, 'created_by')
     for nested_field in nested_fields or []:
         if not nested_field.get('value'):
             prefetch_related_objects(models, '__'.join(nested_field['fields'][:-1]))
@@ -355,22 +357,14 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False):
+def get_json_for_saved_variants(saved_variants, add_details=False):
     """Returns a JSON representation of the given variant.
-
     Args:
-        saved_variant (object): Django model for the SavedVariant.
+        saved_variants (object): Django model for the SavedVariant.
     Returns:
         dict: json object
     """
     def _process_result(variant_json, saved_variant):
-        if add_tags:
-            variant_json.update({
-                'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
-                'functionalData': [get_json_for_variant_functional_data(tag) for tag in
-                                   saved_variant.variantfunctionaldata_set.all()],
-                'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
-            })
         if add_details:
             variant_json.update(saved_variant.saved_variant_json)
         if 'variantId' not in variant_json:
@@ -380,9 +374,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
         return variant_json
 
     prefetch_related_objects(saved_variants, 'family')
-    if add_tags:
-        prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
-                                 'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
 
     return _get_json_for_models(saved_variants, guid_key='variantGuid', process_result=_process_result)
 
@@ -399,37 +390,80 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_variant_tag(tag):
-    """Returns a JSON representation of the given variant tag.
+def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
+
+    variants_by_guid = {
+        variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
+        for variant in get_json_for_saved_variants(saved_variants, **kwargs)
+    }
+
+    tags = get_json_for_variant_tags(VariantTag.objects.filter(saved_variants__in=saved_variants).distinct())
+    for tag in tags:
+        for variant_guid in tag['variantGuids']:
+            if variants_by_guid.get(variant_guid):
+                variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
+
+    functional_data = get_json_for_variant_functional_data_tags(
+        VariantFunctionalData.objects.filter(saved_variants__in=saved_variants).distinct()
+    )
+    for tag in functional_data:
+        for variant_guid in tag['variantGuids']:
+            if variants_by_guid.get(variant_guid):
+                variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
+
+    notes = get_json_for_variant_notes(VariantNote.objects.filter(saved_variants__in=saved_variants).distinct())
+    for note in notes:
+        for variant_guid in note['variantGuids']:
+            if variants_by_guid.get(variant_guid):
+                variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
+
+    return {
+        'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
+        'variantNotesByGuid': {note['noteGuid']: note for note in notes},
+        'variantFunctionalDataByGuid': {tag['tagGuid']: tag for tag in functional_data},
+        'savedVariantsByGuid': {variant_guid: variant for variant_guid, variant in variants_by_guid.items() if
+                                variant['noteGuids'] or variant['tagGuids']},
+    }
+
+
+def get_json_for_variant_tags(tags):
+    """Returns a JSON representation of the given variant tags.
 
     Args:
-        tag (object): Django model for the VariantTag.
+        tag (object): Django models for the VariantTag.
     Returns:
-        dict: json object
+        dict: json objects
     """
+    def _process_result(tag_json, tag):
+        tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
+
+    prefetch_related_objects(tags, 'saved_variants')
 
     nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
-    return _get_json_for_model(tag, nested_fields=nested_fields, guid_key='tagGuid')
+    return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)
 
 
-def get_json_for_variant_functional_data(tag):
-    """Returns a JSON representation of the given variant tag.
+def get_json_for_variant_functional_data_tags(tags):
+    """Returns a JSON representation of the given variant tags.
 
     Args:
-        tag (object): Django model for the VariantFunctionalData.
+        tags (object): Django models for the VariantFunctionalData.
     Returns:
-        dict: json object
+        dict: json objects
     """
 
-    result = _get_json_for_model(tag, guid_key='tagGuid')
+    def _process_result(tag_json, tag):
+        display_data = json.loads(tag.get_functional_data_tag_display())
+        tag_json.update({
+            'variantGuids': [variant.guid for variant in tag.saved_variants.all()],
+            'name': tag_json.pop('functionalDataTag'),
+            'metadataTitle': display_data.get('metadata_title'),
+            'color': display_data['color'],
+        })
 
-    display_data = json.loads(tag.get_functional_data_tag_display())
-    result.update({
-        'name': result.pop('functionalDataTag'),
-        'metadataTitle': display_data.get('metadata_title'),
-        'color': display_data['color'],
-    })
-    return result
+    prefetch_related_objects(tags, 'saved_variants')
+
+    return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
 
 def get_json_for_variant_functional_data_tag_types():
@@ -445,7 +479,25 @@ def get_json_for_variant_functional_data_tag_types():
     return functional_tag_types
 
 
-def get_json_for_variant_note(note):
+def get_json_for_variant_notes(notes, add_variant_guids=True):
+    """Returns a JSON representation of the given variant notes.
+
+    Args:
+        notes (object): Django model for the VariantNote.
+    Returns:
+        dict: json objects
+    """
+    def _process_result(note_json, note):
+        if add_variant_guids:
+            note_json['variantGuids'] = [variant.guid for variant in note.saved_variants.all()]
+
+    if add_variant_guids:
+        prefetch_related_objects(notes, 'saved_variants')
+
+    return _get_json_for_models(notes, guid_key='noteGuid', process_result=_process_result)
+
+
+def get_json_for_variant_note(note, **kwargs):
     """Returns a JSON representation of the given variant note.
 
     Args:
@@ -454,7 +506,7 @@ def get_json_for_variant_note(note):
         dict: json object
     """
 
-    return _get_json_for_model(note, guid_key='noteGuid')
+    return _get_json_for_model(note, get_json_for_models=get_json_for_variant_notes, **kwargs)
 
 
 def get_json_for_gene_notes(notes, user):

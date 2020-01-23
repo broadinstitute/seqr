@@ -550,7 +550,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
-      functionalData: [],
+      functionalDataGuids: [],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -597,21 +597,13 @@ export const STATE_WITH_2_FAMILIES = {
         lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
         majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
       }]},
-      notes: [{
-        dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
-        submitToClinvar: true, user: "hsnow@broadinstitute.org"
-      }],
+      noteGuids: ['VN0727076_116042722_r0390_1000'],
       origAltAlleles: ["T"],
       pos: 45919065,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TTTC",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        },
-      ],
-      variantId: "SV0000004_116042722_r0390_1000",
+      tagGuids: ['VT1726942_1248367227_r0390_101'],
+      variantId: "22-45919065-TTTC-T",
       variantGuid: "SV0000004_116042722_r0390_1000",
       xpos: 22045919065,
     },
@@ -645,12 +637,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "1",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
-      functionalData: [
-        { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
-          metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org" },
-        { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
-          name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
-      ],
+      functionalDataGuids: ['FD_248367227_r0390_100_1', 'FD_248367227_r0390_100_2'],
       genes: [
         {
           constraints: {
@@ -703,29 +690,15 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      notes: [],
+      noteGuids: [],
       origAltAlleles: ["T"],
       mainTranscriptId: 'ENST00000262738',
       transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        },
-        {
-          category: "CMG Discovery Tags",
-          color: "#44AA60",
-          dateSaved: "2018-03-23T19:59:12.262Z",
-          name: "Tier 1 - Phenotype not delineated",
-          searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
-          tagGuid: "VT1708635_1248367227_r0390_100",
-          user: "hsnow@broadinstitute.org",
-        },
-      ],
-      variantId: "SV0000002_1248367227_r0390_100",
+      tagGuids: ["VT1726942_1248367227_r0390_100", "VT1708635_1248367227_r0390_100"],
+      variantId: "1-248367227-TC-T",
       variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
@@ -759,7 +732,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
-      functionalData: [],
+      functionalDataGuids: [],
       genes: [
         {
           constraints: {
@@ -814,21 +787,150 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       mainTranscriptId: null,
       transcripts: {},
-      notes: [],
+      noteGuids: [],
       origAltAlleles: ["T"],
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "C",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        }
-      ],
-      variantId: "SV0000003_2246859832_r0390_100",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367227-C-T",
       variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
+    SV0000005_2246859833_r0390_100: {
+      alt: "T",
+      annotation: {
+        cadd_phred: "27.2",
+        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
+        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
+        vepAnnotations: [
+          {
+            aminoAcids: "P/X",
+            canonical: "YES",
+            cdnaPosition: "897",
+            cdsPosition: "859",
+            codons: "Ccc/cc",
+            consequence: "frameshift_variant",
+            hgvsc: "ENST00000456743.1:c.862delC",
+            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+            isChosenTranscript: true,
+            transcriptId: "ENST00000456743",
+          }
+        ],
+        vepConsequence: "frameshift_variant",
+        vepGroup: "frameshift",
+        worstVepAnnotation: {
+          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
+        }
+      },
+      chrom: "22",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuids: ["F011652_2"],
+      functionalDataGuids: [],
+      genes: [
+        {
+          constraints: {
+            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+          },
+          diseaseDbPhenotypes: [],
+          diseaseGeneLists: [],
+          geneId: "ENSG00000228198",
+          symbol: "OR2M3",
+        }
+      ],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      hgmd: {accession: null, class: null},
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      mainTranscriptId: null,
+      transcripts: {},
+      noteGuids: [],
+      origAltAlleles: ["T"],
+      pos: 248367228,
+      projectGuid: 'R0237_1000_genomes_demo',
+      ref: "C",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367228-C-T",
+      variantGuid: "SV0000005_2246859833_r0390_100",
+      xpos: 22046859833,
+    },
+  },
+  variantTagsByGuid: {
+    VT1726942_1248367227_r0390_101: {
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_101", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000004_116042722_r0390_1000']
+    },
+    VT1726942_1248367227_r0390_100:{
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+    VT1708635_1248367227_r0390_100: {
+      category: "CMG Discovery Tags",
+      color: "#44AA60",
+      dateSaved: "2018-03-23T19:59:12.262Z",
+      name: "Tier 1 - Phenotype not delineated",
+      searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
+      tagGuid: "VT1708635_1248367227_r0390_100",
+      user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+    VT1726942_1248367227_r0390_102: {
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
+      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_102", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000003_2246859832_r0390_100', 'SV0000005_2246859833_r0390_100'],
+    }
+  },
+  variantNotesByGuid: {VN0727076_116042722_r0390_1000: {
+    dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
+    submitToClinvar: true, user: "hsnow@broadinstitute.org", variantGuids: ['SV0000004_116042722_r0390_1000'],
+  }},
+  variantFunctionalDataByGuid: {
+    FD_248367227_r0390_100_1: { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
+      metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org",
+      tagGuid: 'FD_248367227_r0390_100_1', variantGuids: ['SV0000002_1248367227_r0390_100'], },
+    FD_248367227_r0390_100_2: { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2",
+      metadataTitle: "LOD Score", name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org",
+      tagGuid: 'FD_248367227_r0390_100_2', variantGuids: ['SV0000002_1248367227_r0390_100'] },
   },
   mmeSubmissionsByGuid: {
     MS021475_na19675_1: {

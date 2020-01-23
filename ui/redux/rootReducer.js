@@ -262,7 +262,6 @@ export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
   }
 }
 
-
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -277,14 +276,14 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  if (values.variantGuid) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+  if (values.variantGuids) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuids}/note`, 'noteGuid')
   }
   return updateSavedVariant(values)
 }
 
-export const updateVariantTags = (values) => {
-  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+export const updateVariantTags = (values, tagType = 'tags') => {
+  const urlPath = values.variantGuids ? `${values.variantGuids}/update_${tagType}` : 'create'
   return updateSavedVariant(values, urlPath)
 }
 
@@ -347,6 +346,9 @@ const rootReducer = combineReducers(Object.assign({
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
   savedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
+  variantTagsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantTagsByGuid'),
+  variantNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantNotesByGuid'),
+  variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),

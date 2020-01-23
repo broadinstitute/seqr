@@ -49,6 +49,7 @@ const PedigreeIcon = (props) => {
         {props.popupContent}
       </div>
     }
+    header={props.popupHeader}
     size="small"
     wide="very"
     position="top center"
@@ -60,6 +61,7 @@ const PedigreeIcon = (props) => {
 PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,
   affected: PropTypes.string.isRequired,
+  popupHeader: PropTypes.string,
   popupContent: PropTypes.node,
   label: PropTypes.any,
 }

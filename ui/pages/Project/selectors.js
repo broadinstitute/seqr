@@ -18,6 +18,7 @@ import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getProjectGuid, getAllUsers, getHasActiveVariantSampleByFamily,
+  getVariantTagsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -94,12 +95,14 @@ export const getIndividualTaggedVariants = createSelector(
   getSavedVariantsByGuid,
   getIndividualsByGuid,
   getGenesById,
+  getVariantTagsByGuid,
   (state, props) => props.individualGuid,
-  (savedVariants, individualsByGuid, genesById, individualGuid) => {
+  (savedVariants, individualsByGuid, genesById, variantTagsByGuid, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
     return Object.values(savedVariants).filter(
-      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => ({
+      o => o.familyGuids.includes(familyGuid) && o.tagGuids.length).map(variant => ({
       ...variant,
+      tags: variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid]),
       variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
       ...variant.genotypes[individualGuid],
       ...genesById[getVariantMainGeneId(variant)],
