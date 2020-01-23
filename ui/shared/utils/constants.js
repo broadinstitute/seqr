@@ -857,6 +857,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'cadd', getVal: variant => variant.predictions.cadd },
   { header: 'revel', getVal: variant => variant.predictions.revel },
   { header: 'eigen', getVal: variant => variant.predictions.eigen },
+  { header: 'splice_ai', getVal: variant => variant.predictions.splice_ai },
   { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
   { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
