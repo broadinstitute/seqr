@@ -153,7 +153,7 @@ def _search_external_matches(nodes_to_query, patient_data):
             logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
             invalid_results = []
             for result in node_results:
-                if _is_valid_external_result(result):
+                if _is_valid_external_result(result, patient_data):
                     external_results.append(result)
                 else:
                     invalid_results.append(result)
@@ -169,13 +169,19 @@ def _search_external_matches(nodes_to_query, patient_data):
     return external_results
 
 
-def _is_valid_external_result(result):
-    if not (result.get('patient', {}).get('features') or result.get('patient', {}).get('genomicFeatures')):
+def _is_valid_external_result(result, patient_data):
+    result_genomic_features = result.get('patient', {}).get('genomicFeatures', [])
+    result_features = result['patient'].get('features', [])
+    if not (result_genomic_features or result_features):
         return False
-    if any((not feature.get('id')) for feature in result['patient'].get('features', [])):
+    if any((not feature.get('id')) for feature in result_features):
         return False
-    if any((not feature.get('gene', {}).get('id')) for feature in result['patient'].get('genomicFeatures', [])):
+    if any((not feature.get('gene', {}).get('id')) for feature in result_genomic_features):
         return False
+    submission_genomic_features = patient_data['patient'].get('genomicFeatures')
+    if submission_genomic_features:
+        # TODO
+        allowed_gene_ids = []
     return True
 
 

@@ -65,6 +65,11 @@ PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
 INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+INVALID_NEW_MATCH_JSON['patient']['id'] = '123'
+
+MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
+MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 
 
 class EmailException(Exception):
@@ -185,7 +190,7 @@ class MatchmakerAPITest(TestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
