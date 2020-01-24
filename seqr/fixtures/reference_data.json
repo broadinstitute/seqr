@@ -1072,6 +1072,7 @@
     "pk": 36614,
     "fields": {
         "gene": 2,
+        "gene_names": "POR4F29;TTN",
         "uniprot_acc": "",
         "uniprot_id": "",
         "entrez_gene_id": "503538",
@@ -1108,7 +1109,8 @@
     "model": "reference_data.dbnsfpgene",
     "pk": 36615,
     "fields": {
-        "gene": 3,
+        "gene": 7,
+        "gene_names": "OR4F29;RNU6",
         "uniprot_acc": "Q9NQ94",
         "uniprot_id": "A1CF_HUMAN",
         "entrez_gene_id": "29974",
