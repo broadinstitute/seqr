@@ -30,8 +30,11 @@ mkdir -p /seqr_static_files/generated_files
 # launch django dev server in background
 cd /seqr
 
-# git pull
-git checkout $SEQR_GIT_BRANCH
+if [ $SEQR_GIT_BRANCH ]; then
+  git pull
+  git checkout $SEQR_GIT_BRANCH
+fi
+
 pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
