@@ -60,7 +60,7 @@ class ExternalAPITest(TestCase):
             'patient': {
                 'id': '12345',
                 'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'OR4F5'}}],
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'AXL'}}],
                 'features': [{'id': 'HP:0003273'}, {'id': 'HP:0001252'}]
             }}
 
