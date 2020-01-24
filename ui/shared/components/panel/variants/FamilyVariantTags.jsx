@@ -48,8 +48,6 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
-
 const NO_DISPLAY = { display: 'none' }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
@@ -230,7 +228,7 @@ const FamilyVariantTags = (
               Family<HorizontalSpacer width={5} />
               <PopupWithModal
                 hoverable
-                style={FAMILY_POPUP_STYLE}
+                wide="very"
                 position="right center"
                 keepInViewPort
                 trigger={
