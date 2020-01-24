@@ -90,7 +90,7 @@ def parse_mme_features(features, hpo_terms_by_id):
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
     for gene_feature in (genomic_features or []):
-        gene_id = _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids)
+        gene_id = _get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)[0]
         if gene_id:
             gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
@@ -105,12 +105,13 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     return gene_variants
 
 
-def _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids):
+def _get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
     gene_id = gene_feature['gene']['id']
     if not gene_id.startswith('ENSG'):
         gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
-        gene_id = gene_ids[0] if gene_ids else None
-    return gene_id
+    else:
+        gene_ids = [gene_id]
+    return gene_ids
 
 
 def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
@@ -158,7 +159,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
 
     if genomic_features:
         for feature in genomic_features:
-            feature['gene_id'] = _get_gene_id_for_feature(feature, gene_symbols_to_ids)
+            feature['gene_ids'] = _get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
             'query_ids': genes_by_id.keys(),
             'filter_key': 'genomic_features',
@@ -232,7 +233,9 @@ def _get_genotype_score(genomic_features, match):
 
     score = 0
     for feature in genomic_features:
-        feature_gene_matches = match_features_by_gene_id[feature['gene_id']]
+        feature_gene_matches = []
+        for gene_id in feature['gene_ids']:
+            feature_gene_matches += match_features_by_gene_id[gene_id]
         if feature_gene_matches:
             score += 0.7
             if feature.get('zygosty') and any(
