@@ -31,8 +31,8 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
-             'isPhenotipsEnabled', 'phenotipsUserId', 'lastAccessedDate',  'mmeContactUrl', 'genomeVersion',
-             'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', }
+             'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
+             'isMmeEnabled', }
         )
 
     def test_json_for_family(self):
@@ -41,8 +41,8 @@ class JSONUtilsTest(TestCase):
 
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-            'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus', 'pedigreeImage', 'createdDate',
-            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst'
+            'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
+            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds',
         }
         self.assertSetEqual(set(json.keys()), family_fields)
 
@@ -61,7 +61,7 @@ class JSONUtilsTest(TestCase):
         individual_fields = {
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-            'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
+            'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
             'popPlatformFilters', 'filterFlags', 'population',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
@@ -81,7 +81,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-             'datasetFilePath', 'loadedDate', 'datasetType', 'elasticsearchIndex'}
+             'datasetFilePath', 'loadedDate', 'datasetType'}
         )
 
     def test_json_for_saved_variant(self):
@@ -130,8 +130,7 @@ class JSONUtilsTest(TestCase):
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
         tag_fields = {
-            'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy',
-            'variantGuids'
+            'tagGuid', 'name', 'category', 'color', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids'
         }
         self.assertSetEqual(set(json['variantTagsByGuid'].values()[0].keys()), tag_fields)
         for tag_guid in v1_tag_guids:
@@ -159,8 +158,7 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_variant_tags(tags)[0]
 
         fields = {
-            'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy',
-            'variantGuids'
+            'tagGuid', 'name', 'category', 'color', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids'
         }
         self.assertSetEqual(set(json.keys()), fields)
 

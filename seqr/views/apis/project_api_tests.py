@@ -111,8 +111,8 @@ class ProjectAPITest(TestCase):
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
-             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'genomeVersion', 'discoveryTags',
-             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl'}
+             'lastModifiedDate', 'genomeVersion', 'discoveryTags', 'mmeContactInstitution', 'mmeContactUrl',
+             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', }
         )
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],
@@ -125,23 +125,22 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),
             {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
-             'description', 'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus',
+             'description', 'analysisNotes', 'analysisSummary', 'analysisStatus', 'successStoryTypes', 'successStory',
              'pedigreeImage', 'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary',
-             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
-             'successStoryTypes', 'successStory'}
+             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst', }
         )
         self.assertSetEqual(
             set(response_json['individualsByGuid'].values()[0].keys()),
             {'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuids', 'caseReviewStatusLastModifiedBy',
              'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-             'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus',
+             'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus', 'paternalGuid', 'maternalGuid',
              'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-             'paternalGuid', 'maternalGuid', 'mmeSubmissionGuid', 'popPlatformFilters', 'filterFlags', 'population'}
+             'mmeSubmissionGuid', 'popPlatformFilters', 'filterFlags', 'population'}
         )
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'isActive', 'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
+             'isActive', 'loadedDate', 'datasetFilePath'}
         )
         self.assertSetEqual(
             set(response_json['locusListsByGuid'].values()[0].keys()),

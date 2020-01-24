@@ -253,7 +253,6 @@ def update_individual_hpo_terms(request, individual_guid):
     return create_json_response({
         individual.guid: {
             'phenotipsData': patient_json,
-            'phenotipsPatientId': phenotips_patient_id,
             'phenotipsEid': phenotips_eid
         }
     })
