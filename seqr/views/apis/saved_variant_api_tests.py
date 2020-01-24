@@ -108,8 +108,7 @@ class ProjectAPITest(TransactionTestCase):
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(
             set(tag.keys()),
-            {'tagGuid', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids',
-             'category', 'color', 'name'}
+            {'tagGuid', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids', 'category', 'color', 'name'}
         )
 
         # filter by family

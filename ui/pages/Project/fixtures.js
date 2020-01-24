@@ -129,7 +129,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005221',
       sampleGuids: [],
       sex: 'F',
     },
@@ -218,7 +217,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005219',
       sampleGuids: [],
       sex: 'M',
     },
@@ -284,7 +282,6 @@ export const STATE1 = {
           server: 'monarchinitiative.org',
         },
       },
-      phenotipsPatientId: 'P0005220',
       sampleGuids: [],
       sex: 'M',
     },
@@ -429,7 +426,6 @@ export const STATE_WITH_2_FAMILIES = {
       datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
       datasetName: null,
       datasetType: "VARIANTS",
-      elasticsearchIndex: "cmg_walsh_wes_sep2017",
       individualGuid: "I021476_na19678_2",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: "R0237_1000_genomes_demo",
@@ -891,12 +887,12 @@ export const STATE_WITH_2_FAMILIES = {
   variantTagsByGuid: {
     VT1726942_1248367227_r0390_101: {
       category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_101", user: "hsnow@broadinstitute.org",
+      tagGuid: "VT1726942_1248367227_r0390_101", user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000004_116042722_r0390_1000']
     },
     VT1726942_1248367227_r0390_100:{
       category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+      tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000002_1248367227_r0390_100'],
     },
     VT1708635_1248367227_r0390_100: {
@@ -904,14 +900,14 @@ export const STATE_WITH_2_FAMILIES = {
       color: "#44AA60",
       dateSaved: "2018-03-23T19:59:12.262Z",
       name: "Tier 1 - Phenotype not delineated",
-      searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
+      searchHash: "c2edbeae",
       tagGuid: "VT1708635_1248367227_r0390_100",
       user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000002_1248367227_r0390_100'],
     },
     VT1726942_1248367227_r0390_102: {
       category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
-      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_102", user: "hsnow@broadinstitute.org",
+      tagGuid: "VT1726942_1248367227_r0390_102", user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000003_2246859832_r0390_100', 'SV0000005_2246859833_r0390_100'],
     }
   },

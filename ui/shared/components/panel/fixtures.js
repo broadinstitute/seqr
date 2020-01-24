@@ -267,7 +267,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005221',
       sex: 'F',
       sampleGuids: [],
     },
@@ -356,7 +355,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005219',
       sex: 'M',
       sampleGuids: [],
     },
@@ -422,7 +420,6 @@ export const STATE1 = {
           server: 'monarchinitiative.org',
         },
       },
-      phenotipsPatientId: 'P0005220',
       sex: 'M',
       sampleGuids: [],
     },
@@ -470,7 +467,7 @@ export const STATE1 = {
   variantTagsByGuid: {
     VT1726942_1248367227_r0390_100: {
       category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+      tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000002_1248367227_r0390_100'],
     },
     VT1708635_1248367227_r0390_100: {
@@ -478,7 +475,7 @@ export const STATE1 = {
       color: "#44AA60",
       dateSaved: "2018-03-23T19:59:12.262Z",
       name: "Tier 1 - Phenotype not delineated",
-      searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
+      searchHash: "c2edbeae",
       tagGuid: "VT1708635_1248367227_r0390_100",
       user: "hsnow@broadinstitute.org",
       variantGuids: ['SV0000002_1248367227_r0390_100'],

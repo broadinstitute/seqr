@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
-from seqr.models import Sample, Project
+from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_alignment_table_handler, update_individual_alignment_sample
 from seqr.views.utils.test_utils import _check_login
 
@@ -135,10 +135,6 @@ class DatasetAPITest(TransactionTestCase):
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
         updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
         self.assertSetEqual(
-            {INDEX_NAME},
-            {sample['elasticsearchIndex'] for sample in updated_samples}
-        )
-        self.assertSetEqual(
             {'test_data.vds'},
             {sample['datasetFilePath'] for sample in
              [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample_guid]]}
@@ -158,6 +154,10 @@ class DatasetAPITest(TransactionTestCase):
         today = datetime.now().strftime('%Y-%m-%d')
         self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
         self.assertTrue(response_json['samplesByGuid'][new_sample_guid]['loadedDate'].startswith(today))
+
+        updated_sample_models = Sample.objects.filter(guid__in=[sample['sampleGuid'] for sample in updated_samples])
+        self.assertEqual(len(updated_sample_models), 3)
+        self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_alignment_table_handler, args=[PROJECT_GUID])
@@ -239,7 +239,7 @@ class DatasetAPITest(TransactionTestCase):
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
             'createdDate': '2017-02-05T06:42:55.397Z', 'sampleType': 'WES', 'sampleId': 'NA19675_new', 'isActive': True,
             'datasetFilePath': '/readviz/NA19675_new.cram', 'loadedDate': '2017-02-05T06:42:55.397Z',
-            'datasetType': 'ALIGN', 'elasticsearchIndex': None}}})
+            'datasetType': 'ALIGN'}}})
 
         new_sample_url = reverse(update_individual_alignment_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
@@ -256,7 +256,7 @@ class DatasetAPITest(TransactionTestCase):
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'createdDate': mock.ANY, 'sampleType': 'WGS', 'sampleId': 'NA19679', 'isActive': True,
             'datasetFilePath': 'gs://readviz/NA19679.bam', 'loadedDate': mock.ANY,
-            'datasetType': 'ALIGN', 'elasticsearchIndex': None})
+            'datasetType': 'ALIGN'})
         today = datetime.now().strftime('%Y-%m-%d')
         self.assertTrue(response_json['samplesByGuid'][sample_guid]['loadedDate'].startswith(today))
         self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
