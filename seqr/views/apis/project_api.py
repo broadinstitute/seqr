@@ -314,7 +314,6 @@ def _get_json_for_variant_tag_types(project):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'is_built_in': True,
         'numTags': num_tags,
         'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in note_counts_by_family},
     }

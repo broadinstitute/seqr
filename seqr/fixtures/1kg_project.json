@@ -1060,8 +1060,7 @@
         "category": "CMG Discovery Tags",
         "description": "Gene not previously associated with a Mendelian condition",
         "color": "#03441E",
-        "order": 1.0,
-        "is_built_in": true
+        "order": 1.0
     }
 },
 {
@@ -1077,8 +1076,7 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene of interest for further review.",
         "color": "#668FE3",
-        "order": 11.0,
-        "is_built_in": true
+        "order": 11.0
     }
 },
 {
@@ -1094,8 +1092,7 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
         "color": "#555555",
-        "order": 15.0,
-        "is_built_in": true
+        "order": 15.0
     }
 },
 {
@@ -1335,7 +1332,7 @@
         "saved_variants": [2],
         "note": "test n\u00f8te",
         "submit_to_clinvar": false,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1348,7 +1345,7 @@
         "last_modified_date": "2018-02-23T17:32:30.373Z",
         "saved_variants": [1],
         "variant_tag_type": 2,
-        "search_parameters": "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/125897d6/results"
+        "search_hash": "125897d6"
     }
 },
 {
@@ -1361,7 +1358,7 @@
         "last_modified_date": "2018-05-25T21:01:33.193Z",
         "saved_variants": [2],
         "variant_tag_type": 2,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1374,7 +1371,7 @@
         "last_modified_date": "2018-05-29T16:32:51.449Z",
         "saved_variants": [1],
         "variant_tag_type": 1,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1388,7 +1385,7 @@
         "saved_variants": [1],
         "functional_data_tag": "Biochemical Function",
         "metadata": "A note",
-        "search_parameters": ""
+        "search_hash": ""
     }
 },
 {
@@ -1402,7 +1399,7 @@
         "saved_variants": [1],
         "functional_data_tag": "Genome-wide Linkage",
         "metadata": "2",
-        "search_parameters": ""
+        "search_hash": ""
     }
 },
 {
@@ -1440,8 +1437,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.341Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000223972",
-    "description": ""
+    "gene_id": "ENSG00000223972"
   }
 },
 {
@@ -1453,8 +1449,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.347Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000227232",
-    "description": ""
+    "gene_id": "ENSG00000227232"
   }
 },
 {
@@ -1466,8 +1461,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.353Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000243485",
-    "description": ""
+    "gene_id": "ENSG00000243485"
   }
 },
 {
@@ -1482,8 +1476,7 @@
     "genome_version": "37",
     "chrom": "1",
     "start": 248367200,
-    "end": 248367300,
-    "description": null
+    "end": 248367300
   }
 },
 {
@@ -1498,8 +1491,7 @@
     "genome_version": "37",
     "chrom": "3",
     "start": 25,
-    "end": 3000,
-    "description": null
+    "end": 3000
   }
 },
 {

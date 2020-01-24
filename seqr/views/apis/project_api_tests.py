@@ -133,14 +133,14 @@ class ProjectAPITest(TestCase):
             set(response_json['individualsByGuid'].values()[0].keys()),
             {'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuids', 'caseReviewStatusLastModifiedBy',
              'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-             'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus',
+             'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus', 'paternalGuid', 'maternalGuid',
              'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-             'paternalGuid', 'maternalGuid', 'mmeSubmissionGuid', 'popPlatformFilters', 'filterFlags', 'population'}
+             'mmeSubmissionGuid', 'popPlatformFilters', 'filterFlags', 'population'}
         )
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'isActive', 'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
+             'isActive', 'loadedDate', 'datasetFilePath'}
         )
         self.assertSetEqual(
             set(response_json['locusListsByGuid'].values()[0].keys()),
