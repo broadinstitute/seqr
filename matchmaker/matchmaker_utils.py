@@ -1,18 +1,19 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from django.db.models import prefetch_related_objects
+from django.db.models import prefetch_related_objects, Q
 
 from reference_data.models import HumanPhenotypeOntology
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
-from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
+from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols, get_filtered_gene_ids
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
 logger = logging.getLogger(__name__)
 
 
 def get_mme_genes_phenotypes_for_results(results, **kwargs):
-    return _get_mme_genes_phenotypes(results, _get_patient_features, _get_patient_genomic_features, **kwargs)
+    return _get_mme_genes_phenotypes(
+        results, _get_patient_features, _get_patient_genomic_features, include_matched_symbol_genes=True,  **kwargs)
 
 
 def get_mme_genes_phenotypes_for_submissions(submissions):
@@ -40,22 +41,44 @@ def _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, add
     genes = additional_genes if additional_genes else set()
     for result in results:
         hpo_ids.update({feature['id'] for feature in (get_features(result) or []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])})
+        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])
+                      if gene_feature.get('gene', {}).get('id')})
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
     gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
     return hpo_ids, gene_ids, gene_symols
 
 
-def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, **kwargs):
-    hpo_ids, gene_ids, gene_symols = _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, **kwargs)
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symols)
-    gene_ids.update({new_gene_ids[0] for new_gene_ids in gene_symbols_to_ids.values()})
+def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, include_matched_symbol_genes=False, **kwargs):
+    hpo_ids, gene_ids, gene_symbols = _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, **kwargs)
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
+    if include_matched_symbol_genes:
+        # Include all gene IDs associated with the given symbol
+        for new_gene_ids in gene_symbols_to_ids.values():
+            gene_ids.update(new_gene_ids)
+        # Include any gene IDs whose legacy id is the given symbol
+        for gene_symbol in gene_symbols:
+            legacy_gene_ids = get_filtered_gene_ids(
+                Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_symbol)) |
+                Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_symbol)) |
+                Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_symbol))
+            )
+            gene_symbols_to_ids[gene_symbol] += legacy_gene_ids
+            gene_ids.update(legacy_gene_ids)
+    else:
+        gene_ids.update({new_gene_ids[0] for new_gene_ids in gene_symbols_to_ids.values()})
+
     genes_by_id = get_genes(gene_ids)
 
     hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
 
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
+
+
+def _get_legacy_gene_name_query(gene_name):
+    return Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_name)) | \
+           Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_name)) | \
+           Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_name))
 
 
 def parse_mme_features(features, hpo_terms_by_id):
@@ -68,7 +91,7 @@ def parse_mme_features(features, hpo_terms_by_id):
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
     for gene_feature in (genomic_features or []):
-        gene_id = _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids)
+        gene_id = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)[0]
         if gene_id:
             gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
@@ -83,12 +106,15 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     return gene_variants
 
 
-def _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids):
-    gene_id = gene_feature['gene']['id']
+def get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
+    gene_id = gene_feature.get('gene', {}).get('id')
+    if not gene_id:
+        return []
     if not gene_id.startswith('ENSG'):
-        gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
-        gene_id = gene_ids[0] if gene_ids else None
-    return gene_id
+        gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'], [])
+    else:
+        gene_ids = [gene_id]
+    return gene_ids
 
 
 def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
@@ -136,7 +162,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
 
     if genomic_features:
         for feature in genomic_features:
-            feature['gene_id'] = _get_gene_id_for_feature(feature, gene_symbols_to_ids)
+            feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
             'query_ids': genes_by_id.keys(),
             'filter_key': 'genomic_features',
@@ -210,7 +236,9 @@ def _get_genotype_score(genomic_features, match):
 
     score = 0
     for feature in genomic_features:
-        feature_gene_matches = match_features_by_gene_id[feature['gene_id']]
+        feature_gene_matches = []
+        for gene_id in feature['gene_ids']:
+            feature_gene_matches += match_features_by_gene_id[gene_id]
         if feature_gene_matches:
             score += 0.7
             if feature.get('zygosty') and any(
