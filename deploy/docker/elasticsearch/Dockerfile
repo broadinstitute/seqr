@@ -6,7 +6,7 @@ ENV ELASTICSEARCH_VERSION="6.3.2"
 
 # install commmon utilities
 RUN apt-get update \
-  && apt-get install -y --fix-missing curl less \
+  && apt-get install -y --no-install-recommends curl less \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
