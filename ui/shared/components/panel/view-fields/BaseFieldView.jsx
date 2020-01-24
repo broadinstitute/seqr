@@ -18,6 +18,7 @@ const FieldValue = styled.div`
   padding-left: ${props => (props.compact ? 0 : '22px')};
   padding-right: ${props => (props.fieldName ? '20px' : '5px')};
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
+  max-width: calc(100% - ${props => (props.hasButtons ? '60' : '0')}px);
 `
 
 class BaseFieldView extends React.PureComponent {
@@ -42,12 +43,12 @@ class BaseFieldView extends React.PureComponent {
     if (this.props.isPrivate && !this.props.user.isStaff) {
       return null
     }
-    const fieldValue = this.props.initialValues[this.props.field]
+    const fieldValue = this.props.fieldValue || this.props.initialValues[this.props.field]
     const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || this.props.showEmptyValues
     if (!this.props.isEditable && !hasValue) {
       return null
     }
-    const fieldId = this.props.initialValues[this.props.idField]
+    const fieldId = this.props.initialValues[this.props.idField] || this.props.defaultId
     const modalId = this.props.isEditable ? `edit-${fieldId || 'new'}-${this.props.field}-${this.props.modalId}` : null
 
     let editButton
@@ -55,17 +56,17 @@ class BaseFieldView extends React.PureComponent {
       if (this.props.formFields) {
         editButton =
           this.props.showInLine ?
-            <div key="edit">
+            <span key="edit">
               {this.state.showInLineButton ?
                 <ButtonLink
                   size="tiny"
-                  labelPosition="right"
+                  labelPosition={this.props.editLabel && 'right'}
                   icon={this.props.editIconName || 'write'}
                   content={this.props.editLabel}
                   onClick={this.toggleButtonVisibility}
                 />
                 :
-                <Segment>
+                <Segment compact>
                   <ReduxFormWrapper
                     noModal
                     inline
@@ -79,7 +80,7 @@ class BaseFieldView extends React.PureComponent {
                   />
                 </Segment>
               }
-            </div>
+            </span>
             :
             <UpdateButton
               showInLine={this.props.showInLine}
@@ -119,6 +120,7 @@ class BaseFieldView extends React.PureComponent {
       />
     )
     const buttons = [editButton, deleteButton]
+    const hasButtons = editButton || deleteButton
 
     return (
       <span style={this.props.style || {}}>
@@ -126,12 +128,12 @@ class BaseFieldView extends React.PureComponent {
         {this.props.fieldName && [
           <b key="name">{this.props.fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
           ...buttons,
-          this.props.compact && (buttons.some(b => b) ? <HorizontalSpacer width={10} key="hs" /> : null),
+          this.props.compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
           !this.props.compact && <br key="br" />,
         ]}
         {
           hasValue && !this.props.hideValue && this.state.showInLineButton &&
-          <FieldValue compact={this.props.compact} fieldName={this.props.fieldName}>
+          <FieldValue compact={this.props.compact} fieldName={this.props.fieldName} hasButtons={hasButtons}>
             {this.props.fieldDisplay(fieldValue, this.props.compact, fieldId)}
           </FieldValue>
         }
@@ -156,6 +158,7 @@ BaseFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string,
   initialValues: PropTypes.object,
+  fieldValue: PropTypes.any,
   compact: PropTypes.bool,
   style: PropTypes.object,
   editLabel: PropTypes.string,
@@ -167,6 +170,7 @@ BaseFieldView.propTypes = {
   showErrorPanel: PropTypes.bool,
   modalId: PropTypes.string,
   modalSize: PropTypes.string,
+  defaultId: PropTypes.string,
 }
 
 BaseFieldView.defaultProps = {

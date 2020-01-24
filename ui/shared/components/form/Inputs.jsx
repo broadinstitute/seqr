@@ -342,7 +342,10 @@ BooleanCheckbox.propTypes = {
 }
 
 export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
-  padding-right: 10px;
+  margin-bottom: 0 !important;
+  &:last-child {
+    padding-right: 0 !important;
+  }
   
   ${props => (props.divided ?
     `&:after {

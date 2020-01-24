@@ -55,35 +55,43 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
-  compact ?
-    <GeneDetailSection
-      compact
-      color="teal"
-      compactLabel="Gene Lists"
-      details={locusListGuids.length > 0 &&
-        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-      }
-    /> :
-    <div>
-      {locusListGuids.map(locusListGuid =>
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-        />,
-      )}
-    </div>
-)
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
+  const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
+  return (
+    compact ?
+      <GeneDetailSection
+        compact
+        color="teal"
+        compactLabel="Gene Lists"
+        details={locusListGuids.length > 0 &&
+          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+        }
+      /> :
+      <CompondHetTagsInLine
+        inline={areCompoundHets}
+        wrapper={children => <div>{children}</div>}
+      >
+        <React.Fragment>
+          {locusListGuids.map(locusListGuid =>
+            <GeneDetailSection
+              key={locusListGuid}
+              color="teal"
+              maxWidth="7em"
+              showEmpty
+              label={(locusListsByGuid[locusListGuid] || {}).name}
+              description={(locusListsByGuid[locusListGuid] || {}).name}
+              details={(locusListsByGuid[locusListGuid] || {}).description}
+            />,
+          )}
+        </React.Fragment>
+      </CompondHetTagsInLine>)
+}
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -118,7 +126,7 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
+export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
   <div>
     <GeneDetailSection
       compact={compact}
@@ -168,16 +176,17 @@ export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
          loss-of-function mutations`}
       {...labelProps}
     />
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />}
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
   </div>
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
-const VariantGene = ({ geneId, gene, project, variant, compact }) => {
+const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -199,7 +208,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
     </div>
   )
 
-  const geneDetails = <GeneDetails gene={gene} compact={compact} showLocusLists />
+  const geneDetails = <GeneDetails gene={gene} compact={compact} areCompoundHets={areCompoundHets} showLocusLists />
 
   return compact ?
     <Popup
@@ -224,6 +233,7 @@ VariantGene.propTypes = {
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

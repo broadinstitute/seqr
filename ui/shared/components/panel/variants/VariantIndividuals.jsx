@@ -18,6 +18,7 @@ const IndividualsContainer = styled.div`
   border-right: .5px solid grey;
   margin-left: -1px;
   margin-bottom: 5px;
+  border-left: none;
   
   &:first-child {
     padding-left 0;
@@ -36,6 +37,13 @@ const IndividualCell = styled.div`
   vertical-align: top;
   text-align: center;
   padding-right: 20px;
+  max-width: ${props => 100 / Math.min(props.numIndividuals, 4)}%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  small {
+    text-overflow: ellipsis;
+  }
   
   .ui.header {
     padding-top: 3px;
@@ -184,11 +192,12 @@ const Genotype = ({ variant, individual }) => {
 const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual =>
-      <IndividualCell key={individual.individualGuid}>
+      <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
         <PedigreeIcon
           sex={individual.sex}
           affected={individual.affected}
           label={<small>{individual.displayName}</small>}
+          popupHeader={individual.displayName}
           popupContent={
             hasPhenotipsDetails(individual.phenotipsData) ?
               <PhenotipsDataPanel

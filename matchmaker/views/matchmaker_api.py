@@ -15,7 +15,8 @@ from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, get_json_for_matchmaker_submission
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
+    get_json_for_matchmaker_submission
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_permissions
 
 from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
@@ -40,16 +41,15 @@ def get_individual_mme_matches(request, submission_guid):
 
     results = MatchmakerResult.objects.filter(submission=submission)
 
-    saved_variants = get_json_for_saved_variants(
-        SavedVariant.objects.filter(family=submission.individual.family), add_tags=True, add_details=True)
+    response_json = get_json_for_saved_variants_with_tags(
+        SavedVariant.objects.filter(family=submission.individual.family), add_details=True)
 
     gene_ids = set()
-    for variant in saved_variants:
+    for variant in response_json['savedVariantsByGuid'].values():
         gene_ids.update(variant['transcripts'].keys())
 
     return _parse_mme_results(
-        submission, results, request.user, additional_genes=gene_ids, response_json={
-            'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants}})
+        submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

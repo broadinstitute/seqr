@@ -6,9 +6,10 @@ import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
-import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
-  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
-  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig } from 'redux/selectors'
+import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
+  getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
+  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
+  getVisibleSortedSavedVariants } from 'redux/selectors'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -103,7 +104,7 @@ class BaseSavedVariants extends React.Component {
     error: PropTypes.string,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
-    filteredVariants: PropTypes.array,
+    filteredVariantsCount: PropTypes.number,
     variantExportConfig: PropTypes.object,
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
@@ -265,7 +266,7 @@ class BaseSavedVariants extends React.Component {
         {!this.props.loading &&
           <ControlsRow>
             <Grid.Column width={5}>
-              Showing {shownSummary} {this.props.filteredVariants.length}
+              Showing {shownSummary} {this.props.filteredVariantsCount}
               &nbsp;&nbsp;
               <Dropdown
                 inline
@@ -322,8 +323,8 @@ const mapStateToProps = (state, ownProps) => ({
   loading: getSavedVariantsIsLoading(state),
   error: getSavedVariantsLoadingError(state),
   variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
-  totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
-  filteredVariants: getFilteredSavedVariants(state, ownProps),
+  totalVariantsCount: getPairedSelectedSavedVariants(state, ownProps).length,
+  filteredVariantsCount: getPairedFilteredSavedVariants(state, ownProps).length,
   tableState: getSavedVariantTableState(state, ownProps),
   firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
   totalPages: getSavedVariantTotalPages(state, ownProps),

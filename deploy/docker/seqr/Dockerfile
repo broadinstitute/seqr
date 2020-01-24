@@ -3,7 +3,7 @@ FROM debian:jessie
 MAINTAINER MacArthur Lab
 
 # install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
     curl \
@@ -13,23 +13,30 @@ RUN apt-get update && apt-get install -y --fix-missing \
     less \
     nano \
     wget \
-    xterm
+    xterm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # install python
-RUN apt-get install -y python-dev \
+RUN apt-get install -y --no-install-recommends python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
-    && pip install --upgrade pip setuptools
+    && pip install --upgrade pip setuptools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     perl \
     build-essential \
     libcairo2-dev \
     libglib2.0-bin \
     libglib2.0-0 \
     libgtk2.0-dev \
-    libpango1.0-dev
+    libpango1.0-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
@@ -89,7 +96,6 @@ RUN git clone -q https://github.com/macarthur-lab/seqr
 WORKDIR /seqr
 
 # install seqr dependencies
-RUN pip install -r deploy/deploy-requirements.txt
 RUN pip install -r requirements.txt
 
 ARG SEQR_SERVICE_PORT

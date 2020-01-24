@@ -89,7 +89,8 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'mmeContactNotes',
+            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'variantTagsByGuid',
+            'variantNotesByGuid', 'variantFunctionalDataByGuid', 'mmeContactNotes',
             'mmeSubmissionsByGuid',
         })
 
@@ -171,9 +172,7 @@ class MatchmakerAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000135953'}
         )
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'})
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')

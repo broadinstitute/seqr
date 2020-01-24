@@ -92,7 +92,9 @@ class VariantSearchAPITest(TestCase):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search'})
+        self.assertSetEqual(set(response_json.keys()), {
+            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+            'variantFunctionalDataByGuid'})
 
         self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS)
         self.assertDictEqual(response_json['search'], {
@@ -173,7 +175,6 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertDictEqual(response_json, {
             'searchedVariants': [],
-            'savedVariantsByGuid': {},
             'genesById': {},
             'search': {
                 'search': SEARCH,
@@ -293,7 +294,8 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'searchedVariants', 'savedVariantsByGuid', 'genesById', 'projectsByGuid', 'familiesByGuid',
-             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid',}
+             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'variantTagsByGuid',
+             'variantNotesByGuid', 'variantFunctionalDataByGuid'}
         )
 
         self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS[:1])

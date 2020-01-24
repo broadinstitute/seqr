@@ -581,7 +581,7 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
@@ -590,19 +590,18 @@ class VariantTag(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('variant_tag_type', 'saved_variant')
-
         json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 
@@ -612,7 +611,8 @@ class VariantNote(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
@@ -683,7 +683,7 @@ class VariantFunctionalData(ModelWithGUID):
          )),
     )
 
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
     metadata = models.TextField(null=True)
 
@@ -692,14 +692,13 @@ class VariantFunctionalData(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.functional_data_tag)
 
     def _compute_guid(self):
         return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('functional_data_tag', 'saved_variant')
-
         json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 

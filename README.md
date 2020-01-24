@@ -28,10 +28,6 @@ seqr can be installed on a laptop or on-prem server(s) using installation script
   
 **[Detailed instructions for local installations](deploy/LOCAL_INSTALL.md)**  
 
-For cloud-based deployments, there are Docker images and Kubernetes configs: 
-
-**[Detailed instructions for Kubernetes deployments](deploy/KUBERNETES.md)**  
-
 
 ## Updating / Migrating an older seqr Instance
 

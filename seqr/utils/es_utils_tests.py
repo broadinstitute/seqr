@@ -1105,27 +1105,6 @@ class EsUtilsTest(TestCase):
             },
             {
                 'bool': {
-                    'should': [
-                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
-                        {'terms': {
-                            'transcriptConsequenceTerms': [
-                                '5_prime_UTR_variant',
-                                'intergenic_variant',
-                                'inframe_insertion',
-                                'inframe_deletion',
-                            ]
-                        }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
-                            ]
-                        }},
-                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
-                    ]
-                }
-            },
-            {
-                'bool': {
                     'minimum_should_match': 1,
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
@@ -1199,6 +1178,26 @@ class EsUtilsTest(TestCase):
                 }
             },
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
+            {'bool': {
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
+                        {'terms': {
+                            'transcriptConsequenceTerms': [
+                                '5_prime_UTR_variant',
+                                'intergenic_variant',
+                                'inframe_insertion',
+                                'inframe_deletion',
+                            ]
+                        }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
+                            ]
+                        }},
+                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                    ]
+                }
+            },
             {'bool': {
                 'should': [
                     {'bool': {
@@ -1310,17 +1309,52 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
-        self.assertEqual(total_results, 2)
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
+        self.assertEqual(total_results, 1)
 
         self.assertCachedResults(results_model, {
             'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
-            'total_results': 2,
+            'total_results': 1,
         })
 
         self.assertExecutedSearch(
             filters=[COMPOUND_HET_INHERITANCE_QUERY],
+            gene_aggs=True,
+            sort=['xpos'],
+            start_index=0,
+            size=1
+        )
+
+        # test pagination does not fetch
+        get_es_variants(results_model, page=2, num_results=2)
+        self.assertIsNone(self.executed_search)
+
+    def test_compound_het_get_es_variants_secondary_annotation(self):
+        search_model = VariantSearch.objects.create(search={
+            'qualityFilter': {'min_gq': 10},
+            'annotations': {'other': []},
+            'inheritance': {'mode': 'compound_het'},
+            'annotations_secondary': {'other': []}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
+        self.assertEqual(total_results, 1)
+
+        self.assertCachedResults(results_model, {
+            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
+            'total_results': 1,
+        })
+
+        self.maxDiff = None
+        annotation_query = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': []}},
+                                                {'terms': {'transcriptConsequenceTerms': []}}]}}
+        self.assertExecutedSearch(
+            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
             gene_aggs=True,
             sort=['xpos'],
             start_index=0,
@@ -1341,28 +1375,28 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 3)
+        self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS[0])
-        self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS[1])
-        self.assertEqual(total_results, 7)
+        self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertEqual(total_results, 6)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_VARIANTS[1]],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 0,
-            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
-            'total_results': 7,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 1, 'loaded': 1}, INDEX_NAME: {'loaded': 2, 'total': 5}},
+            'total_results': 6,
         })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
 
         self.assertExecutedSearches([
-            dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
+            dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
             dict(
-                filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
+                filters=[pass_filter_query, annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
                 gene_aggs=True,
                 sort=['xpos'],
                 start_index=0,
@@ -1375,7 +1409,7 @@ class EsUtilsTest(TestCase):
         variants, total_results = get_es_variants(results_model, page=3, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, PARSED_VARIANTS)
-        self.assertEqual(total_results, 6)
+        self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
@@ -1384,11 +1418,11 @@ class EsUtilsTest(TestCase):
                 {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
                 {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
             'duplicate_doc_count': 1,
-            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
-            'total_results': 6,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 1, 'loaded': 1}, INDEX_NAME: {'loaded': 4, 'total': 5}},
+            'total_results': 5,
         })
 
-        self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
+        self.assertExecutedSearches([dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
 
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
@@ -1414,24 +1448,24 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 3)
+        self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
-        self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
-        self.assertEqual(total_results, 13)
+        self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
+        self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
+        self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
-            'duplicate_doc_count': 3,
+            'duplicate_doc_count': 2,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
                 INDEX_NAME: {'loaded': 2, 'total': 5},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
-            'total_results': 13,
+            'total_results': 11,
         })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
@@ -1490,9 +1524,9 @@ class EsUtilsTest(TestCase):
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        self.assertEqual(len(variants), 3)
-        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION)
-        self.assertEqual(total_results, 11)
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
+        self.assertEqual(total_results, 9)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
@@ -1503,14 +1537,14 @@ class EsUtilsTest(TestCase):
                 {'null': [PARSED_VARIANTS[0]]},
                 {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
             ],
-            'duplicate_doc_count': 5,
+            'duplicate_doc_count': 4,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 2, 'total': 5},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
                 INDEX_NAME: {'loaded': 4, 'total': 5},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
-            'total_results': 11,
+            'total_results': 9,
         })
 
         project_2_search['start_index'] = 1

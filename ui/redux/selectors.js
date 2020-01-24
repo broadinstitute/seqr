@@ -25,6 +25,9 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
+export const getVariantTagsByGuid = state => state.variantTagsByGuid
+export const getVariantNotesByGuid = state => state.variantNotesByGuid
+export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDataByGuid
 export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
@@ -40,6 +43,15 @@ export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
+
+export const getAnnotationSecondary = (state) => {
+  try {
+    return state.form.variantSearch.values.search.inheritance.annotationSecondary
+  }
+  catch (err) {
+    return false
+  }
+}
 
 export const getAllUsers = createSelector(
   getUsersByUsername,
@@ -144,33 +156,17 @@ export const getSavedVariantCurrentPage = state => state.savedVariantTableState.
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
 
-export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
-
-export const getSavedVariantsGroupedByFamilyVariants = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    variant.familyGuids.forEach((familyGuid) => {
-      if (!(familyGuid in acc)) {
-        acc[familyGuid] = {}
-      }
-      acc[familyGuid][getVariantId(variant)] = variant
-    })
-
-    return acc
-
-  }, {}),
-)
-
-export const getSelectedSavedVariants = createSelector(
+const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
   getProjectGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
+  getVariantTagsByGuid,
+  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
-      return variants.filter(o => o.variantGuid === variantGuid)
+      return variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
     }
 
     if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
@@ -186,13 +182,87 @@ export const getSelectedSavedVariants = createSelector(
 
     if (tag) {
       if (tag === NOTE_TAG_NAME) {
-        variants = variants.filter(o => o.notes.length)
+        variants = variants.filter(o => o.noteGuids.length)
       } else {
-        variants = variants.filter(o => o.tags.some(t => t.name === tag))
+        variants = variants.filter(o => o.tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
       }
     }
 
     return variants
+  },
+)
+
+export const getPairedSelectedSavedVariants = createSelector(
+  getSelectedSavedVariants,
+  getVariantNotesByGuid,
+  getVariantTagsByGuid,
+  (selectedSavedVariants, notesByGuid, tagsByGuid) => {
+    const selectedVariantsByGuid = selectedSavedVariants.reduce(
+      (acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
+    const seenCompoundHets = []
+    return selectedSavedVariants.reduce((acc, variant) => {
+      const variantCompoundHetGuids = [...[
+        ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
+        ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
+      ].filter(variantGuids => variantGuids.length > 1).reduce((guidAcc, variantGuids) =>
+        new Set([...guidAcc, ...variantGuids.filter(variantGuid => variantGuid !== variant.variantGuid)]),
+      new Set())].filter(variantGuid => selectedVariantsByGuid[variantGuid])
+
+      if (variantCompoundHetGuids.length) {
+        seenCompoundHets.push(variant.variantGuid)
+        return acc.concat(variantCompoundHetGuids.filter(variantGuid => !seenCompoundHets.includes(variantGuid)).map(
+          variantGuid => ([variant, selectedVariantsByGuid[variantGuid]])))
+      }
+
+      acc.push(variant)
+      return acc
+    }, [])
+  },
+)
+
+export const getPairedFilteredSavedVariants = createSelector(
+  getPairedSelectedSavedVariants,
+  getSavedVariantCategoryFilter,
+  getSavedVariantHideExcluded,
+  getSavedVariantHideReviewOnly,
+  getSavedVariantHideKnownGeneForPhenotype,
+  getSavedVariantTaggedAfter,
+  getVariantTagsByGuid,
+  (state, props) => props.match.params.tag,
+  (state, props) => props.match.params.gene,
+  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, tagsByGuid, tag, gene) => {
+    let variantsToShow = savedVariants.map(variant => (Array.isArray(variant) ? variant : [variant]))
+    if (hideExcluded) {
+      variantsToShow = variantsToShow.filter(variants =>
+        variants.every(variant => variant.tagGuids.every(t => tagsByGuid[t].name !== EXCLUDED_TAG_NAME)))
+    }
+    if (hideReviewOnly) {
+      variantsToShow = variantsToShow.filter(variants => variants.every(variant =>
+        variant.tagGuids.length !== 1 || tagsByGuid[variant.tagGuids[0]].name !== REVIEW_TAG_NAME,
+      ))
+    }
+    if (!tag) {
+      if (hideKnownGeneForPhenotype && categoryFilter === DISCOVERY_CATEGORY_NAME) {
+        variantsToShow = variantsToShow.filter(variants => variants.every(variant =>
+          variant.tagGuids.every(t => tagsByGuid[t].name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME)))
+      }
+
+      if (categoryFilter !== SHOW_ALL) {
+        variantsToShow = variantsToShow.filter(variants => variants.some(
+          variant => variant.tagGuids.some(t => tagsByGuid[t].category === categoryFilter)))
+      }
+    } else {
+      if (gene) {
+        variantsToShow = variantsToShow.filter(variants => variants.some(variant => gene in variant.transcripts))
+      }
+
+      if (taggedAfter) {
+        const taggedAfterDate = new Date(taggedAfter)
+        variantsToShow = variantsToShow.filter(variants => variants.some(variant =>
+          new Date((variant.tagGuids.find(t => tagsByGuid[t].name === tag) || {}).lastModifiedDate) > taggedAfterDate))
+      }
+    }
+    return variantsToShow.map(variants => (variants.length === 1 ? variants[0] : variants))
   },
 )
 
@@ -203,73 +273,112 @@ export const getSavedVariantVisibleIndices = createSelector(
   },
 )
 
-export const getFilteredSavedVariants = createSelector(
-  getSelectedSavedVariants,
-  getSavedVariantCategoryFilter,
-  getSavedVariantHideExcluded,
-  getSavedVariantHideReviewOnly,
-  getSavedVariantHideKnownGeneForPhenotype,
-  getSavedVariantTaggedAfter,
-  (state, props) => props.match.params.tag,
-  (state, props) => props.match.params.gene,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, tag, gene) => {
-    let variantsToShow = savedVariants
-    if (hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
-    }
-    if (hideReviewOnly) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
-    }
-    if (!tag) {
-      if (hideKnownGeneForPhenotype && categoryFilter === DISCOVERY_CATEGORY_NAME) {
-        variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME))
-      }
-
-      if (categoryFilter !== SHOW_ALL) {
-        variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
-      }
-    } else {
-      if (gene) {
-        variantsToShow = variantsToShow.filter(variant => gene in variant.transcripts)
-      }
-
-      if (taggedAfter) {
-        const taggedAfterDate = new Date(taggedAfter)
-        variantsToShow = variantsToShow.filter(variant =>
-          new Date((variant.tags.find(t => t.name === tag) || {}).lastModifiedDate) > taggedAfterDate)
-      }
-    }
-    return variantsToShow
-  },
-)
-
 export const getVisibleSortedSavedVariants = createSelector(
-  getFilteredSavedVariants,
+  getPairedFilteredSavedVariants,
   getSavedVariantSortOrder,
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (filteredSavedVariants, sort, visibleIndices, genesById, user) => {
+  (pairedFilteredSavedVariants, sort, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
-    filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sort](a, b, genesById, user) || a.xpos - b.xpos
+    pairedFilteredSavedVariants.sort((a, b) => {
+      return VARIANT_SORT_LOOKUP[sort](Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user) ||
+        (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos
     })
-    return filteredSavedVariants.slice(...visibleIndices)
+    return pairedFilteredSavedVariants.slice(...visibleIndices)
   },
 )
 
 export const getSavedVariantTotalPages = createSelector(
-  getFilteredSavedVariants, getSavedVariantRecordsPerPage,
+  getPairedFilteredSavedVariants, getSavedVariantRecordsPerPage,
   (filteredSavedVariants, recordsPerPage) => {
     return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
   },
 )
 
+const groupByVariantGuids = allObjects =>
+  Object.values(allObjects).reduce((acc, o) => {
+    const variantGuids = o.variantGuids.sort().join(',')
+    if (!acc[variantGuids]) {
+      acc[variantGuids] = []
+    }
+    acc[variantGuids].push(o)
+    return acc
+  }, {})
+
+const getTagsByVariantGuids = createSelector(
+  getVariantTagsByGuid,
+  groupByVariantGuids,
+)
+
+const getNotesByVariantGuids = createSelector(
+  getVariantNotesByGuid,
+  groupByVariantGuids,
+)
+
+const getFunctionalDataByVariantGuids = createSelector(
+  getVariantFunctionalDataByGuid,
+  groupByVariantGuids,
+)
+
+export const getVariantId = variant =>
+  (Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
+
+export const getVariantTagNotesByFamilyVariants = createSelector(
+  getTagsByVariantGuids,
+  getNotesByVariantGuids,
+  getFunctionalDataByVariantGuids,
+  getSavedVariantsByGuid,
+  (tagsByGuids, notesByGuids, functionalDataByGuids, savedVariantsByGuid) => {
+    let variantDetails = Object.entries(tagsByGuids).reduce(
+      (acc, [variantGuids, tags]) => ({ ...acc, [variantGuids]: { tags, variantGuids } }), {})
+
+    variantDetails = Object.entries(notesByGuids).reduce((acc, [variantGuids, notes]) => {
+      if (!acc[variantGuids]) {
+        acc[variantGuids] = { variantGuids }
+      }
+      acc[variantGuids].notes = notes
+      return acc
+    }, variantDetails)
+
+    variantDetails = Object.entries(functionalDataByGuids).reduce((acc, [variantGuids, functionalData]) => {
+      if (!acc[variantGuids]) {
+        acc[variantGuids] = { variantGuids }
+      }
+      acc[variantGuids].functionalData = functionalData
+      return acc
+    }, variantDetails)
+
+    variantDetails = Object.keys(savedVariantsByGuid).reduce((acc, variantGuid) => {
+      if (!acc[variantGuid]) {
+        acc[variantGuid] = { variantGuids: variantGuid }
+      }
+      return acc
+    }, variantDetails)
+
+    return Object.values(variantDetails).reduce((acc, variantDetail) => {
+      const variants = variantDetail.variantGuids.split(',').map(variantGuid => savedVariantsByGuid[variantGuid])
+      const variantId = getVariantId(variants)
+      variants[0].familyGuids.forEach((familyGuid) => {
+        if (!(familyGuid in acc)) {
+          acc[familyGuid] = {}
+        }
+        acc[familyGuid][variantId] = variantDetail
+      })
+      return acc
+    }, {})
+  },
+)
+
 export const getSavedVariantExportConfig = createSelector(
-  getFilteredSavedVariants,
+  getPairedFilteredSavedVariants,
   getFamiliesByGuid,
-  (variants, familiesByGuid) => {
-    const familyVariants = variants.map(({ genotypes, ...variant }) => ({
+  getTagsByVariantGuids,
+  getNotesByVariantGuids,
+  (pairedVariants, familiesByGuid, tagsByGuid, notesByGuid) => {
+    const familyVariants = pairedVariants.reduce(
+      (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
+    ).map(({ genotypes, ...variant }) => ({
       ...variant,
       genotypes: Object.keys(genotypes).filter(
         indGuid => variant.familyGuids.some(familyGuid => familiesByGuid[familyGuid].individualGuids.includes(indGuid)),
@@ -283,13 +392,33 @@ export const getSavedVariantExportConfig = createSelector(
         ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
       ],
       processRow: variant => ([
-        ...VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
+        ...VARIANT_EXPORT_DATA.map(config => (
+          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
+        ),
         ...Object.values(variant.genotypes).map(
           ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
       ]),
     }
   },
 )
+
+const getProjectForFamilyGuid = createSelector(
+  getProjectsByGuid,
+  getFamiliesByGuid,
+  (state, ownProps) => ownProps.familyGuid,
+  (projectsByGuid, familiesByGuid, familyGuid) => projectsByGuid[(familiesByGuid[familyGuid] || {}).projectGuid],
+)
+
+export const getProjectTagTypes = createSelector(
+  getProjectForFamilyGuid,
+  project => project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+)
+
+export const getProjectFunctionalTagTypes = createSelector(
+  getProjectForFamilyGuid,
+  project => project.variantFunctionalTagTypes,
+)
+
 
 export const getParsedLocusList = createSelector(
   getLocusListsByGuid,

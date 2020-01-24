@@ -5,7 +5,7 @@ import styled from 'styled-components'
 import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, List, Icon } from 'semantic-ui-react'
 
-import { getUser } from 'redux/selectors'
+import { getUser, getAnnotationSecondary } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
@@ -22,6 +22,7 @@ import {
   INHERITANCE_LOOKUP,
   INHERITANCE_MODE_LOOKUP,
   ALL_INHERITANCE_FILTER,
+  ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
   THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
@@ -133,7 +134,7 @@ const INHERITANCE_PANEL = {
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
       normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_LOOKUP[val].filter } }),
+        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_LOOKUP[val].filter }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
     },
   },
   fields: [
@@ -186,6 +187,14 @@ const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
+  fields: ANNOTATION_GROUPS,
+  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
+  fieldLayout: annotationsFilterLayout,
+}
+
+const ANNOTATION_PANEL_SECONDARY = {
+  name: 'annotations_secondary',
+  headerProps: { title: 'Annotations (Second Hit)', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
@@ -286,6 +295,12 @@ const PANEL_DETAILS = [
 const STAFF_PANEL_DETAILS = [
   INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
+const PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
+  INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+]
+const STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
+  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+]
 
 const panelDetails = ({ name, headerProps, ...panelContentProps }, i) => ({
   key: name,
@@ -306,14 +321,16 @@ const panelDetails = ({ name, headerProps, ...panelContentProps }, i) => ({
 })
 
 const PANELS = PANEL_DETAILS.map(panelDetails)
+const PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY = PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS.map(panelDetails)
 const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
+const STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY = STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS.map(panelDetails)
 
 class VariantSearchFormContent extends React.Component {
   state = { activeIndex: [] }
 
   expandAll = (e) => {
     e.preventDefault()
-    this.setState({ activeIndex: [...PANELS.keys()] })
+    this.setState({ activeIndex: [...(this.props.displayAnnotationSecondary ? PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY : PANELS).keys()] })
   }
 
   collapseAll = (e) => {
@@ -328,7 +345,17 @@ class VariantSearchFormContent extends React.Component {
     this.setState({ activeIndex: newIndex })
   }
 
+
   render() {
+
+    let panels
+    if (this.props.displayAnnotationSecondary) {
+      panels = this.props.user.isStaff ? STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY : PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY
+    }
+    else {
+      panels = this.props.user.isStaff ? STAFF_PANELS : PANELS
+    }
+
     return (
       <div>
         <ProjectFamiliesField />
@@ -342,24 +369,25 @@ class VariantSearchFormContent extends React.Component {
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <FormSection name="search">
-          <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} exclusive={false} activeIndex={this.state.activeIndex} onTitleClick={this.handleTitleClick} />
+          <Accordion fluid panels={panels} exclusive={false} activeIndex={this.state.activeIndex} onTitleClick={this.handleTitleClick} />
         </FormSection>
       </div>
     )
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    // Form content does not use passed props, so should never re-render on prop update
-    return nextState.activeIndex !== this.state.activeIndex
+    return nextState.activeIndex !== this.state.activeIndex || nextProps.displayAnnotationSecondary !== this.props.displayAnnotationSecondary
   }
 }
 
 VariantSearchFormContent.propTypes = {
   user: PropTypes.object,
+  displayAnnotationSecondary: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
+  displayAnnotationSecondary: getAnnotationSecondary(state),
 })
 
 export default connect(mapStateToProps)(VariantSearchFormContent)

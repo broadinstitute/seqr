@@ -799,6 +799,12 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   type: 'date',
   inline: true,
 }
+export const FLATTEN_COMPOUND_HET_TOGGLE_FIELD = {
+  name: 'flattenCompoundHet',
+  component: InlineToggle,
+  label: 'Unpair',
+  labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
+}
 
 export const PREDICTION_INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
@@ -851,6 +857,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'cadd', getVal: variant => variant.predictions.cadd },
   { header: 'revel', getVal: variant => variant.predictions.revel },
   { header: 'eigen', getVal: variant => variant.predictions.eigen },
+  { header: 'splice_ai', getVal: variant => variant.predictions.splice_ai },
   { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
   { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
@@ -862,8 +869,8 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+  { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
 ]
 
 // Users

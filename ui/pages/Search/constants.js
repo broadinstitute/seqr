@@ -62,6 +62,8 @@ const COMPOUND_HET_FILTER = 'compound_het'
 const DE_NOVO_FILTER = 'de_novo'
 const ANY_AFFECTED = 'any_affected'
 
+export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, COMPOUND_HET_FILTER]
+
 export const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
   [RECESSIVE_FILTER]: {
