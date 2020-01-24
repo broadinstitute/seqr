@@ -41,7 +41,8 @@ def _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, add
     genes = additional_genes if additional_genes else set()
     for result in results:
         hpo_ids.update({feature['id'] for feature in (get_features(result) or []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])})
+        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])
+                      if gene_feature.get('gene', {}).get('id')})
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
     gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
@@ -90,7 +91,7 @@ def parse_mme_features(features, hpo_terms_by_id):
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
     for gene_feature in (genomic_features or []):
-        gene_id = _get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)[0]
+        gene_id = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)[0]
         if gene_id:
             gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
@@ -105,10 +106,12 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     return gene_variants
 
 
-def _get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
-    gene_id = gene_feature['gene']['id']
+def get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
+    gene_id = gene_feature.get('gene', {}).get('id')
+    if not gene_id:
+        return []
     if not gene_id.startswith('ENSG'):
-        gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
+        gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'], [])
     else:
         gene_ids = [gene_id]
     return gene_ids
@@ -159,7 +162,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
 
     if genomic_features:
         for feature in genomic_features:
-            feature['gene_ids'] = _get_gene_ids_for_feature(feature, gene_symbols_to_ids)
+            feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
             'query_ids': genes_by_id.keys(),
             'filter_key': 'genomic_features',
