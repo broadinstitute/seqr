@@ -73,6 +73,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
         python-setuptools \
         libffi-dev \
         libssl-dev \
+        libpq-dev \
     && pip install gsutil
 
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
