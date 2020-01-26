@@ -539,16 +539,6 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
     # make sure all keys are upper-case
     settings = {key.upper(): value for key, value in settings.items()}
 
-    # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
-    if runtime_settings.get("DOCKER_IMAGE_TAG"):
-        settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
-    elif runtime_settings["BUILD_DOCKER_IMAGES"]:
-        settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
-    else:
-        settings["DOCKER_IMAGE_TAG"] = ":latest"
-
-    logger.info("==> Using docker image tag: %(DOCKER_IMAGE_TAG)s" % settings)
-
     # configure deployment dir
     settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(
         settings["DEPLOYMENT_TEMP_DIR"],
@@ -736,8 +726,11 @@ def docker_build(component_label, settings, custom_build_args=()):
     docker_tags = set([
         "",
         ":latest",
-        "%(DOCKER_IMAGE_TAG)s" % params,
+        ":%(TIMESTAMP)s" % settings,
         ])
+
+    if settings.get("DOCKER_IMAGE_TAG"):
+        docker_tags.add(params["DOCKER_IMAGE_TAG"])
 
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
