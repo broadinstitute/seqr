@@ -357,18 +357,31 @@ def deploy_seqr(settings):
                    errors_to_ignore=["does not exist"],
                    verbose=True,
                    )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database reference_data_db'",
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
 
     if restore_seqr_db_from_backup:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
                    errors_to_ignore=["does not exist"],
                    verbose=True,
                    )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database reference_data_db'",
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'", verbose=True)
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'", verbose=True)
         run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'",
+                   errors_to_ignore=["already exists"],
+                   verbose=True,
+                   )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'",
                    errors_to_ignore=["already exists"],
                    verbose=True,
                    )
