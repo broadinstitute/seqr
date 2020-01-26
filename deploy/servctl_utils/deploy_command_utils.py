@@ -618,6 +618,8 @@ def _init_cluster_gcloud(settings):
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--no-enable-legacy-authorization",
+            "--enable-autorepair",
+            "--enable-autoupgrade",
             "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
