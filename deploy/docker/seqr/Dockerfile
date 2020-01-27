@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # install python
-RUN apt-get install -y --no-install-recommends python-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python-dev \
+    ca-certificates \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
     && pip install --upgrade pip setuptools \
@@ -73,6 +75,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
         python-setuptools \
         libffi-dev \
         libssl-dev \
+        libpq-dev \
     && pip install gsutil
 
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
@@ -108,7 +111,7 @@ ENV TERM=xterm
 COPY readiness_probe /
 COPY bin/*.sh /usr/local/bin/
 COPY gitconfig /root/.gitconfig
-COPY config/*.py /
+COPY config/*.py ./
 COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /
