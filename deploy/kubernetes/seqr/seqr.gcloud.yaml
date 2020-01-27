@@ -10,7 +10,6 @@ spec:
   type: NodePort
   ports:
   - port: {{ SEQR_SERVICE_PORT }}
-    nodePort: {{ SEQR_SERVICE_NODE_PORT }}
   selector:
     name: seqr
 ---
