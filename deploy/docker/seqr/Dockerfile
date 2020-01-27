@@ -111,7 +111,7 @@ ENV TERM=xterm
 COPY readiness_probe /
 COPY bin/*.sh /usr/local/bin/
 COPY gitconfig /root/.gitconfig
-COPY config/*.py /
+COPY config/*.py ./
 COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /
