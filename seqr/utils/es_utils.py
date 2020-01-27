@@ -207,9 +207,10 @@ class InvalidIndexException(Exception):
     pass
 
 
-class BaseEsSearch(object):
+class EsSearch(object):
 
     AGGREGATION_NAME = 'compound het'
+    CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False, return_all_queried_families=False):
         self._client = get_es_client()
@@ -272,6 +273,10 @@ class BaseEsSearch(object):
                 _safe_redis_set(cache_key, self.index_name)
             self.index_name = alias
         self.index_metadata = get_index_metadata(self.index_name, self._client)
+
+    def sort(self, sort):
+        self._sort = _get_sort(sort)
+        self._search = self._search.sort(*self._sort)
 
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
@@ -385,98 +390,9 @@ class BaseEsSearch(object):
         else:
             return self._execute_multi_search(**search_kwargs)
 
-    def _should_execute_single_search(self, **kwargs):
-        indices = self.samples_by_family_index.keys()
-        return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
-
-    def _execute_single_search(self, page=1, num_results=100, start_index=None, **kwargs):
-        search = self._get_paginated_searches(
-            self.index_name, page=page, num_results=num_results * len(self.samples_by_family_index), start_index=start_index
-        )[0]
-        response = self._execute_search(search)
-        return self._parse_response(response)
-
-    def _execute_multi_search(self, cached_counts_key=None, **kwargs):
-        indices = self.samples_by_family_index.keys()
-
-        if cached_counts_key and not self.previous_search_results.get(cached_counts_key):
-            self.previous_search_results[cached_counts_key] = {}
-
-        ms = MultiSearch()
-        for index_name in indices:
-            start_index = 0
-            if cached_counts_key:
-                if self.previous_search_results[cached_counts_key].get(index_name):
-                    index_total = self.previous_search_results[cached_counts_key][index_name]['total']
-                    start_index = self.previous_search_results[cached_counts_key][index_name]['loaded']
-                    if start_index >= index_total:
-                        continue
-                else:
-                    self.previous_search_results[cached_counts_key][index_name] = {'loaded': 0, 'total': 0}
-
-            searches = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
-            ms = ms.index(index_name)
-            for search in searches:
-                ms = ms.add(search)
-
-        responses = self._execute_search(ms)
-        return [self._parse_response(response) for response in responses]
-
-    def _parse_response(self, response):
-        raise NotImplementedError
-
-    def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
-        searches = []
-        for search in self._index_searches.get(index_name, [self._search]):
-            search = search.index(index_name)
-
-            if search.aggs.to_dict():
-                # For compound het search get results from aggregation instead of top level hits
-                search = search[:1]
-                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
-            else:
-                end_index = page * num_results
-                if start_index is None:
-                    start_index = end_index - num_results
-                if end_index > MAX_VARIANTS:
-                    # ES request size limits are limited by offset + size, which is the same as end_index
-                    raise Exception(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
-
-                search = search[start_index:end_index]
-                search = search.source(QUERY_FIELD_NAMES)
-                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
-
-            searches.append(search)
-        return searches
-
-    def _execute_search(self, search):
-        logger.debug(json.dumps(search.to_dict(), indent=2))
-        try:
-            return search.using(self._client).execute()
-        except elasticsearch.exceptions.ConnectionTimeout as e:
-            canceled = self._delete_long_running_tasks()
-            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
-            raise e
-
-    def _delete_long_running_tasks(self):
-        search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
-        canceled = 0
-        for parent_id, task in search_tasks['tasks'].items():
-            if task['running_time_in_nanos'] > 10 ** 11:
-                canceled += 1
-                self._client.tasks.cancel(parent_task_id=parent_id)
-        return canceled
-
-
-class EsSearch(BaseEsSearch):
-
-    def sort(self, sort):
-        self._sort = _get_sort(sort)
-        self._search = self._search.sort(*self._sort)
-
     def _should_execute_single_search(self, page=1, num_results=100):
-        is_single_search, _ = super(EsSearch, self)._should_execute_single_search()
+        indices = self.samples_by_family_index.keys()
+        is_single_search = len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1
         num_loaded = len(self.previous_search_results.get('all_results', []))
 
         if is_single_search and not self.previous_search_results.get('grouped_results'):
@@ -488,7 +404,7 @@ class EsSearch(BaseEsSearch):
             # If doing all project-families all inheritance search, do it as a single query
             # Load all variants, do not skip pages
             num_loaded += self.previous_search_results.get('duplicate_doc_count', 0)
-            if num_loaded >= (page-1)*num_results:
+            if num_loaded >= (page - 1) * num_results:
                 start_index = num_loaded
             else:
                 start_index = 0
@@ -496,9 +412,16 @@ class EsSearch(BaseEsSearch):
         else:
             return False, {'page': page, 'num_results': num_results}
 
-    def _execute_single_search(self, page=1, num_results=100, deduplicate=False, **kwargs):
-        variant_results, total_results, is_compound_het, _ = super(EsSearch, self)._execute_single_search(
-            page=page, num_results=num_results, deduplicate=deduplicate, **kwargs)
+    def _execute_single_search(self, page=1, num_results=100, start_index=None, **kwargs):
+        search = self._get_paginated_searches(
+            self.index_name, page=page, num_results=num_results * len(self.samples_by_family_index), start_index=start_index
+        )[0]
+        response = self._execute_search(search)
+        parsed_response = self._parse_response(response)
+        return self._process_single_search_response(parsed_response, page=page, num_results=num_results, **kwargs)
+
+    def _process_single_search_response(self, parsed_response, page=1, num_results=100, deduplicate=False, **kwargs):
+        variant_results, total_results, is_compound_het, _ = parsed_response
         self.previous_search_results['total_results'] = total_results
 
         results_start_index = (page - 1) * num_results
@@ -519,10 +442,34 @@ class EsSearch(BaseEsSearch):
 
         return variant_results[:num_results]
 
-    def _execute_multi_search(self, page=1, num_results=100):
-        parsed_responses = super(EsSearch, self)._execute_multi_search(
-            cached_counts_key='loaded_variant_counts', page=page, num_results=num_results)
+    def _execute_multi_search(self, **kwargs):
+        indices = self.samples_by_family_index.keys()
 
+        if self.CACHED_COUNTS_KEY and not self.previous_search_results.get(self.CACHED_COUNTS_KEY):
+            self.previous_search_results[self.CACHED_COUNTS_KEY] = {}
+
+        ms = MultiSearch()
+        for index_name in indices:
+            start_index = 0
+            if self.CACHED_COUNTS_KEY:
+                if self.previous_search_results[self.CACHED_COUNTS_KEY].get(index_name):
+                    index_total = self.previous_search_results[self.CACHED_COUNTS_KEY][index_name]['total']
+                    start_index = self.previous_search_results[self.CACHED_COUNTS_KEY][index_name]['loaded']
+                    if start_index >= index_total:
+                        continue
+                else:
+                    self.previous_search_results[self.CACHED_COUNTS_KEY][index_name] = {'loaded': 0, 'total': 0}
+
+            searches = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
+            ms = ms.index(index_name)
+            for search in searches:
+                ms = ms.add(search)
+
+        responses = self._execute_search(ms)
+        parsed_responses = [self._parse_response(response) for response in responses]
+        return self._process_multi_search_responses(parsed_responses, **kwargs)
+
+    def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         new_results = []
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
         for response_hits, response_total, is_compound_het, index_name in parsed_responses:
@@ -568,6 +515,90 @@ class EsSearch(BaseEsSearch):
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
 
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
+
+    def _parse_hit(self, raw_hit):
+        hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
+        index_name = raw_hit.meta.index
+        index_family_samples = self.samples_by_family_index[index_name]
+
+        if hasattr(raw_hit.meta, 'matched_queries'):
+            family_guids = list(raw_hit.meta.matched_queries)
+        elif self._return_all_queried_families:
+            family_guids = index_family_samples.keys()
+        else:
+            # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
+            alt_allele_samples = set()
+            for alt_samples_field in HAS_ALT_FIELD_KEYS:
+                alt_allele_samples.update(hit[alt_samples_field])
+            family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
+                            if any(sample_id in alt_allele_samples for sample_id in samples_by_id.keys())]
+
+        genotypes = {}
+        for family_guid in family_guids:
+            samples_by_id = index_family_samples[family_guid]
+            genotypes.update({
+                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
+            })
+
+        genome_version = self.index_metadata[index_name]['genomeVersion']
+        lifted_over_genome_version = None
+        lifted_over_chrom = None
+        lifted_over_pos = None
+        liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+        if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
+            if liftover_grch38_to_grch37:
+                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                )
+                if grch37_coord and grch37_coord[0]:
+                    lifted_over_genome_version = GENOME_VERSION_GRCh37
+                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                    lifted_over_pos = grch37_coord[0][1]
+
+        populations = {
+            population: _get_field_values(
+                hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(),
+                lookup_field_prefix=population,
+                existing_fields=self.index_metadata[index_name]['fields'],
+                get_addl_fields=lambda field, field_config:
+                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in
+                                           field_config.get('fields', [])],
+            )
+            for population, pop_config in POPULATIONS.items()
+        }
+
+        sorted_transcripts = [
+            {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
+            for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
+        ]
+        transcripts = defaultdict(list)
+        for transcript in sorted_transcripts:
+            transcripts[transcript['geneId']].append(transcript)
+
+        result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
+        result.update({
+            field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
+            for field_name, fields in NESTED_FIELDS.items()
+        })
+        if hasattr(raw_hit.meta, 'sort'):
+            result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
+
+        result.update({
+            'familyGuids': sorted(family_guids),
+            'genotypes': genotypes,
+            'genomeVersion': genome_version,
+            'liftedOverGenomeVersion': lifted_over_genome_version,
+            'liftedOverChrom': lifted_over_chrom,
+            'liftedOverPos': lifted_over_pos,
+            'mainTranscriptId': sorted_transcripts[0]['transcriptId'] if len(sorted_transcripts) else None,
+            'populations': populations,
+            'predictions': _get_field_values(
+                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+            ),
+            'transcripts': transcripts,
+        })
+        return result
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
@@ -677,90 +708,6 @@ class EsSearch(BaseEsSearch):
             compound_het_results.extend([{k: compound_het_pair} for compound_het_pair in compound_het_pairs])
         return compound_het_results, total_compound_het_results
 
-    def _parse_hit(self, raw_hit):
-        hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
-        index_name = raw_hit.meta.index
-        index_family_samples = self.samples_by_family_index[index_name]
-
-        if hasattr(raw_hit.meta, 'matched_queries'):
-            family_guids = list(raw_hit.meta.matched_queries)
-        elif self._return_all_queried_families:
-            family_guids = index_family_samples.keys()
-        else:
-            # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
-            alt_allele_samples = set()
-            for alt_samples_field in HAS_ALT_FIELD_KEYS:
-                alt_allele_samples.update(hit[alt_samples_field])
-            family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
-                            if any(sample_id in alt_allele_samples for sample_id in samples_by_id.keys())]
-
-        genotypes = {}
-        for family_guid in family_guids:
-            samples_by_id = index_family_samples[family_guid]
-            genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
-                for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
-            })
-
-        genome_version = self.index_metadata[index_name]['genomeVersion']
-        lifted_over_genome_version = None
-        lifted_over_chrom = None
-        lifted_over_pos = None
-        liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-        if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
-            if liftover_grch38_to_grch37:
-                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                )
-                if grch37_coord and grch37_coord[0]:
-                    lifted_over_genome_version = GENOME_VERSION_GRCh37
-                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                    lifted_over_pos = grch37_coord[0][1]
-
-        populations = {
-            population: _get_field_values(
-                hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(),
-                lookup_field_prefix=population,
-                existing_fields=self.index_metadata[index_name]['fields'],
-                get_addl_fields=lambda field, field_config:
-                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in
-                                           field_config.get('fields', [])],
-            )
-            for population, pop_config in POPULATIONS.items()
-        }
-
-        sorted_transcripts = [
-            {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
-            for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
-        ]
-        transcripts = defaultdict(list)
-        for transcript in sorted_transcripts:
-            transcripts[transcript['geneId']].append(transcript)
-
-        result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
-        result.update({
-            field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
-            for field_name, fields in NESTED_FIELDS.items()
-        })
-        if hasattr(raw_hit.meta, 'sort'):
-            result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
-
-        result.update({
-            'familyGuids': sorted(family_guids),
-            'genotypes': genotypes,
-            'genomeVersion': genome_version,
-            'liftedOverGenomeVersion': lifted_over_genome_version,
-            'liftedOverChrom': lifted_over_chrom,
-            'liftedOverPos': lifted_over_pos,
-            'mainTranscriptId': sorted_transcripts[0]['transcriptId'] if len(sorted_transcripts) else None,
-            'populations': populations,
-            'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
-            ),
-            'transcripts': transcripts,
-        })
-        return result
-
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
 
@@ -796,7 +743,8 @@ class EsSearch(BaseEsSearch):
         variant_results = []
         for i, variant in enumerate(sorted_new_results):
             if variant['genomeVersion'] == GENOME_VERSION_GRCh38:
-                hg37_id = '{}-{}-{}-{}'.format(variant['liftedOverChrom'], variant['liftedOverPos'], variant['ref'], variant['alt'])
+                hg37_id = '{}-{}-{}-{}'.format(variant['liftedOverChrom'], variant['liftedOverPos'], variant['ref'],
+                                               variant['alt'])
                 existing_38_index = hg_38_variant_indices.get(hg37_id)
                 if existing_38_index is not None:
                     cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
@@ -909,9 +857,53 @@ class EsSearch(BaseEsSearch):
             self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
         return merged_variant_results
 
+    def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
+        searches = []
+        for search in self._index_searches.get(index_name, [self._search]):
+            search = search.index(index_name)
 
-class EsGeneAggSearch(BaseEsSearch):
+            if search.aggs.to_dict():
+                # For compound het search get results from aggregation instead of top level hits
+                search = search[:1]
+                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
+            else:
+                end_index = page * num_results
+                if start_index is None:
+                    start_index = end_index - num_results
+                if end_index > MAX_VARIANTS:
+                    # ES request size limits are limited by offset + size, which is the same as end_index
+                    raise Exception(
+                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
+
+                search = search[start_index:end_index]
+                search = search.source(QUERY_FIELD_NAMES)
+                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+
+            searches.append(search)
+        return searches
+
+    def _execute_search(self, search):
+        logger.debug(json.dumps(search.to_dict(), indent=2))
+        try:
+            return search.using(self._client).execute()
+        except elasticsearch.exceptions.ConnectionTimeout as e:
+            canceled = self._delete_long_running_tasks()
+            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            raise e
+
+    def _delete_long_running_tasks(self):
+        search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
+        canceled = 0
+        for parent_id, task in search_tasks['tasks'].items():
+            if task['running_time_in_nanos'] > 10 ** 11:
+                canceled += 1
+                self._client.tasks.cancel(parent_task_id=parent_id)
+        return canceled
+
+
+class EsGeneAggSearch(EsSearch):
     AGGREGATION_NAME = 'gene aggregation'
+    CACHED_COUNTS_KEY = None
 
     def aggregate_by_gene(self):
         searches = {self._search}
@@ -930,8 +922,11 @@ class EsGeneAggSearch(BaseEsSearch):
                     'vars_by_gene', 'top_hits', size=100, _source='none'
                 )
 
-    def _execute_single_search(self, **kwargs):
-        gene_aggs = super(EsGeneAggSearch, self)._execute_single_search(**kwargs)
+    def _should_execute_single_search(self, **kwargs):
+        indices = self.samples_by_family_index.keys()
+        return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
+
+    def _process_single_search_response(self, gene_aggs, **kwargs):
         gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in gene_aggs.items()}
         self._add_compound_hets(gene_aggs)
 
@@ -939,8 +934,7 @@ class EsGeneAggSearch(BaseEsSearch):
 
         return gene_aggs
 
-    def _execute_multi_search(self, **kwargs):
-        parsed_responses = super(EsGeneAggSearch, self)._execute_multi_search(**kwargs)
+    def _process_multi_search_responses(self, parsed_responses, **kwargs):
         gene_aggs = parsed_responses[0] if parsed_responses else {}
         for response in parsed_responses[1:]:
             for gene_id, count_details in response.items():

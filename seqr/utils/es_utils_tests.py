@@ -922,9 +922,13 @@ class EsUtilsTest(TestCase):
             else:
                 return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
-        patcher = mock.patch('seqr.utils.es_utils.BaseEsSearch._execute_search')
+        patcher = mock.patch('seqr.utils.es_utils.EsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
+
+        gene_agg_patcher = mock.patch('seqr.utils.es_utils.EsGeneAggSearch._execute_search')
+        gene_agg_patcher.start().side_effect = mock_execute_search
+        self.addCleanup(gene_agg_patcher.stop)
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
