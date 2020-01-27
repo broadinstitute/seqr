@@ -656,6 +656,7 @@ def _init_cluster_gcloud(settings):
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--node-version %(KUBERNETES_VERSION)s",
             "--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
