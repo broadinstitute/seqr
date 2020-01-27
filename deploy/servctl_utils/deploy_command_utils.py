@@ -37,6 +37,8 @@ DEPLOYABLE_COMPONENTS = [
     "nginx",
     "pipeline-runner",
 
+    "kube-scan",
+
     # components of a sharded elasticsearch cluster based on https://github.com/pires/kubernetes-elasticsearch-cluster
     "es-client",
     "es-master",
@@ -56,7 +58,8 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "redis",
     "phenotips",
     "seqr",
-    "pipeline-runner",
+    #"pipeline-runner",
+    "kube-scan",
 ]
 
 
@@ -69,6 +72,7 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "es-client",
     "es-data",
     "es-kibana",
+    "kube-scan",
 ]
 
 
@@ -413,6 +417,17 @@ def deploy_nginx(settings):
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
 
 
+def deploy_kibana(settings):
+    print_separator("kibana")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("kibana", settings)
+
+    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
+
+    deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
+
+
 def deploy_pipeline_runner(settings):
     print_separator("pipeline_runner")
 
@@ -424,6 +439,18 @@ def deploy_pipeline_runner(settings):
     ])
 
     deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
+
+
+def deploy_kube_scan(settings):
+    print_separator("kube-scan")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
+
+        if settings["ONLY_PUSH_TO_REGISTRY"]:
+            return
+
+    run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
 
 def deploy_es_client(settings):
