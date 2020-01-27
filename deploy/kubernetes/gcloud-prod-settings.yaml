@@ -18,7 +18,6 @@ GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_GIT_BRANCH: 'master'
-MME_CONFIG_DIR: '/mme'
 
 ENABLE_DATABASE_BACKUPS: true
 DATABASE_BACKUP_BUCKET: seqr-backups

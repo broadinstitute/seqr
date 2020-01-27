@@ -18,6 +18,7 @@ IMAGE_PULL_POLICY: 'Always'
 DEPLOYMENT_TEMP_DIR: '/tmp'
 DATA_DIR: '/data'
 STATIC_MEDIA_DIR: '/seqr_static_files'
+MME_CONFIG_DIR: '/mme'
 
 POSTGRES_SERVICE_HOSTNAME: postgres
 POSTGRES_USERNAME: postgres
