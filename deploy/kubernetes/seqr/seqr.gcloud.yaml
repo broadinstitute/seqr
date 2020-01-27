@@ -49,11 +49,6 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
-        securityContext:
-          privileged: true
-          capabilities:
-            add:
-              - SYS_ADMIN
         volumeMounts:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
