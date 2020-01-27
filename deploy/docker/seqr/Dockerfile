@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # install python
-RUN apt-get install -y --no-install-recommends python-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python-dev \
+    ca-certificates \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
     && pip install --upgrade pip setuptools \
