@@ -188,16 +188,10 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     if search.get('freqs'):
         es_search.filter(_frequency_filter(search['freqs']))
 
-    # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-    pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
-    if not search.get('annotations') and pathogenicity_filter:
-        es_search.filter(pathogenicity_filter)
-
-    # Filter by secondary annotations for compound hets only (not recessive)
-    es_search.filter_by_annot_and_genotype(
+    es_search.filter_by_annotation_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity_filter=pathogenicity_filter)
+        pathogenicity=search.get('pathogenicity'))
 
     if aggregate_by_gene:
         es_search.aggregate_by_gene()
@@ -287,9 +281,12 @@ class BaseEsSearch(object):
         consequences_filter, allowed_consequences = _annotations_filter(annotations)
         if allowed_consequences:
             if pathogenicity_filter:
+                # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
                 consequences_filter |= pathogenicity_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
+        elif pathogenicity_filter:
+            self.filter(pathogenicity_filter)
 
     def filter_by_location(self, genes, intervals, rs_ids, variant_ids, locus):
         genome_version = locus.get('genomeVersion')
@@ -312,7 +309,7 @@ class BaseEsSearch(object):
         if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
 
-    def filter_by_annot_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity_filter=None):
+    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -335,7 +332,9 @@ class BaseEsSearch(object):
             annotations_filter, _ = _annotations_filter(annotations)
             annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
             self._allowed_consequences_secondary = allowed_consequences_secondary
-        if annotations:
+
+        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
+        if annotations or pathogenicity_filter:
             self.filter_by_annotations(annotations, pathogenicity_filter)
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
