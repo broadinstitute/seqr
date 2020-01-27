@@ -34,6 +34,8 @@ COMPONENT_PORTS = {
     "postgres":        [5432],
     "seqr":            [8000],
     "pipeline-runner": [30005],
+
+    'kube-scan':       [8080],
     #"nginx":           [80, 443],
 }
 
@@ -154,6 +156,8 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
 
     procs = []
     for component_label in components:
+        if component_label == "kube-scan":
+            continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
 
         if not previous:
             wait_until_pod_is_running(component_label, deployment_target)
@@ -218,6 +222,9 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
     """
     procs = []
     for component_label, port in component_port_pairs:
+        if component_label == "kube-scan":
+            continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
+
         wait_until_pod_is_running(component_label, deployment_target)
 
         logger.info("Forwarding port %s for %s" % (port, component_label))
