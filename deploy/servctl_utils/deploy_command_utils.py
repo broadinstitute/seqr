@@ -178,7 +178,7 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.json",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/%(DEPLOY_TO)s/config.json",
     ]) % settings, errors_to_ignore=["already exists"])
 
     account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
