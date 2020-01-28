@@ -6,7 +6,7 @@ import { Header, Menu } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
-import SavedVariants from 'shared/components/panel/variants/SavedVariants'
+import RoutedSavedVariants, { SavedVariants } from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -22,6 +22,8 @@ import Users from './components/Users'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
+const StaffSavedVariants = RoutedSavedVariants(SavedVariants)
+
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
@@ -31,7 +33,7 @@ const STAFF_PAGES = [
   { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
   { path: 'sample_qc', component: SampleQc },
-  { path: 'saved_variants', component: SavedVariants },
+  { path: 'saved_variants', component: StaffSavedVariants },
   { path: 'seqr_stats', component: SeqrStats },
   { path: 'users', component: Users },
 ]

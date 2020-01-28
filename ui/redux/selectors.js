@@ -2,6 +2,7 @@ import { createSelector } from 'reselect'
 import orderBy from 'lodash/orderBy'
 
 import { compareObjects } from 'shared/utils/sortUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 import {
   NOTE_TAG_NAME,
   EXCLUDED_TAG_NAME,
@@ -364,9 +365,13 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
 export const getSavedVariantExportConfig = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
+  getAnalysisGroupsByGuid,
   getTagsByVariantGuids,
   getNotesByVariantGuids,
-  (pairedVariants, familiesByGuid, tagsByGuid, notesByGuid) => {
+  getCurrentProject,
+  getSavedVariantTableState,
+  (state, props) => props.match.params,
+  (pairedVariants, familiesByGuid, analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
     const familyVariants = pairedVariants.reduce(
       (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
     ).map(({ genotypes, ...variant }) => ({
@@ -376,20 +381,29 @@ export const getSavedVariantExportConfig = createSelector(
       ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),
     }))
     const maxGenotypes = Math.max(...familyVariants.map(variant => Object.keys(variant.genotypes).length), 0)
-    return {
-      rawData: familyVariants,
-      headers: [
-        ...VARIANT_EXPORT_DATA.map(config => config.header),
-        ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
-      ],
-      processRow: variant => ([
-        ...VARIANT_EXPORT_DATA.map(config => (
-          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
-        ),
-        ...Object.values(variant.genotypes).map(
-          ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
-      ]),
-    }
+
+    const familyId = params.familyGuid && params.familyGuid.split(/_(.+)/)[1]
+    const analysisGroupName = (analysisGroupsByGuid[params.analysisGroupGuid] || {}).name
+    const tagName = params.tag || tableState.categoryFilter || 'All'
+
+    return [{
+      name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analysisGroupName ? ` in Analysis Group ${analysisGroupName}` : ''}`,
+      data: {
+        filename: toSnakecase(`saved_${tagName}_variants_${(project || {}).name}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
+        rawData: familyVariants,
+        headers: [
+          ...VARIANT_EXPORT_DATA.map(config => config.header),
+          ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
+        ],
+        processRow: variant => ([
+          ...VARIANT_EXPORT_DATA.map(config => (
+            config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
+          ),
+          ...Object.values(variant.genotypes).map(
+            ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
+        ]),
+      },
+    }]
   },
 )
 

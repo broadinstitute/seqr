@@ -2,18 +2,27 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Dropdown, Form, Message } from 'semantic-ui-react'
-import { Route, Switch } from 'react-router-dom'
+import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
-import { getAnalysisGroupsByGuid, getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
+import { loadSavedVariants, updateSavedVariantTable, updateStaffSavedVariantTable } from 'redux/rootReducer'
+import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
   getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
   getVisibleSortedSavedVariants } from 'redux/selectors'
 import {
+  REVIEW_TAG_NAME,
+  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
+  VARIANT_SORT_FIELD,
+  VARIANT_HIDE_EXCLUDED_FIELD,
+  VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
+  VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
+  VARIANT_TAGGED_DATE_FIELD,
 } from 'shared/utils/constants'
+import { toSnakecase } from 'shared/utils/stringUtils'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
@@ -24,6 +33,43 @@ import DataLoader from '../../DataLoader'
 import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
+
+const NO_PROJECT_FILTER_FIELDS = [
+  VARIANT_TAGGED_DATE_FIELD,
+  VARIANT_SORT_FIELD,
+  VARIANT_PER_PAGE_FIELD,
+]
+const FILTER_FIELDS = [
+  VARIANT_SORT_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
+  VARIANT_HIDE_EXCLUDED_FIELD,
+  VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_PER_PAGE_FIELD,
+]
+const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
+
+const TAG_TYPES = [
+  'Tier 1 - Novel gene and phenotype',
+  'Tier 1 - Novel gene for known phenotype',
+  'Tier 1 - Phenotype expansion',
+  'Tier 1 - Phenotype not delineated',
+  'Tier 1 - Novel mode of inheritance',
+  'Tier 1 - Known gene, new phenotype',
+  'Tier 2 - Novel gene and phenotype',
+  'Tier 2 - Novel gene for known phenotype',
+  'Tier 2 - Phenotype expansion',
+  'Tier 2 - Phenotype not delineated',
+  'Tier 2 - Known gene, new phenotype',
+  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
+  REVIEW_TAG_NAME,
+  'Send for Sanger validation',
+  'Sanger validated',
+  'Sanger did not confirm',
+  'Confident AR one hit',
+  'MatchBox (MME)',
+  'Submit to Clinvar',
+  'Share with KOMP',
+].map(name => ({ name, color: 'white' }))
 
 const GENE_SEARCH_CATEGORIES = ['genes']
 
@@ -39,6 +85,14 @@ const ControlsRow = styled(Grid.Row)`
   }
 `
 
+const LabelLink = styled(Link)`
+  color: black;
+  
+  &:hover {
+    color: black;
+  }
+`
+
 class BaseSavedVariants extends React.PureComponent {
 
   static propTypes = {
@@ -46,23 +100,30 @@ class BaseSavedVariants extends React.PureComponent {
     history: PropTypes.object,
     project: PropTypes.object,
     analysisGroup: PropTypes.object,
-    tagOptions: PropTypes.array,
-    categoryOptions: PropTypes.array,
-    filters: PropTypes.array,
-    discoveryFilters: PropTypes.array,
+    variantTagTypes: PropTypes.array,
     loading: PropTypes.bool,
     error: PropTypes.string,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
     filteredVariantsCount: PropTypes.number,
-    variantExportConfig: PropTypes.array,
+    variantExportConfig: PropTypes.object,
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
-    updateTable: PropTypes.func,
-    filterByGene: PropTypes.bool,
+    updateSavedVariantTable: PropTypes.func,
+    updateStaffSavedVariantTable: PropTypes.func,
   }
+
+  constructor(props) {
+    super(props)
+
+    this.categoryOptions = this.props.project ? [...new Set(
+      this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
+    )] : []
+    this.updateTable = this.props.project ? this.props.updateSavedVariantTable : this.props.updateStaffSavedVariantTable
+  }
+
 
   loadVariants = (params) => {
     const { familyGuid, variantGuid, analysisGroupGuid, tag, gene } = params
@@ -75,9 +136,9 @@ class BaseSavedVariants extends React.PureComponent {
       this.props.match.params.variantGuid !== variantGuid
 
     if (hasUpdatedTagOrGene || hasUpdatedFamilies) {
-      this.props.updateTable({ page: 1 })
+      this.updateTable({ page: 1 })
     }
-    if (isInitialLoad || hasUpdatedFamilies || (hasUpdatedTagOrGene && this.props.filterByGene)) {
+    if (isInitialLoad || hasUpdatedFamilies || (hasUpdatedTagOrGene && !this.props.project)) {
       this.props.loadSavedVariants(familyGuids, variantGuid, tag, gene)
     }
   }
@@ -85,14 +146,14 @@ class BaseSavedVariants extends React.PureComponent {
 
   navigateToTag = (e, data) => {
     const { familyGuid } = this.props.match.params
-    const isCategory = this.props.categoryOptions && this.props.categoryOptions.includes(data.value)
+    const isCategory = this.categoryOptions.includes(data.value)
     const urlPath = getSavedVariantsLinkPath({
       project: this.props.project,
       analysisGroup: this.props.analysisGroup,
       tag: !isCategory && data.value !== ALL_FILTER && data.value,
       familyGuid,
     })
-    this.props.updateTable({ categoryFilter: isCategory ? data.value : null })
+    this.updateTable({ categoryFilter: isCategory ? data.value : null })
     this.props.history.push(urlPath)
   }
 
@@ -107,13 +168,63 @@ class BaseSavedVariants extends React.PureComponent {
   render() {
     const { familyGuid, variantGuid, tag } = this.props.match.params
 
-    const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
-    let { filters } = this.props
-    if (this.props.discoveryFilters) {
-      if (appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) {
-        filters = this.props.discoveryFilters
-      }
+    const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
+    const analsisGroupName = (this.props.analysisGroup || {}).name
+    const tagName = tag || this.props.tableState.categoryFilter || 'All'
+    const exports = [{
+      name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analsisGroupName ? ` in Analysis Group ${analsisGroupName}` : ''}`,
+      data: {
+        filename: toSnakecase(`saved_${tagName}_variants_${(this.props.project || {}).name}${familyId ? `_family_${familyId}` : ''}${analsisGroupName ? `_analysis_group_${analsisGroupName}` : ''}`),
+        ...this.props.variantExportConfig,
+      },
+    }]
+
+    let currCategory = null
+    const tagOptions = [
+      ...(this.props.project ? this.props.project.variantTagTypes : TAG_TYPES).reduce((acc, vtt) => {
+        if (vtt.category !== currCategory) {
+          currCategory = vtt.category
+          if (vtt.category) {
+            acc.push({
+              key: vtt.category,
+              text: vtt.category,
+              value: vtt.category,
+            })
+          }
+        }
+        acc.push({
+          value: vtt.name,
+          text: vtt.name,
+          key: vtt.name,
+          label: { empty: true, circular: true, style: { backgroundColor: vtt.color } },
+        })
+        return acc
+      }, []),
+    ]
+    if (this.props.project) {
+      tagOptions.unshift({
+        value: ALL_FILTER,
+        text: 'All Saved',
+        content: (
+          <LabelLink
+            to={getSavedVariantsLinkPath({ project: this.props.project, analysisGroup: this.props.analysisGroup, familyGuid })}
+          >
+            All Saved
+          </LabelLink>
+        ),
+        key: 'all',
+      })
     }
+
+    const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
+
+    let filters
+    if (this.props.project) {
+      filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+    } else {
+      filters = NO_PROJECT_FILTER_FIELDS
+    }
+
     if (this.props.totalPages > 1) {
       filters = filters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages })
     }
@@ -147,7 +258,7 @@ class BaseSavedVariants extends React.PureComponent {
               &nbsp;&nbsp;
               <Dropdown
                 inline
-                options={this.props.tagOptions}
+                options={tagOptions}
                 value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}
               />
@@ -155,7 +266,7 @@ class BaseSavedVariants extends React.PureComponent {
 
             </Grid.Column>
             <Grid.Column width={11} floated="right" textAlign="right">
-              {this.props.filterByGene &&
+              {!this.props.project &&
                 <StyledForm inline>
                   <Form.Field
                     control={AwesomeBar}
@@ -171,7 +282,7 @@ class BaseSavedVariants extends React.PureComponent {
               }
               {!variantGuid &&
                 <ReduxFormWrapper
-                  onSubmit={this.props.updateTable}
+                  onSubmit={this.updateTable}
                   form="editSavedVariantTable"
                   initialValues={this.props.tableState}
                   closeOnSuccess={false}
@@ -181,7 +292,7 @@ class BaseSavedVariants extends React.PureComponent {
                 />
               }
               <HorizontalSpacer width={10} />
-              <ExportTableButton downloads={this.props.variantExportConfig} />
+              <ExportTableButton downloads={exports} />
             </Grid.Column>
           </ControlsRow>
         }
@@ -205,6 +316,7 @@ class BaseSavedVariants extends React.PureComponent {
 }
 
 const mapStateToProps = (state, ownProps) => ({
+  project: getCurrentProject(state),
   loading: getSavedVariantsIsLoading(state),
   error: getSavedVariantsLoadingError(state),
   variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
@@ -219,6 +331,8 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   loadSavedVariants,
+  updateSavedVariantTable,
+  updateStaffSavedVariantTable,
 }
 
 export const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)

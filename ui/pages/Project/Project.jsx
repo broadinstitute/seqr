@@ -6,7 +6,7 @@ import { Loader } from 'semantic-ui-react'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import { Error404 } from 'shared/components/page/Errors'
-import SavedVariants from 'shared/components/panel/variants/SavedVariants'
+import RoutedSavedVariants, { SavedVariants } from 'shared/components/panel/variants/SavedVariants'
 import { loadProject, unloadProject } from './reducers'
 import { getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
@@ -14,6 +14,7 @@ import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
 
+const ProjectSavedVariants = RoutedSavedVariants(SavedVariants)
 
 class Project extends React.Component
 {
@@ -45,7 +46,7 @@ class Project extends React.Component
           <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid`} component={FamilyPage} />
-          <Route path={`${this.props.match.url}/saved_variants`} component={SavedVariants} />
+          <Route path={`${this.props.match.url}/saved_variants`} component={ProjectSavedVariants} />
           <Route component={() => <Error404 />} />
         </Switch>
       )
