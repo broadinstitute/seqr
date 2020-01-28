@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError
 
-from seqr.utils.es_utils import get_es_client
+from seqr.utils.elasticsearch.utils import get_es_client
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos

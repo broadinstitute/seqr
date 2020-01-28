@@ -5,8 +5,9 @@ from collections import defaultdict
 from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, _genotype_inheritance_filter
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
+    get_es_variant_gene_counts
+from seqr.utils.elasticsearch.es_search import _genotype_inheritance_filter
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -899,9 +900,9 @@ def create_mock_response(search, index=INDEX_NAME):
     return mock_response
 
 
-@mock.patch('seqr.utils.es_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
-@mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
+@mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
+@mock.patch('seqr.utils.elasticsearch.utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
+@mock.patch('seqr.utils.elasticsearch.es_search._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -917,12 +918,12 @@ class EsUtilsTest(TestCase):
             self.searched_indices += search._index
 
             if isinstance(self.executed_search, list):
-                return [create_mock_response(search, index=self.executed_search[i-1]['index'][0])
-                        for i, search in enumerate(self.executed_search) if search.get('query')]
+                return [create_mock_response(exec_search, index=self.executed_search[i-1]['index'][0])
+                        for i, exec_search in enumerate(self.executed_search) if exec_search.get('query')]
             else:
                 return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
-        patcher = mock.patch('seqr.utils.es_utils.BaseEsSearch._execute_search')
+        patcher = mock.patch('seqr.utils.elasticsearch.es_search.EsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
 
@@ -1001,7 +1002,7 @@ class EsUtilsTest(TestCase):
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[0])
         self.assertExecutedSearch(
-            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
         )
 
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G', return_all_queried_families=True)
@@ -1010,7 +1011,7 @@ class EsUtilsTest(TestCase):
         all_family_variant['genotypes']['I000004_hg00731'] = {'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None}
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
-            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
         )
 
     def test_get_es_variants(self):
@@ -1602,7 +1603,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertDictEqual(variants[0], PARSED_MULTI_GENOME_VERSION_VARIANT)
 

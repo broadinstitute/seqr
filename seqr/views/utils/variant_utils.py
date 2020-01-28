@@ -2,7 +2,7 @@ import logging
 import redis
 
 from seqr.models import SavedVariant, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
