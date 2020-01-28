@@ -101,6 +101,9 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
+    def filter_by_frequency(self, frequencies):
+        self.filter(_frequency_filter(frequencies))
+
     def filter_by_annotations(self, annotations, pathogenicity_filter):
         consequences_filter, allowed_consequences = _annotations_filter(annotations)
         if allowed_consequences:
@@ -112,16 +115,15 @@ class EsSearch(object):
         elif pathogenicity_filter:
             self.filter(pathogenicity_filter)
 
-    def filter_by_location(self, genes, intervals, rs_ids, variant_ids, locus):
-        from seqr.utils.es_utils import parse_variant_id
-        genome_version = locus.get('genomeVersion')
+    def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
+        genome_version = locus and locus.get('genomeVersion')
         variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
         if variant_id_genome_versions and genome_version:
             lifted_genome_version = GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
             liftover = _liftover_grch38_to_grch37() if genome_version == GENOME_VERSION_GRCh38 else _liftover_grch37_to_grch38()
             if liftover:
                 for variant_id in deepcopy(variant_ids):
-                    chrom, pos, ref, alt = parse_variant_id(variant_id)
+                    chrom, pos, ref, alt = self.parse_variant_id(variant_id)
                     lifted_coord = liftover.convert_coordinate('chr{}'.format(chrom), pos)
                     if lifted_coord and lifted_coord[0]:
                         lifted_variant_id = '{chrom}-{pos}-{ref}-{alt}'.format(
@@ -133,6 +135,7 @@ class EsSearch(object):
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
         if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
+        return self
 
     def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
@@ -743,6 +746,13 @@ class EsSearch(object):
 
         return None, {'page': page, 'num_results': num_results_to_use}
 
+    @classmethod
+    def parse_variant_id(cls, variant_id):
+        var_fields = variant_id.split('-')
+        if len(var_fields) != 4:
+            raise ValueError('Invalid variant id')
+        return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
+
 
 # TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/macarthur-lab/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
@@ -832,7 +842,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
     if inheritance_mode == X_LINKED_RECESSIVE:
         samples_q = Q('match', contig='X')
         for individual in individuals:
-            if individual_affected_status[individual.guid] == Individual.AFFECTED_STATUS_AFFECTED \
+            if individual_affected_status[individual.guid] == Individual.AFFECTED_STATUS_UNAFFECTED \
                     and individual.sex == Individual.SEX_MALE:
                 individual_genotype_filter[individual.guid] = REF_REF
 
@@ -893,7 +903,7 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
         else:
             q = variant_id_q
 
-    if location_filter.get('excludeLocations'):
+    if location_filter and location_filter.get('excludeLocations'):
         return ~q
     else:
         return q

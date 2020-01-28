@@ -1,6 +1,5 @@
 from collections import defaultdict
 import elasticsearch
-from elasticsearch_dsl import Q
 import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME
@@ -8,7 +7,7 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.es_search_constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, MAX_COMPOUND_HET_GENES
 from seqr.utils.es_search_helper import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
-from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
+from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +39,20 @@ def get_index_metadata(index_name, client):
 def get_single_es_variant(families, variant_id, return_all_queried_families=False):
     variants = EsSearch(
         families, return_all_queried_families=return_all_queried_families
-    ).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
+    ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
 def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
-    variant_id_filter = _variant_id_filter(xpos_ref_alt_tuples)
-    variants = EsSearch(families).filter(variant_id_filter).search(num_results=len(xpos_ref_alt_tuples))
+    variant_ids = []
+    for xpos, ref, alt in xpos_ref_alt_tuples:
+        chrom, pos = get_chrom_pos(xpos)
+        if chrom == 'M':
+            chrom = 'MT'
+        variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
+    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 
@@ -84,12 +88,13 @@ def _get_es_variants_for_search(search_model, es_search_cls, sort=None, aggregat
         es_search.sort(sort)
 
     if genes or intervals or rs_ids or variant_ids:
-        es_search.filter_by_location(genes, intervals, rs_ids, variant_ids, search['locus'])
+        es_search.filter_by_location(
+            genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=search['locus'])
         if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
             search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
 
     if search.get('freqs'):
-        es_search.filter(_frequency_filter(search['freqs']))
+        es_search.filter_by_frequency(search['freqs'])
 
     es_search.filter_by_annotation_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),
@@ -241,21 +246,6 @@ class EsGeneAggSearch(EsSearch):
         return None, {}
 
 
-def _variant_id_filter(xpos_ref_alt_tuples):
-    variant_ids = []
-    for xpos, ref, alt in xpos_ref_alt_tuples:
-        chrom, pos = get_chrom_pos(xpos)
-        if chrom == 'M':
-            chrom = 'MT'
-        variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-
-    return Q('terms', variantId=variant_ids)
-
-
-def _single_variant_id_filter(variant_id):
-    return Q('term', variantId=variant_id)
-
-
 def _parse_variant_items(search_json):
     raw_items = search_json.get('rawVariantItems')
     if not raw_items:
@@ -269,17 +259,10 @@ def _parse_variant_items(search_json):
             rs_ids.append(item)
         else:
             try:
-                chrom, pos, _, _ = parse_variant_id(item)
+                chrom, pos, _, _ = EsSearch.parse_variant_id(item)
                 get_xpos(chrom, pos)
                 variant_ids.append(item.lstrip('chr'))
             except (KeyError, ValueError):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, invalid_items
-
-
-def parse_variant_id(variant_id):
-    var_fields = variant_id.split('-')
-    if len(var_fields) != 4:
-        raise ValueError('Invalid variant id')
-    return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]

@@ -6,7 +6,8 @@ from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, _genotype_inheritance_filter
+    get_es_variant_gene_counts
+from seqr.utils.es_search_helper import _genotype_inheritance_filter
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -899,9 +900,9 @@ def create_mock_response(search, index=INDEX_NAME):
     return mock_response
 
 
-@mock.patch('seqr.utils.es_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
+@mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 @mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
-@mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
+@mock.patch('seqr.utils.es_search_helper._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -1005,7 +1006,7 @@ class EsUtilsTest(TestCase):
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[0])
         self.assertExecutedSearch(
-            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
         )
 
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G', return_all_queried_families=True)
@@ -1014,7 +1015,7 @@ class EsUtilsTest(TestCase):
         all_family_variant['genotypes']['I000004_hg00731'] = {'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None}
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
-            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
         )
 
     def test_get_es_variants(self):
