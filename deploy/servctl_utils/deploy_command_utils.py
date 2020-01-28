@@ -37,6 +37,8 @@ DEPLOYABLE_COMPONENTS = [
     "nginx",
     "pipeline-runner",
 
+    "kube-scan",
+
     # components of a sharded elasticsearch cluster based on https://github.com/pires/kubernetes-elasticsearch-cluster
     "es-client",
     "es-master",
@@ -56,7 +58,8 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "redis",
     "phenotips",
     "seqr",
-    "pipeline-runner",
+    #"pipeline-runner",
+    "kube-scan",
 ]
 
 
@@ -69,6 +72,7 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "es-client",
     "es-data",
     "es-kibana",
+    "kube-scan",
 ]
 
 
@@ -174,7 +178,7 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.json",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/%(DEPLOY_TO)s/config.json",
     ]) % settings, errors_to_ignore=["already exists"])
 
     account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
@@ -357,18 +361,31 @@ def deploy_seqr(settings):
                    errors_to_ignore=["does not exist"],
                    verbose=True,
                    )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database reference_data_db'",
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
 
     if restore_seqr_db_from_backup:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
                    errors_to_ignore=["does not exist"],
                    verbose=True,
                    )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database reference_data_db'",
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'", verbose=True)
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'", verbose=True)
         run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'",
+                   errors_to_ignore=["already exists"],
+                   verbose=True,
+                   )
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'",
                    errors_to_ignore=["already exists"],
                    verbose=True,
                    )
@@ -393,11 +410,22 @@ def deploy_nginx(settings):
 
     print_separator("nginx")
 
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml" % locals())
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml" % locals())
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
+
+
+def deploy_kibana(settings):
+    print_separator("kibana")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("kibana", settings)
+
+    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
+
+    deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_pipeline_runner(settings):
@@ -411,6 +439,18 @@ def deploy_pipeline_runner(settings):
     ])
 
     deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
+
+
+def deploy_kube_scan(settings):
+    print_separator("kube-scan")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
+
+        if settings["ONLY_PUSH_TO_REGISTRY"]:
+            return
+
+    run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
 
 def deploy_es_client(settings):
@@ -526,16 +566,6 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
     # make sure all keys are upper-case
     settings = {key.upper(): value for key, value in settings.items()}
 
-    # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
-    if runtime_settings.get("DOCKER_IMAGE_TAG"):
-        settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
-    elif runtime_settings["BUILD_DOCKER_IMAGES"]:
-        settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
-    else:
-        settings["DOCKER_IMAGE_TAG"] = ":latest"
-
-    logger.info("==> Using docker image tag: %(DOCKER_IMAGE_TAG)s" % settings)
-
     # configure deployment dir
     settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(
         settings["DEPLOYMENT_TEMP_DIR"],
@@ -591,12 +621,21 @@ def _init_cluster_gcloud(settings):
     run(" ".join([
         "gcloud beta container clusters create %(CLUSTER_NAME)s",
         "--enable-autorepair",
+        "--enable-autoupgrade",
+        "--maintenance-window 7:00",
         "--enable-stackdriver-kubernetes",
         "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
         "--machine-type %(CLUSTER_MACHINE_TYPE)s",
         "--num-nodes 1",
+        "--no-enable-legacy-authorization",
+        "--metadata disable-legacy-endpoints=true",
+        "--no-enable-basic-auth",
+        "--no-enable-legacy-authorization",
+        "--no-issue-client-certificate",
+        "--enable-master-authorized-networks",
+        "--master-authorized-networks %(MASTER_AUTHORIZED_NETWORKS)s",
         #"--network %(GCLOUD_PROJECT)s-auto-vpc",
         #"--local-ssd-count 1",
         "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
@@ -617,7 +656,10 @@ def _init_cluster_gcloud(settings):
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--node-version %(KUBERNETES_VERSION)s",
             "--no-enable-legacy-authorization",
+            "--enable-autorepair",
+            "--enable-autoupgrade",
             "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
@@ -712,8 +754,11 @@ def docker_build(component_label, settings, custom_build_args=()):
     docker_tags = set([
         "",
         ":latest",
-        "%(DOCKER_IMAGE_TAG)s" % params,
+        ":%(TIMESTAMP)s" % settings,
         ])
+
+    if settings.get("DOCKER_IMAGE_TAG"):
+        docker_tags.add(params["DOCKER_IMAGE_TAG"])
 
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
