@@ -249,7 +249,8 @@ export const getPairedFilteredSavedVariants = createSelector(
       if (taggedAfter) {
         const taggedAfterDate = new Date(taggedAfter)
         variantsToShow = variantsToShow.filter(variants => variants.some(variant =>
-          new Date((variant.tagGuids.find(t => tagsByGuid[t].name === tag) || {}).lastModifiedDate) > taggedAfterDate))
+          variant.tagGuids.find(
+            t => tagsByGuid[t].name === tag && new Date(tagsByGuid[t].lastModifiedDate) > taggedAfterDate)))
       }
     }
     return variantsToShow.map(variants => (variants.length === 1 ? variants[0] : variants))
