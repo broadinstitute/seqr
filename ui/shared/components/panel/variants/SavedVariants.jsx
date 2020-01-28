@@ -5,7 +5,7 @@ import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
+import { loadSavedVariants, updateSavedVariantTable, updateStaffSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
   getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
@@ -111,6 +111,7 @@ class BaseSavedVariants extends React.Component {
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
+    updateStaffSavedVariantTable: PropTypes.func,
   }
 
   constructor(props) {
@@ -121,6 +122,7 @@ class BaseSavedVariants extends React.Component {
     this.categoryOptions = this.props.project ? [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
     )] : []
+    this.updateTable = this.props.project ? this.props.updateSavedVariantTable : this.props.updateStaffSavedVariantTable
   }
 
   componentWillReceiveProps(nextProps) {
@@ -131,9 +133,9 @@ class BaseSavedVariants extends React.Component {
     const { familyGuid, variantGuid, analysisGroupGuid, tag, gene } = this.props.match.params
     if (nextFamilyGuid !== familyGuid || nextAnalysisGroupGuid !== analysisGroupGuid || nextVariantGuid !== variantGuid) {
       this.loadVariants(nextProps)
-      this.props.updateSavedVariantTable({ page: 1 })
+      this.updateTable({ page: 1 })
     } else if (nextTag !== tag || nextGene !== gene) {
-      this.props.updateSavedVariantTable({ page: 1 })
+      this.updateTable({ page: 1 })
       if (!this.props.project) {
         this.loadVariants(nextProps)
       }
@@ -156,7 +158,7 @@ class BaseSavedVariants extends React.Component {
       tag: !isCategory && data.value !== ALL_FILTER && data.value,
       familyGuid,
     })
-    this.props.updateSavedVariantTable({ categoryFilter: isCategory ? data.value : null })
+    this.updateTable({ categoryFilter: isCategory ? data.value : null })
     this.props.history.push(urlPath)
   }
 
@@ -294,7 +296,7 @@ class BaseSavedVariants extends React.Component {
               }
               {!variantGuid &&
                 <ReduxFormWrapper
-                  onSubmit={this.props.updateSavedVariantTable}
+                  onSubmit={this.updateTable}
                   form="editSavedVariantTable"
                   initialValues={this.props.tableState}
                   closeOnSuccess={false}
@@ -335,6 +337,7 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = {
   loadSavedVariants,
   updateSavedVariantTable,
+  updateStaffSavedVariantTable,
 }
 
 const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)

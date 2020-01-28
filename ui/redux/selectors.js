@@ -146,15 +146,9 @@ export const getActiveAlignmentSamplesByFamily = createSelector(
 )
 
 // Saved variant selectors
-export const getSavedVariantTableState = state => state.savedVariantTableState
-export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
-export const getSavedVariantSortOrder = state => state.savedVariantTableState.sort || SORT_BY_FAMILY_GUID
-export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
-export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
-const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
-export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
-export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
-export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
+export const getSavedVariantTableState = state => (
+  state.currentProjectGuid ? state.savedVariantTableState : state.staffSavedVariantTableState
+)
 
 const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -222,15 +216,11 @@ export const getPairedSelectedSavedVariants = createSelector(
 
 export const getPairedFilteredSavedVariants = createSelector(
   getPairedSelectedSavedVariants,
-  getSavedVariantCategoryFilter,
-  getSavedVariantHideExcluded,
-  getSavedVariantHideReviewOnly,
-  getSavedVariantHideKnownGeneForPhenotype,
-  getSavedVariantTaggedAfter,
+  getSavedVariantTableState,
   getVariantTagsByGuid,
   (state, props) => props.match.params.tag,
   (state, props) => props.match.params.gene,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, tagsByGuid, tag, gene) => {
+  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, tag, gene) => {
     let variantsToShow = savedVariants.map(variant => (Array.isArray(variant) ? variant : [variant]))
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variants =>
@@ -267,19 +257,19 @@ export const getPairedFilteredSavedVariants = createSelector(
 )
 
 export const getSavedVariantVisibleIndices = createSelector(
-  getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
-  (page, recordsPerPage) => {
+  getSavedVariantTableState,
+  ({ page = 1, recordsPerPage = 25 }) => {
     return [(page - 1) * recordsPerPage, page * recordsPerPage]
   },
 )
 
 export const getVisibleSortedSavedVariants = createSelector(
   getPairedFilteredSavedVariants,
-  getSavedVariantSortOrder,
+  getSavedVariantTableState,
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (pairedFilteredSavedVariants, sort, visibleIndices, genesById, user) => {
+  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => {
       return VARIANT_SORT_LOOKUP[sort](Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user) ||
@@ -290,8 +280,8 @@ export const getVisibleSortedSavedVariants = createSelector(
 )
 
 export const getSavedVariantTotalPages = createSelector(
-  getPairedFilteredSavedVariants, getSavedVariantRecordsPerPage,
-  (filteredSavedVariants, recordsPerPage) => {
+  getPairedFilteredSavedVariants, getSavedVariantTableState,
+  (filteredSavedVariants, { recordsPerPage = 25 }) => {
     return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
   },
 )

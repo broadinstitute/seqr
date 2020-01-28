@@ -29,6 +29,7 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
+const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
@@ -325,6 +326,7 @@ export const updateLocusList = (values) => {
 }
 
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
+export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
 export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
 
 
@@ -363,6 +365,12 @@ const rootReducer = combineReducers(Object.assign({
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
     hideReviewOnly: false,
+    categoryFilter: SHOW_ALL,
+    sort: SORT_BY_FAMILY_GUID,
+    page: 1,
+    recordsPerPage: 25,
+  }, false),
+  staffSavedVariantTableState: createSingleObjectReducer(UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, {
     categoryFilter: SHOW_ALL,
     sort: SORT_BY_FAMILY_GUID,
     page: 1,
