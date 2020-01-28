@@ -13,7 +13,8 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
     AnalysisGroup, ProjectCategory, VariantTagType
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+    InvalidIndexException
+from seqr.utils.es_search_constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.export_table_utils import export_table
