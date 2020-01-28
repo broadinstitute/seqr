@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
+import { Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -29,6 +29,7 @@ import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/Variant
 import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
 import AwesomeBar from '../../page/AwesomeBar'
 import { HorizontalSpacer } from '../../Spacers'
+import DataLoader from '../../DataLoader'
 import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
@@ -116,8 +117,6 @@ class BaseSavedVariants extends React.Component {
 
   constructor(props) {
     super(props)
-
-    this.loadVariants(props)
 
     this.categoryOptions = this.props.project ? [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
@@ -240,15 +239,6 @@ class BaseSavedVariants extends React.Component {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
 
-    let variantContent
-    if (this.props.loading) {
-      variantContent = <Loader inline="centered" active />
-    } else if (this.props.error) {
-      variantContent = <Message error content={this.props.error} />
-    } else {
-      variantContent = <Variants variants={this.props.variantsToDisplay} />
-    }
-
     return (
       <Grid stackable>
         {this.props.project &&
@@ -312,7 +302,15 @@ class BaseSavedVariants extends React.Component {
         }
         <Grid.Row>
           <Grid.Column width={16}>
-            {variantContent}
+            <DataLoader
+              load={this.loadVariants}
+              contentId={this.props}
+              loading={this.props.loading}
+              errorMessage={this.props.error && <Message error content={this.props.error} />}
+              content={this.props.variantsToDisplay}
+            >
+              <Variants variants={this.props.variantsToDisplay} />
+            </DataLoader>
           </Grid.Column>
         </Grid.Row>
       </Grid>
