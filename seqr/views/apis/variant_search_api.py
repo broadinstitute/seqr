@@ -8,6 +8,7 @@ from django.db import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
+import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
@@ -35,6 +36,8 @@ from seqr.views.utils.orm_to_json_utils import \
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 from settings import API_LOGIN_REQUIRED_URL
 
+logger = logging.getLogger(__name__)
+
 
 GENOTYPE_AC_LOOKUP = {
     'ref_ref': [0, 0],
@@ -61,6 +64,7 @@ def query_variants_handler(request, search_hash):
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
+        logger.error(e)
         return create_json_response({'error': e.message}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
@@ -68,8 +72,9 @@ def query_variants_handler(request, search_hash):
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
+        logger.error('InvalidIndexException: {}'.format(e))
         return create_json_response({'error': e.message}, status=400, reason=e.message)
-    except ConnectionTimeout as e:
+    except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
     response = _process_variants(variants or [], results_model.families.all())
