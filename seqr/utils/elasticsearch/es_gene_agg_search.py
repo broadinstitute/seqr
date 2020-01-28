@@ -1,8 +1,8 @@
 from collections import defaultdict
 import logging
 
-from seqr.utils.es_search_constants import MAX_COMPOUND_HET_GENES
-from seqr.utils.es_search_helper import EsSearch
+from seqr.utils.elasticsearch.constants import MAX_COMPOUND_HET_GENES
+from seqr.utils.elasticsearch.es_search import EsSearch
 
 logger = logging.getLogger(__name__)
 

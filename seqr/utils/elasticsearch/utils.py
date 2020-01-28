@@ -3,9 +3,9 @@ import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.es_search_constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE
-from seqr.utils.es_gene_agg_helper import EsGeneAggSearch
-from seqr.utils.es_search_helper import EsSearch
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE
+from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
+from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 

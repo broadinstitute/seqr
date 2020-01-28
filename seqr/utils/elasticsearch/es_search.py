@@ -11,7 +11,7 @@ from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
-from seqr.utils.es_search_constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, IS_OR_INHERITANCE, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
@@ -29,7 +29,7 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False, return_all_queried_families=False):
-        from seqr.utils.es_utils import get_es_client, InvalidIndexException
+        from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -80,7 +80,7 @@ class EsSearch(object):
         self._no_sample_filters = False
 
     def _set_index_metadata(self):
-        from seqr.utils.es_utils import get_index_metadata
+        from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_name = ','.join(sorted(self.samples_by_family_index.keys()))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
             alias = hashlib.md5(self.index_name).hexdigest()

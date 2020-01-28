@@ -5,9 +5,9 @@ from collections import defaultdict
 from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts
-from seqr.utils.es_search_helper import _genotype_inheritance_filter
+from seqr.utils.elasticsearch.es_search import _genotype_inheritance_filter
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -901,8 +901,8 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
-@mock.patch('seqr.utils.es_search_helper._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
+@mock.patch('seqr.utils.elasticsearch.utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
+@mock.patch('seqr.utils.elasticsearch.es_search._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -923,13 +923,9 @@ class EsUtilsTest(TestCase):
             else:
                 return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
-        patcher = mock.patch('seqr.utils.es_utils.EsSearch._execute_search')
+        patcher = mock.patch('seqr.utils.elasticsearch.es_search.EsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
-
-        gene_agg_patcher = mock.patch('seqr.utils.es_utils.EsGeneAggSearch._execute_search')
-        gene_agg_patcher.start().side_effect = mock_execute_search
-        self.addCleanup(gene_agg_patcher.stop)
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
