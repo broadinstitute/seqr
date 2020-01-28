@@ -28,11 +28,11 @@ class EsGeneAggSearch(EsSearch):
                     'vars_by_gene', 'top_hits', size=100, _source='none'
                 )
 
-    def _should_execute_single_search(self, **kwargs):
+    def _should_execute_single_search(self, page=1, num_results=100):
         indices = self.samples_by_family_index.keys()
         return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
 
-    def _process_single_search_response(self, gene_aggs, **kwargs):
+    def _process_single_search_response(self, gene_aggs, page=1, num_results=100, deduplicate=False, **kwargs):
         gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in gene_aggs.items()}
         self._add_compound_hets(gene_aggs)
 
@@ -40,7 +40,7 @@ class EsGeneAggSearch(EsSearch):
 
         return gene_aggs
 
-    def _process_multi_search_responses(self, parsed_responses, **kwargs):
+    def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         gene_aggs = parsed_responses[0] if parsed_responses else {}
         for response in parsed_responses[1:]:
             for gene_id, count_details in response.items():
@@ -99,7 +99,7 @@ class EsGeneAggSearch(EsSearch):
                     gene_counts[gene_id]['families'][family_guid] += len(variants)
 
     @classmethod
-    def process_previous_results(cls, previous_search_results, **kwargs):
+    def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
         if previous_search_results.get('gene_aggs'):
             return previous_search_results['gene_aggs'], {}
 

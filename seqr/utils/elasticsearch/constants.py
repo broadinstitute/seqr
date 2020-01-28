@@ -145,7 +145,8 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(phenotype_mim_number__isnull=False).only('gene__gene_id')]
+                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
+                        phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
                 'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
             }

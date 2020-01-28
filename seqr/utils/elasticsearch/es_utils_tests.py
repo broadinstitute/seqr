@@ -918,8 +918,8 @@ class EsUtilsTest(TestCase):
             self.searched_indices += search._index
 
             if isinstance(self.executed_search, list):
-                return [create_mock_response(search, index=self.executed_search[i-1]['index'][0])
-                        for i, search in enumerate(self.executed_search) if search.get('query')]
+                return [create_mock_response(exec_search, index=self.executed_search[i-1]['index'][0])
+                        for i, exec_search in enumerate(self.executed_search) if exec_search.get('query')]
             else:
                 return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
@@ -1603,7 +1603,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertDictEqual(variants[0], PARSED_MULTI_GENOME_VERSION_VARIANT)
 
