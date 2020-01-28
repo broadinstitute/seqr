@@ -32,8 +32,8 @@ class EsGeneAggSearch(EsSearch):
         indices = self.samples_by_family_index.keys()
         return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
 
-    def _process_single_search_response(self, gene_aggs, page=1, num_results=100, deduplicate=False, **kwargs):
-        gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in gene_aggs.items()}
+    def _process_single_search_response(self, parsed_response, page=1, num_results=100, deduplicate=False, **kwargs):
+        gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in parsed_response.items()}
         self._add_compound_hets(gene_aggs)
 
         self.previous_search_results['gene_aggs'] = gene_aggs
