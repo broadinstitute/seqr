@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # install python
-RUN apt-get install -y --no-install-recommends python-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python-dev \
+    ca-certificates \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
     && pip install --upgrade pip setuptools \
@@ -58,7 +60,8 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
     && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
     && apt-get update && apt-get install -y \
         postgresql \
-        postgresql-client
+        postgresql-client \
+        libpq-dev
 
 RUN apt-get update && apt-get install -y \
     redis-tools
@@ -72,6 +75,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
         python-setuptools \
         libffi-dev \
         libssl-dev \
+        libpq-dev \
     && pip install gsutil
 
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
@@ -107,7 +111,7 @@ ENV TERM=xterm
 COPY readiness_probe /
 COPY bin/*.sh /usr/local/bin/
 COPY gitconfig /root/.gitconfig
-COPY config/guncorn_config.py /
+COPY config/*.py ./
 COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /
