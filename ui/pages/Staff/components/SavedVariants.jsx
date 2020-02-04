@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Form } from 'semantic-ui-react'
 
-import { updateStaffSavedVariantTable } from 'redux/rootReducer'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -17,7 +16,7 @@ import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { loadSavedVariants } from '../reducers'
+import { loadSavedVariants, updateStaffSavedVariantTable } from '../reducers'
 
 const GENE_SEARCH_CATEGORIES = ['genes']
 

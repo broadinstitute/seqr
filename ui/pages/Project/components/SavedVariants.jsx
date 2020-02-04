@@ -5,7 +5,6 @@ import { Route, Switch, Link } from 'react-router-dom'
 import { Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject } from 'redux/selectors'
 import {
   VARIANT_SORT_FIELD,
@@ -17,7 +16,7 @@ import {
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
-import { loadSavedVariants } from '../reducers'
+import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 
 const ALL_FILTER = 'ALL'
 

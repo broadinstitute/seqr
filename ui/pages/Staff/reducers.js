@@ -3,6 +3,7 @@ import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/rootReducer'
+import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -20,6 +21,7 @@ const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
+const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 
 
 // Data actions
@@ -210,6 +212,8 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
   }
 }
 
+export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
+
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
@@ -226,6 +230,12 @@ export const reducers = {
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
+  staffSavedVariantTableState: createSingleObjectReducer(UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, {
+    categoryFilter: SHOW_ALL,
+    sort: SORT_BY_XPOS,
+    page: 1,
+    recordsPerPage: 25,
+  }, false),
 }
 
 const rootReducer = combineReducers(reducers)

@@ -5,7 +5,7 @@ import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/rootReducer'
-import { SHOW_ALL } from 'shared/utils/constants'
+import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
@@ -16,6 +16,7 @@ const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
+const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 
 
@@ -267,6 +268,8 @@ export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
 )
 
+export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
+
 // reducers
 
 export const reducers = {
@@ -285,6 +288,14 @@ export const reducers = {
     familiesFilter: SHOW_IN_REVIEW,
     familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
     familiesSortDirection: 1,
+  }, false),
+  savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
+    hideExcluded: false,
+    hideReviewOnly: false,
+    categoryFilter: SHOW_ALL,
+    sort: SORT_BY_FAMILY_GUID,
+    page: 1,
+    recordsPerPage: 25,
   }, false),
 }
 

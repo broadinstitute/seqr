@@ -7,7 +7,6 @@ import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import {
   createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
 } from './utils/reducerFactories'
@@ -26,8 +25,6 @@ export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
-const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
@@ -269,10 +266,7 @@ export const updateLocusList = (values) => {
   }
 }
 
-export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
-export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
 export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
-
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -304,20 +298,6 @@ const rootReducer = combineReducers(Object.assign({
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   meta: zeroActionsReducer,
   form: formReducer,
-  savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
-    hideExcluded: false,
-    hideReviewOnly: false,
-    categoryFilter: SHOW_ALL,
-    sort: SORT_BY_FAMILY_GUID,
-    page: 1,
-    recordsPerPage: 25,
-  }, false),
-  staffSavedVariantTableState: createSingleObjectReducer(UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, {
-    categoryFilter: SHOW_ALL,
-    sort: SORT_BY_FAMILY_GUID,
-    page: 1,
-    recordsPerPage: 25,
-  }, false),
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
