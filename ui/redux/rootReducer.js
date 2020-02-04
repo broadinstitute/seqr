@@ -7,7 +7,6 @@ import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import {
   createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
 } from './utils/reducerFactories'
@@ -22,14 +21,10 @@ export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
-const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
-const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
+export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
-const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
@@ -209,60 +204,6 @@ export const navigateSavedHashedSearch = (search, navigateSearch) => {
   }
 }
 
-export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
-  return (dispatch, getState) => {
-    const state = getState()
-    const projectGuid = state.currentProjectGuid
-
-    let url = projectGuid ? `/api/project/${projectGuid}/saved_variants` : `/api/staff/saved_variants/${tag}`
-
-    // Do not load if already loaded
-    let expectedFamilyGuids
-    if (variantGuid) {
-      if (state.savedVariantsByGuid[variantGuid]) {
-        return
-      }
-      url = `${url}/${variantGuid}`
-    } else if (projectGuid) {
-      expectedFamilyGuids = familyGuids
-      if (!expectedFamilyGuids) {
-        expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
-          family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
-      }
-      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
-        return
-      }
-    } else if (tag) {
-      if (state.savedVariantTags[tag]) {
-        return
-      }
-    } else {
-      return
-    }
-
-    dispatch({ type: REQUEST_SAVED_VARIANTS })
-    new HttpRequestHelper(url,
-      (responseJson) => {
-        if (expectedFamilyGuids) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_FAMILIES,
-            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
-          })
-        } else if (tag && !gene) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_TAGS,
-            updates: { [tag]: true },
-          })
-        }
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      },
-    ).get(familyGuids ? { families: familyGuids.join(',') } : { gene })
-  }
-}
-
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -325,10 +266,7 @@ export const updateLocusList = (values) => {
   }
 }
 
-export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
-export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
 export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
-
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -353,8 +291,6 @@ const rootReducer = combineReducers(Object.assign({
   variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
-  savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,
@@ -362,20 +298,6 @@ const rootReducer = combineReducers(Object.assign({
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   meta: zeroActionsReducer,
   form: formReducer,
-  savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
-    hideExcluded: false,
-    hideReviewOnly: false,
-    categoryFilter: SHOW_ALL,
-    sort: SORT_BY_FAMILY_GUID,
-    page: 1,
-    recordsPerPage: 25,
-  }, false),
-  staffSavedVariantTableState: createSingleObjectReducer(UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, {
-    categoryFilter: SHOW_ALL,
-    sort: SORT_BY_FAMILY_GUID,
-    page: 1,
-    recordsPerPage: 25,
-  }, false),
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 

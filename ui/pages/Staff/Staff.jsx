@@ -6,7 +6,6 @@ import { Header, Menu } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
-import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -17,6 +16,7 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
 import SampleQc from './components/SampleQc'
+import SavedVariants from './components/SavedVariants'
 import SeqrStats from './components/SeqrStats'
 import Users from './components/Users'
 
