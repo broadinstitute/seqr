@@ -15,7 +15,6 @@ import {
 } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
-import { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { HorizontalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
@@ -40,10 +39,7 @@ class SavedVariants extends React.PureComponent {
   static propTypes = {
     match: PropTypes.object,
     history: PropTypes.object,
-    project: PropTypes.object,
-    analysisGroup: PropTypes.object,
     tagOptions: PropTypes.array,
-    categoryOptions: PropTypes.array,
     filters: PropTypes.array,
     discoveryFilters: PropTypes.array,
     loading: PropTypes.bool,
@@ -57,6 +53,7 @@ class SavedVariants extends React.PureComponent {
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
     updateTable: PropTypes.func,
+    getUpdateTagUrl: PropTypes.func,
     getVariantReloadParams: PropTypes.func,
     additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.node,
@@ -74,17 +71,7 @@ class SavedVariants extends React.PureComponent {
 
 
   navigateToTag = (e, data) => {
-    const { familyGuid } = this.props.match.params
-    const isCategory = this.props.categoryOptions && this.props.categoryOptions.includes(data.value)
-    // TODO redo how link path is done
-    const urlPath = getSavedVariantsLinkPath({
-      project: this.props.project,
-      analysisGroup: this.props.analysisGroup,
-      tag: !isCategory && data.value !== ALL_FILTER && data.value,
-      familyGuid,
-    })
-    this.props.updateTable({ categoryFilter: isCategory ? data.value : null })
-    this.props.history.push(urlPath)
+    this.props.history.push(this.props.getUpdateTagUrl(data.value))
   }
 
   render() {

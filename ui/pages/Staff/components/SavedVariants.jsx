@@ -61,6 +61,8 @@ const getVariantReloadParams = (newParams, oldParams) => {
   return [variantReloadParams, hasUpdatedTagOrGene]
 }
 
+const getUpdateTagUrl = tag => `/staff/saved_variants/${tag}`
+
 const BaseStaffSavedVariants = (props) => {
   const getGeneHref = (selectedGene) => {
     const { tag } = props.match.params
@@ -76,6 +78,7 @@ const BaseStaffSavedVariants = (props) => {
       tagOptions={TAG_OPTIONS}
       filters={FILTER_FIELDS}
       getVariantReloadParams={getVariantReloadParams}
+      getUpdateTagUrl={getUpdateTagUrl}
       additionalFilter={
         <StyledForm inline>
           <Form.Field

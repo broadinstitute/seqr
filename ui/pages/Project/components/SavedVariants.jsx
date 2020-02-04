@@ -57,6 +57,18 @@ const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
     project.variantTagTypes.map(type => type.category).filter(category => category),
   )]
 
+  const getUpdateTagUrl = (tag) => {
+    const isCategory = categoryOptions.includes(tag)
+    props.updateTable({ categoryFilter: isCategory ? tag : null })
+    return getSavedVariantsLinkPath({
+      project,
+      analysisGroup,
+      tag: !isCategory && tag !== ALL_FILTER && tag,
+      familyGuid,
+    })
+  }
+
+
   let currCategory = null
   const tagOptions =
     project.variantTagTypes.reduce((acc, vtt) => {
@@ -92,13 +104,11 @@ const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
 
   return (
     <SavedVariants
-      project={project}
-      analysisGroup={analysisGroup}
-      categoryOptions={categoryOptions}
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
       getVariantReloadParams={getVariantReloadParams(analysisGroup)}
+      getUpdateTagUrl={getUpdateTagUrl}
       tableSummaryComponent={
         summaryProps =>
           <Grid.Row>
@@ -121,6 +131,7 @@ BaseProjectSavedVariants.propTypes = {
   match: PropTypes.object,
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
+  updateTable: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
