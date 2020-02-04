@@ -6,7 +6,7 @@ import { Route, Switch } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { loadSavedVariants } from 'redux/rootReducer'
-import { getAnalysisGroupsByGuid, getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
+import { getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
   getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
   getVisibleSortedSavedVariants } from 'redux/selectors'
@@ -16,7 +16,7 @@ import {
 } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
-import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
+import { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
 import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
 import AwesomeBar from '../../page/AwesomeBar'
 import { HorizontalSpacer } from '../../Spacers'
@@ -62,6 +62,7 @@ class BaseSavedVariants extends React.PureComponent {
     loadSavedVariants: PropTypes.func,
     updateTable: PropTypes.func,
     filterByGene: PropTypes.bool,
+    tableSummaryComponent: PropTypes.node,
   }
 
   loadVariants = (params) => {
@@ -86,6 +87,7 @@ class BaseSavedVariants extends React.PureComponent {
   navigateToTag = (e, data) => {
     const { familyGuid } = this.props.match.params
     const isCategory = this.props.categoryOptions && this.props.categoryOptions.includes(data.value)
+    // TODO redo how link path is done
     const urlPath = getSavedVariantsLinkPath({
       project: this.props.project,
       analysisGroup: this.props.analysisGroup,
@@ -108,6 +110,7 @@ class BaseSavedVariants extends React.PureComponent {
     const { familyGuid, variantGuid, tag } = this.props.match.params
 
     const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
+
     let { filters } = this.props
     if (this.props.discoveryFilters) {
       if (appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) {
@@ -126,20 +129,10 @@ class BaseSavedVariants extends React.PureComponent {
 
     return (
       <Grid stackable>
-        {this.props.project &&
-          <Grid.Row>
-            <Grid.Column width={16}>
-              <VariantTagTypeBar
-                height={30}
-                project={this.props.project}
-                analysisGroup={this.props.analysisGroup}
-                familyGuid={variantGuid ? ((this.props.variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid}
-                hideExcluded={this.props.tableState.hideExcluded}
-                hideReviewOnly={this.props.tableState.hideReviewOnly}
-              />
-            </Grid.Column>
-          </Grid.Row>
-        }
+        {this.props.tableSummaryComponent && React.createElement(this.props.tableSummaryComponent, {
+          familyGuid: variantGuid ? ((this.props.variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid,
+          ...this.props.tableState,
+        })}
         {!this.props.loading &&
           <ControlsRow>
             <Grid.Column width={5}>
@@ -214,7 +207,6 @@ const mapStateToProps = (state, ownProps) => ({
   firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
   totalPages: getSavedVariantTotalPages(state, ownProps),
   variantExportConfig: getSavedVariantExportConfig(state, ownProps),
-  analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
 })
 
 const mapDispatchToProps = {
