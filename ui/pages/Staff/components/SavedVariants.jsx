@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
+import { Form } from 'semantic-ui-react'
 
 import { updateStaffSavedVariantTable } from 'redux/rootReducer'
 import {
@@ -11,7 +12,12 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
 } from 'shared/utils/constants'
-import { SavedVariants } from 'shared/components/panel/variants/SavedVariants'
+import { StyledForm } from 'shared/components/form/ReduxFormWrapper'
+import AwesomeBar from 'shared/components/page/AwesomeBar'
+import SavedVariants from 'shared/components/panel/variants/SavedVariants'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+
+const GENE_SEARCH_CATEGORIES = ['genes']
 
 const FILTER_FIELDS = [
   VARIANT_TAGGED_DATE_FIELD,
@@ -47,16 +53,54 @@ const TAG_OPTIONS = [
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 }))
 
-const BaseStaffSavedVariants = props =>
-  <SavedVariants
-    tagOptions={TAG_OPTIONS}
-    filters={FILTER_FIELDS}
-    filterByGene
-    {...props}
-  />
+const getVariantReloadParams = (newParams, oldParams) => {
+  const isInitialLoad = oldParams === newParams
+  const hasUpdatedTagOrGene = oldParams.tag !== newParams.tag || oldParams.gene !== newParams.gene
+
+  const variantReloadParams = (isInitialLoad || hasUpdatedTagOrGene) && newParams
+  return [variantReloadParams, hasUpdatedTagOrGene]
+}
+
+const BaseStaffSavedVariants = (props) => {
+  const getGeneHref = (selectedGene) => {
+    const { tag } = props.match.params
+    if (!tag) {
+      return props.match.url
+    }
+
+    return `/staff/saved_variants${tag ? `/${tag}` : ''}/gene/${selectedGene.key}`
+  }
+
+  return (
+    <SavedVariants
+      tagOptions={TAG_OPTIONS}
+      filters={FILTER_FIELDS}
+      getVariantReloadParams={getVariantReloadParams}
+      additionalFilter={
+        <StyledForm inline>
+          <Form.Field
+            control={AwesomeBar}
+            categories={GENE_SEARCH_CATEGORIES}
+            inputwidth="200px"
+            label="Gene"
+            placeholder="Search for a gene"
+            getResultHref={getGeneHref}
+            inline
+          />
+          <HorizontalSpacer width={10} />
+        </StyledForm>
+      }
+      {...props}
+    />
+  )
+}
 
 const mapDispatchToProps = {
   updateTable: updateStaffSavedVariantTable,
+}
+
+BaseStaffSavedVariants.propTypes = {
+  match: PropTypes.object,
 }
 
 const StaffSavedVariants = connect(null, mapDispatchToProps)(BaseStaffSavedVariants)

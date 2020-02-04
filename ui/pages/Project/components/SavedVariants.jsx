@@ -15,7 +15,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
-import { SavedVariants } from 'shared/components/panel/variants/SavedVariants'
+import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 const ALL_FILTER = 'ALL'
 
@@ -35,6 +35,20 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
+
+const getVariantReloadParams = analysisGroup => (newParams, oldParams) => {
+  const isInitialLoad = oldParams === newParams
+  const hasUpdatedTag = newParams.tag !== oldParams.tag
+  const hasUpdatedFamilies = newParams.familyGuid !== oldParams.familyGuid ||
+    newParams.analysisGroupGuid !== oldParams.analysisGroupGuid ||
+    newParams.variantGuid !== oldParams.variantGuid
+
+  const familyGuids = newParams.familyGuid ? [newParams.familyGuid] : (analysisGroup || {}).familyGuids
+
+  const variantReloadParams = (isInitialLoad || hasUpdatedFamilies) && { familyGuids, ...newParams }
+  return [variantReloadParams, (hasUpdatedTag || hasUpdatedFamilies)]
+}
+
 
 const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
   const { familyGuid } = props.match.params
@@ -84,6 +98,7 @@ const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
+      getVariantReloadParams={getVariantReloadParams(analysisGroup)}
       tableSummaryComponent={
         summaryProps =>
           <Grid.Row>

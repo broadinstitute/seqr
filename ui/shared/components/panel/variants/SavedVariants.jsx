@@ -1,8 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Dropdown, Form, Message } from 'semantic-ui-react'
-import { Route, Switch } from 'react-router-dom'
+import { Grid, Dropdown, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { loadSavedVariants } from 'redux/rootReducer'
@@ -17,15 +16,12 @@ import {
 
 import ExportTableButton from '../../buttons/ExportTableButton'
 import { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
-import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
-import AwesomeBar from '../../page/AwesomeBar'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { HorizontalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
-
-const GENE_SEARCH_CATEGORIES = ['genes']
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -39,7 +35,7 @@ const ControlsRow = styled(Grid.Row)`
   }
 `
 
-class BaseSavedVariants extends React.PureComponent {
+class SavedVariants extends React.PureComponent {
 
   static propTypes = {
     match: PropTypes.object,
@@ -61,25 +57,18 @@ class BaseSavedVariants extends React.PureComponent {
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
     updateTable: PropTypes.func,
-    filterByGene: PropTypes.bool,
+    getVariantReloadParams: PropTypes.func,
+    additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.node,
   }
 
   loadVariants = (params) => {
-    const { familyGuid, variantGuid, analysisGroupGuid, tag, gene } = params
-    const familyGuids = familyGuid ? [familyGuid] : (this.props.analysisGroup || {}).familyGuids
-
-    const isInitialLoad = params === this.props.match.params
-    const hasUpdatedTagOrGene = this.props.match.params.tag !== tag || this.props.match.params.gene !== gene
-    const hasUpdatedFamilies = this.props.match.params.familyGuid !== familyGuid ||
-      this.props.match.params.analysisGroupGuid !== analysisGroupGuid ||
-      this.props.match.params.variantGuid !== variantGuid
-
-    if (hasUpdatedTagOrGene || hasUpdatedFamilies) {
+    const [variantReloadParams, resetPage] = this.props.getVariantReloadParams(params, this.props.match.params)
+    if (resetPage) {
       this.props.updateTable({ page: 1 })
     }
-    if (isInitialLoad || hasUpdatedFamilies || (hasUpdatedTagOrGene && this.props.filterByGene)) {
-      this.props.loadSavedVariants(familyGuids, variantGuid, tag, gene)
+    if (variantReloadParams) {
+      this.props.loadSavedVariants(variantReloadParams)
     }
   }
 
@@ -96,14 +85,6 @@ class BaseSavedVariants extends React.PureComponent {
     })
     this.props.updateTable({ categoryFilter: isCategory ? data.value : null })
     this.props.history.push(urlPath)
-  }
-
-  getGeneHref = (selectedGene) => {
-    const { tag } = this.props.match.params
-    if (!tag) {
-      return this.props.match.url
-    }
-    return getSavedVariantsLinkPath({ tag, gene: selectedGene.key })
   }
 
   render() {
@@ -135,7 +116,7 @@ class BaseSavedVariants extends React.PureComponent {
         })}
         {!this.props.loading &&
           <ControlsRow>
-            <Grid.Column width={5}>
+            <Grid.Column width={4}>
               Showing {shownSummary} {this.props.filteredVariantsCount}
               &nbsp;&nbsp;
               <Dropdown
@@ -147,21 +128,8 @@ class BaseSavedVariants extends React.PureComponent {
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
 
             </Grid.Column>
-            <Grid.Column width={11} floated="right" textAlign="right">
-              {this.props.filterByGene &&
-                <StyledForm inline>
-                  <Form.Field
-                    control={AwesomeBar}
-                    categories={GENE_SEARCH_CATEGORIES}
-                    inputwidth="200px"
-                    label="Gene"
-                    placeholder="Search for a gene"
-                    getResultHref={this.getGeneHref}
-                    inline
-                  />
-                  <HorizontalSpacer width={10} />
-                </StyledForm>
-              }
+            <Grid.Column width={12} floated="right" textAlign="right">
+              {this.props.additionalFilter}
               {!variantGuid &&
                 <ReduxFormWrapper
                   onSubmit={this.props.updateTable}
@@ -213,20 +181,4 @@ const mapDispatchToProps = {
   loadSavedVariants,
 }
 
-export const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)
-
-// eslint-disable-next-line react/prop-types
-const RoutedSavedVariants = component => ({ match }) =>
-  <Switch>
-    <Route path={`${match.url}/variant/:variantGuid`} component={component} />
-    <Route path={`${match.url}/family/:familyGuid/:tag?`} component={component} />
-    <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={component} />
-    <Route path={`${match.url}/:tag/gene/:gene`} component={component} />
-    <Route path={`${match.url}/:tag?`} component={component} />
-  </Switch>
-
-RoutedSavedVariants.propTypes = {
-  match: PropTypes.object,
-}
-
-export default RoutedSavedVariants
+export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)
