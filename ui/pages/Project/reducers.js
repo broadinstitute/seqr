@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/rootReducer'
 import { SHOW_ALL } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
@@ -39,6 +39,50 @@ export const loadProject = (projectGuid) => {
         },
       ).get()
     }
+  }
+}
+
+
+export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const projectGuid = state.currentProjectGuid
+
+    let url = `/api/project/${projectGuid}/saved_variants`
+
+    // Do not load if already loaded
+    let expectedFamilyGuids
+    if (variantGuid) {
+      if (state.savedVariantsByGuid[variantGuid]) {
+        return
+      }
+      url = `${url}/${variantGuid}`
+    } else {
+      expectedFamilyGuids = familyGuids
+      if (!expectedFamilyGuids) {
+        expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
+          family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
+      }
+      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
+        return
+      }
+    }
+
+    dispatch({ type: REQUEST_SAVED_VARIANTS })
+    new HttpRequestHelper(url,
+      (responseJson) => {
+        if (expectedFamilyGuids) {
+          dispatch({
+            type: RECEIVE_SAVED_VARIANT_FAMILIES,
+            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
+          })
+        }
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
 }
 
@@ -230,6 +274,7 @@ export const reducers = {
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
+  savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSearch: '',

@@ -17,6 +17,8 @@ import {
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
+import { loadSavedVariants } from '../reducers'
+
 const ALL_FILTER = 'ALL'
 
 const FILTER_FIELDS = [
@@ -36,38 +38,40 @@ const LabelLink = styled(Link)`
   }
 `
 
-const getVariantReloadParams = analysisGroup => (newParams, oldParams) => {
-  const isInitialLoad = oldParams === newParams
-  const hasUpdatedTag = newParams.tag !== oldParams.tag
-  const hasUpdatedFamilies = newParams.familyGuid !== oldParams.familyGuid ||
-    newParams.analysisGroupGuid !== oldParams.analysisGroupGuid ||
-    newParams.variantGuid !== oldParams.variantGuid
-
-  const familyGuids = newParams.familyGuid ? [newParams.familyGuid] : (analysisGroup || {}).familyGuids
-
-  const variantReloadParams = (isInitialLoad || hasUpdatedFamilies) && { familyGuids, ...newParams }
-  return [variantReloadParams, (hasUpdatedTag || hasUpdatedFamilies)]
-}
-
-
-const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
-  const { familyGuid } = props.match.params
+const BaseProjectSavedVariants = ({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
+  const { familyGuid, tag, variantGuid, analysisGroupGuid } = props.match.params
 
   const categoryOptions = [...new Set(
     project.variantTagTypes.map(type => type.category).filter(category => category),
   )]
 
-  const getUpdateTagUrl = (tag) => {
-    const isCategory = categoryOptions.includes(tag)
-    props.updateTable({ categoryFilter: isCategory ? tag : null })
+  const getUpdateTagUrl = (newTag) => {
+    const isCategory = categoryOptions.includes(newTag)
+    props.updateTable({ categoryFilter: isCategory ? newTag : null })
     return getSavedVariantsLinkPath({
       project,
       analysisGroup,
-      tag: !isCategory && tag !== ALL_FILTER && tag,
+      tag: !isCategory && newTag !== ALL_FILTER && newTag,
       familyGuid,
     })
   }
 
+  const loadVariants = (newParams) => {
+    const isInitialLoad = props.match.params === newParams
+    const hasUpdatedTag = newParams.tag !== tag
+    const hasUpdatedFamilies = newParams.familyGuid !== familyGuid ||
+      newParams.analysisGroupGuid !== analysisGroupGuid ||
+      newParams.variantGuid !== variantGuid
+
+    const familyGuids = newParams.familyGuid ? [newParams.familyGuid] : (analysisGroup || {}).familyGuids
+
+    if (hasUpdatedTag || hasUpdatedFamilies) {
+      props.updateTable({ page: 1 })
+    }
+    if (isInitialLoad || hasUpdatedFamilies) {
+      loadProjectSavedVariants({ familyGuids, ...newParams })
+    }
+  }
 
   let currCategory = null
   const tagOptions =
@@ -107,8 +111,8 @@ const BaseProjectSavedVariants = ({ project, analysisGroup, ...props }) => {
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
-      getVariantReloadParams={getVariantReloadParams(analysisGroup)}
       getUpdateTagUrl={getUpdateTagUrl}
+      loadVariants={loadVariants}
       tableSummaryComponent={
         summaryProps =>
           <Grid.Row>
@@ -132,6 +136,7 @@ BaseProjectSavedVariants.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
   updateTable: PropTypes.func,
+  loadProjectSavedVariants: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -141,6 +146,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   updateTable: updateSavedVariantTable,
+  loadProjectSavedVariants: loadSavedVariants,
 }
 
 const ProjectSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseProjectSavedVariants)

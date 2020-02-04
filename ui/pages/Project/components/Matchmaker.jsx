@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
 import {
   getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getSavedVariantsIsLoading,
 } from 'redux/selectors'
@@ -24,6 +23,7 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
+  loadSavedVariants,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,

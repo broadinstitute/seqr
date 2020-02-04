@@ -22,9 +22,7 @@ export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
-const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
-const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
+export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
@@ -209,60 +207,6 @@ export const navigateSavedHashedSearch = (search, navigateSearch) => {
   }
 }
 
-export const loadSavedVariants = ({ familyGuids, variantGuid, tag, gene = '' }) => {
-  return (dispatch, getState) => {
-    const state = getState()
-    const projectGuid = state.currentProjectGuid
-
-    let url = projectGuid ? `/api/project/${projectGuid}/saved_variants` : `/api/staff/saved_variants/${tag}`
-
-    // Do not load if already loaded
-    let expectedFamilyGuids
-    if (variantGuid) {
-      if (state.savedVariantsByGuid[variantGuid]) {
-        return
-      }
-      url = `${url}/${variantGuid}`
-    } else if (projectGuid) {
-      expectedFamilyGuids = familyGuids
-      if (!expectedFamilyGuids) {
-        expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
-          family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
-      }
-      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
-        return
-      }
-    } else if (tag) {
-      if (state.savedVariantTags[tag]) {
-        return
-      }
-    } else {
-      return
-    }
-
-    dispatch({ type: REQUEST_SAVED_VARIANTS })
-    new HttpRequestHelper(url,
-      (responseJson) => {
-        if (expectedFamilyGuids) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_FAMILIES,
-            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
-          })
-        } else if (tag && !gene) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_TAGS,
-            updates: { [tag]: true },
-          })
-        }
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      },
-    ).get(familyGuids ? { families: familyGuids.join(',') } : { gene })
-  }
-}
-
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -353,8 +297,6 @@ const rootReducer = combineReducers(Object.assign({
   variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
-  savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,

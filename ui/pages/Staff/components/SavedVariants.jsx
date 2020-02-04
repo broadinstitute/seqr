@@ -17,6 +17,8 @@ import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
+import { loadSavedVariants } from '../reducers'
+
 const GENE_SEARCH_CATEGORIES = ['genes']
 
 const FILTER_FIELDS = [
@@ -53,19 +55,13 @@ const TAG_OPTIONS = [
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 }))
 
-const getVariantReloadParams = (newParams, oldParams) => {
-  const isInitialLoad = oldParams === newParams
-  const hasUpdatedTagOrGene = oldParams.tag !== newParams.tag || oldParams.gene !== newParams.gene
-
-  const variantReloadParams = (isInitialLoad || hasUpdatedTagOrGene) && newParams
-  return [variantReloadParams, hasUpdatedTagOrGene]
-}
-
 const getUpdateTagUrl = tag => `/staff/saved_variants/${tag}`
 
-const BaseStaffSavedVariants = (props) => {
+const BaseStaffSavedVariants = ({ loadStaffSavedVariants, ...props }) => {
+  const { params } = props.match
+  const { tag, gene } = params
+
   const getGeneHref = (selectedGene) => {
-    const { tag } = props.match.params
     if (!tag) {
       return props.match.url
     }
@@ -73,12 +69,24 @@ const BaseStaffSavedVariants = (props) => {
     return `/staff/saved_variants${tag ? `/${tag}` : ''}/gene/${selectedGene.key}`
   }
 
+  const loadVariants = (newParams) => {
+    const isInitialLoad = params === newParams
+    const hasUpdatedTagOrGene = tag !== newParams.tag || gene !== newParams.gene
+
+    if (hasUpdatedTagOrGene) {
+      props.updateTable({ page: 1 })
+    }
+    if (isInitialLoad || hasUpdatedTagOrGene) {
+      loadStaffSavedVariants(newParams)
+    }
+  }
+
   return (
     <SavedVariants
       tagOptions={TAG_OPTIONS}
       filters={FILTER_FIELDS}
-      getVariantReloadParams={getVariantReloadParams}
       getUpdateTagUrl={getUpdateTagUrl}
+      loadVariants={loadVariants}
       additionalFilter={
         <StyledForm inline>
           <Form.Field
@@ -100,10 +108,13 @@ const BaseStaffSavedVariants = (props) => {
 
 const mapDispatchToProps = {
   updateTable: updateStaffSavedVariantTable,
+  loadStaffSavedVariants: loadSavedVariants,
 }
 
 BaseStaffSavedVariants.propTypes = {
   match: PropTypes.object,
+  updateTable: PropTypes.func,
+  loadStaffSavedVariants: PropTypes.func,
 }
 
 const StaffSavedVariants = connect(null, mapDispatchToProps)(BaseStaffSavedVariants)

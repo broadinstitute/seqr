@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Grid, Dropdown, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
 import { getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
   getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
@@ -51,24 +50,12 @@ class SavedVariants extends React.PureComponent {
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
     totalPages: PropTypes.number,
-    loadSavedVariants: PropTypes.func,
     updateTable: PropTypes.func,
     getUpdateTagUrl: PropTypes.func,
-    getVariantReloadParams: PropTypes.func,
+    loadVariants: PropTypes.func,
     additionalFilter: PropTypes.node,
     tableSummaryComponent: PropTypes.node,
   }
-
-  loadVariants = (params) => {
-    const [variantReloadParams, resetPage] = this.props.getVariantReloadParams(params, this.props.match.params)
-    if (resetPage) {
-      this.props.updateTable({ page: 1 })
-    }
-    if (variantReloadParams) {
-      this.props.loadSavedVariants(variantReloadParams)
-    }
-  }
-
 
   navigateToTag = (e, data) => {
     this.props.history.push(this.props.getUpdateTagUrl(data.value))
@@ -136,7 +123,7 @@ class SavedVariants extends React.PureComponent {
         <Grid.Row>
           <Grid.Column width={16}>
             <DataLoader
-              load={this.loadVariants}
+              load={this.props.loadVariants}
               contentId={this.props.match.params}
               reloadOnIdUpdate
               loading={this.props.loading}
@@ -164,8 +151,4 @@ const mapStateToProps = (state, ownProps) => ({
   variantExportConfig: getSavedVariantExportConfig(state, ownProps),
 })
 
-const mapDispatchToProps = {
-  loadSavedVariants,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)
+export default connect(mapStateToProps)(SavedVariants)

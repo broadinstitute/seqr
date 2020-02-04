@@ -1,8 +1,8 @@
 import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
-import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA } from 'redux/rootReducer'
+import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
+import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -16,6 +16,7 @@ const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
+const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
@@ -180,6 +181,35 @@ export const uploadQcPipelineOutput = (values) => {
   }
 }
 
+export const loadSavedVariants = ({ tag, gene = '' }) => {
+  return (dispatch, getState) => {
+    // Do not load if already loaded
+    if (tag) {
+      if (getState().savedVariantTags[tag]) {
+        return
+      }
+    } else {
+      return
+    }
+
+    dispatch({ type: REQUEST_SAVED_VARIANTS })
+    new HttpRequestHelper(`/api/staff/saved_variants/${tag}`,
+      (responseJson) => {
+        if (tag && !gene) {
+          dispatch({
+            type: RECEIVE_SAVED_VARIANT_TAGS,
+            updates: { [tag]: true },
+          })
+        }
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).get({ gene })
+  }
+}
+
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
@@ -192,6 +222,7 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
+  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
