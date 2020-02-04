@@ -78,6 +78,7 @@ class EsSearch(object):
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
         self._no_sample_filters = False
+        self._family_individual_affected_status = {}
 
     def _set_index_metadata(self):
         from seqr.utils.elasticsearch.utils import get_index_metadata
@@ -175,9 +176,10 @@ class EsSearch(object):
                     self._no_sample_filters = True
                     continue
 
-            genotypes_q = _genotype_inheritance_filter(
+            genotypes_q, index_family_individual_affected_status = _genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter,
             )
+            self._family_individual_affected_status.update(index_family_individual_affected_status)
 
             compound_het_q = None
             if inheritance_mode == COMPOUND_HET:
@@ -186,7 +188,7 @@ class EsSearch(object):
                 self._index_searches[index].append(self._search.filter(genotypes_q))
 
             if inheritance_mode == RECESSIVE:
-                compound_het_q = _genotype_inheritance_filter(
+                compound_het_q, _ = _genotype_inheritance_filter(
                     COMPOUND_HET, inheritance_filter, family_samples_by_id, quality_filter,
                 )
 
@@ -429,12 +431,10 @@ class EsSearch(object):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
             raise Exception('This search returned too many compound heterozygous variants. Please add stricter filters')
 
-        index_name = response.hits[0].meta.index
-
         family_unaffected_individual_guids = {
-            family_guid: {sample.individual.guid for sample in samples_by_id.values() if
-                          sample.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED}
-            for family_guid, samples_by_id in self.samples_by_family_index[index_name].items()
+            family_guid: {individual_guid for individual_guid, affected_status in individual_affected_status.items() if
+                          affected_status == Individual.AFFECTED_STATUS_UNAFFECTED}
+            for family_guid, individual_affected_status in self._family_individual_affected_status.items()
         }
 
         compound_het_pairs_by_gene = {}
@@ -795,6 +795,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
     genotypes_q = None
+    affected_status = {}
     for family_guid in sorted(family_samples_by_id.keys()):
         samples_by_id = family_samples_by_id[family_guid]
         # Filter samples by quality
@@ -815,13 +816,14 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
 
         # Filter samples by inheritance
         if inheritance_filter:
-            family_samples_q = _family_genotype_inheritance_filter(
+            family_samples_q, family_individual_affected_status = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id
             )
+            affected_status[family_guid] = family_individual_affected_status
 
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
-                x_linked_q = _family_genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+                x_linked_q, _ = _family_genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
                 family_samples_q |= x_linked_q
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
@@ -838,7 +840,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
         else:
             genotypes_q |= family_samples_q
 
-    return genotypes_q
+    return genotypes_q, affected_status
 
 
 def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id):
@@ -882,7 +884,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
             else:
                 samples_q &= sample_q
 
-    return samples_q
+    return samples_q, individual_affected_status
 
 
 def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):

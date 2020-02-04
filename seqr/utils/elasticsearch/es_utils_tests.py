@@ -1789,7 +1789,7 @@ class EsUtilsTest(TestCase):
         custom_multi_affected = {'I000005_hg00732': 'A'}
 
         # custom genotype
-        inheritance_filter = _genotype_inheritance_filter(None, {
+        inheritance_filter, affected_status = _genotype_inheritance_filter(None, {
             'genotype': {'I000004_hg00731': 'ref_ref', 'I000005_hg00732': 'ref_alt'}
         }, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
@@ -1804,9 +1804,11 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
+        self.assertDictEqual(affected_status, {
+            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
 
         # de novo
-        inheritance_filter = _genotype_inheritance_filter('de_novo', {}, samples_by_id, {})
+        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1824,7 +1826,10 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        inheritance_filter = _genotype_inheritance_filter('de_novo', {'affected': custom_affected}, samples_by_id, {})
+        self.assertDictEqual(affected_status, {
+            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
+
+        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1842,7 +1847,10 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        inheritance_filter = _genotype_inheritance_filter('de_novo', {'affected': custom_multi_affected}, samples_by_id, {})
+        self.assertDictEqual(affected_status, {
+            'F000002_2': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+
+        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {'affected': custom_multi_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1865,6 +1873,8 @@ class EsUtilsTest(TestCase):
                 }]
             }
         }]}})
+        self.assertDictEqual(affected_status, {
+            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
 
         recessive_filter = {
             'bool': {
@@ -1894,15 +1904,15 @@ class EsUtilsTest(TestCase):
         }
 
         # homozygous recessive
-        inheritance_filter = _genotype_inheritance_filter('homozygous_recessive', {}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('homozygous_recessive', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [recessive_filter]}})
-        inheritance_filter = _genotype_inheritance_filter('homozygous_recessive', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('homozygous_recessive', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {
             'bool': {'_name': 'F000002_2', 'must': [custom_affected_recessive_filter]}
         })
 
         # compound het
-        inheritance_filter = _genotype_inheritance_filter('compound_het', {}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('compound_het', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'must_not': [
@@ -1916,7 +1926,7 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        inheritance_filter = _genotype_inheritance_filter('compound_het', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('compound_het', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'must_not': [
@@ -1963,26 +1973,26 @@ class EsUtilsTest(TestCase):
             }
         }
 
-        inheritance_filter = _genotype_inheritance_filter('x_linked_recessive', {}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('x_linked_recessive', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [x_linked_filter]}})
-        inheritance_filter = _genotype_inheritance_filter(
+        inheritance_filter, _ = _genotype_inheritance_filter(
             'x_linked_recessive', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {
             'bool': {'_name': 'F000002_2', 'must': [custom_affected_x_linked_filter]}
         })
 
         # recessive
-        inheritance_filter = _genotype_inheritance_filter('recessive', {}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('recessive', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {'should': [recessive_filter, x_linked_filter]}
         }]}})
-        inheritance_filter = _genotype_inheritance_filter('recessive', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('recessive', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {'should': [custom_affected_recessive_filter, custom_affected_x_linked_filter]}
         }]}})
 
         # any affected
-        inheritance_filter = _genotype_inheritance_filter('any_affected', {}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('any_affected', {}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'should': [
@@ -1991,7 +2001,7 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        inheritance_filter = _genotype_inheritance_filter('any_affected', {'affected': custom_multi_affected}, samples_by_id, {})
+        inheritance_filter, _ = _genotype_inheritance_filter('any_affected', {'affected': custom_multi_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'should': [
