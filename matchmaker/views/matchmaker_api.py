@@ -264,7 +264,7 @@ def delete_mme_submission(request, submission_guid):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete()
 
-    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'mmeDeletedDate': deleted_date}}})
+    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'deletedDate': deleted_date}}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

@@ -630,7 +630,7 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(
-            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeDeletedDate'][:10],
+            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['deletedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
 
