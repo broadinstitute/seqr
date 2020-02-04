@@ -123,6 +123,7 @@ export const LOCUS_LIST = {
 }
 
 export const STATE1 = {
+  currentProjectGuid: 'R0237_1000_genomes_demo',
   projectsByGuid: {
     R0237_1000_genomes_demo: {
       createdDate: '2016-05-16T05:37:08.634Z',
@@ -424,6 +425,7 @@ export const STATE1 = {
       sampleGuids: [],
     },
   },
+  analysisGroupsByGuid: {},
   samplesByGuid: {},
   mmeSubmissionsByGuid: {},
   project: {
@@ -491,6 +493,8 @@ export const STATE1 = {
       variantGuids: ['SV0000002_1248367227_r0390_100'], tagGuid: 'VFD0000001_1248367227_r0390_100'},
   },
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
+  savedVariantsLoading: {},
+  savedVariantTableState: {},
 }
 
 export const STATE_WITH_2_FAMILIES = {
