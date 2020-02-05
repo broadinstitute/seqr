@@ -13,7 +13,7 @@ from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, v
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant
 from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ class Command(BaseCommand):
         logger.info('Successfully updated {} variants'.format(len(es_variants)))
 
         # Update project and sample data
-        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
+        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38})
 
         reset_cached_search_results(project)
 

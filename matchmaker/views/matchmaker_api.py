@@ -9,7 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
-    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, MME_DISCLAIMER
+    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, \
+    get_gene_ids_for_feature, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
@@ -132,6 +133,10 @@ def _search_external_matches(nodes_to_query, patient_data):
     body = {'_disclaimer': MME_DISCLAIMER}
     body.update(patient_data)
     external_results = []
+    submission_gene_ids = set()
+    for feature in patient_data['patient'].get('genomicFeatures', []):
+        submission_gene_ids.update(get_gene_ids_for_feature(feature, {}))
+
     for node in nodes_to_query:
         headers = {
             'X-Auth-Token': node['token'],
@@ -151,15 +156,18 @@ def _search_external_matches(nodes_to_query, patient_data):
 
             node_results = external_result.json()['results']
             logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
-            invalid_results = []
-            for result in node_results:
-                if _is_valid_external_result(result):
-                    external_results.append(result)
-                else:
-                    invalid_results.append(result)
-            if invalid_results:
-                error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
-                logger.error(error_message)
+            if node_results:
+                _, _, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(node_results)
+                invalid_results = []
+                for result in node_results:
+                    if (not submission_gene_ids) or \
+                            _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
+                        external_results.append(result)
+                    else:
+                        invalid_results.append(result)
+                if invalid_results:
+                    error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
+                    logger.error(error_message)
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], e.message, json.dumps(patient_data))
@@ -169,14 +177,11 @@ def _search_external_matches(nodes_to_query, patient_data):
     return external_results
 
 
-def _is_valid_external_result(result):
-    if not (result.get('patient', {}).get('features') or result.get('patient', {}).get('genomicFeatures')):
-        return False
-    if any((not feature.get('id')) for feature in result['patient'].get('features', [])):
-        return False
-    if any((not feature.get('gene', {}).get('id')) for feature in result['patient'].get('genomicFeatures', [])):
-        return False
-    return True
+def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
+    for feature in result.get('patient', {}).get('genomicFeatures', []):
+        if any(gene_id in submission_gene_ids for gene_id in get_gene_ids_for_feature(feature, gene_symbols_to_ids)):
+            return True
+    return False
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -259,7 +264,7 @@ def delete_mme_submission(request, submission_guid):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete()
 
-    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'mmeDeletedDate': deleted_date}}})
+    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'deletedDate': deleted_date}}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

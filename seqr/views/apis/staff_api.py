@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError
 
-from seqr.utils.es_utils import get_es_client
+from seqr.utils.elasticsearch.utils import get_es_client
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -839,7 +839,8 @@ def saved_variants_page(request, tag):
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)
 
-    genes = _saved_variant_genes(response_json['savedVariantsByGuid'].values())
+    saved_variants = response_json['savedVariantsByGuid'].values()
+    genes = _saved_variant_genes(saved_variants)
     locus_list_guids = _add_locus_lists(project_models_by_guid.values(), saved_variants, genes)
 
     projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)

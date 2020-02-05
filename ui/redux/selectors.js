@@ -2,6 +2,7 @@ import { createSelector } from 'reselect'
 import orderBy from 'lodash/orderBy'
 
 import { compareObjects } from 'shared/utils/sortUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 import {
   NOTE_TAG_NAME,
   EXCLUDED_TAG_NAME,
@@ -146,15 +147,9 @@ export const getActiveAlignmentSamplesByFamily = createSelector(
 )
 
 // Saved variant selectors
-export const getSavedVariantTableState = state => state.savedVariantTableState
-export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
-export const getSavedVariantSortOrder = state => state.savedVariantTableState.sort || SORT_BY_FAMILY_GUID
-export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
-export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
-const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
-export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
-export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
-export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
+export const getSavedVariantTableState = state => (
+  state.currentProjectGuid ? state.savedVariantTableState : state.staffSavedVariantTableState
+)
 
 const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -222,15 +217,11 @@ export const getPairedSelectedSavedVariants = createSelector(
 
 export const getPairedFilteredSavedVariants = createSelector(
   getPairedSelectedSavedVariants,
-  getSavedVariantCategoryFilter,
-  getSavedVariantHideExcluded,
-  getSavedVariantHideReviewOnly,
-  getSavedVariantHideKnownGeneForPhenotype,
-  getSavedVariantTaggedAfter,
+  getSavedVariantTableState,
   getVariantTagsByGuid,
   (state, props) => props.match.params.tag,
   (state, props) => props.match.params.gene,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, tagsByGuid, tag, gene) => {
+  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, tag, gene) => {
     let variantsToShow = savedVariants.map(variant => (Array.isArray(variant) ? variant : [variant]))
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variants =>
@@ -259,7 +250,8 @@ export const getPairedFilteredSavedVariants = createSelector(
       if (taggedAfter) {
         const taggedAfterDate = new Date(taggedAfter)
         variantsToShow = variantsToShow.filter(variants => variants.some(variant =>
-          new Date((variant.tagGuids.find(t => tagsByGuid[t].name === tag) || {}).lastModifiedDate) > taggedAfterDate))
+          variant.tagGuids.find(
+            t => tagsByGuid[t].name === tag && new Date(tagsByGuid[t].lastModifiedDate) > taggedAfterDate)))
       }
     }
     return variantsToShow.map(variants => (variants.length === 1 ? variants[0] : variants))
@@ -267,19 +259,19 @@ export const getPairedFilteredSavedVariants = createSelector(
 )
 
 export const getSavedVariantVisibleIndices = createSelector(
-  getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
-  (page, recordsPerPage) => {
+  getSavedVariantTableState,
+  ({ page = 1, recordsPerPage = 25 }) => {
     return [(page - 1) * recordsPerPage, page * recordsPerPage]
   },
 )
 
 export const getVisibleSortedSavedVariants = createSelector(
   getPairedFilteredSavedVariants,
-  getSavedVariantSortOrder,
+  getSavedVariantTableState,
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (pairedFilteredSavedVariants, sort, visibleIndices, genesById, user) => {
+  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => {
       return VARIANT_SORT_LOOKUP[sort](Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user) ||
@@ -290,8 +282,8 @@ export const getVisibleSortedSavedVariants = createSelector(
 )
 
 export const getSavedVariantTotalPages = createSelector(
-  getPairedFilteredSavedVariants, getSavedVariantRecordsPerPage,
-  (filteredSavedVariants, recordsPerPage) => {
+  getPairedFilteredSavedVariants, getSavedVariantTableState,
+  (filteredSavedVariants, { recordsPerPage = 25 }) => {
     return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
   },
 )
@@ -373,9 +365,13 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
 export const getSavedVariantExportConfig = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
+  getAnalysisGroupsByGuid,
   getTagsByVariantGuids,
   getNotesByVariantGuids,
-  (pairedVariants, familiesByGuid, tagsByGuid, notesByGuid) => {
+  getCurrentProject,
+  getSavedVariantTableState,
+  (state, props) => props.match.params,
+  (pairedVariants, familiesByGuid, analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
     const familyVariants = pairedVariants.reduce(
       (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
     ).map(({ genotypes, ...variant }) => ({
@@ -385,20 +381,29 @@ export const getSavedVariantExportConfig = createSelector(
       ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),
     }))
     const maxGenotypes = Math.max(...familyVariants.map(variant => Object.keys(variant.genotypes).length), 0)
-    return {
-      rawData: familyVariants,
-      headers: [
-        ...VARIANT_EXPORT_DATA.map(config => config.header),
-        ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
-      ],
-      processRow: variant => ([
-        ...VARIANT_EXPORT_DATA.map(config => (
-          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
-        ),
-        ...Object.values(variant.genotypes).map(
-          ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
-      ]),
-    }
+
+    const familyId = params.familyGuid && params.familyGuid.split(/_(.+)/)[1]
+    const analysisGroupName = (analysisGroupsByGuid[params.analysisGroupGuid] || {}).name
+    const tagName = params.tag || tableState.categoryFilter || 'All'
+
+    return [{
+      name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analysisGroupName ? ` in Analysis Group ${analysisGroupName}` : ''}`,
+      data: {
+        filename: toSnakecase(`saved_${tagName}_variants_${(project || {}).name}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
+        rawData: familyVariants,
+        headers: [
+          ...VARIANT_EXPORT_DATA.map(config => config.header),
+          ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
+        ],
+        processRow: variant => ([
+          ...VARIANT_EXPORT_DATA.map(config => (
+            config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
+          ),
+          ...Object.values(variant.genotypes).map(
+            ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
+        ]),
+      },
+    }]
   },
 )
 

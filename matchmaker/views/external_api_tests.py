@@ -60,7 +60,7 @@ class ExternalAPITest(TestCase):
             'patient': {
                 'id': '12345',
                 'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'OR4F5'}}],
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'OR4F29'}}],
                 'features': [{'id': 'HP:0003273'}, {'id': 'HP:0001252'}]
             }}
 
@@ -204,7 +204,7 @@ class ExternalAPITest(TestCase):
     matchbox found a match between a patient from Test Institute and the following 2 case(s) 
     in matchbox. The following information was included with the query,
 
-    genes: FAM138A, OR4F5
+    genes: FAM138A, OR4F29, OR4F5
     phenotypes: HP:0001252 (Muscular hypotonia), HP:0003273 (Hip contracture)
     contact: PI
     email: test@test.com

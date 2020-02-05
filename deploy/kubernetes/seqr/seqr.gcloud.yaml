@@ -55,7 +55,6 @@ spec:
           readOnly: true
         - name: matchbox-secrets-volume
           mountPath: {{ MME_CONFIG_DIR }}
-          readOnly: true
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
         resources:

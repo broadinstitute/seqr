@@ -33,7 +33,11 @@ def get_gene_ids_for_gene_symbols(gene_symbols):
 
 
 def get_filtered_gene_ids(gene_filter):
-    return [gene.gene_id for gene in GeneInfo.objects.only('gene_id').filter(**gene_filter)]
+    if isinstance(gene_filter, dict):
+        gene_query = GeneInfo.objects.filter(**gene_filter)
+    else:
+        gene_query = GeneInfo.objects.filter(gene_filter)
+    return [gene.gene_id for gene in gene_query.only('gene_id')]
 
 
 def get_queried_genes(query, max_results):

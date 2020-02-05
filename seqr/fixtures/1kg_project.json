@@ -12,14 +12,12 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "1kg",
     "genome_version": "37",
 	"is_mme_enabled": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": "1kg"
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {
@@ -35,12 +33,10 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": ""
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {
@@ -56,13 +52,11 @@
 	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
-	"is_phenotips_enabled": true,
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z",
-	"deprecated_project_id": ""
+	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
 {
@@ -108,7 +102,6 @@
         "pedigree_image": "ped_1.png",
         "analysis_notes": "<b>\r\n                        F\u00e5mily analysis n\u00f8tes\r\n                    </b>",
         "analysis_summary": "<b>\r\n                        F\u00e5mily analysis summ\u00e5ry.\r\n                    </b>",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
@@ -130,7 +123,6 @@
         "pedigree_image": "ped_2.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
@@ -152,7 +144,6 @@
         "pedigree_image": "ped_3.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -174,7 +165,6 @@
         "pedigree_image": "ped_4.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -196,7 +186,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -218,7 +207,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -240,7 +228,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -262,7 +249,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -284,7 +270,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -306,7 +291,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -328,7 +312,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "",
@@ -350,7 +333,6 @@
         "pedigree_image": "ped.png",
         "analysis_notes": "",
         "analysis_summary": "",
-        "causal_inheritance_mode": "unknown",
         "analysis_status": "Q",
         "internal_analysis_status": null,
         "internal_case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
@@ -1078,8 +1060,7 @@
         "category": "CMG Discovery Tags",
         "description": "Gene not previously associated with a Mendelian condition",
         "color": "#03441E",
-        "order": 1.0,
-        "is_built_in": true
+        "order": 1.0
     }
 },
 {
@@ -1095,8 +1076,7 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene of interest for further review.",
         "color": "#668FE3",
-        "order": 11.0,
-        "is_built_in": true
+        "order": 11.0
     }
 },
 {
@@ -1112,8 +1092,7 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
         "color": "#555555",
-        "order": 15.0,
-        "is_built_in": true
+        "order": 15.0
     }
 },
 {
@@ -1353,7 +1332,7 @@
         "saved_variants": [2],
         "note": "test n\u00f8te",
         "submit_to_clinvar": false,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1366,7 +1345,7 @@
         "last_modified_date": "2018-02-23T17:32:30.373Z",
         "saved_variants": [1],
         "variant_tag_type": 2,
-        "search_parameters": "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/125897d6/results"
+        "search_hash": "125897d6"
     }
 },
 {
@@ -1379,7 +1358,7 @@
         "last_modified_date": "2018-05-25T21:01:33.193Z",
         "saved_variants": [2],
         "variant_tag_type": 2,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1392,7 +1371,7 @@
         "last_modified_date": "2018-05-29T16:32:51.449Z",
         "saved_variants": [1],
         "variant_tag_type": 1,
-        "search_parameters": null
+        "search_hash": null
     }
 },
 {
@@ -1406,7 +1385,7 @@
         "saved_variants": [1],
         "functional_data_tag": "Biochemical Function",
         "metadata": "A note",
-        "search_parameters": ""
+        "search_hash": ""
     }
 },
 {
@@ -1420,7 +1399,7 @@
         "saved_variants": [1],
         "functional_data_tag": "Genome-wide Linkage",
         "metadata": "2",
-        "search_parameters": ""
+        "search_hash": ""
     }
 },
 {
@@ -1458,8 +1437,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.341Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000223972",
-    "description": ""
+    "gene_id": "ENSG00000223972"
   }
 },
 {
@@ -1471,8 +1449,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.347Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000227232",
-    "description": ""
+    "gene_id": "ENSG00000227232"
   }
 },
 {
@@ -1484,8 +1461,7 @@
     "created_by": null,
     "last_modified_date": "2018-04-28T00:03:25.353Z",
     "locus_list": 1,
-    "gene_id": "ENSG00000243485",
-    "description": ""
+    "gene_id": "ENSG00000243485"
   }
 },
 {
@@ -1500,8 +1476,7 @@
     "genome_version": "37",
     "chrom": "1",
     "start": 248367200,
-    "end": 248367300,
-    "description": null
+    "end": 248367300
   }
 },
 {
@@ -1516,8 +1491,7 @@
     "genome_version": "37",
     "chrom": "3",
     "start": 25,
-    "end": 3000,
-    "description": null
+    "end": 3000
   }
 },
 {

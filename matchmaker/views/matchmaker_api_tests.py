@@ -27,7 +27,7 @@ NEW_MATCH_JSON = {
         "genomicFeatures": [
             {
                 "gene": {
-                    "id": "ENSG00000186092"
+                    "id": "OR4F29"
                 }
             }
         ],
@@ -48,7 +48,7 @@ PARSED_NEW_MATCH_JSON = {
     'patient': NEW_MATCH_JSON['patient'],
     'submissionGuid': SUBMISSION_GUID,
     'phenotypes': [{'observed': 'yes', 'id': 'HP:0012469', 'label': 'Infantile spasms'}],
-    'geneVariants': [{'geneId': 'ENSG00000186092'}],
+    'geneVariants': [{'geneId': 'ENSG00000235249'}],
     'matchStatus': {
         'matchmakerResultGuid': mock.ANY,
         'comments': None,
@@ -65,6 +65,11 @@ PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
 INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+INVALID_NEW_MATCH_JSON['patient']['id'] = '123'
+
+MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
+MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 
 
 class EmailException(Exception):
@@ -185,7 +190,7 @@ class MatchmakerAPITest(TestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
@@ -255,7 +260,7 @@ class MatchmakerAPITest(TestCase):
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
-            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972'}
+            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
         )
 
         self.assertDictEqual(response_json['mmeContactNotes'], {
@@ -311,7 +316,7 @@ class MatchmakerAPITest(TestCase):
         message = u"""
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
-     - From Reza Maroofian at institution St Georges, University of London with genes OR4F5 with phenotypes HP:0012469 (Infantile spasms).
+     - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
@@ -366,7 +371,7 @@ class MatchmakerAPITest(TestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000237613',
+                'geneId': 'ENSG00000235249',
                 'alt': 'C',
                 'ref': 'CCACT',
                 'chrom': '14',
@@ -397,7 +402,7 @@ class MatchmakerAPITest(TestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000237613',
+                'geneId': 'ENSG00000235249',
                 'alt': 'C',
                 'ref': 'CCACT',
                 'chrom': '14',
@@ -420,7 +425,7 @@ class MatchmakerAPITest(TestCase):
         new_match_result_guid = response_json['mmeResultsByGuid'].keys()[0]
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertEqual(response_json['mmeResultsByGuid'].values()[0]['submissionGuid'], new_submission_guid)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000237613'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249'})
 
         self.assertDictEqual(response_json['mmeContactNotes'], {
             'st georges, university of london': {
@@ -441,7 +446,7 @@ class MatchmakerAPITest(TestCase):
                     {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
                 ],
                 'genomicFeatures': [{
-                    'gene': {'id': 'ENSG00000237613'},
+                    'gene': {'id': 'ENSG00000235249'},
                     'variant': {
                         'start': 77027549,
                         'assembly': 'GRCh38',
@@ -590,7 +595,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': new_submission_guid,
         }})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092','ENSG00000227232'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249', 'ENSG00000227232'})
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test proxy calls
@@ -625,7 +630,7 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(
-            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeDeletedDate'][:10],
+            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['deletedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
 

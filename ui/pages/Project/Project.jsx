@@ -6,14 +6,13 @@ import { Loader } from 'semantic-ui-react'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import { Error404 } from 'shared/components/page/Errors'
-import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { loadProject, unloadProject } from './reducers'
 import { getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
-
+import SavedVariants from './components/SavedVariants'
 
 class Project extends React.Component
 {

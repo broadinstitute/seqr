@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
 import {
   getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getSavedVariantsIsLoading,
 } from 'redux/selectors'
@@ -24,6 +23,7 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
+  loadSavedVariants,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -480,7 +480,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
       return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
     },
     onSubmit: (values) => {
-      return dispatch(updateMmeSubmission({ ...values, individualGuid: ownProps.individual.individualGuid }))
+      return dispatch(updateMmeSubmission({
+        ...values,
+        submissionGuid: ownProps.individual.mmeSubmissionGuid,
+        individualGuid: ownProps.individual.individualGuid,
+      }))
     },
   }
 }

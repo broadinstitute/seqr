@@ -8,12 +8,14 @@ from django.db import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
+import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
     AnalysisGroup, ProjectCategory, VariantTagType
-from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
+    InvalidIndexException
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.export_table_utils import export_table
@@ -34,6 +36,8 @@ from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 from settings import API_LOGIN_REQUIRED_URL
+
+logger = logging.getLogger(__name__)
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -61,6 +65,7 @@ def query_variants_handler(request, search_hash):
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
+        logger.error(e)
         return create_json_response({'error': e.message}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
@@ -68,8 +73,9 @@ def query_variants_handler(request, search_hash):
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
+        logger.error('InvalidIndexException: {}'.format(e))
         return create_json_response({'error': e.message}, status=400, reason=e.message)
-    except ConnectionTimeout as e:
+    except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
     response = _process_variants(variants or [], results_model.families.all())
@@ -93,8 +99,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
             families = Family.objects.filter(guid__in=all_families)
         elif search_context.get('allProjectFamilies'):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(user)
-                        if project.has_new_search and project not in omit_projects]
+            projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
         else:
             raise Exception('Invalid search: no projects/ families specified')
