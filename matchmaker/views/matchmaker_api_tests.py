@@ -622,7 +622,9 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
 
-    def test_delete_mme_submission(self):
+    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
+    @responses.activate
+    def test_delete_mme_submission(self, mock_mme_nodes):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
@@ -640,6 +642,35 @@ class MatchmakerAPITest(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 402)
         self.assertEqual(response.reason_phrase, 'Matchmaker submission has already been deleted for NA19675_1')
+
+        # Test submission un-deletes when updated
+        responses.add(responses.POST, 'http://node_a.com/match', status=200, json={'results': []})
+        mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
+
+        update_url = reverse(update_mme_submission, args=[SUBMISSION_GUID])
+        response = self.client.post(update_url, content_type='application/json',  data=json.dumps({
+            'geneVariants': [{'geneId': 'ENSG00000235249', 'genomeVersion': '38'}]
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
+            'mmeResultGuids': mock.ANY,
+            'individualGuid': INDIVIDUAL_GUID,
+            'submissionGuid': SUBMISSION_GUID,
+            'createdDate': '2018-05-23T09:07:49.719Z',
+            'lastModifiedDate': mock.ANY,
+            'deletedDate': None,
+            'contactName': 'Sam Baxter',
+            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'submissionId': 'NA19675_1_01',
+            'phenotypes': [],
+            'geneVariants': [{'geneId': 'ENSG00000235249'}],
+        }})
+        self.assertEqual(
+            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['lastModifiedDate'][:10],
+            datetime.today().strftime('%Y-%m-%d')
+        )
 
     def test_update_mme_result_status(self):
         url = reverse(update_mme_result_status, args=[RESULT_STATUS_GUID])

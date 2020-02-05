@@ -217,6 +217,8 @@ def update_mme_submission(request, submission_guid=None):
     submission_json.update({
         'features': phenotypes,
         'genomicFeatures': genomic_features,
+        'deletedDate': None,
+        'deletedBy': None,
     })
 
     if submission_guid:
