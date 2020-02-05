@@ -43,7 +43,6 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-
 export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
   return (dispatch, getState) => {
     const state = getState()
@@ -86,6 +85,8 @@ export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
     ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
 }
+
+export const loadFamilySavedVariants = familyGuid => loadSavedVariants({ familyGuids: [familyGuid] })
 
 const unloadSavedVariants = (dispatch, getState) => {
   const state = getState()
