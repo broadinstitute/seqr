@@ -91,7 +91,8 @@ def parse_mme_features(features, hpo_terms_by_id):
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
     for gene_feature in (genomic_features or []):
-        gene_id = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)[0]
+        gene_ids = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)
+        gene_id = gene_ids[0] if gene_ids else None
         if gene_id:
             gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
