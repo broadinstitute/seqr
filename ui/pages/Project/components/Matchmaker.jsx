@@ -480,7 +480,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
       return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
     },
     onSubmit: (values) => {
-      return dispatch(updateMmeSubmission({ ...values, submissionGuid: ownProps.individual.mmeSubmissionGuid }))
+      return dispatch(updateMmeSubmission({
+        ...values,
+        submissionGuid: ownProps.individual.mmeSubmissionGuid,
+        individualGuid: ownProps.individual.individualGuid,
+      }))
     },
   }
 }
