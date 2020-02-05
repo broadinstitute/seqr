@@ -1,26 +1,14 @@
 from copy import deepcopy
 from django.contrib import admin
+from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult, MatchmakerContactNotes
 from seqr.models import Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, \
     VariantTag, VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, \
     FamilyAnalysedBy
 
 for model_class in [
-    Project,
-    Family,
-    Individual,
-    Sample,
-    LocusList,
-    LocusListGene,
-    LocusListInterval,
-    VariantNote,
-    VariantTag,
-    VariantTagType,
-    VariantFunctionalData,
-    SavedVariant,
-    GeneNote,
-    AnalysisGroup,
-    ProjectCategory,
-    FamilyAnalysedBy,
+    Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag,
+    VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, FamilyAnalysedBy,
+    MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult, MatchmakerContactNotes
 ]:
 
     @admin.register(model_class)
@@ -28,7 +16,7 @@ for model_class in [
         search_fields = [field.name for field in model_class._meta.get_fields() if field.name in {
             'guid', 'name', 'display_name', 'family_id', 'individual_id', 'description'
         }]
-        list_display = deepcopy(model_class._meta.json_fields if hasattr(model_class._meta, 'json_fields') else search_fields)
+        list_display = deepcopy(model_class._meta.json_fields if getattr(model_class._meta, 'json_fields', None) else search_fields)
         if hasattr(model_class._meta, 'internal_json_fields'):
             list_display = model_class._meta.internal_json_fields + list_display
         if 'created_date' not in list_display:
