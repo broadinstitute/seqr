@@ -10,6 +10,7 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import Anvil from './components/Anvil'
+import CustomSearch from './components/CustomSearch'
 import DiscoverySheet from './components/DiscoverySheet'
 import SuccessStory from './components/SuccessStory'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
@@ -25,6 +26,7 @@ const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
+  { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },

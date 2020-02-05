@@ -196,11 +196,11 @@ export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
 
-export const navigateSavedHashedSearch = (search, navigateSearch) => {
+export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath) => {
   return (dispatch) => {
     const searchHash = hash.MD5(search)
     dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
-    navigateSearch(`/variant_search/results/${searchHash}`)
+    navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
   }
 }
 
