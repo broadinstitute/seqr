@@ -341,7 +341,7 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   margin-bottom: 0 !important;
   &:last-child {
     padding-right: 0 !important;
@@ -362,7 +362,7 @@ export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {
   .ui.toggle.checkbox, .ui.toggle.checkbox input, .ui.toggle.checkbox label, .ui.toggle.checkbox label:before, .ui.toggle.checkbox label:after {
     left: auto !important;
     right: 0  !important;
-    height: 1.2em !important;
+    ${props => (props.fullHeight ? '' : 'height: 1.2em !important;')}
     min-height: 1.2em !important;
   }
   

@@ -1,11 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Header } from 'semantic-ui-react'
 
 import { loadProject } from 'redux/rootReducer'
 import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading } from 'redux/selectors'
-import { Dropdown } from 'shared/components/form/Inputs'
+import { Select, InlineToggle } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
@@ -14,15 +14,14 @@ import VariantSearchFormPanels, {
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'pages/Search/components/VariantSearchResults' // TODO move to shared
 import { InlineHeader } from 'shared/components/StyledComponents'
-import { INHERITANCE_FILTER_OPTIONS } from 'shared/utils/constants'
+import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils/constants'
+import { STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
 import { loadProjectGroupContext } from '../reducers'
+import { getSearchIncludeAllProjectsInput } from '../selectors'
 
-
-const SEARCH_FORM_NAME = 'customVariantSearch'
-
-const PANELS = [
-  STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
-]
+const mapFormStateToProps = state => ({
+  includeAllProjects: getSearchIncludeAllProjectsInput(state),
+})
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
@@ -45,33 +44,47 @@ const PROJECT_FAMILIES_FIELD = {
   isArrayField: true,
 }
 
-const INHERITANCE_FIELD = {
-  name: 'inheritance.mode',
-  label: <InlineHeader content="Inheritance" />,
-  component: Dropdown,
-  inline: true,
-  selection: true,
-  placeholder: 'All',
-  options: INHERITANCE_FILTER_OPTIONS,
+const INCLUDE_ALL_PROJECTS_FIELD = {
+  name: INCLUDE_ALL_PROJECTS,
+  component: InlineToggle,
+  fullHeight: true,
 }
 
-const CustomSearch = props =>
+const INHERITANCE_PANEL = {
+  name: 'inheritance.mode',
+  headerProps: {
+    title: 'Inheritance',
+    inputProps: {
+      component: Select,
+      options: INHERITANCE_FILTER_OPTIONS,
+      format: val => val || ALL_INHERITANCE_FILTER,
+    },
+  },
+  helpText: <Header disabled content="Custom inheritance search is disabled for multi-family searches" />,
+}
+
+const PANELS = [
+  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+]
+
+const CustomSearch = ({ match, history, includeAllProjects, ...props }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
-        <VariantSearchFormContainer history={props.history} resultsPath={props.match.url} form={SEARCH_FORM_NAME}>
-          {configuredField(PROJECT_FAMILIES_FIELD)}
-          {configuredField(INHERITANCE_FIELD)}
+        <VariantSearchFormContainer history={history} resultsPath={match.url} form={STAFF_SEARCH_FORM_NAME}>
+          <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+          {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
           <VariantSearchFormPanels panels={PANELS} />
         </VariantSearchFormContainer>
       </Grid.Column>
     </Grid.Row>
-    {props.match.params.searchHash && <VariantSearchResults {...props} />}
+    {match.params.searchHash && <VariantSearchResults match={match} history={history} {...props} />}
   </Grid>
 
 CustomSearch.propTypes = {
   match: PropTypes.object,
   history: PropTypes.object,
+  includeAllProjects: PropTypes.bool,
 }
 
-export default CustomSearch
+export default connect(mapFormStateToProps)(CustomSearch)

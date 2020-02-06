@@ -189,7 +189,7 @@ HeaderContent.propTypes = {
 }
 
 const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
-  const fieldComponents = configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
+  const fieldComponents = fields && configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
   return (
     <FormSection name={name}>
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
