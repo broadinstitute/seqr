@@ -86,14 +86,23 @@ export const loadUserOptions = (staffOnly) => {
 
 export const loadStaffOptions = () => loadUserOptions(true)
 
-/**
- * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
- * Accepts a values object that includes any data to be posted as well as the following keys:
- *
- * action: A string representation of the action to perform. Can be "create", "update" or "delete". Defaults to "update"
- * projectGuid: The GUID for the project to update. If omitted, the action will be set to "create"
- * projectField: A specific field to update (e.g. "categories"). Should be used for fields which have special server-side logic for updating
- */
+export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
+  return (dispatch, getState) => {
+    const project = getState().projectsByGuid[projectGuid]
+    if (!project || !project[detailField]) {
+      dispatch({ type: requestType || REQUEST_PROJECTS })
+      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)

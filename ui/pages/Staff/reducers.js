@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/rootReducer'
+import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS, REQUEST_PROJECTS } from 'redux/rootReducer'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -212,6 +212,31 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
   }
 }
 
+export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback) => {
+  return (dispatch, getState) => {
+    const state = getState()
+
+    if (state.projectCategoriesByGuid[projectCategoryGuid]) {
+      Object.values(state.projectsByGuid).filter(({ projectCategoryGuids }) =>
+        projectCategoryGuids.includes(projectCategoryGuid),
+      ).forEach(({ projectGuid }) => addElementCallback(projectGuid))
+    }
+
+    else {
+      dispatch({ type: REQUEST_PROJECTS })
+      new HttpRequestHelper('/api/search_context',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          Object.keys(responseJson.projectsByGuid).forEach(projectGuid => addElementCallback(projectGuid))
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).post({ projectCategoryGuid })
+    }
+  }
+}
+
 export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const reducers = {
@@ -226,6 +251,7 @@ export const reducers = {
   mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
+  projectGroupContextLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),

@@ -101,6 +101,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
             projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
+        elif search_context.get('projectGuids'):
+            families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:
             raise Exception('Invalid search: no projects/ families specified')
 
