@@ -106,7 +106,7 @@ class EsSearch(object):
         self.filter(_frequency_filter(frequencies))
 
     def filter_by_annotations(self, annotations, pathogenicity_filter):
-        consequences_filter, allowed_consequences = _annotations_filter(annotations)
+        consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
         if allowed_consequences:
             if pathogenicity_filter:
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
@@ -239,7 +239,7 @@ class EsSearch(object):
 
     def _execute_single_search(self, page=1, num_results=100, start_index=None, **kwargs):
         search = self._get_paginated_searches(
-            self.index_name, page=page, num_results=num_results * len(self.samples_by_family_index), start_index=start_index
+            self.index_name, page=page, num_results=num_results, start_index=start_index
         )[0]
         response = self._execute_search(search)
         parsed_response = self._parse_response(response)

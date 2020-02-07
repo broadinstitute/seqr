@@ -22,7 +22,7 @@ import {
   getFlattenCompoundHet,
   getDisplayVariants,
   getSearchedVariantExportConfig,
-  getSearchContextIsLoading,
+  // getSearchContextIsLoading,
   getInhertanceFilterMode,
 } from '../selectors'
 import GeneBreakdown from './GeneBreakdown'
@@ -44,7 +44,7 @@ const FIELDS = [
 ]
 
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, toggleUnpair, flattenCompoundHet, displayVariants,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, variantsLoading, contextLoading, errorMessage, totalVariantsCount, inheritanceFilter, toggleUnpair, flattenCompoundHet, displayVariants,
 }) => {
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
@@ -57,7 +57,7 @@ const BaseVariantSearchResults = ({
     <DataLoader
       contentId={searchHash || variantId}
       content={searchedVariants}
-      loading={loading}
+      loading={variantsLoading || contextLoading}
       load={load}
       unload={unload}
       reloadOnIdUpdate
@@ -135,7 +135,8 @@ BaseVariantSearchResults.propTypes = {
   unload: PropTypes.func,
   onSubmit: PropTypes.func,
   searchedVariants: PropTypes.array,
-  loading: PropTypes.bool,
+  variantsLoading: PropTypes.bool,
+  contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
   variantSearchDisplay: PropTypes.object,
   searchedVariantExportConfig: PropTypes.array,
@@ -148,7 +149,8 @@ BaseVariantSearchResults.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
-  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
+  variantsLoading: getSearchedVariantsIsLoading(state),
+  // contextLoading: getSearchContextIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),

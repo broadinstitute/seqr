@@ -4,6 +4,7 @@ import { createSelector } from 'reselect'
 import {
   CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMN_FORMATS, STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS,
 } from './constants'
+import { getSearchesByHash } from '../Search/selectors' // TODO move to shared
 
 export const getAnvilLoading = state => state.anvilLoading.isLoading
 export const getAnvilLoadingError = state => state.anvilLoading.errorMessage
@@ -20,6 +21,7 @@ export const getMmeLoading = state => state.mmeLoading.isLoading
 export const getMmeLoadingError = state => state.mmeLoading.errorMessage
 export const getMmeMetrics = state => state.mmeMetrics
 export const getMmeSubmissions = state => state.mmeSubmissions
+export const getSearchHashContextLoading = state => state.searchHashContextLoading.isLoading
 export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
 export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage
 export const getSeqrStats = state => state.seqrStats
@@ -39,6 +41,12 @@ export const getAnvilColumns = createSelector(
         }
       })))
   },
+)
+
+export const getCurrentSearchParams = createSelector(
+  getSearchesByHash,
+  (state, ownProps) => ownProps.match.params.searchHash,
+  (searchesByHash, searchHash) => searchesByHash[searchHash],
 )
 
 export const getSearchIncludeAllProjectsInput = state =>

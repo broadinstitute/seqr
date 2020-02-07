@@ -16,8 +16,8 @@ class InvalidIndexException(Exception):
     pass
 
 
-def get_es_client(timeout=30):
-    return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
+def get_es_client(timeout=60):
+    return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout)
 
 
 def get_index_metadata(index_name, client):

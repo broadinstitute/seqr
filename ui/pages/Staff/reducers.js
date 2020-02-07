@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS, REQUEST_PROJECTS } from 'redux/rootReducer'
+import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS, REQUEST_PROJECTS, loadProject } from 'redux/rootReducer'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -18,6 +18,8 @@ const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
+const REQUEST_SEARCH_HASH_CONTEXT = 'REQUEST_SEARCH_HASH_CONTEXT'
+const RECEIVE_SEARCH_HASH_CONTEXT = 'RECEIVE_SEARCH_HASH_CONTEXT'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
@@ -212,6 +214,42 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
   }
 }
 
+export const loadSearchHashContext = (searchHash) => {
+  return (dispatch, getState) => {
+    if (!searchHash) {
+      return
+    }
+    const state = getState()
+    if (state.searchHashContextLoading.isLoading) {
+      return
+    }
+
+    if (!state.searchesByHash[searchHash] || !state.searchesByHash[searchHash].projectGuids ||
+        state.searchesByHash[searchHash].projectGuids.some(projectGuid => !state.projectsByGuid[projectGuid])) {
+      dispatch({ type: REQUEST_SEARCH_HASH_CONTEXT })
+      new HttpRequestHelper('/api/search_context',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          dispatch({ type: RECEIVE_SEARCH_HASH_CONTEXT })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SEARCH_HASH_CONTEXT, error: e.message })
+        },
+      ).post({ searchHash, searchParams: state.searchesByHash[searchHash] })
+    }
+  }
+}
+
+export const loadProjectContext = (projectGuid) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    if (state.searchHashContextLoading.isLoading) {
+      return
+    }
+    loadProject(projectGuid)(dispatch, getState)
+  }
+}
+
 export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback) => {
   return (dispatch, getState) => {
     const state = getState()
@@ -253,6 +291,7 @@ export const reducers = {
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
   projectGroupContextLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
+  searchHashContextLoading: loadingReducer(REQUEST_SEARCH_HASH_CONTEXT, RECEIVE_SEARCH_HASH_CONTEXT),
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),

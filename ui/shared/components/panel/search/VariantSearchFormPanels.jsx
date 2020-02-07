@@ -203,7 +203,7 @@ const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
 }
 
 PanelContent.propTypes = {
-  fields: PropTypes.array.isRequired,
+  fields: PropTypes.array,
   name: PropTypes.string.isRequired,
   fieldProps: PropTypes.object,
   helpText: PropTypes.node,

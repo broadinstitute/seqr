@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Header } from 'semantic-ui-react'
 
-import { loadProject } from 'redux/rootReducer'
 import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading } from 'redux/selectors'
 import { Select, InlineToggle } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
@@ -13,24 +12,21 @@ import VariantSearchFormPanels, {
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'pages/Search/components/VariantSearchResults' // TODO move to shared
+import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils/constants'
 import { STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
-import { loadProjectGroupContext } from '../reducers'
-import { getSearchIncludeAllProjectsInput } from '../selectors'
+import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
+import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading, getCurrentSearchParams } from '../selectors'
 
-const mapFormStateToProps = state => ({
-  includeAllProjects: getSearchIncludeAllProjectsInput(state),
-})
-
-const mapStateToProps = (state, ownProps) => ({
+const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
   projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value],
   loading: getProjectsIsLoading(state),
 })
 
-const mapDispatchToProps = {
-  load: loadProject,
+const mapProjectsDispatchToProps = {
+  load: loadProjectContext,
 }
 
 const mapAddProjectDispatchToProps = {
@@ -39,7 +35,7 @@ const mapAddProjectDispatchToProps = {
 
 const PROJECT_FAMILIES_FIELD = {
   name: 'projectGuids',
-  component: connect(mapStateToProps, mapDispatchToProps)(ProjectFilter),
+  component: connect(mapProjectsStateToProps, mapProjectsDispatchToProps)(ProjectFilter),
   addArrayElement: connect(null, mapAddProjectDispatchToProps)(AddProjectButton),
   isArrayField: true,
 }
@@ -67,24 +63,46 @@ const PANELS = [
   INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = ({ match, history, includeAllProjects, ...props }) =>
+const CustomSearch = ({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
-        <VariantSearchFormContainer history={history} resultsPath={match.url} form={STAFF_SEARCH_FORM_NAME}>
-          <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
-          {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
-          <VariantSearchFormPanels panels={PANELS} />
-        </VariantSearchFormContainer>
+        <DataLoader contentId={match.params.searchHash} content loading={loading} load={loadContext} hideError>
+          <VariantSearchFormContainer
+            history={history}
+            resultsPath={match.url}
+            form={STAFF_SEARCH_FORM_NAME}
+            initialValues={searchParams}
+          >
+            <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+            {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
+            <VariantSearchFormPanels panels={PANELS} />
+          </VariantSearchFormContainer>
+        </DataLoader>
       </Grid.Column>
     </Grid.Row>
-    {match.params.searchHash && <VariantSearchResults match={match} history={history} {...props} />}
+    {match.params.searchHash &&
+      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />
+    }
   </Grid>
 
 CustomSearch.propTypes = {
   match: PropTypes.object,
   history: PropTypes.object,
   includeAllProjects: PropTypes.bool,
+  loadContext: PropTypes.func,
+  loading: PropTypes.bool,
+  searchParams: PropTypes.object,
 }
 
-export default connect(mapFormStateToProps)(CustomSearch)
+const mapStateToProps = (state, ownProps) => ({
+  includeAllProjects: getSearchIncludeAllProjectsInput(state),
+  loading: getSearchHashContextLoading(state),
+  searchParams: getCurrentSearchParams(state, ownProps),
+})
+
+const mapDispatchToProps = {
+  loadContext: loadSearchHashContext,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(CustomSearch)

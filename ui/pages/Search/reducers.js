@@ -116,9 +116,12 @@ export const updateCompoundHetDisplay = ({ updates }) => {
 
 export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
-    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-
     const state = getState()
+    if (state.searchedVariantsLoading.isLoading) {
+      return
+    }
+
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
 
     const apiQueryParams = {}
     if (searchHash) {
