@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Header } from 'semantic-ui-react'
 
-import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading } from 'redux/selectors'
+import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading, getCurrentSearchParams } from 'redux/selectors'
 import { Select, InlineToggle } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
@@ -11,13 +11,13 @@ import VariantSearchFormPanels, {
   STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
-import VariantSearchResults from 'pages/Search/components/VariantSearchResults' // TODO move to shared
+import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils/constants'
 import { STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
 import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
-import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading, getCurrentSearchParams } from '../selectors'
+import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading } from '../selectors'
 
 const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
@@ -70,7 +70,7 @@ const CustomSearch = ({ match, history, includeAllProjects, loadContext, loading
         <DataLoader contentId={match.params.searchHash} content loading={loading} load={loadContext} hideError>
           <VariantSearchFormContainer
             history={history}
-            resultsPath={match.url}
+            resultsPath="/staff/custom_search"
             form={STAFF_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >

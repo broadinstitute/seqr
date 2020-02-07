@@ -6,7 +6,8 @@ import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { SORT_BY_XPOS } from 'shared/utils/constants'
+import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import {
   createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
 } from './utils/reducerFactories'
@@ -26,6 +27,11 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
+export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
+export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
+const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
+const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
 
@@ -213,6 +219,69 @@ export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath) =
   }
 }
 
+export const loadSearchedVariants = ({ searchHash }, { displayUpdates, queryParams, updateQueryParams }) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    if (state.searchedVariantsLoading.isLoading) {
+      return
+    }
+
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
+
+    let { sort, page } = displayUpdates || queryParams
+    if (!page) {
+      page = 1
+    }
+    if (!sort) {
+      sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
+    }
+    const apiQueryParams = { sort: sort.toLowerCase(), page }
+
+    // Update search table state and query params
+    dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
+    updateQueryParams(apiQueryParams)
+
+    const url = `/api/search/${searchHash}?${getUrlQueryString(apiQueryParams)}`
+    const search = state.searchesByHash[searchHash]
+
+    // Fetch variants
+    new HttpRequestHelper(url,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
+      },
+    ).post(search)
+  }
+}
+
+export const unloadSearchResults = () => {
+  return (dispatch) => {
+    dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: [] })
+  }
+}
+
+export const loadGeneBreakdown = (searchHash) => {
+  return (dispatch, getState) => {
+    if (!getState().searchGeneBreakdown[searchHash]) {
+      dispatch({ type: REQUEST_SEARCH_GENE_BREAKDOWN })
+
+      new HttpRequestHelper(`/api/search/${searchHash}/gene_breakdown`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -299,6 +368,10 @@ const rootReducer = combineReducers(Object.assign({
   variantNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantNotesByGuid'),
   variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
+  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
+  searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
+  searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
+  searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
@@ -308,6 +381,11 @@ const rootReducer = combineReducers(Object.assign({
   meta: zeroActionsReducer,
   form: formReducer,
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
+  variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
+    sort: SORT_BY_XPOS,
+    page: 1,
+    recordsPerPage: 100,
+  }, false),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

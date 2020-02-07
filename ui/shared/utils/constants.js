@@ -799,12 +799,6 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   type: 'date',
   inline: true,
 }
-export const FLATTEN_COMPOUND_HET_TOGGLE_FIELD = {
-  name: 'flattenCompoundHet',
-  component: InlineToggle,
-  label: 'Unpair',
-  labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
-}
 
 export const PREDICTION_INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
