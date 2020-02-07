@@ -109,7 +109,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
 TagFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string.isRequired,
-  initialValues: PropTypes.object.isRequired,
+  initialValues: PropTypes.object,
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   editMetadata: PropTypes.bool,

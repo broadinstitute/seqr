@@ -23,7 +23,7 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
-  loadSavedVariants,
+  loadFamilySavedVariants,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -73,8 +73,8 @@ const GENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditGenotypesTable = ({ savedVariants, value, load, loading, familyGuids, onChange }) =>
-  <DataLoader content contentId={familyGuids} load={load} loading={false}>
+const BaseEditGenotypesTable = ({ savedVariants, value, load, loading, familyGuid, onChange }) =>
+  <DataLoader content contentId={familyGuid} load={load} loading={false}>
     <SelectableTableFormInput
       idField="variantId"
       defaultSortColumn="xpos"
@@ -91,7 +91,7 @@ BaseEditGenotypesTable.propTypes = {
   value: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
-  familyGuids: PropTypes.array,
+  familyGuid: PropTypes.object,
   onChange: PropTypes.func,
 }
 
@@ -100,13 +100,13 @@ const mapGenotypesStateToProps = (state, ownProps) => {
   const { familyGuid } = state.individualsByGuid[individualGuid]
   return {
     savedVariants: getIndividualTaggedVariants(state, { individualGuid }),
-    familyGuids: [familyGuid],
+    familyGuid,
     loading: getSavedVariantsIsLoading(state),
   }
 }
 
 const mapGenotypeDispatchToProps = {
-  load: loadSavedVariants,
+  load: loadFamilySavedVariants,
 }
 
 const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypeDispatchToProps)(BaseEditGenotypesTable)
