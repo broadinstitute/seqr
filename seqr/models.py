@@ -725,7 +725,7 @@ class VariantSearch(ModelWithGUID):
     search = JSONField()
 
     def __unicode__(self):
-        return self.name or self.id
+        return self.name or str(self.id)
 
     def _compute_guid(self):
         return 'VS%07d_%s' % (self.id, _slugify(self.name or ''))

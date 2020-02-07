@@ -96,11 +96,11 @@ const CompoundHets = ({ variants }) => {
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
     const mainGene1 = getVariantMainGeneId(variants[0])
-    if (mainGene1 in sharedGeneIds) {
+    if (sharedGeneIds.includes(mainGene1)) {
       mainGeneId = mainGene1
     } else {
       const mainGene2 = getVariantMainGeneId(variants[1])
-      if (mainGene1 in sharedGeneIds) {
+      if (sharedGeneIds.includes(mainGene2)) {
         mainGeneId = mainGene2
       }
     }
@@ -115,7 +115,7 @@ const CompoundHets = ({ variants }) => {
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
-        {sharedGeneIds[0] && <VariantGene geneId={mainGeneId} variant={variants[0]} areCompoundHets />}
+        {mainGeneId && <VariantGene geneId={mainGeneId} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {variants.map(compoundHet =>
