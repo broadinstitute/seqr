@@ -1,4 +1,5 @@
 import elasticsearch
+from elasticsearch_dsl import Q
 import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME
@@ -78,6 +79,13 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
         raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
 
     es_search = es_search_cls(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
+
+    if search.get('customQuery'):
+        custom_q = search['customQuery']
+        if not isinstance(custom_q, list):
+            custom_q = [custom_q]
+        for q_dict in custom_q:
+            es_search.filter(Q(q_dict))
 
     if sort:
         es_search.sort(sort)
