@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading, getCurrentSearchParams } from 'redux/selectors'
-import { Select, InlineToggle } from 'shared/components/form/Inputs'
+import { Select, InlineToggle, JsonInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
@@ -46,6 +46,12 @@ const INCLUDE_ALL_PROJECTS_FIELD = {
   fullHeight: true,
 }
 
+const CUSTOM_QUERY_FIELD = {
+  name: 'search.customQuery',
+  component: JsonInput,
+  format: val => val || {},
+}
+
 const INHERITANCE_PANEL = {
   name: 'inheritance.mode',
   headerProps: {
@@ -77,6 +83,7 @@ const CustomSearch = ({ match, history, includeAllProjects, loadContext, loading
             <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
             {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
             <VariantSearchFormPanels panels={PANELS} />
+            {configuredField(CUSTOM_QUERY_FIELD)}
           </VariantSearchFormContainer>
         </DataLoader>
       </Grid.Column>
