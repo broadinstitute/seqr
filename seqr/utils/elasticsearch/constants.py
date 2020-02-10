@@ -73,39 +73,49 @@ HGMD_CLASS_MAP = {
 POPULATIONS = {
     'callset': {
         'AF': 'AF',
+        'filter_AF': [],
         'AC': 'AC',
         'AN': 'AN',
     },
     'topmed': {
-        'use_default_field_suffix': True,
+        'filter_AF': [],
     },
     'g1k': {
-        'AF': 'g1k_POPMAX_AF',
+        'filter_AF': ['g1k_POPMAX_AF'],
     },
     'exac': {
-        'AF': 'exac_AF_POPMAX',
+        'filter_AF': ['exac_AF_POPMAX'],
         'AC': 'exac_AC_Adj',
         'AN': 'exac_AN_Adj',
         'Hom': 'exac_AC_Hom',
         'Hemi': 'exac_AC_Hemi',
     },
-    'gnomad_exomes': {},
-    'gnomad_genomes': {},
+    'gnomad_exomes': {
+        'filter_AF': ['gnomad_exomes_FAF_AF', 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
+    },
+    'gnomad_genomes': {
+        'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
+    },
 }
 POPULATION_FIELD_CONFIGS = {
-    'AF': {'fields': ['AF_POPMAX_OR_GLOBAL'], 'format_value': float},
+    'AF': {'format_value': float},
+    'filter_AF': {'format_value': lambda val: float(val) if val is not None else None, 'default_value': None},
     'AC': {},
     'AN': {},
     'Hom': {},
     'Hemi': {},
 }
 for population, pop_config in POPULATIONS.items():
-    for freq_field, field_config in POPULATION_FIELD_CONFIGS.items():
+    for freq_field in POPULATION_FIELD_CONFIGS.keys():
         if freq_field not in pop_config:
             freq_suffix = freq_field
-            if field_config.get('fields') and not pop_config.get('use_default_field_suffix'):
-                freq_suffix = field_config['fields'][-1]
             pop_config[freq_field] = '{}_{}'.format(population, freq_suffix)
+
+DEFAULT_POP_FIELD_CONFIG = {
+    'format_value': int,
+    'default_value': 0,
+}
+POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
 
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
@@ -228,20 +238,13 @@ GENOTYPE_FIELDS_CONFIG = {
     'num_alt': {'format_value': int, 'default_value': -1},
 }
 
-DEFAULT_POP_FIELD_CONFIG = {
-    'format_value': int,
-    'default_value': 0,
-}
-POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
-
-
 QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
-for population, pop_config in POPULATIONS.items():
-    for field, field_config in POPULATION_RESPONSE_FIELD_CONFIGS.items():
-        if pop_config.get(field):
-            QUERY_FIELD_NAMES.append(pop_config.get(field))
-        QUERY_FIELD_NAMES.append('{}_{}'.format(population, field))
-        QUERY_FIELD_NAMES += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
+for pop_config in POPULATIONS.values():
+    for pop_field in pop_config.values():
+        if isinstance(pop_field, list):
+            QUERY_FIELD_NAMES += pop_field
+        else:
+            QUERY_FIELD_NAMES.append(pop_field)
