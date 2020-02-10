@@ -237,13 +237,17 @@ class EsSearch(object):
         else:
             return False, {'page': page, 'num_results': num_results}
 
-    def _execute_single_search(self, page=1, num_results=100, start_index=None, **kwargs):
+    def _execute_single_search(self, page=1, num_results=100, start_index=None, deduplicate=False, **kwargs):
+        num_results_for_search = num_results * len(self.samples_by_family_index) if deduplicate else num_results
+        if num_results_for_search > MAX_VARIANTS and deduplicate:
+            num_results_for_search = MAX_VARIANTS
         search = self._get_paginated_searches(
-            self.index_name, page=page, num_results=num_results, start_index=start_index
+            self.index_name, page=page, num_results=num_results_for_search, start_index=start_index
         )[0]
         response = self._execute_search(search)
         parsed_response = self._parse_response(response)
-        return self._process_single_search_response(parsed_response, page=page, num_results=num_results, **kwargs)
+        return self._process_single_search_response(
+            parsed_response, page=page, num_results=num_results, deduplicate=deduplicate, **kwargs)
 
     def _process_single_search_response(self, parsed_response, page=1, num_results=100, deduplicate=False, **kwargs):
         variant_results, total_results, is_compound_het, _ = parsed_response
