@@ -6,7 +6,9 @@ import {
   getVisibleSortedSavedVariants,
   getPairedFilteredSavedVariants,
   getVariantTagNotesByFamilyVariants,
+  getSearchGeneBreakdownValues,
 } from './selectors'
+import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
 test('getPairedSelectedSavedVariants', () => {
 
@@ -86,3 +88,13 @@ test('getVisibleSortedSavedVariants', () => {
   expect(savedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
 })
 
+test('getSearchGeneBreakdownValues', () => {
+  expect(getSearchGeneBreakdownValues(STATE, { searchHash: SEARCH_HASH })).toEqual([{
+    numVariants: 3,
+    numFamilies: 1,
+    families: [{ family: STATE.familiesByGuid[FAMILY_GUID], count: 2 }],
+    search: SEARCH.search,
+    geneId: GENE_ID,
+    geneSymbol: 'OR2M3',
+  }])
+})
