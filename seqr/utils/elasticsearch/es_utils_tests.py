@@ -108,6 +108,7 @@ ES_VARIANTS = [
           'dbnsfp_DANN_score': None,
           'AN': 32,
           'gnomad_genomes_AF_POPMAX_OR_GLOBAL': 0.0004590314436538903,
+          'gnomad_genomes_FAF_AF': 0.000437,
           'exac_AF': 0.00006589,
           'dbnsfp_GERP_RS': None,
           'dbnsfp_SIFT_pred': None,
@@ -256,6 +257,7 @@ ES_VARIANTS = [
           'dbnsfp_DANN_score': None,
           'AN': 32,
           'gnomad_genomes_AF_POPMAX_OR_GLOBAL': None,
+          'gnomad_genomes_FAF_AF': None,
           'exac_AF': 0.00004942,
           'dbnsfp_GERP_RS': None,
           'dbnsfp_SIFT_pred': None,
@@ -462,12 +464,12 @@ PARSED_VARIANTS = [
         'mainTranscriptId': TRANSCRIPT_3['transcriptId'],
         'originalAltAlleles': ['T'],
         'populations': {
-            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
-            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.0004590314436538903, 'hemi': 0},
-            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.0006726888333653661, 'hemi': 0},
-            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.0009151523074911753, 'hemi': 0},
-            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0}
+            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0, 'filter_af': 0.000437},
+            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661},
+            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753},
+            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None}
         },
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
@@ -503,12 +505,12 @@ PARSED_VARIANTS = [
         'mainTranscriptId': TRANSCRIPT_1['transcriptId'],
         'originalAltAlleles': ['G'],
         'populations': {
-            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
-            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
-            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.000242306760358614, 'hemi': 0},
-            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.00016269686320447742, 'hemi': 0},
-            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0}
+            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614},
+            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0, 'filter_af': 0.00016269686320447742},
+            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None}
         },
         'pos': 103343353,
         'predictions': {
@@ -630,16 +632,12 @@ MAPPING_FIELDS = [
     'hgmd_class',
     'AC',
     'AF',
-    'callset_AF',
-    'callset_AF_POPMAX_OR_GLOBAL',
     'AN',
-    'callset_AN',
     'g1k_AC',
     'g1k_Hom',
     'g1k_Hemi',
     'g1k_POPMAX_AF',
     'g1k_AF',
-    'g1k_AF_POPMAX_OR_GLOBAL',
     'g1k_AN',
     'gnomad_genomes_AC',
     'gnomad_genomes_Hom',
@@ -654,25 +652,19 @@ MAPPING_FIELDS = [
     'gnomad_exomes_AF_POPMAX_OR_GLOBAL',
     'gnomad_exomes_AN',
     'exac_AC_Adj',
-    'exac_AC',
     'exac_AC_Hom',
-    'exac_Hom',
     'exac_AC_Hemi',
-    'exac_Hemi',
     'exac_AF_POPMAX',
     'exac_AF',
-    'exac_AF_POPMAX_OR_GLOBAL',
     'exac_AN_Adj',
-    'exac_AN',
     'topmed_AC',
     'topmed_Hom',
     'topmed_Hemi',
     'topmed_AF',
-    'topmed_AF_POPMAX_OR_GLOBAL',
     'topmed_AN',
-    'callset_AC',
+    'gnomad_genomes_FAF_AF',
 ]
-SOURCE_FIELDS = {'callset_Hom', 'callset_Hemi'}
+SOURCE_FIELDS = {'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF'}
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 
 INDEX_METADATA = {
@@ -1070,7 +1062,7 @@ class EsUtilsTest(TestCase):
                 'callset': {'af': 0.1},
                 'exac': {'ac': 2},
                 'g1k': {'ac': None, 'af': 0.001},
-                'gnomad_exomes': {'ac': 3, 'hh': 3},
+                'gnomad_exomes': {'af': 0.01, 'ac': 3, 'hh': 3},
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
                 'topmed': {'ac': 2, 'af': None},
             },
@@ -1122,8 +1114,8 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'}}]}},
-                                {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_FAF_AF'}}]}},
+                                {'range': {'gnomad_genomes_FAF_AF': {'lte': 0.01}}}
                             ]
                         }},
                         {'bool': {
@@ -1143,8 +1135,8 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AC'}}]}},
-                                {'range': {'gnomad_exomes_AC': {'lte': 3}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
                         }},
                         {'bool': {

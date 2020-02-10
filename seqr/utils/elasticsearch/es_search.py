@@ -103,7 +103,21 @@ class EsSearch(object):
         return self
 
     def filter_by_frequency(self, frequencies):
-        self.filter(_frequency_filter(frequencies))
+        q = Q()
+        for pop, freqs in frequencies.items():
+            if freqs.get('af') is not None:
+                filter_field = next(
+                    (field_key for field_key in POPULATIONS[pop]['filter_AF']
+                     if all(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
+                    POPULATIONS[pop]['AF'])
+                q &= _pop_freq_filter(filter_field, freqs['af'])
+            elif freqs.get('ac') is not None:
+                q &= _pop_freq_filter(POPULATIONS[pop]['AC'], freqs['ac'])
+
+            if freqs.get('hh') is not None:
+                q &= _pop_freq_filter(POPULATIONS[pop]['Hom'], freqs['hh'])
+                q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
+        self.filter(q)
 
     def filter_by_annotations(self, annotations, pathogenicity_filter):
         consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
@@ -392,9 +406,7 @@ class EsSearch(object):
                 hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(),
                 lookup_field_prefix=population,
                 existing_fields=self.index_metadata[index_name]['fields'],
-                get_addl_fields=lambda field, field_config:
-                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in
-                                           field_config.get('fields', [])],
+                get_addl_fields=lambda field: pop_config[field] if isinstance(pop_config[field], list) else [pop_config[field]],
             )
             for population, pop_config in POPULATIONS.items()
         }
@@ -966,20 +978,6 @@ def _pop_freq_filter(filter_key, value):
     return Q('range', **{filter_key: {'lte': value}}) | ~Q('exists', field=filter_key)
 
 
-def _frequency_filter(frequencies):
-    q = Q()
-    for pop, freqs in frequencies.items():
-        if freqs.get('af') is not None:
-            q &= _pop_freq_filter(POPULATIONS[pop]['AF'], freqs['af'])
-        elif freqs.get('ac') is not None:
-            q &= _pop_freq_filter(POPULATIONS[pop]['AC'], freqs['ac'])
-
-        if freqs.get('hh') is not None:
-            q &= _pop_freq_filter(POPULATIONS[pop]['Hom'], freqs['hh'])
-            q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
-    return q
-
-
 def _build_or_filter(op, filters):
     if not filters:
         return None
@@ -1050,7 +1048,7 @@ def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, ge
     return {
         field_config.get('response_key', format_response_key(field)): _value_if_has_key(
             hit,
-            (get_addl_fields(field, field_config) if get_addl_fields else []) +
+            (get_addl_fields(field) if get_addl_fields else []) +
             ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],
             existing_fields=existing_fields,
             **field_config
