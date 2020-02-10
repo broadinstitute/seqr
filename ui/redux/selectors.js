@@ -238,7 +238,7 @@ export const getPairedFilteredSavedVariants = createSelector(
           variant.tagGuids.every(t => tagsByGuid[t].name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME)))
       }
 
-      if (categoryFilter !== SHOW_ALL) {
+      if (categoryFilter && categoryFilter !== SHOW_ALL) {
         variantsToShow = variantsToShow.filter(variants => variants.some(
           variant => variant.tagGuids.some(t => tagsByGuid[t].category === categoryFilter)))
       }
