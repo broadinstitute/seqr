@@ -122,6 +122,10 @@ export const LOCUS_LIST = {
   parsedItems: { items:  [{ geneId: 'ENSG00000164458' }], itemMap: { 'TTN': { geneId: 'ENSG00000164458', symbol: 'TTN' } } }
 }
 
+const GENE_ID = 'ENSG00000228198'
+export const SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
+export const SEARCH = { projectFamilies: [{ projectGuid: 'R0237_1000_genomes_demo', familyGuid: 'F011652_1'}], search: {} }
+
 export const STATE1 = {
   currentProjectGuid: 'R0237_1000_genomes_demo',
   projectsByGuid: {
@@ -495,6 +499,9 @@ export const STATE1 = {
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
   savedVariantsLoading: {},
   savedVariantTableState: {},
+  searchesByHash: { [SEARCH_HASH]: SEARCH },
+  searchGeneBreakdown: { [SEARCH_HASH]: {[GENE_ID]: { total: 3, families: { F011652_1: 2 }}} },
+  searchGeneBreakdownLoading: { isLoading: false },
 }
 
 export const STATE_WITH_2_FAMILIES = {

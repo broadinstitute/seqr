@@ -191,11 +191,11 @@ VariantNoteField.propTypes = {
 }
 
 const VariantLink = (
-  { variant, family },
+  { variant, variantTagNotes, family },
 ) =>
   <NavLink
-    to={variant.variantGuid || (variant[0] || {}).variantGuid ?
-      `/project/${family.projectGuid}/saved_variants/variant/${variant.length > 0 ? variant.map(sv => (sv || {}).variantGuid) : variant.variantGuid}` :
+    to={variantTagNotes ?
+      `/project/${family.projectGuid}/saved_variants/variant/${variantTagNotes.variantGuids}` :
       `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
     }
     activeStyle={NO_DISPLAY}
@@ -211,6 +211,7 @@ const VariantLink = (
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  variantTagNotes: PropTypes.object,
   family: PropTypes.object,
 }
 
@@ -283,7 +284,9 @@ const FamilyVariantTags = (
             }
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
-            {(!Array.isArray(variant) || variantTagNotes) && <VariantLink variant={variant} family={family} />}
+            {(!Array.isArray(variant) || variantTagNotes) &&
+              <VariantLink variant={variant} variantTagNotes={variantTagNotes} family={family} />
+            }
           </Table.Cell>
         </Table.Row>
         <Table.Row verticalAlign="top" >

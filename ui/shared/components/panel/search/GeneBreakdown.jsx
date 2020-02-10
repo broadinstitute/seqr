@@ -21,8 +21,8 @@ import {
   getSearchGeneBreakdownValues,
   getSearchGeneBreakdownLoading,
   getSearchGeneBreakdownErrorMessage,
-} from '../selectors'
-import { loadGeneBreakdown } from '../reducers'
+} from 'redux/selectors'
+import { loadGeneBreakdown } from 'redux/rootReducer'
 
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION },

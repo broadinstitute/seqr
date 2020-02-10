@@ -12,5 +12,5 @@ configure({ adapter: new Adapter() })
 test('shallow-render without crashing', () => {
   const store = configureStore()(STATE)
 
-  shallow(<VariantSearchResults store={store} match={{ params: {}}} />)
+  shallow(<VariantSearchResults store={store} />)
 })

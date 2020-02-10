@@ -65,6 +65,8 @@
     "extend": "^3.0.2",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "igv": "^2.2.2",
+    "jsoneditor": "^8.5.3",
+    "jsoneditor-react": "^3.0.0",
     "lodash": "^4.17.15",
     "mini-css-extract-plugin": "^0.9.0",
     "minimatch": "^3.0.4",
@@ -126,6 +128,7 @@
     ],
     "moduleNameMapper": {
       "igv": "<rootDir>/config/jest/fileTransform.js",
+      "jsoneditor-react": "<rootDir>/config/jest/fileTransform.js",
       "gtex-d3": "<rootDir>/config/jest/fileTransform.js",
       "^react-native$": "react-native-web"
     },

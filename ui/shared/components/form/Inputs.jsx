@@ -5,6 +5,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
+import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
 
 import { helpLabel } from './ReduxFormWrapper'
@@ -341,7 +342,7 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   margin-bottom: 0 !important;
   &:last-child {
     padding-right: 0 !important;
@@ -362,7 +363,7 @@ export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {
   .ui.toggle.checkbox, .ui.toggle.checkbox input, .ui.toggle.checkbox label, .ui.toggle.checkbox label:before, .ui.toggle.checkbox label:after {
     left: auto !important;
     right: 0  !important;
-    height: 1.2em !important;
+    ${props => (props.fullHeight ? '' : 'height: 1.2em !important;')}
     min-height: 1.2em !important;
   }
   
@@ -441,3 +442,13 @@ Pagination.propTypes = {
   onChange: PropTypes.func,
   error: PropTypes.bool,
 }
+
+const JSON_EDITOR_MODES = ['code', 'tree']
+export const JsonInput = ({ value, onChange }) =>
+  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />
+
+JsonInput.propTypes = {
+  value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  onChange: PropTypes.func,
+}
+

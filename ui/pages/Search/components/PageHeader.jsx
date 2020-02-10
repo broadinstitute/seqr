@@ -2,11 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid } from 'redux/selectors'
+import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash } from 'redux/selectors'
 import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { getSelectedAnalysisGroups } from '../constants'
-import { getSearchesByHash } from '../selectors'
 
 
 const PAGE_CONFIGS = {
