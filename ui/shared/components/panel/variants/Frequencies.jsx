@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GENOME_VERSION_37, GENOME_VERSION_38 } from '../../../utils/constants'
 
 
@@ -11,7 +11,7 @@ const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = ({ urls, value, variant, queryParams }) => {
+const FreqLink = ({ urls, value, displayValue, variant, queryParams }) => {
   let { chrom, pos, genomeVersion } = variant
   if (!urls[genomeVersion] && urls[variant.liftedOverGenomeVersion]) {
     chrom = variant.liftedOverChrom
@@ -32,7 +32,7 @@ const FreqLink = ({ urls, value, variant, queryParams }) => {
 
   return (
     <a href={`http://${urls[genomeVersion]}/${isRegion ? 'region' : 'variant'}/${coords}${queryString}`} target="_blank">
-      {value}
+      {displayValue || value}
     </a>
   )
 }
@@ -40,6 +40,7 @@ const FreqLink = ({ urls, value, variant, queryParams }) => {
 FreqLink.propTypes = {
   urls: PropTypes.object.isRequired,
   value: PropTypes.string,
+  displayValue: PropTypes.string,
   variant: PropTypes.object.isRequired,
   queryParams: PropTypes.object,
 }
@@ -51,6 +52,7 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, pr
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
+  const filterValue = population.filter_af && population.filter_af > 0 && population.filter_af.toPrecision(precision)
 
   const popCountDetails = [{ popField: `${field}_hom`, title: 'Hom' }]
   if (chrom.endsWith('X')) {
@@ -70,8 +72,9 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, pr
               urls={urls}
               queryParams={queryParams}
               value={value}
+              displayValue={filterValue}
               variant={variant}
-            /> : value
+            /> : (filterValue || value)
           }
         </b>
         {population.hom !== null && population.hom !== undefined &&
@@ -136,21 +139,27 @@ const Frequencies = ({ variant }) => {
     </div>
   )
 
+  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field].ac)
+  const hasGlobalAfPops = POPULATIONS.filter(
+    pop => populations[pop.field].filter_af && (populations[pop.field].filter_af !== populations[pop.field].af))
+
   return (
-    Object.values(populations || {}).some(pop => pop.ac) ?
-      <Popup
-        position="top center"
-        flowing
-        trigger={freqContent}
-        header="Allele Counts"
-        content={
-          <div>
-            {POPULATIONS.filter(pop => populations[pop.field].ac).map(pop =>
-              <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>,
-            )}
-          </div>
-        }
-      />
+    (hasAcPops.length || hasGlobalAfPops.length) ?
+      <Popup position="top center" flowing trigger={freqContent}>
+        {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
+        <Popup.Content>
+          {hasGlobalAfPops.map(pop =>
+            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].af.toPrecision(pop.precision || 2)}</div>,
+          )}
+        </Popup.Content>
+        {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
+        {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
+        <Popup.Content>
+          {hasAcPops.map(pop =>
+            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>,
+          )}
+        </Popup.Content>
+      </Popup>
       : freqContent
   )
 }
