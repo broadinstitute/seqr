@@ -32,7 +32,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(locus_list.keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name'}
+             'canEdit', 'name', 'numProjects'}
         )
 
     def test_locus_list_info(self):

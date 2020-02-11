@@ -554,7 +554,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_project_count=False):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -573,6 +573,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
                 'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
                 'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
             })
+        if include_project_count:
+            result['numProjects'] = locus_list.num_projects
         result.update({
             'numEntries': gene_set.count() + interval_set.count(),
             'canEdit': user == locus_list.created_by,

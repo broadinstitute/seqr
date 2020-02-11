@@ -15,7 +15,7 @@ import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 import {
-  LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
+  LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD,
 } from 'shared/utils/constants'
 import { updateLocusLists } from '../reducers'
 
@@ -24,10 +24,8 @@ const ItemContainer = styled.div`
   white-space: nowrap;
 `
 
-const OMIT_LOCUS_LIST_FIELDS = [
-  LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
-  LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
-  LOCUS_LIST_CURATOR_FIELD_NAME,
+const FIELDS = [
+  LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD,
 ]
 
 const LocusListItem = ({ project, locusList, updateLocusLists: onSubmit }) => {
@@ -136,12 +134,11 @@ class AddGeneLists extends React.PureComponent {
         <LocusListsLoader>
           Add an existing Gene List to {this.props.project.name} or <CreateLocusListButton />
           <LocusListTables
-            isEditable={false}
-            showLinks={false}
-            omitFields={OMIT_LOCUS_LIST_FIELDS}
+            fields={FIELDS}
             omitLocusLists={this.props.project.locusListGuids}
             selectRows={this.selectList}
             selectedRows={this.state.selected}
+            hidePrivateLists
           />
           <Divider />
           <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>

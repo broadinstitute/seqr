@@ -2,7 +2,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.views.decorators.csrf import csrf_exempt
 
 
@@ -25,10 +25,13 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def locus_lists(request):
-    # TODO for staff add all private
-    # locus_lists = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
-    locus_lists = LocusList.objects.all()
-    locus_lists_json = get_json_for_locus_lists(locus_lists, request.user)
+    if request.user.is_staff:
+        locus_list_models = LocusList.objects.all()
+    else:
+        locus_list_models = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
+    locus_list_models = locus_list_models.annotate(num_projects=Count('projects'))
+
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True)
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json}
@@ -69,7 +72,7 @@ def create_locus_list_handler(request):
         is_public=request_json.get('isPublic') or False,
         created_by=request.user,
     )
-    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
+    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -81,7 +84,6 @@ def create_locus_list_handler(request):
 @csrf_exempt
 def update_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    # TODO staff users should be able to edit public lists
     check_user_created_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
 
     request_json = json.loads(request.body)
@@ -92,7 +94,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
     if genes_by_id is not None:
-        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
+        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -140,7 +142,7 @@ def delete_project_locus_lists(request, project_guid):
     })
 
 
-def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
+def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json):
     # Update genes
     locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
@@ -148,7 +150,6 @@ def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, u
         LocusListGene.objects.get_or_create(
             locus_list=locus_list,
             gene_id=gene_id,
-            created_by=user,
         )
 
     # Update intervals

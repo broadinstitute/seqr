@@ -497,6 +497,7 @@ export const STATE1 = {
       variantGuids: ['SV0000002_1248367227_r0390_100'], tagGuid: 'VFD0000001_1248367227_r0390_100'},
   },
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
+  locusListsLoading: {},
   savedVariantsLoading: {},
   savedVariantTableState: {},
   searchesByHash: { [SEARCH_HASH]: SEARCH },
