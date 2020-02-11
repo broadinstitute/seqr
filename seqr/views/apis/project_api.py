@@ -11,13 +11,13 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
-    get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
+    get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
@@ -198,7 +198,7 @@ def _get_project_child_entities(project, user):
     samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid, individual_models)
     mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
-    locus_lists = get_sorted_project_locus_lists(project, user)
+    locus_lists = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
     return {
         'familiesByGuid': families_by_guid,

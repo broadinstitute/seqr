@@ -651,6 +651,7 @@ class LocusList(ModelWithGUID):
     name = models.TextField(db_index=True)
     description = models.TextField(null=True, blank=True)
 
+    projects = models.ManyToManyField('Project')
     is_public = models.BooleanField(default=False)
 
     def __unicode__(self):

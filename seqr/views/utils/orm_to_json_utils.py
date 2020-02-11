@@ -596,15 +596,6 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_project_locus_list_models(project):
-    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
-
-
-def get_sorted_project_locus_lists(project, user):
-    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
-    return sorted(result, key=lambda locus_list: locus_list['name'])
-
-
 def get_json_for_project_collaborator_list(project):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborator_list = get_project_collaborators_by_username(project).values()

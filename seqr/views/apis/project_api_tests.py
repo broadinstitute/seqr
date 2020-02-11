@@ -28,10 +28,6 @@ def find_mme_matches(search):
     }]
 
 
-def get_objects_for_group(can_view_group, permission, object_cls):
-    return object_cls.objects.all()
-
-
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -89,7 +85,6 @@ class ProjectAPITest(TestCase):
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
         _check_login(self, url)
@@ -156,7 +151,6 @@ class ProjectAPITest(TestCase):
             {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate'}
         )
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.get_objects_for_group', get_objects_for_group)
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
         _check_login(self, url)
@@ -177,6 +171,7 @@ class ProjectAPITest(TestCase):
         self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
         self.assertDictEqual(response_json['genesById'], {})
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {})
+        self.assertDictEqual(response_json['locusListsByGuid'], {})
 
     def test_export_tables(self):
         url = reverse(export_project_individuals_handler, args=['R0001_1kg'])

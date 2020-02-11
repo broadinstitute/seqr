@@ -12,7 +12,7 @@ import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType
+    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
@@ -32,7 +32,6 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_variants_with_tags, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
-    get_project_locus_list_models, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 from settings import API_LOGIN_REQUIRED_URL
@@ -335,7 +334,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
     project_models_by_guid = {project.guid: project for project in projects}
     projects_json = get_json_for_projects(projects, user)
 
-    locus_lists = set()
+    locus_lists = LocusList.objects.filter(projects__in=projects)
 
     functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
     variant_tag_types_by_guid = {
@@ -345,11 +344,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     variant_tag_types = _get_json_for_models(variant_tag_types_by_guid.values())
     for project_json in projects_json:
         project = project_models_by_guid[project_json['projectGuid']]
-        project_locus_lists = get_project_locus_list_models(project)
-        locus_lists.update(project_locus_lists)
 
         project_json.update({
-            'locusListGuids': [locus_list.guid for locus_list in project_locus_lists],
+            'locusListGuids': [locus_list.guid for locus_list in locus_lists if project in locus_list.projects.all()],
             'variantTagTypes': [
                 vtt for vtt in variant_tag_types
                 if variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project is None or
@@ -379,7 +376,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
-        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(list(locus_lists), user)},
+        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
     if project_category_guid:
