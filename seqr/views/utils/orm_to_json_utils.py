@@ -11,10 +11,9 @@ from copy import copy
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
-from guardian.shortcuts import get_objects_for_group
 
-from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, LocusList
+from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
@@ -439,7 +438,7 @@ def get_json_for_variant_tags(tags):
     def _process_result(tag_json, tag):
         tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
 
-    prefetch_related_objects(tags, 'saved_variants')
+    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
     return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)
@@ -463,7 +462,7 @@ def get_json_for_variant_functional_data_tags(tags):
             'color': display_data['color'],
         })
 
-    prefetch_related_objects(tags, 'saved_variants')
+    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
@@ -494,7 +493,7 @@ def get_json_for_variant_notes(notes, add_variant_guids=True):
             note_json['variantGuids'] = [variant.guid for variant in note.saved_variants.all()]
 
     if add_variant_guids:
-        prefetch_related_objects(notes, 'saved_variants')
+        prefetch_related_objects(notes, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(notes, guid_key='noteGuid', process_result=_process_result)
 
@@ -676,15 +675,15 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
             result['notes'] = gene_notes_json.get(result['geneId'], [])
 
     if add_dbnsfp:
-        prefetch_related_objects(genes, 'dbnsfpgene_set')
+        prefetch_related_objects(genes, Prefetch('dbnsfpgene_set', queryset=dbNSFPGene.objects.only('gene__gene_id', *dbNSFPGene._meta.json_fields)))
     if add_omim:
-        prefetch_related_objects(genes, 'omim_set')
+        prefetch_related_objects(genes, Prefetch('omim_set', queryset=Omim.objects.only('gene__gene_id', *Omim._meta.json_fields)))
     if add_constraints:
-        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
+        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI').only('gene__gene_id', *GeneConstraint._meta.json_fields)))
     if add_primate_ai:
-        prefetch_related_objects(genes, 'primateai_set')
+        prefetch_related_objects(genes, Prefetch('primateai_set', queryset=PrimateAI.objects.only('gene__gene_id', *PrimateAI._meta.json_fields)))
     if add_mgi:
-        prefetch_related_objects(genes, 'mgi_set')
+        prefetch_related_objects(genes, Prefetch('mgi_set', queryset=MGI.objects.only('gene__gene_id', *MGI._meta.json_fields)))
 
     return _get_json_for_models(genes, process_result=_process_result)
 

@@ -301,7 +301,8 @@ def search_context_handler(request):
     """Search variants.
     """
     response = _get_saved_searches(request.user)
-    context = json.loads(request.body)
+    # context = json.loads(request.body)
+    context = request.GET
 
     if context.get('projectGuid'):
         projects = Project.objects.filter(guid=context.get('projectGuid'))
@@ -323,6 +324,8 @@ def search_context_handler(request):
 
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
+    from seqr.views.react_app import _render_app_html
+    return _render_app_html(request, {})
     return create_json_response(response)
 
 
