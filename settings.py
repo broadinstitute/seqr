@@ -73,7 +73,7 @@ ALLOWED_HOSTS = ['*']
 CSRF_COOKIE_HTTPONLY = True
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = True
+ENABLE_DJANGO_DEBUG_TOOLBAR = False
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
