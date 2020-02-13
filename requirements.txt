@@ -8,15 +8,17 @@ elasticsearch==6.4.0             # elasticsearch client
 elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
 gunicorn==19.10.0                # web server
 jmespath==0.9.4
-openpyxl==2.6.4                  # library for reading/writing Excel files
+openpyxl==2.4.11                 # library for reading/writing Excel files
 pillow==6.2.2                    # required dependency of Djagno ImageField-type database records
-psycopg2==2.8.4                  # postgres database access
+psycopg2-binary==2.8.4                  # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests
 redis==3.3.11                    # client lib for the redis in-memory database - used for caching server-side objects
 requests-toolbelt==0.9.1         # for troubleshooting requests
-six==1.13.0                      # Django dependency
+six==1.10.0                      # Django dependency
 slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling. Behind a major version due to missing Python 2 support
+lxml==4.5.0 			 # If this is too old then manage.py won't work
+tornado==4.5.3			 # Some package pulls this in as a dependency, and if it pulls in the newest version it will fail
