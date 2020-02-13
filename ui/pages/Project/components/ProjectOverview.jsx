@@ -2,12 +2,16 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import { VerticalSpacer } from 'shared/components/Spacers'
+import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import Modal from 'shared/components/modal/Modal'
+import DataTable from 'shared/components/table/DataTable'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   DATASET_TYPE_VARIANT_CALLS,
@@ -16,7 +20,9 @@ import {
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsByGuid, getProjectAnalysisGroupSamplesByGuid,
+  getProjectAnalysisGroupIndividualsByGuid,
+  getProjectAnalysisGroupSamplesByGuid,
+  getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditHpoTermsButton from './edit-families-and-individuals/EditHpoTermsButton'
@@ -49,7 +55,43 @@ DetailSection.propTypes = {
   button: PropTypes.node,
 }
 
-const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts, user }) => {
+const MME_COLUMNS = [
+  {
+    name: 'href',
+    content: '',
+    width: 1,
+    format: row =>
+      <NavLink to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
+        <Icon name="linkify" link />
+      </NavLink>,
+  },
+  { name: 'familyName', content: 'Family', width: 2 },
+  { name: 'individualName', content: 'Individual', width: 2 },
+  { name: 'createdDate', content: 'Created Date', width: 2, format: ({ createdDate }) => createdDate && new Date(createdDate).toLocaleDateString() },
+  { name: 'deletedDate', content: 'Removed Date', width: 2, format: ({ deletedDate }) => deletedDate && new Date(deletedDate).toLocaleDateString() },
+  { name: 'mmeNotes', content: 'Notes', width: 7 },
+]
+
+const MatchmakerSubmissionOverview = ({ mmeSubmissions }) => {
+  return (
+    <DataTable
+      basic="very"
+      fixed
+      data={Object.values(mmeSubmissions)}
+      idField="submissionGuid"
+      defaultSortColumn="familyName"
+      columns={MME_COLUMNS}
+    />
+  )
+}
+
+MatchmakerSubmissionOverview.propTypes = {
+  mmeSubmissions: PropTypes.array,
+}
+
+const ProjectOverview = (
+  { project, familiesByGuid, individualsByGuid, samplesByGuid, mmeSubmissions, analysisStatusCounts, user },
+) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -71,6 +113,9 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
     editIndividualsButton = <EditHpoTermsButton />
   }
 
+  const mmeSubmissionCount = mmeSubmissions.length
+  const deletedSubmissionCount = mmeSubmissions.filter(({ deletedDate }) => deletedDate).length
+
   return (
     <Grid>
       <Grid.Column width={5}>
@@ -83,6 +128,25 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
               </div>)
           }
           button={editIndividualsButton}
+        />
+        <VerticalSpacer height={10} />
+        <DetailSection
+          title="Matchmaker Submissions"
+          content={mmeSubmissionCount ?
+            <div>
+              {mmeSubmissionCount - deletedSubmissionCount} submissions <HorizontalSpacer width={5} />
+              <Modal
+                trigger={<ButtonLink icon="external" size="tiny" />}
+                title={`Matchmaker Submissions for ${project.name}`}
+                modalName="mmeSubmissions"
+                size="large"
+              >
+                <MatchmakerSubmissionOverview mmeSubmissions={mmeSubmissions} />
+              </Modal>
+              {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
+            </div>
+            : 'No Submissions'
+          }
         />
       </Grid.Column>
       <Grid.Column width={5}>
@@ -120,6 +184,7 @@ ProjectOverview.propTypes = {
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   samplesByGuid: PropTypes.object.isRequired,
+  mmeSubmissions: PropTypes.array,
   analysisStatusCounts: PropTypes.array.isRequired,
   user: PropTypes.object.isRequired,
 }
@@ -130,6 +195,7 @@ const mapStateToProps = (state, ownProps) => ({
   individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
   samplesByGuid: getProjectAnalysisGroupSamplesByGuid(state, ownProps),
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+  mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
 })
 
 export default connect(mapStateToProps)(ProjectOverview)

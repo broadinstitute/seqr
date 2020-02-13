@@ -90,6 +90,26 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
     }), {}),
 )
 
+export const getProjectAnalysisGroupMmeSubmissions = createSelector(
+  getMmeSubmissionsByGuid,
+  getProjectAnalysisGroupFamiliesByGuid,
+  getProjectAnalysisGroupIndividualsByGuid,
+  (submissionsByGuid, familiesByGuid, individualsByGuid) =>
+    Object.values(individualsByGuid).reduce((acc, individual) => (
+      individual.mmeSubmissionGuid ? [
+        ...acc,
+        {
+          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes,
+          familyName: familiesByGuid[individual.familyGuid].displayName,
+          individualName: individual.displayName,
+          familyGuid: individual.familyGuid,
+          projectGuid: individual.projectGuid,
+          ...submissionsByGuid[individual.mmeSubmissionGuid],
+        },
+      ] : acc
+    ), []),
+)
+
 
 export const getIndividualTaggedVariants = createSelector(
   getSavedVariantsByGuid,
