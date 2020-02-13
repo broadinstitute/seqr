@@ -301,8 +301,7 @@ def search_context_handler(request):
     """Search variants.
     """
     response = _get_saved_searches(request.user)
-    # context = json.loads(request.body)
-    context = request.GET
+    context = json.loads(request.body)
 
     if context.get('projectGuid'):
         projects = Project.objects.filter(guid=context.get('projectGuid'))
@@ -324,8 +323,6 @@ def search_context_handler(request):
 
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
-    from seqr.views.react_app import _render_app_html
-    return _render_app_html(request, {})
     return create_json_response(response)
 
 
@@ -337,7 +334,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     project_models_by_guid = {project.guid: project for project in projects}
     projects_json = get_json_for_projects(projects, user)
 
-    locus_lists = LocusList.objects.filter(projects__in=projects)
+    locus_lists = LocusList.objects.filter(projects__in=projects).prefetch_related('projects')
+
+    project_guid = projects[0].guid if len(projects) == 1 else None
 
     functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
     variant_tag_types_by_guid = {
@@ -357,10 +356,40 @@ def _get_projects_details(projects, user, project_category_guid=None):
             'variantFunctionalTagTypes': functional_data_tag_types,
         })
 
-    families = _get_json_for_families(Family.objects.filter(project__in=projects), user)
-    individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=projects), user=user)
-    samples = get_json_for_samples(Sample.objects.filter(individual__family__project__in=projects))
-    analysis_groups = get_json_for_analysis_groups(AnalysisGroup.objects.filter(project__in=projects))
+    family_models = Family.objects.filter(project__in=projects)
+    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
+
+    individual_models = Individual.objects.filter(family__in=family_models)
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, skip_nested=True)
+
+    sample_models = Sample.objects.filter(individual__in=individual_models)
+    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
+
+    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
+
+    if not project_guid:
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        family_id_to_guid = {family.id: family.guid for family in family_models}
+        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+        family_guid_to_project_guid = {}
+        individual_guid_to_project_guid = {}
+        for family in families:
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+            family_guid_to_project_guid[family['familyGuid']] = project_guid
+        for individual in individuals:
+            family_guid = family_id_to_guid[individual.pop('familyId')]
+            project_guid = family_guid_to_project_guid[family_guid]
+            individual['familyGuid'] = family_guid
+            individual['projectGuid'] = project_guid
+            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+        for sample in samples:
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for group in analysis_groups:
+            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
     individual_guids_by_family = defaultdict(list)
     for individual in individuals:
