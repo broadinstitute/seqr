@@ -6,6 +6,7 @@ import styled from 'styled-components'
 
 import {
   getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getSavedVariantsIsLoading,
+  getFamiliesByGuid,
 } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -14,11 +15,14 @@ import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/Matc
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
+import Family from 'shared/components/panel/family'
 import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
-import { AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from 'shared/utils/constants'
+import {
+  AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD, FAMILY_FIELD_MME_NOTES,
+} from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
@@ -491,16 +495,24 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMatchmakerIndividual)
 
-const Matchmaker = ({ individuals }) =>
-  individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
-    <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
-  )
+const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, canEdit: true, colWidth: 16 }]
+
+const Matchmaker = ({ individuals, family }) =>
+  <div>
+    <Header dividing size="medium" content="Notes" />
+    <Family family={family} compact useFullWidth hidePedigree showVariantDetails={false} fields={MME_FAMILY_FIELDS} />
+    {individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
+      <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
+    )}
+  </div>
 
 Matchmaker.propTypes = {
+  family: PropTypes.object,
   individuals: PropTypes.array,
 }
 
 const mapIndividualsStateToProps = (state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
   individuals: getSortedIndividualsByFamily(state)[ownProps.match.params.familyGuid],
 })
 
