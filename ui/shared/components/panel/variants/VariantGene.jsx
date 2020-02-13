@@ -139,7 +139,9 @@ export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ..
           {gene.omimPhenotypes.map(phenotype =>
             <ListItemLink
               key={phenotype.phenotypeDescription}
-              content={phenotype.phenotypeDescription}
+              content={phenotype.phenotypeInheritance ?
+                <span>{phenotype.phenotypeDescription} (<i>{phenotype.phenotypeInheritance}</i>)</span> :
+                phenotype.phenotypeDescription}
               target="_blank"
               href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
             />,
