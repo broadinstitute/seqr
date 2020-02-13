@@ -11,10 +11,9 @@ from copy import copy
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
-from guardian.shortcuts import get_objects_for_group
 
-from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, LocusList
+from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
@@ -162,7 +161,7 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -206,9 +205,12 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
-    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
+    if project_guid or not skip_nested:
+        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+    else:
+        kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(families, nested_fields=nested_fields, user=user, process_result=_process_result)
+    return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_family(family, user=None, **kwargs):
@@ -225,7 +227,7 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None, skip_nested=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -267,13 +269,17 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
 
-    nested_fields = [
-        {'fields': ('family', 'guid'), 'value': family_guid},
-        {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
-    ]
-    if family_fields:
-        for field in family_fields:
-            nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
+    if project_guid or not skip_nested:
+        nested_fields = [
+            {'fields': ('family', 'guid'), 'value': family_guid},
+            {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+        ]
+        if family_fields:
+            for field in family_fields:
+                nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
+        kwargs = {'nested_fields': nested_fields}
+    else:
+        kwargs = {'additional_model_fields': ['family_id']}
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
@@ -281,7 +287,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
 
-    return _get_json_for_models(individuals, nested_fields=nested_fields, user=user, process_result=_process_result)
+    return _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_individual(individual, user=None, **kwargs):
@@ -296,7 +302,7 @@ def _get_json_for_individual(individual, user=None, **kwargs):
     return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
-def get_json_for_samples(samples, project_guid=None, individual_guid=None):
+def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -305,12 +311,15 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None):
         array: array of json objects
     """
 
-    nested_fields = [
-        {'fields': ('individual', 'guid'), 'value': individual_guid},
-        {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
-    ]
+    if project_guid or not skip_nested:
+        kwargs = {'nested_fields': [
+            {'fields': ('individual', 'guid'), 'value': individual_guid},
+            {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+        ]}
+    else:
+        kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, nested_fields=nested_fields)
+    return _get_json_for_models(samples, **kwargs)
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -325,7 +334,7 @@ def get_json_for_sample(sample, **kwargs):
     return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
 
 
-def get_json_for_analysis_groups(analysis_groups, project_guid=None):
+def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
@@ -342,9 +351,12 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None):
 
     prefetch_related_objects(analysis_groups, 'families')
 
-    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
+    if project_guid or not skip_nested:
+        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+    else:
+        kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(analysis_groups, nested_fields=nested_fields, process_result=_process_result)
+    return _get_json_for_models(analysis_groups, process_result=_process_result, **kwargs)
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):
@@ -439,7 +451,7 @@ def get_json_for_variant_tags(tags):
     def _process_result(tag_json, tag):
         tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
 
-    prefetch_related_objects(tags, 'saved_variants')
+    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
     return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)
@@ -463,7 +475,7 @@ def get_json_for_variant_functional_data_tags(tags):
             'color': display_data['color'],
         })
 
-    prefetch_related_objects(tags, 'saved_variants')
+    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
@@ -494,7 +506,7 @@ def get_json_for_variant_notes(notes, add_variant_guids=True):
             note_json['variantGuids'] = [variant.guid for variant in note.saved_variants.all()]
 
     if add_variant_guids:
-        prefetch_related_objects(notes, 'saved_variants')
+        prefetch_related_objects(notes, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(notes, guid_key='noteGuid', process_result=_process_result)
 
@@ -554,7 +566,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_project_count=False):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -573,6 +585,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
                 'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
                 'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
             })
+        if include_project_count:
+            result['numProjects'] = locus_list.num_projects
         result.update({
             'numEntries': gene_set.count() + interval_set.count(),
             'canEdit': user == locus_list.created_by,
@@ -594,15 +608,6 @@ def get_json_for_locus_list(locus_list, user):
         dict: json object
     """
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
-
-
-def get_project_locus_list_models(project):
-    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
-
-
-def get_sorted_project_locus_lists(project, user):
-    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
-    return sorted(result, key=lambda locus_list: locus_list['name'])
 
 
 def get_json_for_project_collaborator_list(project):
@@ -683,15 +688,15 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
             result['notes'] = gene_notes_json.get(result['geneId'], [])
 
     if add_dbnsfp:
-        prefetch_related_objects(genes, 'dbnsfpgene_set')
+        prefetch_related_objects(genes, Prefetch('dbnsfpgene_set', queryset=dbNSFPGene.objects.only('gene__gene_id', *dbNSFPGene._meta.json_fields)))
     if add_omim:
-        prefetch_related_objects(genes, 'omim_set')
+        prefetch_related_objects(genes, Prefetch('omim_set', queryset=Omim.objects.only('gene__gene_id', *Omim._meta.json_fields)))
     if add_constraints:
-        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
+        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI').only('gene__gene_id', *GeneConstraint._meta.json_fields)))
     if add_primate_ai:
-        prefetch_related_objects(genes, 'primateai_set')
+        prefetch_related_objects(genes, Prefetch('primateai_set', queryset=PrimateAI.objects.only('gene__gene_id', *PrimateAI._meta.json_fields)))
     if add_mgi:
-        prefetch_related_objects(genes, 'mgi_set')
+        prefetch_related_objects(genes, Prefetch('mgi_set', queryset=MGI.objects.only('gene__gene_id', 'marker_id')))
 
     return _get_json_for_models(genes, process_result=_process_result)
 
@@ -708,14 +713,15 @@ def get_json_for_gene(gene, **kwargs):
     return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
 
 
-def get_json_for_saved_searches(search, user):
+def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-staff users
         if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }
-    return _get_json_for_models(search, guid_key='savedSearchGuid', process_result=_process_result)
+    prefetch_related_objects(searches, 'created_by')
+    return _get_json_for_models(searches, guid_key='savedSearchGuid', process_result=_process_result)
 
 
 def get_json_for_saved_search(search, user):

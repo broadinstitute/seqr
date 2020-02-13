@@ -38,14 +38,3 @@ test('getSearchGeneBreakdownValues', () => {
     [PROJECT_GUID], STATE.projectsByGuid, STATE.locusListsByGuid,
   )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid }])
 })
-
-test('getSearchGeneBreakdownValues', () => {
-  expect(getSearchGeneBreakdownValues(STATE, { searchHash: SEARCH_HASH })).toEqual([{
-    numVariants: 3,
-    numFamilies: 1,
-    families: [{ family: STATE.familiesByGuid[FAMILY_GUID], count: 2 }],
-    search: SEARCH.search,
-    geneId: GENE_ID,
-    geneSymbol: 'OR2M3',
-  }])
-})

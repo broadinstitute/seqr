@@ -1,6 +1,5 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
 import { formValueSelector } from 'redux-form'
-import uniqBy from 'lodash/uniqBy'
 
 import {
   getProjectsByGuid,
@@ -9,41 +8,17 @@ import {
   getAnalysisGroupsByGuid,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
-  getGenesById,
+  getCurrentSearchParams,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
 
-
-export const getSearchedVariants = state => state.searchedVariants
-export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
-export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
-export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
-export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
-export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
-
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
-export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
-export const getVariantSearchDisplay = state => state.variantSearchDisplay
 export const getFlattenCompoundHet = state => state.flattenCompoundHet
-
-export const getDisplayVariants = createSelector(
-  getFlattenCompoundHet,
-  getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => (flattenCompoundHet ? (uniqBy(searchedVariants.flat(), 'variantId') || []) : searchedVariants),
-)
-
-const getCurrentSearchHash = state => state.currentSearchHash
-
-export const getCurrentSearchParams = createSelector(
-  getSearchesByHash,
-  getCurrentSearchHash,
-  (searchesByHash, searchHash) => searchesByHash[searchHash],
-)
 
 export const getInhertanceFilterMode = createSelector(
   getCurrentSearchParams,
@@ -140,19 +115,6 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   },
 )
 
-export const getTotalVariantsCount = createSelector(
-  getCurrentSearchParams,
-  searchParams => (searchParams || {}).totalResults,
-)
-
-export const getSearchedVariantExportConfig = createSelector(
-  getCurrentSearchHash,
-  searchHash => [{
-    name: 'Variant Search Results',
-    url: `/api/search/${searchHash}/download`,
-  }],
-)
-
 const getProjectsInput = createSelector(
   getProjectsFamiliesFieldInput,
   projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
@@ -206,23 +168,5 @@ export const getAnalysisGroupOptions = createSelector(
   (analysisGroupsGroupedByProjectGuid, projectGuid) =>
     Object.values(analysisGroupsGroupedByProjectGuid[projectGuid] || {}).map(
       group => ({ value: group.analysisGroupGuid, text: group.name }),
-    ),
-)
-
-export const getSearchGeneBreakdownValues = createSelector(
-  getSearchGeneBreakdown,
-  (state, props) => props.searchHash,
-  getFamiliesByGuid,
-  getGenesById,
-  getSearchesByHash,
-  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) =>
-    Object.entries(geneBreakdowns[searchHash] || {}).map(
-      ([geneId, counts]) => ({
-        numVariants: counts.total,
-        numFamilies: Object.keys(counts.families).length,
-        families: Object.entries(counts.families).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
-        search: searchesByHash[searchHash].search,
-        ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
-      }),
     ),
 )

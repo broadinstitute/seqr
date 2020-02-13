@@ -6,7 +6,7 @@ import { Loader } from 'semantic-ui-react'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import { Error404 } from 'shared/components/page/Errors'
-import { loadProject, unloadProject } from './reducers'
+import { loadCurrentProject, unloadProject } from './reducers'
 import { getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
@@ -21,14 +21,14 @@ class Project extends React.Component
     user: PropTypes.object,
     match: PropTypes.object,
     loading: PropTypes.bool.isRequired,
-    loadProject: PropTypes.func.isRequired,
+    loadCurrentProject: PropTypes.func.isRequired,
     unloadProject: PropTypes.func.isRequired,
   }
 
   constructor(props) {
     super(props)
 
-    props.loadProject(props.match.params.projectGuid)
+    props.loadCurrentProject(props.match.params.projectGuid)
   }
 
   componentWillUnmount() {
@@ -56,7 +56,7 @@ class Project extends React.Component
 }
 
 const mapDispatchToProps = {
-  loadProject, unloadProject,
+  loadCurrentProject, unloadProject,
 }
 
 const mapStateToProps = state => ({

@@ -16,6 +16,8 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
 } from 'shared/utils/constants'
 
+export const STAFF_SEARCH_FORM_NAME = 'customVariantSearch'
+export const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'
 
 const PROJECT_ID_FIELD = 'Project_ID'
 

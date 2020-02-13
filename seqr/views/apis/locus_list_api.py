@@ -2,18 +2,18 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.views.decorators.csrf import csrf_exempt
-from guardian.shortcuts import assign_perm, remove_perm
 
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
+from seqr.models import LocusList, LocusListGene, LocusListInterval, CAN_EDIT
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list, get_sorted_project_locus_lists
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_object_permissions, check_public_object_permissions
+from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
+    check_user_created_object_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -25,8 +25,13 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def locus_lists(request):
-    locus_lists = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
-    locus_lists_json = get_json_for_locus_lists(locus_lists, request.user)
+    if request.user.is_staff:
+        locus_list_models = LocusList.objects.all()
+    else:
+        locus_list_models = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
+    locus_list_models = locus_list_models.annotate(num_projects=Count('projects'))
+
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True)
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json}
@@ -38,7 +43,8 @@ def locus_lists(request):
 def locus_list_info(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
 
-    check_public_object_permissions(locus_list, request.user)
+    if not locus_list.is_public:
+        check_multi_project_permissions(locus_list, request.user)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
     gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
@@ -66,8 +72,7 @@ def create_locus_list_handler(request):
         is_public=request_json.get('isPublic') or False,
         created_by=request.user,
     )
-    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
-    _add_locus_list_user_permissions(locus_list)
+    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -79,7 +84,7 @@ def create_locus_list_handler(request):
 @csrf_exempt
 def update_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
+    check_user_created_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
 
     request_json = json.loads(request.body)
 
@@ -89,7 +94,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
     if genes_by_id is not None:
-        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
+        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -101,7 +106,7 @@ def update_locus_list_handler(request, locus_list_guid):
 @csrf_exempt
 def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
+    check_user_created_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
 
     locus_list.delete()
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
@@ -114,10 +119,11 @@ def add_project_locus_lists(request, project_guid):
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
-        assign_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
+        locus_list.projects.add(project)
+        locus_list.save()
 
     return create_json_response({
-        'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
     })
 
 
@@ -128,20 +134,15 @@ def delete_project_locus_lists(request, project_guid):
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
-        remove_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
+        locus_list.projects.remove(project)
+        locus_list.save()
 
     return create_json_response({
-        'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
     })
 
 
-def _add_locus_list_user_permissions(locus_list):
-    assign_perm(user_or_group=locus_list.created_by, perm=IS_OWNER, obj=locus_list)
-    assign_perm(user_or_group=locus_list.created_by, perm=CAN_EDIT, obj=locus_list)
-    assign_perm(user_or_group=locus_list.created_by, perm=CAN_VIEW, obj=locus_list)
-
-
-def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
+def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json):
     # Update genes
     locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
@@ -149,7 +150,6 @@ def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, u
         LocusListGene.objects.get_or_create(
             locus_list=locus_list,
             gene_id=gene_id,
-            created_by=user,
         )
 
     # Update intervals
@@ -165,3 +165,8 @@ def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, u
         )
         interval_guids.add(interval_model.guid)
     locus_list.locuslistinterval_set.exclude(guid__in=interval_guids).delete()
+
+
+def _get_sorted_project_locus_lists(project, user):
+    result = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
+    return sorted(result, key=lambda locus_list: locus_list['name'])

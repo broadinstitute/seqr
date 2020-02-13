@@ -12,7 +12,7 @@ import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType
+    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
@@ -32,7 +32,6 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_variants_with_tags, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
-    get_project_locus_list_models, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 from settings import API_LOGIN_REQUIRED_URL
@@ -101,6 +100,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
             projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
+        elif search_context.get('projectGuids'):
+            families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:
             raise Exception('Invalid search: no projects/ families specified')
 
@@ -333,7 +334,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     project_models_by_guid = {project.guid: project for project in projects}
     projects_json = get_json_for_projects(projects, user)
 
-    locus_lists = set()
+    locus_lists = LocusList.objects.filter(projects__in=projects).prefetch_related('projects')
+
+    project_guid = projects[0].guid if len(projects) == 1 else None
 
     functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
     variant_tag_types_by_guid = {
@@ -343,11 +346,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     variant_tag_types = _get_json_for_models(variant_tag_types_by_guid.values())
     for project_json in projects_json:
         project = project_models_by_guid[project_json['projectGuid']]
-        project_locus_lists = get_project_locus_list_models(project)
-        locus_lists.update(project_locus_lists)
 
         project_json.update({
-            'locusListGuids': [locus_list.guid for locus_list in project_locus_lists],
+            'locusListGuids': [locus_list.guid for locus_list in locus_lists if project in locus_list.projects.all()],
             'variantTagTypes': [
                 vtt for vtt in variant_tag_types
                 if variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project is None or
@@ -355,10 +356,40 @@ def _get_projects_details(projects, user, project_category_guid=None):
             'variantFunctionalTagTypes': functional_data_tag_types,
         })
 
-    families = _get_json_for_families(Family.objects.filter(project__in=projects), user)
-    individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=projects), user=user)
-    samples = get_json_for_samples(Sample.objects.filter(individual__family__project__in=projects))
-    analysis_groups = get_json_for_analysis_groups(AnalysisGroup.objects.filter(project__in=projects))
+    family_models = Family.objects.filter(project__in=projects)
+    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
+
+    individual_models = Individual.objects.filter(family__in=family_models)
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, skip_nested=True)
+
+    sample_models = Sample.objects.filter(individual__in=individual_models)
+    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
+
+    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
+
+    if not project_guid:
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        family_id_to_guid = {family.id: family.guid for family in family_models}
+        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+        family_guid_to_project_guid = {}
+        individual_guid_to_project_guid = {}
+        for family in families:
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+            family_guid_to_project_guid[family['familyGuid']] = project_guid
+        for individual in individuals:
+            family_guid = family_id_to_guid[individual.pop('familyId')]
+            project_guid = family_guid_to_project_guid[family_guid]
+            individual['familyGuid'] = family_guid
+            individual['projectGuid'] = project_guid
+            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+        for sample in samples:
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for group in analysis_groups:
+            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
     individual_guids_by_family = defaultdict(list)
     for individual in individuals:
@@ -377,7 +408,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
-        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(list(locus_lists), user)},
+        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
     if project_category_guid:

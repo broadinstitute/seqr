@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity, loadProject } from 'redux/rootReducer'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
@@ -22,24 +22,14 @@ const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 
 // Data actions
 
-export const loadProject = (projectGuid) => {
+export const loadCurrentProject = (projectGuid) => {
   return (dispatch, getState) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
     const project = getState().projectsByGuid[projectGuid]
-    if (!project || !project.detailsLoaded) {
-      dispatch({ type: REQUEST_PROJECT_DETAILS })
-      if (!project) {
-        dispatch({ type: REQUEST_PROJECTS })
-      }
-      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        },
-      ).get()
+    if (!project) {
+      dispatch({ type: REQUEST_PROJECTS })
     }
+    return loadProject(projectGuid, REQUEST_PROJECT_DETAILS, 'detailsLoaded')(dispatch, getState)
   }
 }
 

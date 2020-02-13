@@ -319,22 +319,25 @@ export const CLINSIG_SEVERITY = {
 
 // LOCUS LISTS
 
+export const LOCUS_LIST_NAME_FIELD = 'name'
+export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
+export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
 export const LOCUS_LIST_FIELDS = [
   {
-    name: 'name',
+    name: LOCUS_LIST_NAME_FIELD,
     label: 'List Name',
     labelHelp: 'A descriptive name for this gene list',
     validate: value => (value ? undefined : 'Name is required'),
     width: 3,
     isEditable: true,
   },
-  { name: 'numEntries', label: 'Entries', width: 1 },
+  { name: LOCUS_LIST_NUM_ENTRIES_FIELD, label: 'Entries', width: 1 },
   {
-    name: 'description',
+    name: LOCUS_LIST_DESCRIPTION_FIELD,
     label: 'Description',
     labelHelp: 'Some background on how this list is curated',
     width: 9,
@@ -799,12 +802,6 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   type: 'date',
   inline: true,
 }
-export const FLATTEN_COMPOUND_HET_TOGGLE_FIELD = {
-  name: 'flattenCompoundHet',
-  component: InlineToggle,
-  label: 'Unpair',
-  labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
-}
 
 export const PREDICTION_INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
@@ -871,6 +868,51 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
   { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+]
+
+export const ALL_INHERITANCE_FILTER = 'all'
+export const RECESSIVE_FILTER = 'recessive'
+export const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
+export const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
+export const COMPOUND_HET_FILTER = 'compound_het'
+export const DE_NOVO_FILTER = 'de_novo'
+export const ANY_AFFECTED = 'any_affected'
+
+export const INHERITANCE_FILTER_OPTIONS = [
+  { value: ALL_INHERITANCE_FILTER, text: 'All' },
+  {
+    value: RECESSIVE_FILTER,
+    text: 'Recessive',
+    detail: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
+  },
+  {
+    value: HOM_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Homozygous Recessive',
+    detail: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
+  },
+  {
+    value: X_LINKED_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'X-Linked Recessive',
+    detail: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
+  },
+  {
+    value: COMPOUND_HET_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Compound Heterozygous',
+    detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
+  },
+  {
+    value: DE_NOVO_FILTER,
+    text: 'De Novo/ Dominant',
+    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+  },
+  {
+    value: ANY_AFFECTED,
+    text: 'Any Affected',
+    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
+  },
 ]
 
 // Users
