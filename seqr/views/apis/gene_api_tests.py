@@ -4,7 +4,7 @@ from django.urls.base import reverse
 
 from seqr.models import GeneNote
 from seqr.views.apis.gene_api import gene_info, create_gene_note_handler, update_gene_note_handler, delete_gene_note_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, GENE_DETAIL_FIELDS
 
 
 GENE_ID = 'ENSG00000223972'
@@ -22,11 +22,7 @@ class GeneAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
 
         gene = response.json()['genesById'][GENE_ID]
-        self.assertSetEqual(set(gene.keys()), {
-            'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38', 'constraints',
-            'diseaseDesc', 'endGrch37', 'endGrch38', 'functionDesc', 'gencodeGeneType', 'geneId', 'geneSymbol',
-            'omimPhenotypes', 'mimNumber', 'startGrch37', 'startGrch38', 'notes', 'mgiMarkerId', 'geneNames',
-        })
+        self.assertSetEqual(set(gene.keys()), GENE_DETAIL_FIELDS)
 
     def test_create_update_and_delete_gene_note(self):
         create_gene_note_url = reverse(create_gene_note_handler, args=[GENE_ID])

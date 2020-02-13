@@ -42,3 +42,69 @@ def create_proxy_request_stub(response_status=200, reason="OK"):
         return http_response
 
     return _proxy_request_stub
+
+
+USER_FIELDS = {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
+
+PROJECT_FIELDS = {
+    'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
+    'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
+    'isMmeEnabled',
+}
+
+FAMILY_FIELDS = {
+    'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
+    'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
+    'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'mmeNotes',
+}
+
+INTERNAL_FAMILY_FIELDS = {
+    'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary', 'individualGuids', 'successStory',
+    'successStoryTypes',
+}
+INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
+
+INDIVIDUAL_FIELDS = {
+    'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData', 'individualId',
+    'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'phenotipsData', 'createdDate',
+    'lastModifiedDate', 'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population',
+}
+
+INTERNAL_INDIVIDUAL_FIELDS = {
+    'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
+}
+INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
+
+SAMPLE_FIELDS = {
+    'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
+    'datasetFilePath', 'loadedDate', 'datasetType',
+}
+
+SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}
+
+TAG_FIELDS = {'tagGuid', 'name', 'category', 'color', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids'}
+
+VARIANT_NOTE_FIELDS = {'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy', 'variantGuids'}
+
+FUNCTIONAL_FIELDS = {
+    'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids',
+}
+
+SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'search', 'createdById'}
+
+LOCUS_LIST_FIELDS = {
+    'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
+    'name',
+}
+LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
+LOCUS_LIST_DETAIL_FIELDS.update(LOCUS_LIST_FIELDS)
+
+GENE_FIELDS = {
+    'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38',  'endGrch37', 'endGrch38',
+    'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
+}
+
+GENE_DETAIL_FIELDS = {
+    'constraints', 'diseaseDesc', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber', 'mgiMarkerId', 'geneNames',
+}
+GENE_DETAIL_FIELDS.update(GENE_FIELDS)

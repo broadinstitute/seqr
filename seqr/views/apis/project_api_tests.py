@@ -7,7 +7,8 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, export_project_individuals_handler
-from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub
+from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub, PROJECT_FIELDS, \
+    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS
 
 
 MME_INDIVIDUAL_ID = 'IND_012'
@@ -102,13 +103,12 @@ class ProjectAPITest(TestCase):
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
             {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'numTagsPerFamily'}
         )
-        self.assertSetEqual(
-            set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
-            {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
-             'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
-             'lastModifiedDate', 'genomeVersion', 'discoveryTags', 'mmeContactInstitution', 'mmeContactUrl',
-             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', }
-        )
+        project_fields = {
+            'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
+            'discoveryTags',
+        }
+        project_fields.update(PROJECT_FIELDS)
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), project_fields)
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
@@ -117,31 +117,12 @@ class ProjectAPITest(TestCase):
         self.assertEqual(len(discovery_tags), 1)
         self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
-        self.assertSetEqual(
-            set(response_json['familiesByGuid'].values()[0].keys()),
-            {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
-             'description', 'analysisNotes', 'analysisSummary', 'analysisStatus', 'successStoryTypes', 'successStory',
-             'pedigreeImage', 'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary',
-             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst', }
-        )
-        self.assertSetEqual(
-            set(response_json['individualsByGuid'].values()[0].keys()),
-            {'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuids', 'caseReviewStatusLastModifiedBy',
-             'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-             'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus', 'paternalGuid', 'maternalGuid',
-             'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-             'mmeSubmissionGuid', 'popPlatformFilters', 'filterFlags', 'population'}
-        )
-        self.assertSetEqual(
-            set(response_json['samplesByGuid'].values()[0].keys()),
-            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'isActive', 'loadedDate', 'datasetFilePath'}
-        )
-        self.assertSetEqual(
-            set(response_json['locusListsByGuid'].values()[0].keys()),
-            {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name'}
-        )
+        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), INTERNAL_FAMILY_FIELDS)
+        individual_fields = {'sampleGuids', 'mmeSubmissionGuid'}
+        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
+        self.assertSetEqual(set(response_json['samplesByGuid'].values()[0].keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid'].values()[0].keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(
             set(response_json['analysisGroupsByGuid'].values()[0].keys()),
             {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
