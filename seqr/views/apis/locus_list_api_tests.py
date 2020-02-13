@@ -7,7 +7,6 @@ from django.urls.base import reverse
 from seqr.models import LocusList, Project
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
     update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.orm_to_json_utils import get_project_locus_list_models
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -33,7 +32,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(locus_list.keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name'}
+             'canEdit', 'name', 'numProjects'}
         )
 
     def test_locus_list_info(self):
@@ -149,8 +148,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertEqual(len(new_locus_list), 0)
 
     def test_add_and_remove_project_locus_lists(self):
-        project = Project.objects.get(guid=PROJECT_GUID)
-        self.assertListEqual(list(get_project_locus_list_models(project)), [])
+        existing_guid = 'LL00005_retina_proteome'
 
         # add a locus list
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
@@ -158,12 +156,17 @@ class LocusListAPITest(TransactionTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [LOCUS_LIST_GUID])
-        self.assertListEqual(list(get_project_locus_list_models(project)), [LocusList.objects.get(guid=LOCUS_LIST_GUID)])
+        self.assertListEqual(response.json()['locusListGuids'], [LOCUS_LIST_GUID, existing_guid])
+        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
+        self.assertEqual(ll_projects.count(), 2)
+        self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
 
         # remove a locus list
         url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [])
-        self.assertListEqual(list(get_project_locus_list_models(project)), [])
+        self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
+        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
+        self.assertEqual(ll_projects.count(), 1)
+        self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})
+

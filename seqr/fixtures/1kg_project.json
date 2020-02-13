@@ -1407,6 +1407,7 @@
     "pk": 1,
     "fields": {
         "guid": "LL00049_pid_genes_autosomal_do",
+        "projects": [3],
         "created_date": "2017-02-07T12:55:30.700Z",
         "created_by": null,
         "last_modified_date": "2018-05-01T00:02:38.733Z",
@@ -1420,6 +1421,7 @@
     "pk": 2,
     "fields": {
         "guid": "LL00005_retina_proteome",
+        "projects": [1],
         "created_date": "2017-02-07 07:55:06.032034-05",
         "created_by": 10,
         "last_modified_date": "2018-05-01T00:02:38.733Z",

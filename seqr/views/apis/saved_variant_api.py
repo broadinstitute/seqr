@@ -6,14 +6,13 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
+    LocusList, LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    get_project_locus_list_models
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
@@ -338,9 +337,7 @@ def _saved_variant_genes(variants):
 
 
 def _add_locus_lists(projects, variants, genes):
-    locus_lists = set()
-    for project in projects:
-        locus_lists.update(get_project_locus_list_models(project))
+    locus_lists = LocusList.objects.filter(projects__in=projects)
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:

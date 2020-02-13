@@ -45,12 +45,25 @@ def check_public_object_permissions(obj, user, permission_level=CAN_VIEW):
     _check_object_permissions(obj, user, permission_level, check_permission=lambda obj, user: obj.is_public)
 
 
+def check_user_created_object_permissions(obj, user, permission_level=CAN_VIEW):
+    _check_object_permissions(obj, user, permission_level, check_permission=lambda obj, user: obj.created_by == user)
+
+
 def _check_object_permissions(obj, user, permission_level, check_permission):
     if user.has_perm(permission_level, obj) or user.is_superuser or user.is_staff or (check_permission and check_permission(obj, user)):
         pass
     else:
         raise PermissionDenied("{user} does not have {permission_level} permissions for {object}".format(
             user=user, object=obj, permission_level=permission_level))
+
+
+def check_multi_project_permissions(obj, user, permission_level=CAN_VIEW):
+    for project in obj.projects.all():
+        try:
+            check_object_permissions(project, user, permission_level)
+            return
+        except PermissionDenied:
+            continue
 
 
 def get_projects_user_can_view(user):

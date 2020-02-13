@@ -319,22 +319,25 @@ export const CLINSIG_SEVERITY = {
 
 // LOCUS LISTS
 
+export const LOCUS_LIST_NAME_FIELD = 'name'
+export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
+export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
 export const LOCUS_LIST_FIELDS = [
   {
-    name: 'name',
+    name: LOCUS_LIST_NAME_FIELD,
     label: 'List Name',
     labelHelp: 'A descriptive name for this gene list',
     validate: value => (value ? undefined : 'Name is required'),
     width: 3,
     isEditable: true,
   },
-  { name: 'numEntries', label: 'Entries', width: 1 },
+  { name: LOCUS_LIST_NUM_ENTRIES_FIELD, label: 'Entries', width: 1 },
   {
-    name: 'description',
+    name: LOCUS_LIST_DESCRIPTION_FIELD,
     label: 'Description',
     labelHelp: 'Some background on how this list is curated',
     width: 9,
