@@ -35,6 +35,6 @@ class Command(BaseCommand):
                postgres_host=options['postgres_host'], db_name=db_name, backup_dir=backup_dir,
                 backup_filename=backup_filename
             ))
-            run("usr/local/bin/gsutil mv {backup_dir}/{backup_filename} gs://{bucket}/postgres/{backup_filename}".format(
+            run("/usr/local/bin/gsutil mv {backup_dir}/{backup_filename} gs://{bucket}/postgres/{backup_filename}".format(
                 backup_dir=backup_dir, backup_filename=backup_filename, bucket=options['bucket']
             ))
