@@ -10,9 +10,8 @@ import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/f
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { VEP_GROUP_OTHER } from 'shared/utils/constants'
 
-import FrequencyFilter from './FrequencyFilter'
+import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
-  THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
@@ -131,23 +130,9 @@ export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
     title: 'Frequency',
-    inputSize: 6,
+    inputSize: 8,
     inputProps: {
-      component: FrequencyFilter,
-      format: (values) => {
-        if (!values) {
-          return {}
-        }
-        const { callset, ...freqValues } = values
-        return Object.values(freqValues).reduce((acc, value) => ({
-          af: value.af === acc.af ? value.af : null,
-          ac: value.ac === acc.ac ? value.ac : null,
-          hh: value.hh === acc.hh ? value.hh : null,
-        }), Object.values(freqValues)[0])
-      },
-      parse: value => FREQUENCIES.reduce((acc, { name }) => (name === THIS_CALLSET_FREQUENCY ? acc : { ...acc, [name]: value }), {}),
-      homHemi: true,
-      inlineAF: true,
+      component: HeaderFrequencyFilter,
     },
   },
   fields: FREQUENCIES,
@@ -172,7 +157,7 @@ export const QUALITY_PANEL = {
 const HeaderContent = ({ name, title, inputSize, inputProps }) =>
   <Grid>
     <Grid.Row>
-      <Grid.Column width={9} verticalAlign="middle">{title}</Grid.Column>
+      <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps &&
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
           {configuredField({ ...inputProps, name })}
