@@ -5,14 +5,6 @@ import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { loadSearchedVariants, unloadSearchResults } from 'redux/rootReducer'
-import DataLoader from 'shared/components/DataLoader'
-import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
-import { HorizontalSpacer } from 'shared/components/Spacers'
-import ExportTableButton from 'shared/components/buttons/ExportTableButton'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
-
 import {
   getDisplayVariants,
   getSearchedVariantsIsLoading,
@@ -21,6 +13,13 @@ import {
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
 } from 'redux/selectors'
+import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
+import DataLoader from '../../DataLoader'
+import { QueryParamsEditor } from '../../QueryParamEditor'
+import { HorizontalSpacer } from '../../Spacers'
+import ExportTableButton from '../../buttons/ExportTableButton'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 
 const LargeRow = styled(Grid.Row)`
@@ -40,7 +39,7 @@ const FIELDS = [
 export const DisplayVariants = ({ displayVariants }) =>
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants variants={displayVariants} />
+      <Variants variants={displayVariants} showDiscoveryTags />
     </Grid.Column>
   </Grid.Row>
 

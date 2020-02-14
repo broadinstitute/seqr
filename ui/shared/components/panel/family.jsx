@@ -245,10 +245,13 @@ DiscoveryGenes.propTypes = {
 const Family = (
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample, hidePedigree,
+    disableEdit,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
+
+  const isEditable = !disableEdit && project.canEdit
 
   const familyField = (field) => {
     const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
@@ -256,7 +259,7 @@ const Family = (
       values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
     return React.createElement(renderDetails.component || TextFieldView, {
       key: field.id,
-      isEditable: project.canEdit && field.canEdit,
+      isEditable: isEditable && field.canEdit,
       isPrivate: renderDetails.internal,
       fieldName: compact ? null : renderDetails.name,
       field: field.id,
@@ -279,7 +282,7 @@ const Family = (
         family.displayName
       }
     />,
-    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
+    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
   ]
 
   const rightContent = showVariantDetails ? [
@@ -332,6 +335,7 @@ Family.propTypes = {
   annotation: PropTypes.node,
   genesById: PropTypes.object,
   hasActiveVariantSample: PropTypes.bool,
+  disableEdit: PropTypes.bool,
 }
 
 

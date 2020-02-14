@@ -44,6 +44,31 @@ MetadataField.propTypes = {
   error: PropTypes.bool,
 }
 
+export const TagFieldDisplay = ({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst }) => {
+  return (
+    <span>
+      {displayFieldValues.map((tag) => {
+        const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
+        const annotation = tagAnnotation && tagAnnotation(tag)
+        return (
+          <span key={tag.name}>
+            <HorizontalSpacer width={5} />
+            {displayAnnotationFirst && annotation}
+            {popup ? popup(tag)(label) : label}
+            {!displayAnnotationFirst && annotation}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
+TagFieldDisplay.propTypes = {
+  displayFieldValues: PropTypes.array.isRequired,
+  popup: PropTypes.func,
+  tagAnnotation: PropTypes.func,
+  displayAnnotationFirst: PropTypes.bool,
+}
 
 const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
   const fieldValues = (initialValues || {})[field] || []
@@ -89,18 +114,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
-      <span>
-        {displayFieldValues.map((tag) => {
-          const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
-          return (
-            <span key={tag.name}>
-              <HorizontalSpacer width={5} />
-              {popup ? popup(tag)(label) : label}
-              {tagAnnotation && tagAnnotation(tag)}
-            </span>
-          )
-        })}
-      </span>
+      <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} />
     }
     {...props}
   />

@@ -572,11 +572,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
             saved_variants__in=SavedVariant.objects.filter(discovery_variant_q)
         ), include_variant_details=True)
         family_guids = set()
-        discovery_tags_by_variant_id = defaultdict(list)
         for tag in discovery_tags:
-            tag['familyGuids'] = set()
             for variant in tag['variants']:
-                discovery_tags_by_variant_id[variant['variantId']].append(tag)
                 family_guids.update(variant['familyGuids'])
         families_by_guid = {f.guid: f for f in Family.objects.filter(guid__in=family_guids).prefetch_related('project')}
         for tag in discovery_tags:
@@ -590,12 +587,11 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
                     tag_json = {'savedVariant': {
                         'variantGuid': variant['variantGuid'],
                         'familyGuid': variant_family.guid,
-                        'familyDisplayName': variant_family.display_name or variant_family.family_id,
                         'projectGuid': variant_family.project.guid,
-                        'projectName': variant_family.project.name,
                     }}
                     tag_json.update(tag)
                     searched_variant['discoveryTags'].append(tag_json)
+        json['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(families_by_guid.values())}
 
     return json, variants_to_saved_variants
 
