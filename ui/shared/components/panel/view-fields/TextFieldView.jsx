@@ -6,7 +6,7 @@ import RichTextEditor from '../../form/RichTextEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
 
-const MARKDOWN_OPTIONS = { breaks: true }
+const MARKDOWN_OPTIONS = { breaks: true, linkTarget: '_blank' }
 const INLINE_STYLE = { display: 'inline-block' }
 
 const TextFieldView = (props) => {

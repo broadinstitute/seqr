@@ -182,17 +182,25 @@ AnalysedBy.propTypes = {
   compact: PropTypes.bool,
 }
 
+const getContentWidth = (useFullWidth, leftContent, rightContent) => {
+  if (!useFullWidth || (leftContent && rightContent)) {
+    return 10
+  }
+  if (leftContent || rightContent) {
+    return 13
+  }
+  return 16
+}
+
 export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
   <div>
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
-        <Grid.Column width={3}>
-          {leftContent}
-        </Grid.Column>
+        {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
         {compact ? fields.map(field =>
           <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={(useFullWidth && !rightContent) ? 13 : 10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) : <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>
@@ -236,7 +244,7 @@ DiscoveryGenes.propTypes = {
 
 const Family = (
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample, hidePedigree,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
@@ -261,7 +269,7 @@ const Family = (
     })
   }
 
-  const leftContent = [
+  const leftContent = hidePedigree ? null : [
     <InlineHeader
       key="name"
       overrideInline={!compact}
@@ -319,6 +327,7 @@ Family.propTypes = {
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
   showFamilyPageLink: PropTypes.bool,
+  hidePedigree: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   genesById: PropTypes.object,

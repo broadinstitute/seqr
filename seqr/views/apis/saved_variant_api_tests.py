@@ -8,7 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, SAVED_VARIANT_FIELDS, TAG_FIELDS
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -74,7 +74,7 @@ COMPOUND_HET_5_JSON = {
 }
 
 
-class ProjectAPITest(TransactionTestCase):
+class SavedVariantAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
     def test_saved_variant_data(self):
@@ -93,23 +93,20 @@ class ProjectAPITest(TransactionTestCase):
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
 
         variant = variants['SV0000001_2103343353_r0390_100']
-        self.assertSetEqual(
-            set(variant.keys()),
-            {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
-             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tagGuids', 'functionalDataGuids', 'noteGuids',
-             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts',
-             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',}
-        )
+        fields = {
+            'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
+            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
+            'transcripts', 'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
+        }
+        fields.update(SAVED_VARIANT_FIELDS)
+        self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
             set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
         )
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
-        self.assertSetEqual(
-            set(tag.keys()),
-            {'tagGuid', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids', 'category', 'color', 'name'}
-        )
+        self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
