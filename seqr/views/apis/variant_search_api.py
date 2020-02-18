@@ -571,27 +571,28 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
             variant_tag_type__category='CMG Discovery Tags',
             saved_variants__in=SavedVariant.objects.filter(discovery_variant_q)
         ), include_variant_details=True)
-        family_guids = set()
-        for tag in discovery_tags:
-            for variant in tag['variants']:
-                family_guids.update(variant['familyGuids'])
-        families_by_guid = {f.guid: f for f in Family.objects.filter(guid__in=family_guids).prefetch_related('project')}
-        for tag in discovery_tags:
-            for variant in tag.pop('variants'):
-                variant_family = families_by_guid[variant['familyGuids'][0]]
-                searched_variant = variants_by_id.get(
-                    _get_variant_key(genomeVersion=variant_family.project.genome_version, **variant))
-                if searched_variant:
-                    if not searched_variant.get('discoveryTags'):
-                        searched_variant['discoveryTags'] = []
-                    tag_json = {'savedVariant': {
-                        'variantGuid': variant['variantGuid'],
-                        'familyGuid': variant_family.guid,
-                        'projectGuid': variant_family.project.guid,
-                    }}
-                    tag_json.update(tag)
-                    searched_variant['discoveryTags'].append(tag_json)
-        json['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(families_by_guid.values())}
+        if discovery_tags:
+            family_guids = set()
+            for tag in discovery_tags:
+                for variant in tag['variants']:
+                    family_guids.update(variant['familyGuids'])
+            families_by_guid = {f.guid: f for f in Family.objects.filter(guid__in=family_guids).prefetch_related('project')}
+            for tag in discovery_tags:
+                for variant in tag.pop('variants'):
+                    variant_family = families_by_guid[variant['familyGuids'][0]]
+                    searched_variant = variants_by_id.get(
+                        _get_variant_key(genomeVersion=variant_family.project.genome_version, **variant))
+                    if searched_variant:
+                        if not searched_variant.get('discoveryTags'):
+                            searched_variant['discoveryTags'] = []
+                        tag_json = {'savedVariant': {
+                            'variantGuid': variant['variantGuid'],
+                            'familyGuid': variant_family.guid,
+                            'projectGuid': variant_family.project.guid,
+                        }}
+                        tag_json.update(tag)
+                        searched_variant['discoveryTags'].append(tag_json)
+            json['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(families_by_guid.values())}
 
     return json, variants_to_saved_variants
 
