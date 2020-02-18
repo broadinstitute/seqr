@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Icon, Popup, Table, Header } from 'semantic-ui-react'
+import { Icon, Popup, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
@@ -25,7 +25,7 @@ import {
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { ColoredComponent, NoBorderTable } from '../../StyledComponents'
+import { ColoredComponent, NoBorderTable, InlineHeader } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -64,7 +64,7 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
-const taggedByPopup = (tag, title) => trigger =>
+export const taggedByPopup = (tag, title) => trigger =>
   <Popup
     position="top right"
     size="tiny"
@@ -215,6 +215,37 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
+const FamilyLabel = ({ family, disableEdit, ...linkProps }) =>
+  <InlineHeader size="small">
+    Family<HorizontalSpacer width={5} />
+    <PopupWithModal
+      hoverable
+      wide="very"
+      position="right center"
+      keepInViewPort
+      trigger={
+        <ColoredLink
+          to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+          color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+          {...linkProps}
+        >
+          {family.displayName}
+        </ColoredLink>
+      }
+      content={<Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} useFullWidth disablePedigreeZoom />}
+    />
+  </InlineHeader>
+
+
+FamilyLabel.propTypes = {
+  family: PropTypes.object,
+  disableEdit: PropTypes.bool,
+}
+
+export const LoadedFamilyLabel = connect((state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
+}))(FamilyLabel)
+
 const FamilyVariantTags = (
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
     dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
@@ -225,24 +256,7 @@ const FamilyVariantTags = (
         <Table.Row verticalAlign="top">
           {!isCompoundHet &&
           <Table.Cell collapsing rowSpan={2}>
-            <Header size="small">
-              Family<HorizontalSpacer width={5} />
-              <PopupWithModal
-                hoverable
-                wide="very"
-                position="right center"
-                keepInViewPort
-                trigger={
-                  <ColoredLink
-                    to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
-                    color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-                  >
-                    {family.displayName}
-                  </ColoredLink>
-                }
-                content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-              />
-            </Header>
+            <FamilyLabel family={family} />
           </Table.Cell>}
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Tags:</TagTitle>

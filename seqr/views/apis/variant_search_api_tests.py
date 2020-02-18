@@ -11,7 +11,7 @@ from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, login_non_staff_user
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -41,7 +41,21 @@ EXPECTED_VARIANTS = deepcopy(VARIANTS)
 EXPECTED_VARIANTS[0]['locusListGuids'] = []
 EXPECTED_VARIANTS[1]['locusListGuids'] = [LOCUS_LIST_GUID]
 EXPECTED_VARIANTS[2]['locusListGuids'] = []
-
+EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(EXPECTED_VARIANTS)
+EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
+    'savedVariant': {
+        'variantGuid': 'SV0000006_1248367227_r0003_tes',
+        'familyGuid': 'F000011_11',
+        'projectGuid': 'R0003_test',
+    },
+    'tagGuid': 'VT1726961_2103343353_r0003_tes',
+    'name': 'Tier 1 - Novel gene and phenotype',
+    'category': 'CMG Discovery Tags',
+    'color': '#03441E',
+    'searchHash': None,
+    'lastModifiedDate': '2018-05-29T16:32:51.449Z',
+    'createdBy': None,
+}]
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
@@ -94,9 +108,9 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid'})
+            'variantFunctionalDataByGuid', 'familiesByGuid'})
 
-        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS)
+        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': PROJECT_FAMILIES,
@@ -113,6 +127,7 @@ class VariantSearchAPITest(TestCase):
         self.assertListEqual(
             response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
         )
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
@@ -165,6 +180,16 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
+
+        # Test no cross-project discovery for non-staff users
+        login_non_staff_user(self)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+            'variantFunctionalDataByGuid'})
+        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS)
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants

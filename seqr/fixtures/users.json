@@ -40,5 +40,23 @@
         "groups": [],
         "user_permissions": []
     }
+},
+    {
+    "model": "auth.user",
+    "pk": 12,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": true,
+        "username": "test_user_non_staff",
+        "first_name": "Test Non Staff User",
+        "last_name": "",
+        "email": "test_user_no_staff@test.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
 }
 ]
