@@ -7,7 +7,7 @@ import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 
-class BaseLocusListDropdown extends React.Component
+class BaseLocusListDropdown extends React.PureComponent
 {
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props

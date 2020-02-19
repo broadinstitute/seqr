@@ -17,7 +17,7 @@ const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
  Style menu bar is based on this example:
  https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
  */
-class RichTextEditor extends React.Component {
+class RichTextEditor extends React.PureComponent {
   static propTypes = {
     value: PropTypes.string,
     onChange: PropTypes.func,

@@ -6,7 +6,7 @@ import { Modal, Icon, Popup, Confirm } from 'semantic-ui-react'
 import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal } from 'redux/utils/modalReducer'
 import { ButtonLink } from '../StyledComponents'
 
-class CustomModal extends React.Component
+class CustomModal extends React.PureComponent
 {
   static propTypes = {
     trigger: PropTypes.node,

@@ -14,37 +14,32 @@ const StyledMessage = styled(Message)`
   text-align: left !important;
 `
 
-class MessagesPanel extends React.Component {
+const MessagesPanel = ({ info, warnings, errors }) =>
+  <MessagePanelContainer>
+    {
+      info && info.length > 0 &&
+      <StyledMessage info>
+        {info.map(infoItem => <div key={infoItem}>{infoItem}<br /></div>)}
+      </StyledMessage>
+    }
+    {
+      warnings && warnings.length > 0 &&
+      <StyledMessage warning>
+        {warnings.map(warning => <div key={warning}><b>WARNING:</b> {warning}<br /></div>)}
+      </StyledMessage>
+    }
+    {
+      errors && errors.length > 0 &&
+      <StyledMessage error>
+        {errors.map(error => <div key={error}><b>ERROR:</b> {error}<br /></div>)}
+      </StyledMessage>
+    }
+  </MessagePanelContainer>
 
-  static propTypes = {
-    errors: PropTypes.array,
-    warnings: PropTypes.array,
-    info: PropTypes.array,
-  }
-
-  render() {
-    return (
-      <MessagePanelContainer>
-        {
-          this.props.info && this.props.info.length > 0 &&
-          <StyledMessage info>
-            {this.props.info.map(info => <div key={info}>{info}<br /></div>)}
-          </StyledMessage>
-        }
-        {
-          this.props.warnings && this.props.warnings.length > 0 &&
-          <StyledMessage warning>
-            {this.props.warnings.map(warning => <div key={warning}><b>WARNING:</b> {warning}<br /></div>)}
-          </StyledMessage>
-        }
-        {
-          this.props.errors && this.props.errors.length > 0 &&
-          <StyledMessage error>
-            {this.props.errors.map(error => <div key={error}><b>ERROR:</b> {error}<br /></div>)}
-          </StyledMessage>
-        }
-      </MessagePanelContainer>)
-  }
+MessagesPanel.propTypes = {
+  errors: PropTypes.array,
+  warnings: PropTypes.array,
+  info: PropTypes.array,
 }
 
 export default MessagesPanel
