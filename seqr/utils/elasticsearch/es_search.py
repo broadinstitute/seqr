@@ -44,13 +44,17 @@ class EsSearch(object):
         if len(self.samples_by_family_index) < 1:
             raise InvalidIndexException('No es index found')
 
+        self._skipped_sample_count = 0
         if skip_unaffected_families:
             for index, family_samples in self.samples_by_family_index.items():
                 index_skipped_families = []
                 for family_guid, samples_by_id in family_samples.items():
-                    if not any(s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED
-                               for s in samples_by_id.values()):
+                    affected_samples = [
+                        s for s in samples_by_id.values() if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED
+                    ]
+                    if not affected_samples:
                         index_skipped_families.append(family_guid)
+                        self._skipped_sample_count += len(samples_by_id) - len(affected_samples)
 
                 for family_guid in index_skipped_families:
                     del self.samples_by_family_index[index][family_guid]
@@ -78,6 +82,7 @@ class EsSearch(object):
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
         self._no_sample_filters = False
+        self._any_affected_sample_filters = False
         self._family_individual_affected_status = {}
 
     def _set_index_metadata(self):
@@ -182,14 +187,14 @@ class EsSearch(object):
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
             affected_status = None
-            if inheritance_filter:
+            if inheritance_filter or inheritance_mode:
                 affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
                 self._family_individual_affected_status.update(affected_status)
 
             genotypes_q = None
             if not quality_filter['min_ab'] and not quality_filter['min_gq'] and \
                     (inheritance_mode == ANY_AFFECTED or not inheritance):
-                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     if inheritance_mode == ANY_AFFECTED:
@@ -199,7 +204,7 @@ class EsSearch(object):
                                 sample_id for sample_id, sample in samples_by_id.items()
                                 if affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
                         genotypes_q = _any_affected_sample_filter(sample_ids)
-                        self._no_sample_filters = False
+                        self._any_affected_sample_filters = True
                     else:
                         # If searching across all families in an index with no inheritance mode we do not need to explicitly
                         # filter on inheritance, as all variants have some inheritance for at least one family
@@ -391,13 +396,14 @@ class EsSearch(object):
             alt_allele_samples = set()
             for alt_samples_field in HAS_ALT_FIELD_KEYS:
                 alt_allele_samples.update(hit[alt_samples_field])
-            if self._no_sample_filters:
-                _is_matched_sample = lambda *args: True
-            else:
+
+            if self._any_affected_sample_filters:
                 # If using the any inheritance filter only include matched families
                 def _is_matched_sample(family_guid, sample):
                     return self._family_individual_affected_status[family_guid][sample.individual.guid] == \
                            Individual.AFFECTED_STATUS_AFFECTED
+            else:
+                _is_matched_sample = lambda *args: True
 
             family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
                             if any(sample_id in alt_allele_samples and _is_matched_sample(family_guid, sample)
@@ -869,7 +875,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
             sample_ids = [sample_id for sample_id, sample in samples_by_id.items()
                           if affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
             family_samples_q = _any_affected_sample_filter(sample_ids)
-        elif inheritance_filter:
+        elif inheritance_filter or inheritance_mode:
             if inheritance_mode:
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
@@ -934,6 +940,8 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
                 sample_q = ~Q(sample_q)
 
             if not samples_q:
+                samples_q = sample_q
+            else:
                 samples_q &= sample_q
 
     return samples_q
