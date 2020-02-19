@@ -57,6 +57,8 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         readinessProbe:
           exec:
             command:
@@ -67,6 +69,6 @@ spec:
             - postgres
         volumeMounts:
         - name: postgres-dbpath
-          mountPath: /var/lib/postgresql
+          mountPath: /var/lib/postgresql/data
       restartPolicy: Always
       dnsPolicy: ClusterFirst
