@@ -195,8 +195,10 @@ class SavedVariantAPITest(TransactionTestCase):
         response = self.client.post(create_saved_compound_hets_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        new_compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[1]
-        new_compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[0]
+        new_compound_het_3_guid = next(guid for guid, variant_json in response.json()['savedVariantsByGuid'].items()
+                                       if variant_json['xpos'] == 15062456358)
+        new_compound_het_4_guid = next(guid for guid, variant_json in response.json()['savedVariantsByGuid'].items()
+                                       if variant_json['xpos'] == 15062456406)
 
         saved_compound_het_3 = SavedVariant.objects.get(guid=new_compound_het_3_guid, family__guid='F000001_1')
         saved_compound_het_4 = SavedVariant.objects.get(guid=new_compound_het_4_guid, family__guid='F000001_1')

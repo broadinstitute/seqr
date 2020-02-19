@@ -440,7 +440,7 @@ def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     }
 
 
-def get_json_for_variant_tags(tags):
+def get_json_for_variant_tags(tags, include_variant_details=False):
     """Returns a JSON representation of the given variant tags.
 
     Args:
@@ -449,9 +449,13 @@ def get_json_for_variant_tags(tags):
         dict: json objects
     """
     def _process_result(tag_json, tag):
-        tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
+        if include_variant_details:
+            tag_json['variants'] = get_json_for_saved_variants(tag.saved_variants.all())
+        else:
+            tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
 
-    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
+    variant_fields = SavedVariant._meta.json_fields if include_variant_details else ['guid']
+    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only(*variant_fields)))
 
     nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
     return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)

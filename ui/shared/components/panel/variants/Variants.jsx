@@ -4,8 +4,9 @@ import styled from 'styled-components'
 import { Grid, Divider } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
+import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyVariantReads from './FamilyVariantReads'
-import FamilyVariantTags from './FamilyVariantTags'
+import FamilyVariantTags, { LoadedFamilyLabel, taggedByPopup } from './FamilyVariantTags'
 import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'
 import Predictions from './Predictions'
@@ -43,7 +44,19 @@ const StyledCompoundHetRows = styled(Grid)`
   margin-bottom: 0 !important;
 `
 
-const Variant = ({ variant, isCompoundHet, mainGeneId }) => {
+const TagFamily = ({ savedVariant }) =>
+  <LoadedFamilyLabel
+    familyGuid={savedVariant.familyGuid}
+    to={`/project/${savedVariant.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`}
+    disableEdit
+    target="_blank"
+  />
+
+TagFamily.propTypes = {
+  savedVariant: PropTypes.object,
+}
+
+const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
@@ -58,6 +71,17 @@ const Variant = ({ variant, isCompoundHet, mainGeneId }) => {
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
       </Grid.Column>
+      {showDiscoveryTags && variant.discoveryTags &&
+        <Grid.Column width={16}>
+          <b>Other Project Discovery Tags:</b>
+          <TagFieldDisplay
+            displayFieldValues={variant.discoveryTags}
+            popup={taggedByPopup}
+            tagAnnotation={TagFamily}
+            displayAnnotationFirst
+          />
+        </Grid.Column>
+      }
       {variant.familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} />
@@ -88,10 +112,11 @@ Variant.propTypes = {
   variant: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   mainGeneId: PropTypes.string,
+  showDiscoveryTags: PropTypes.bool,
 }
 
 
-const CompoundHets = ({ variants }) => {
+const CompoundHets = ({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
@@ -119,7 +144,7 @@ const CompoundHets = ({ variants }) => {
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {variants.map(compoundHet =>
-          <Variant variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet />,
+          <Variant variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
         )}
       </StyledCompoundHetRows>
     </StyledVariantRow>
@@ -131,11 +156,11 @@ CompoundHets.propTypes = {
   variants: PropTypes.array,
 }
 
-const Variants = ({ variants }) => (
+const Variants = ({ variants, ...props }) => (
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant => (Array.isArray(variant) ?
-      <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> :
-      <Variant variant={variant} key={variant.variantId} />
+      <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} {...props} /> :
+      <Variant variant={variant} key={variant.variantId} {...props} />
     ))}
   </Grid>
 )

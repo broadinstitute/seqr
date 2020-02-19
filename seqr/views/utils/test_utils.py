@@ -19,6 +19,11 @@ def _check_login(test_case, url):
     test_case.client.force_login(test_user)
 
 
+def login_non_staff_user(test_case):
+    test_user = User.objects.get(username='test_user_non_staff')
+    test_case.client.force_login(test_user)
+
+
 def create_proxy_request_stub(response_status=200, reason="OK"):
 
     """Factory for creating a PhenoTips mock function to replace _send_request_to_phenotips.

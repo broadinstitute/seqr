@@ -7,7 +7,7 @@ from django.test import TestCase
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts
-from seqr.utils.elasticsearch.es_search import _genotype_inheritance_filter
+from seqr.utils.elasticsearch.es_search import _genotype_inheritance_filter, _get_family_affected_status
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -529,6 +529,10 @@ PARSED_VARIANTS = [
         '_sort': [2103343353],
     },
 ]
+PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_ANY_AFFECTED_VARIANTS[1]['familyGuids'] = ['F000003_3']
+PARSED_ANY_AFFECTED_VARIANTS[1]['genotypes'] = {'I000007_na20870': PARSED_ANY_AFFECTED_VARIANTS[1]['genotypes']['I000007_na20870']}
+
 PARSED_COMPOUND_HET_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_COMPOUND_HET_VARIANTS[0]['_sort'] = [1248367327]
 PARSED_COMPOUND_HET_VARIANTS[1]['_sort'] = [2103343453]
@@ -1431,6 +1435,26 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
 
+    def test_all_samples_any_affected_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, PARSED_ANY_AFFECTED_VARIANTS)
+        self.assertEqual(total_results, 5)
+
+        self.assertExecutedSearch(filters=[
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+            {'bool': {
+                'should': [
+                    {'terms': {'samples_num_alt_1': ['HG00731', 'NA20870', 'NA19675']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731', 'NA20870', 'NA19675']}},
+                ]
+            }}
+        ], sort=['xpos'])
+
     def test_multi_project_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
@@ -1773,17 +1797,39 @@ class EsUtilsTest(TestCase):
         })
         self.assertIsNone(self.executed_search)
 
-    def test_genotype_inheritance_filter(self):
+    def test_get_family_affected_status(self):
         samples_by_id = {'F000002_2': {
             sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
         }}
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
         custom_multi_affected = {'I000005_hg00732': 'A'}
 
+        self.assertDictEqual(_get_family_affected_status(samples_by_id, {}), {
+            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
+
+        custom_affected_status = _get_family_affected_status(samples_by_id, {'affected': custom_affected})
+        self.assertDictEqual(custom_affected_status, {
+            'F000002_2': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+
+        custom_affected_status = _get_family_affected_status(samples_by_id, {'affected': custom_multi_affected})
+        self.assertDictEqual(custom_affected_status, {
+            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+
+    def test_genotype_inheritance_filter(self):
+        samples_by_id = {'F000002_2': {
+            sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
+        }}
+
+        affected_status = {'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}}
+        custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
+        custom_affected_status = {'F000002_2': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}}
+        custom_multi_affected = {'I000005_hg00732': 'A'}
+        custom_multi_affected_status = {'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}}
+
         # custom genotype
-        inheritance_filter, affected_status = _genotype_inheritance_filter(None, {
+        inheritance_filter = _genotype_inheritance_filter(None, {
             'genotype': {'I000004_hg00731': 'ref_ref', 'I000005_hg00732': 'ref_alt'}
-        }, samples_by_id, {})
+        }, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'must_not': [
@@ -1796,11 +1842,9 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        self.assertDictEqual(affected_status, {
-            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
 
         # de novo
-        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('de_novo', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1818,10 +1862,8 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        self.assertDictEqual(affected_status, {
-            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
 
-        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('de_novo', {'affected': custom_affected}, samples_by_id, {}, custom_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1839,10 +1881,9 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        self.assertDictEqual(affected_status, {
-            'F000002_2': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
 
-        inheritance_filter, affected_status = _genotype_inheritance_filter('de_novo', {'affected': custom_multi_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter(
+            'de_novo', {'affected': custom_multi_affected}, samples_by_id, {}, custom_multi_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'minimum_should_match': 1,
@@ -1865,8 +1906,6 @@ class EsUtilsTest(TestCase):
                 }]
             }
         }]}})
-        self.assertDictEqual(affected_status, {
-            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
 
         recessive_filter = {
             'bool': {
@@ -1896,15 +1935,16 @@ class EsUtilsTest(TestCase):
         }
 
         # homozygous recessive
-        inheritance_filter, _ = _genotype_inheritance_filter('homozygous_recessive', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('homozygous_recessive', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [recessive_filter]}})
-        inheritance_filter, _ = _genotype_inheritance_filter('homozygous_recessive', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter(
+            'homozygous_recessive', {'affected': custom_affected}, samples_by_id, {}, custom_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {
             'bool': {'_name': 'F000002_2', 'must': [custom_affected_recessive_filter]}
         })
 
         # compound het
-        inheritance_filter, _ = _genotype_inheritance_filter('compound_het', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('compound_het', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'must_not': [
@@ -1918,7 +1958,8 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
-        inheritance_filter, _ = _genotype_inheritance_filter('compound_het', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter(
+            'compound_het', {'affected': custom_affected}, samples_by_id, {}, custom_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'must_not': [
@@ -1965,42 +2006,41 @@ class EsUtilsTest(TestCase):
             }
         }
 
-        inheritance_filter, _ = _genotype_inheritance_filter('x_linked_recessive', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('x_linked_recessive', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [x_linked_filter]}})
-        inheritance_filter, _ = _genotype_inheritance_filter(
-            'x_linked_recessive', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter(
+            'x_linked_recessive', {'affected': custom_affected}, samples_by_id, {}, custom_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {
             'bool': {'_name': 'F000002_2', 'must': [custom_affected_x_linked_filter]}
         })
 
         # recessive
-        inheritance_filter, _ = _genotype_inheritance_filter('recessive', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('recessive', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {'should': [recessive_filter, x_linked_filter]}
         }]}})
-        inheritance_filter, _ = _genotype_inheritance_filter('recessive', {'affected': custom_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter(
+            'recessive', {'affected': custom_affected}, samples_by_id, {}, custom_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {'should': [custom_affected_recessive_filter, custom_affected_x_linked_filter]}
         }]}})
 
         # any affected
-        inheritance_filter, _ = _genotype_inheritance_filter('any_affected', {}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('any_affected', {}, samples_by_id, {}, affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'should': [
-                    {'term': {'samples_num_alt_1': 'HG00731'}},
-                    {'term': {'samples_num_alt_2': 'HG00731'}}
+                    {'terms': {'samples_num_alt_1': ['HG00731']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731']}}
                 ]
             }
         }]}})
-        inheritance_filter, _ = _genotype_inheritance_filter('any_affected', {'affected': custom_multi_affected}, samples_by_id, {})
+        inheritance_filter = _genotype_inheritance_filter('any_affected', {'affected': custom_multi_affected}, samples_by_id, {}, custom_multi_affected_status)
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'should': [
-                    {'term': {'samples_num_alt_1': 'HG00731'}},
-                    {'term': {'samples_num_alt_2': 'HG00731'}},
-                    {'term': {'samples_num_alt_1': 'HG00732'}},
-                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                    {'terms': {'samples_num_alt_1': ['HG00731', 'HG00732']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731', 'HG00732']}},
                 ]
             }
         }]}})

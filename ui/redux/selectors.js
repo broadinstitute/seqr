@@ -105,7 +105,7 @@ export const getSortedIndividualsByFamily = createSelector(
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
       [familyGuid]: orderBy(
-        family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]),
+        (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]),
         [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
       ),
     }), {})
@@ -228,9 +228,11 @@ export const getPairedFilteredSavedVariants = createSelector(
   getPairedSelectedSavedVariants,
   getSavedVariantTableState,
   getVariantTagsByGuid,
-  (state, props) => props.match.params.tag,
-  (state, props) => props.match.params.gene,
-  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, tag, gene) => {
+  (state, props) => props.match.params,
+  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, { tag, gene, variantGuid }) => {
+    if (variantGuid) {
+      return savedVariants
+    }
     let variantsToShow = savedVariants.map(variant => (Array.isArray(variant) ? variant : [variant]))
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variants =>
