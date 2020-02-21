@@ -31,6 +31,13 @@ class BaseLocusListDropdown extends React.Component
       this.props.onChange({ locusListGuid, rawItems })
     }
   }
+
+  shouldComponentUpdate(nextProps) {
+    return nextProps.projectLocusListOptions !== this.props.projectLocusListOptions ||
+      nextProps.onChange !== this.props.onChange ||
+      nextProps.locusList.locusListGuid !== this.props.locusList.locusListGuid ||
+      (!!this.props.locusList.locusListGuid && nextProps.locusList.rawItems !== this.props.locusList.rawItems)
+  }
 }
 
 const mapStateToProps = state => ({

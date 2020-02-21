@@ -28,7 +28,7 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
   }
 `
 
-class AwesomeBar extends React.Component
+class AwesomeBar extends React.PureComponent
 {
   static propTypes = {
     categories: PropTypes.array,

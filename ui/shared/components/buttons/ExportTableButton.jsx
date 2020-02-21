@@ -34,7 +34,7 @@ const EXT_CONFIG = {
 
 const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : item)
 
-export const FileLink = ({ url, data, ext, linkContent }) => {
+export const FileLink = React.memo(({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
     linkContent =
@@ -60,7 +60,7 @@ export const FileLink = ({ url, data, ext, linkContent }) => {
     url += '&'
   }
   return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
-}
+})
 
 FileLink.propTypes = {
   ext: PropTypes.string.isRequired,

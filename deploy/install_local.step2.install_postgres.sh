@@ -16,6 +16,7 @@ elif [ $PLATFORM = "macos" ]; then
 
     brew install postgres
     pg_ctl -D /usr/local/var/postgres start && brew services start postgresql
+    /usr/local/opt/postgres/bin/createuser -s postgres
 
 elif [ $PLATFORM = "centos" ]; then
     wget -nv https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm

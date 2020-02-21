@@ -160,17 +160,19 @@ export const getSavedVariantTableState = state => (
   state.currentProjectGuid ? state.savedVariantTableState : state.staffSavedVariantTableState
 )
 
-const getSelectedSavedVariants = createSelector(
+export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
   getProjectGuid,
   getVariantTagsByGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid) => {
+  getVariantNotesByGuid,
+  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid, notesByGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
-      return variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
+      variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
+      return variants.length > 1 ? [variants] : variants
     }
 
     if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
@@ -184,43 +186,36 @@ const getSelectedSavedVariants = createSelector(
       variants = variants.filter(o => o.familyGuids.some(fg => familiesByGuid[fg].projectGuid === projectGuid))
     }
 
-    if (tag) {
-      if (tag === NOTE_TAG_NAME) {
-        variants = variants.filter(o => o.noteGuids.length)
-      } else {
-        variants = variants.filter(o => o.tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
-      }
-    }
-
-    return variants
-  },
-)
-
-export const getPairedSelectedSavedVariants = createSelector(
-  getSelectedSavedVariants,
-  getVariantNotesByGuid,
-  getVariantTagsByGuid,
-  (selectedSavedVariants, notesByGuid, tagsByGuid) => {
-    const selectedVariantsByGuid = selectedSavedVariants.reduce(
+    const selectedVariantsByGuid = variants.reduce(
       (acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
     const seenCompoundHets = []
-    return selectedSavedVariants.reduce((acc, variant) => {
+    let pairedVariants = variants.reduce((acc, variant) => {
       const variantCompoundHetGuids = [...[
         ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
         ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
       ].filter(variantGuids => variantGuids.length > 1).reduce((guidAcc, variantGuids) =>
-        new Set([...guidAcc, ...variantGuids.filter(variantGuid => variantGuid !== variant.variantGuid)]),
-      new Set())].filter(variantGuid => selectedVariantsByGuid[variantGuid])
+        new Set([...guidAcc, ...variantGuids.filter(varGuid => varGuid !== variant.variantGuid)]),
+      new Set())].filter(varGuid => selectedVariantsByGuid[varGuid])
 
       if (variantCompoundHetGuids.length) {
         seenCompoundHets.push(variant.variantGuid)
-        return acc.concat(variantCompoundHetGuids.filter(variantGuid => !seenCompoundHets.includes(variantGuid)).map(
-          variantGuid => ([variant, selectedVariantsByGuid[variantGuid]])))
+        return acc.concat(variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid)).map(
+          varGuid => ([variant, selectedVariantsByGuid[varGuid]])))
       }
 
       acc.push(variant)
       return acc
     }, [])
+
+    if (tag) {
+      if (tag === NOTE_TAG_NAME) {
+        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ noteGuids }) => noteGuids.length))
+      } else {
+        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag)))
+      }
+    }
+
+    return pairedVariants
   },
 )
 

@@ -144,7 +144,7 @@ export const LOCATION_PANEL = {
   name: 'locus',
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
-  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054). Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
+  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 
 export const QUALITY_PANEL = {
@@ -173,7 +173,7 @@ HeaderContent.propTypes = {
   inputProps: PropTypes.object,
 }
 
-const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
+const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = fields && configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
   return (
     <FormSection name={name}>
@@ -185,7 +185,7 @@ const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
       </Form.Group>
     </FormSection>
   )
-}
+})
 
 PanelContent.propTypes = {
   fields: PropTypes.array,
@@ -195,31 +195,12 @@ PanelContent.propTypes = {
   fieldLayout: PropTypes.func,
 }
 
-const panelDetails = totalPanels => ({ name, headerProps, ...panelContentProps }, i) => ({
-  key: name,
-  title: {
-    key: `${name}-title`,
-    as: ToggleHeader,
-    attached: i === 0 ? 'top' : true,
-    content: <HeaderContent name={name} {...headerProps} />,
-  },
-  content: {
-    key: name,
-    as: Segment,
-    attached: i === totalPanels - 1 ? 'bottom' : true,
-    padded: true,
-    textAlign: 'center',
-    content: <PanelContent name={name} {...panelContentProps} />,
-  },
-})
-
-
 class VariantSearchFormPanels extends React.PureComponent {
   state = { activeIndex: [] }
 
   expandAll = (e) => {
     e.preventDefault()
-    this.setState({ activeIndex: [...this.props.panels.keys()] })
+    this.setState({ activeIndex: this.props.panels })
   }
 
   collapseAll = (e) => {
@@ -229,9 +210,8 @@ class VariantSearchFormPanels extends React.PureComponent {
 
   handleTitleClick = (e, { index }) => {
     const { activeIndex } = this.state
-    const newIndex = activeIndex.indexOf(index) === -1 ? [...activeIndex, index] : activeIndex.filter(item => item !== index)
-
-    this.setState({ activeIndex: newIndex })
+    activeIndex[index] = !activeIndex[index]
+    this.setState({ activeIndex: [...activeIndex] })
   }
 
 
@@ -245,13 +225,40 @@ class VariantSearchFormPanels extends React.PureComponent {
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={25} />
         <FormSection name="search">
-          <Accordion
-            fluid
-            panels={this.props.panels.map(panelDetails(this.props.panels.length))}
-            exclusive={false}
-            activeIndex={this.state.activeIndex}
-            onTitleClick={this.handleTitleClick}
-          />
+          <Accordion fluid exclusive={false}>
+            {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+              const isActive = !!this.state.activeIndex[i]
+              let attachedTitle = true
+              if (i === 0) {
+                attachedTitle = 'top'
+              } else if (i === this.props.panels.length - 1 && !isActive) {
+                attachedTitle = 'bottom'
+              }
+              return [...acc,
+                <Accordion.Title
+                  key={`${name}-title`}
+                  active={isActive}
+                  index={i}
+                  onClick={this.handleTitleClick}
+                  as={ToggleHeader}
+                  attached={attachedTitle}
+                >
+                  <Icon name="dropdown" />
+                  <HeaderContent name={name} {...headerProps} />
+                </Accordion.Title>,
+                <Accordion.Content
+                  key={`${name}-content`}
+                  active={isActive}
+                  as={Segment}
+                  attached={i === this.props.panels.length - 1 ? 'bottom' : true}
+                  padded
+                  textAlign="center"
+                >
+                  <PanelContent name={name} {...panelContentProps} />
+                </Accordion.Content>,
+              ] }, [])
+            }
+          </Accordion>
         </FormSection>
       </div>
     )

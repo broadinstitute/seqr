@@ -3,57 +3,47 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
+import styled from 'styled-components'
+import { Icon } from 'semantic-ui-react'
 
-import { ColoredIcon } from 'shared/components/StyledComponents'
 import { getProjectCategoriesByGuid } from 'redux/selectors'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
-class CategoryIndicator extends React.Component {
+const getColor = categoryNames => (
+  categoryNames.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: categoryNames.sort().join(',') })
+)
 
-  static propTypes = {
-    project: PropTypes.object.isRequired,
-  }
+const ComputedColoredIcon = styled(({ categoryNames, ...props }) => <Icon {...props} />)`
+  color: ${props => getColor(props.categoryNames)} !important;
+`
 
-  constructor(props) {
-    super(props)
+const CategoryIndicator = ({ project, projectCategoriesByGuid }) => {
+  const categoryNames = project.projectCategoryGuids.map(guid => (projectCategoriesByGuid[guid] && projectCategoriesByGuid[guid].name) || guid)
 
-    this.computeValuesBeforeRender(props)
-  }
+  const popup = categoryNames.length > 0 ? {
+    content: categoryNames.map(name => <div key={name}>{name}</div>),
+    header: 'Categories',
+    position: 'top center',
+    size: 'small',
+  } : null
 
-  componentWillReceiveProps(nextProps) {
-    this.computeValuesBeforeRender(nextProps)
-  }
-
-  computeValuesBeforeRender(props) {
-    this.categoryGuids = props.project.projectCategoryGuids
-    this.categoryNames = this.categoryGuids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
-    this.categoryNames.sort()
-    this.color = this.categoryGuids.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
-  }
-
-  render() {
-    const StarButton = (
-      <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-        <ColoredIcon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} color={this.color} />
-      </a>
-    )
-
-    let popup
-    if (this.categoryGuids.length > 0) {
-      popup = {
-        content: (
-          <div>
-            <div>Categories:</div><br />
-            <div>{this.categoryNames.map(name => <div key={name}>{name}</div>)}</div>
-          </div>
-        ),
-        position: 'top center',
-        size: 'small',
+  return (
+    <EditProjectCategoriesModal
+      project={project}
+      trigger={
+        <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
+          <ComputedColoredIcon name={`${categoryNames.length === 0 ? 'empty ' : ''}star`} categoryNames={categoryNames} />
+        </a>
       }
-    }
+      popup={popup}
+      triggerName="categoryIndicator"
+    />
+  )
+}
 
-    return <EditProjectCategoriesModal project={this.props.project} trigger={StarButton} popup={popup} triggerName="categoryIndicator" />
-  }
+CategoryIndicator.propTypes = {
+  project: PropTypes.object.isRequired,
+  projectCategoriesByGuid: PropTypes.object.isRequired,
 }
 
 export { CategoryIndicator as CategoryIndicatorComponent }
