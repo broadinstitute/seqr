@@ -3,4 +3,4 @@ psutil==5.6.7                    # library for process and system monitoring
 
 # kubernetes deployment dependencies
 Jinja2==2.10.1                   # jinja templates are used in the kubernetes deployment scripts
-PyYAML==5.1                      # yaml parsing
+PyYAML==5.3                      # yaml parsing
