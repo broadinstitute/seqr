@@ -142,11 +142,13 @@ def get_submission_json_for_external_match(submission, score=None):
                 'institution': MME_DEFAULT_CONTACT_INSTITUTION,
             },
             'species': 'NCBITaxon:9606',
-            'sex': MatchmakerSubmission.SEX_LOOKUP[submission.individual.sex],
             'features': submission.features,
             'genomicFeatures': submission.genomic_features,
         }
     }
+    sex = MatchmakerSubmission.SEX_LOOKUP.get(submission.individual.sex)
+    if sex:
+        submission_json['patient']['sex'] = sex
     if score:
         submission_json['score'] = score
     return submission_json

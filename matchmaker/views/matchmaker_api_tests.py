@@ -284,7 +284,6 @@ class MatchmakerAPITest(TestCase):
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
                 'species': 'NCBITaxon:9606',
-                'sex': 'MALE',
                 'features': [
                     {'id': 'HP:0001252', 'observed': 'yes'},
                     {'id': 'HP:0001263', 'observed': 'no'},
@@ -298,6 +297,7 @@ class MatchmakerAPITest(TestCase):
                     },
                     'zygosity': 1
                 }],
+                'sex': 'MALE',
             },
         }
         expected_body = json.dumps(dict(_disclaimer=MME_DISCLAIMER, **expected_patient_body))
