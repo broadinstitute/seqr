@@ -7,7 +7,7 @@ import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 
-class BaseLocusListDropdown extends React.PureComponent
+class BaseLocusListDropdown extends React.Component
 {
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props
@@ -30,6 +30,13 @@ class BaseLocusListDropdown extends React.PureComponent
       const { locusListGuid, rawItems } = nextProps.locusList
       this.props.onChange({ locusListGuid, rawItems })
     }
+  }
+
+  shouldComponentUpdate(nextProps) {
+    return nextProps.projectLocusListOptions !== this.props.projectLocusListOptions ||
+      nextProps.onChange !== this.props.onChange ||
+      nextProps.locusList.locusListGuid !== this.props.locusList.locusListGuid ||
+      (!!this.props.locusList.locusListGuid && nextProps.locusList.rawItems !== this.props.locusList.rawItems)
   }
 }
 
