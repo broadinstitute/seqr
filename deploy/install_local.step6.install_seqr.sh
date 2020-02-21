@@ -34,7 +34,7 @@ if [ -z "$PLATFORM" ]; then
 elif [ $PLATFORM = "macos" ]; then
 
     brew install ssl
-    cat <(echo 'export PATH=/usr/local/opt/openssl/bin:$PATH') ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
+    cat <(echo "export PATH=/usr/local/opt/openssl/bin:$PATH") ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
 
 elif [ $PLATFORM = "centos" ]; then
 
