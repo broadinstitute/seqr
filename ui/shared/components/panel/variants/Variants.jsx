@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider } from 'semantic-ui-react'
+import { Grid, Divider, Popup, Label, Button } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -44,6 +44,11 @@ const StyledCompoundHetRows = styled(Grid)`
   margin-bottom: 0 !important;
 `
 
+const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
+  padding: 0.2em !important;
+  box-shadow: none !important;
+`
+
 const TagFamily = ({ savedVariant }) =>
   <LoadedFamilyLabel
     familyGuid={savedVariant.familyGuid}
@@ -70,18 +75,20 @@ const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
     <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
-      </Grid.Column>
-      {showDiscoveryTags && variant.discoveryTags &&
-        <Grid.Column width={16}>
-          <b>Other Project Discovery Tags:</b>
-          <TagFieldDisplay
-            displayFieldValues={variant.discoveryTags}
-            popup={taggedByPopup}
-            tagAnnotation={TagFamily}
-            displayAnnotationFirst
+        {showDiscoveryTags && variant.discoveryTags &&
+          <InlinePopup
+            on="click"
+            position="right center"
+            trigger={<Button as={Label} basic color="grey">Other Project Discovery Tags</Button>}
+            content={<TagFieldDisplay
+              displayFieldValues={variant.discoveryTags}
+              popup={taggedByPopup}
+              tagAnnotation={TagFamily}
+              displayAnnotationFirst
+            />}
           />
-        </Grid.Column>
       }
+      </Grid.Column>
       {variant.familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} />
