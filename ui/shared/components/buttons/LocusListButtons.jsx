@@ -16,7 +16,7 @@ const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_ITEMS_FIELD]).filter(field =
     [...acc, fieldProps, ...(additionalFormFields || [])], [],
 )
 
-const UpdateLocusList = ({ locusList, size, onSubmit }) =>
+const UpdateLocusList = React.memo(({ locusList, size, onSubmit }) =>
   <UpdateButton
     modalTitle="Edit Gene List"
     modalId={`editLocusList-${locusList.locusListGuid}`}
@@ -27,7 +27,7 @@ const UpdateLocusList = ({ locusList, size, onSubmit }) =>
     size={size}
     showErrorPanel
   />
-
+)
 
 UpdateLocusList.propTypes = {
   onSubmit: PropTypes.func,
@@ -37,7 +37,7 @@ UpdateLocusList.propTypes = {
 
 const DEFAULT_LOCUS_LIST = { [LOCUS_LIST_IS_PUBLIC_FIELD_NAME]: false }
 
-const CreateLocusList = ({ onSubmit }) =>
+const CreateLocusList = React.memo(({ onSubmit }) =>
   <UpdateButton
     modalTitle="Create a New Gene List"
     modalId="createLocusList"
@@ -48,12 +48,13 @@ const CreateLocusList = ({ onSubmit }) =>
     formFields={FIELDS}
     showErrorPanel
   />
+)
 
 CreateLocusList.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-const DeleteLocusList = ({ locusList, onSubmit, size, iconOnly, history }) =>
+const DeleteLocusList = React.memo(({ locusList, onSubmit, size, iconOnly, history }) =>
   <DeleteButton
     initialValues={locusList}
     onSubmit={onSubmit}
@@ -62,6 +63,7 @@ const DeleteLocusList = ({ locusList, onSubmit, size, iconOnly, history }) =>
     size={size}
     onSuccess={() => history.push('/gene_lists')}
   />
+)
 
 DeleteLocusList.propTypes = {
   onSubmit: PropTypes.func,

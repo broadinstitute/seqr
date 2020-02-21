@@ -34,7 +34,7 @@ const EXT_CONFIG = {
 
 const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : item)
 
-export const FileLink = ({ url, data, ext, linkContent }) => {
+export const FileLink = React.memo(({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
     linkContent =
@@ -60,7 +60,7 @@ export const FileLink = ({ url, data, ext, linkContent }) => {
     url += '&'
   }
   return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
-}
+})
 
 FileLink.propTypes = {
   ext: PropTypes.string.isRequired,
@@ -69,7 +69,7 @@ FileLink.propTypes = {
   linkContent: PropTypes.node,
 }
 
-const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
+const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) =>
   <Popup
     trigger={
       <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
@@ -102,6 +102,7 @@ const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
     on="click"
     position="bottom center"
   />
+)
 
 
 ExportTableButton.propTypes = {

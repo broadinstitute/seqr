@@ -5,8 +5,9 @@ import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { ButtonLink } from '../StyledComponents'
 
-const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults }) =>
+const SearchResultsLink = React.memo(({ buttonText = 'Gene Search', openSearchResults }) =>
   <ButtonLink content={buttonText} onClick={openSearchResults} />
+)
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,

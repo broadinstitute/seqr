@@ -5,7 +5,7 @@ import Modal from '../modal/Modal'
 import GeneDetail from '../panel/genes/GeneDetail'
 import { ButtonLink } from '../StyledComponents'
 
-const ShowGeneModal = ({ gene, modalId = 'gene', ...linkProps }) =>
+const ShowGeneModal =React.memo(({ gene, modalId = 'gene', ...linkProps }) =>
   <Modal
     trigger={<ButtonLink {...linkProps}>{gene.geneSymbol}</ButtonLink>}
     title={gene.geneSymbol}
@@ -14,6 +14,7 @@ const ShowGeneModal = ({ gene, modalId = 'gene', ...linkProps }) =>
   >
     <GeneDetail geneId={gene.geneId} />
   </Modal>
+)
 
 ShowGeneModal.propTypes = {
   gene: PropTypes.object,
