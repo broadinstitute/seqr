@@ -6,7 +6,7 @@ import { Icon } from 'semantic-ui-react'
 import Modal from 'shared/components/modal/Modal'
 import { updateIndividual } from 'redux/rootReducer'
 
-const ShowPhenotipsModalButton = React.memo(({ individual, isViewOnly, modalId, handleEditClose }) => (
+const ShowPhenotipsModalButton = ({ individual, isViewOnly, modalId, handleEditClose }) => (
   <Modal
     modalName={`Phenotips-${individual.individualGuid}-${isViewOnly ? 'view' : 'edit'}-${modalId || ''}`}
     title={`PhenoTips: ${individual.displayName}`}
@@ -31,7 +31,7 @@ const ShowPhenotipsModalButton = React.memo(({ individual, isViewOnly, modalId, 
       src={`/api/project/${individual.projectGuid}/individual/${individual.individualGuid}/phenotips_${isViewOnly ? 'pdf' : 'edit'}`}
     />
   </Modal>
-))
+)
 
 ShowPhenotipsModalButton.propTypes = {
   individual: PropTypes.object.isRequired,

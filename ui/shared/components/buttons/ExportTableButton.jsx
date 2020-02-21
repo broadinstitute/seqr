@@ -69,7 +69,7 @@ FileLink.propTypes = {
   linkContent: PropTypes.node,
 }
 
-const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) =>
+const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
   <Popup
     trigger={
       <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
@@ -102,7 +102,6 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
     on="click"
     position="bottom center"
   />
-)
 
 
 ExportTableButton.propTypes = {
