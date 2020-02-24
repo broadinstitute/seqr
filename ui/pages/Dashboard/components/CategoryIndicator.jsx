@@ -17,7 +17,7 @@ const ComputedColoredIcon = styled(({ categoryNames, ...props }) => <Icon {...pr
   color: ${props => getColor(props.categoryNames)} !important;
 `
 
-const CategoryIndicator = ({ project, projectCategoriesByGuid }) => {
+const CategoryIndicator = React.memo(({ project, projectCategoriesByGuid }) => {
   const categoryNames = project.projectCategoryGuids.map(guid => (projectCategoriesByGuid[guid] && projectCategoriesByGuid[guid].name) || guid)
 
   const popup = categoryNames.length > 0 ? {
@@ -39,7 +39,7 @@ const CategoryIndicator = ({ project, projectCategoriesByGuid }) => {
       triggerName="categoryIndicator"
     />
   )
-}
+})
 
 CategoryIndicator.propTypes = {
   project: PropTypes.object.isRequired,

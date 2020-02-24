@@ -42,12 +42,13 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
-const DetailSection = ({ title, content, button }) =>
+const DetailSection = React.memo(({ title, content, button }) =>
   <div>
     <b>{title}</b>
     <DetailContent>{content}</DetailContent>
     {button && <div><VerticalSpacer height={15} />{button}</div>}
-  </div>
+  </div>,
+)
 
 DetailSection.propTypes = {
   title: PropTypes.string.isRequired,
@@ -72,7 +73,7 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 7 },
 ]
 
-const MatchmakerSubmissionOverview = ({ mmeSubmissions }) => {
+const MatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
   return (
     <DataTable
       basic="very"
@@ -83,13 +84,13 @@ const MatchmakerSubmissionOverview = ({ mmeSubmissions }) => {
       columns={MME_COLUMNS}
     />
   )
-}
+})
 
 MatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.array,
 }
 
-const ProjectOverview = (
+const ProjectOverview = React.memo((
   { project, familiesByGuid, individualsByGuid, samplesByGuid, mmeSubmissions, analysisStatusCounts, user },
 ) => {
   const familySizeHistogram = Object.values(familiesByGuid)
@@ -176,7 +177,7 @@ const ProjectOverview = (
       </Grid.Column>
     </Grid>
   )
-}
+})
 
 
 ProjectOverview.propTypes = {

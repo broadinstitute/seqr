@@ -32,7 +32,7 @@ import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
 
-const ProjectSectionComponent = ({ loading, label, children, editButton, linkPath, linkText, project }) => {
+const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,
     <div key="content">
@@ -52,7 +52,7 @@ const ProjectSectionComponent = ({ loading, label, children, editButton, linkPat
       </div>
     ) : null,
   ])
-}
+})
 
 const mapSectionStateToProps = state => ({
   project: getCurrentProject(state),
@@ -68,7 +68,7 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = (props) => {
+const ProjectPageUI = React.memo((props) => {
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },
@@ -123,7 +123,7 @@ const ProjectPageUI = (props) => {
       </Grid.Row>
     </Grid>
   )
-}
+})
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,

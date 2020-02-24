@@ -51,13 +51,14 @@ UcscBrowserLink.propTypes = {
 const MAX_SEQUENCE_LENGTH = 30
 const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
 
-const Sequence = ({ sequence, ...props }) =>
+const Sequence = React.memo(({ sequence, ...props }) =>
   <SequenceContainer {...props}>
     {sequence.length > MAX_SEQUENCE_LENGTH ?
       <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
       sequence
     }
-  </SequenceContainer>
+  </SequenceContainer>,
+)
 
 Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
@@ -65,8 +66,9 @@ Sequence.propTypes = {
 
 export const parseHgvs = hgvs => (hgvs || '').split(':').pop()
 
-export const ProteinSequence = ({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />
+export const ProteinSequence = React.memo(({ hgvs }) =>
+  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
+)
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
@@ -82,7 +84,7 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
+const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
@@ -129,7 +131,7 @@ const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
     )
   }
   return links
-}
+})
 
 const mapStateToProps = (state, ownProps) => ({
   mainGene: getGenesById(state)[ownProps.mainTranscript.geneId],
@@ -137,7 +139,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const Annotations = ({ variant }) => {
+const Annotations = React.memo(({ variant }) => {
   const { rsid } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
@@ -218,7 +220,7 @@ const Annotations = ({ variant }) => {
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
   )
-}
+})
 
 Annotations.propTypes = {
   variant: PropTypes.object,

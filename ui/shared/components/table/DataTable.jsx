@@ -258,7 +258,7 @@ class DataTable extends React.PureComponent {
 export default DataTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = ({ value, onChange, error, data = [], ...props }) =>
+export const SelectableTableFormInput = React.memo(({ value, onChange, error, data = [], ...props }) =>
   <DataTable
     basic="very"
     fixed
@@ -266,7 +266,8 @@ export const SelectableTableFormInput = ({ value, onChange, error, data = [], ..
     selectedRows={value || EMPTY_OBJECT}
     data={data}
     {...props}
-  />
+  />,
+)
 
 SelectableTableFormInput.propTypes = {
   value: PropTypes.any,

@@ -17,7 +17,7 @@ const BASE_FORM_ID = 'addVariant-'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
-const ZygosityInput = ({ individuals, name }) =>
+const ZygosityInput = React.memo(({ individuals, name }) =>
   <FormSection name={name}>
     <Divider horizontal>Zygosity</Divider>
     <Grid columns="equal">
@@ -34,7 +34,8 @@ const ZygosityInput = ({ individuals, name }) =>
         </Grid.Column>
       ))}
     </Grid>
-  </FormSection>
+  </FormSection>,
+)
 
 ZygosityInput.propTypes = {
   individuals: PropTypes.array,
@@ -117,7 +118,7 @@ const FIELDS = [...[
   { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
 ].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, TAG_FIELD, ZYGOSITY_FIELD]
 
-const CreateVariantButton = ({ project, family, user, onSubmit }) => (
+const CreateVariantButton = React.memo(({ project, family, user, onSubmit }) => (
   user.isStaff ? <UpdateButton
     modalTitle={`Add a Manual Variant for Family ${family.displayName}`}
     modalId={`${BASE_FORM_ID}${family.familyGuid}`}
@@ -128,7 +129,7 @@ const CreateVariantButton = ({ project, family, user, onSubmit }) => (
     formFields={FIELDS}
     showErrorPanel
   /> : null
-)
+))
 
 CreateVariantButton.propTypes = {
   project: PropTypes.object,

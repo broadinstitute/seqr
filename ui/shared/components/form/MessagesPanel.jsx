@@ -14,7 +14,7 @@ const StyledMessage = styled(Message)`
   text-align: left !important;
 `
 
-const MessagesPanel = ({ info, warnings, errors }) =>
+const MessagesPanel = React.memo(({ info, warnings, errors }) =>
   <MessagePanelContainer>
     {
       info && info.length > 0 &&
@@ -34,7 +34,8 @@ const MessagesPanel = ({ info, warnings, errors }) =>
         {errors.map(error => <div key={error}><b>ERROR:</b> {error}<br /></div>)}
       </StyledMessage>
     }
-  </MessagePanelContainer>
+  </MessagePanelContainer>,
+)
 
 MessagesPanel.propTypes = {
   errors: PropTypes.array,

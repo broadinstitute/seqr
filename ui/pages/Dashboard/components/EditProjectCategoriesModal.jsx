@@ -10,7 +10,7 @@ import { updateProject } from 'redux/rootReducer'
 import { getProjectCategoriesByGuid } from 'redux/selectors'
 
 
-const EditProjectCategoriesModal = (props) => {
+const EditProjectCategoriesModal = React.memo((props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
     return { value: projectCategory.guid, text: projectCategory.name }
   })
@@ -41,7 +41,7 @@ const EditProjectCategoriesModal = (props) => {
       />
     </Modal>
   )
-}
+})
 
 EditProjectCategoriesModal.propTypes = {
   trigger: PropTypes.node,

@@ -62,7 +62,7 @@ const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const BaseBulkContent = ({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+const BaseBulkContent = React.memo(({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
   <div>
     <Container>
       To {actionDescription}, upload a table in one of these formats:
@@ -132,7 +132,8 @@ const BaseBulkContent = ({ actionDescription, details, project, name, requiredFi
       name={FILE_FIELD_NAME}
       uploaderStyle={UPLOADER_STYLE}
     />
-  </div>
+  </div>,
+)
 
 BaseBulkContent.propTypes = {
   actionDescription: PropTypes.string.isRequired,
@@ -160,7 +161,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const BulkContent = connect(mapStateToProps)(BaseBulkContent)
 
-const EditBulkForm = ({ name, modalName, onSubmit, ...props }) =>
+const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
     form={`bulkUpload_${name}`}
     modalName={modalName}
@@ -172,7 +173,8 @@ const EditBulkForm = ({ name, modalName, onSubmit, ...props }) =>
     size="small"
   >
     <BulkContent name={name} {...props} />
-  </ReduxFormWrapper>
+  </ReduxFormWrapper>,
+)
 
 EditBulkForm.propTypes = {
   name: PropTypes.string.isRequired,
@@ -187,7 +189,7 @@ const mapFamiliesStateToProps = (state, ownProps) => ({
   rawData: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
 })
 
-const FamiliesBulkForm = props =>
+const FamiliesBulkForm = React.memo(props =>
   <EditBulkForm
     name="families"
     actionDescription="bulk-add or edit families"
@@ -203,7 +205,8 @@ const FamiliesBulkForm = props =>
     uploadFormats={BASE_UPLOAD_FORMATS}
     blankDownload
     {...props}
-  />
+  />,
+)
 
 const mapFamiliesDispatchToProps = {
   onSubmit: updateFamilies,
@@ -211,7 +214,7 @@ const mapFamiliesDispatchToProps = {
 
 export const EditFamiliesBulkForm = connect(mapFamiliesStateToProps, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
-const IndividualsBulkForm = props =>
+const IndividualsBulkForm = React.memo(props =>
   <EditBulkForm
     name="individuals"
     actionDescription="bulk-add or edit individuals"
@@ -227,7 +230,8 @@ const IndividualsBulkForm = props =>
     uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
     {...props}
-  />
+  />,
+)
 
 const mapIndividualsDispatchToProps = {
   onSubmit: updateIndividuals,
@@ -236,7 +240,7 @@ const mapIndividualsDispatchToProps = {
 export const EditIndividualsBulkForm = connect(null, mapIndividualsDispatchToProps)(IndividualsBulkForm)
 
 
-const HPOBulkForm = props =>
+const HPOBulkForm = React.memo(props =>
   <EditBulkForm
     name="hpo_terms"
     actionDescription="edit individual's HPO terms"
@@ -245,7 +249,8 @@ const HPOBulkForm = props =>
     optionalFields={INDIVIDUAL_HPO_EXPORT_DATA}
     uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
-  />
+  />,
+)
 
 const mapHpoDispatchToProps = {
   onSubmit: updateIndividualsHpoTerms,

@@ -69,14 +69,15 @@ const SORT_FILTER_FIELDS = [
 const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 const INTERNAL_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: INTERNAL_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 
-export const TableHeaderDetail = ({ fields, offset, showVariantDetails }) =>
+export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) =>
   <FamilyLayout
     compact
     offset={offset}
     fields={fields}
     fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
     rightContent={showVariantDetails ? 'Saved Variants' : null}
-  />
+  />,
+)
 
 
 TableHeaderDetail.propTypes = {
@@ -85,7 +86,7 @@ TableHeaderDetail.propTypes = {
   showVariantDetails: PropTypes.bool,
 }
 
-const TableHeaderRow = (
+const TableHeaderRow = React.memo((
   { showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
     updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
   }) =>
@@ -119,7 +120,8 @@ const TableHeaderRow = (
           </Table.HeaderCell>
         </Table.Row>
       }
-    </Table.Header>
+    </Table.Header>,
+)
 
 TableHeaderRow.propTypes = {
   showInternalFilters: PropTypes.bool,

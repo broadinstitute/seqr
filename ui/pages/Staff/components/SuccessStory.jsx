@@ -41,7 +41,7 @@ const formatInitialValue = (match) => {
   return { successStoryTypes: queryToArr }
 }
 
-const SuccessStory = ({ match, data, loading, loadingError, load, history }) =>
+const SuccessStory = React.memo(({ match, data, loading, loadingError, load, history }) =>
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Types:" />
     <TagFieldView
@@ -73,7 +73,8 @@ const SuccessStory = ({ match, data, loading, loadingError, load, history }) =>
       loadingProps={LOADING_PROPS}
       getRowFilterVal={getFamilyFilterVal}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 SuccessStory.propTypes = {
   match: PropTypes.object,

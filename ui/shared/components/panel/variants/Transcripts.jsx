@@ -33,7 +33,7 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = ({ variant, genesById, updateMainTranscript }) =>
+const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) =>
@@ -104,7 +104,8 @@ const Transcripts = ({ variant, genesById, updateMainTranscript }) =>
       </Segment>
       <VerticalSpacer height={10} />
     </div>,
-  )
+  ),
+)
 
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,

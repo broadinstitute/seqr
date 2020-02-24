@@ -49,19 +49,20 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   box-shadow: none !important;
 `
 
-const TagFamily = ({ savedVariant }) =>
+const TagFamily = React.memo(({ savedVariant }) =>
   <LoadedFamilyLabel
     familyGuid={savedVariant.familyGuid}
     to={`/project/${savedVariant.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
-  />
+  />,
+)
 
 TagFamily.propTypes = {
   savedVariant: PropTypes.object,
 }
 
-const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
+const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
@@ -113,7 +114,7 @@ const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
       </Grid.Column>
     </StyledVariantRow>
   )
-}
+})
 
 Variant.propTypes = {
   variant: PropTypes.object,
@@ -123,7 +124,7 @@ Variant.propTypes = {
 }
 
 
-const CompoundHets = ({ variants, ...props }) => {
+const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
@@ -156,21 +157,21 @@ const CompoundHets = ({ variants, ...props }) => {
       </StyledCompoundHetRows>
     </StyledVariantRow>
   )
-}
+})
 
 
 CompoundHets.propTypes = {
   variants: PropTypes.array,
 }
 
-const Variants = ({ variants, ...props }) => (
+const Variants = React.memo(({ variants, ...props }) => (
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} {...props} /> :
       <Variant variant={variant} key={variant.variantId} {...props} />
     ))}
   </Grid>
-)
+))
 
 Variants.propTypes = {
   variants: PropTypes.array,

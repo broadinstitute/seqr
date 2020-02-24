@@ -83,16 +83,16 @@ export const taggedByPopup = (tag, title) => trigger =>
   />
 
 
-const ShortcutTagToggle = ({ tag, ...props }) => {
+const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
   return tag ? taggedByPopup(tag)(toggle) : toggle
-}
+})
 
 ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = ({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
+const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = ((variantTagNotes || {}).tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
@@ -125,7 +125,7 @@ const ShortcutTags = ({ variantTagNotes, dispatchUpdateFamilyVariantTags, family
       fields={shortcutTagFields}
     />
   )
-}
+})
 
 ShortcutTags.propTypes = {
   variantTagNotes: PropTypes.object,
@@ -135,7 +135,7 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variantTagNotes, variantId, fieldName, family, ...props }) =>
+const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) =>
   <TagFieldView
     idField="variantGuids"
     defaultId={variantId}
@@ -152,7 +152,8 @@ const VariantTagField = ({ variantTagNotes, variantId, fieldName, family, ...pro
     isEditable
     popup={taggedByPopup}
     {...props}
-  />
+  />,
+)
 
 VariantTagField.propTypes = {
   variantTagNotes: PropTypes.object,
@@ -161,7 +162,7 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) => {
+const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ...props }) => {
   const values = { ...variantTagNotes, ...note }
   return (
     <div>
@@ -181,7 +182,7 @@ const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) =
       />
     </div>
   )
-}
+})
 
 VariantNoteField.propTypes = {
   note: PropTypes.object,
@@ -190,9 +191,7 @@ VariantNoteField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantLink = (
-  { variant, variantTagNotes, family },
-) =>
+const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
   <NavLink
     to={variantTagNotes ?
       `/project/${family.projectGuid}/saved_variants/variant/${variantTagNotes.variantGuids}` :
@@ -207,7 +206,8 @@ const VariantLink = (
       position="right center"
       wide
     />
-  </NavLink>
+  </NavLink>,
+)
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -215,7 +215,7 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyLabel = ({ family, disableEdit, ...linkProps }) =>
+const FamilyLabel = React.memo(({ family, disableEdit, ...linkProps }) =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <PopupWithModal
@@ -234,7 +234,8 @@ const FamilyLabel = ({ family, disableEdit, ...linkProps }) =>
       }
       content={<Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} useFullWidth disablePedigreeZoom />}
     />
-  </InlineHeader>
+  </InlineHeader>,
+)
 
 
 FamilyLabel.propTypes = {
@@ -246,7 +247,7 @@ export const LoadedFamilyLabel = connect((state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
 }))(FamilyLabel)
 
-const FamilyVariantTags = (
+const FamilyVariantTags = React.memo((
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
     dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
 ) => (
@@ -333,7 +334,7 @@ const FamilyVariantTags = (
         </Table.Row>
       </Table.Body>
     </NoBorderTable> : null
-)
+))
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),

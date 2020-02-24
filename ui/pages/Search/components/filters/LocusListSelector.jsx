@@ -52,10 +52,11 @@ BaseLocusListDropdown.propTypes = {
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 
-const LocusListSelector = ({ value, ...props }) =>
+const LocusListSelector = React.memo(({ value, ...props }) =>
   <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
     <LocusListDropdown {...props} />
-  </LocusListItemsLoader>
+  </LocusListItemsLoader>,
+)
 
 LocusListSelector.propTypes = {
   value: PropTypes.object,

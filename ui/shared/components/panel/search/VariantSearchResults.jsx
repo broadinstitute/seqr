@@ -36,18 +36,19 @@ const FIELDS = [
   VARIANT_SORT_FIELD_NO_FAMILY_SORT,
 ]
 
-export const DisplayVariants = ({ displayVariants }) =>
+export const DisplayVariants = React.memo(({ displayVariants }) =>
   <Grid.Row>
     <Grid.Column width={16}>
       <Variants variants={displayVariants} showDiscoveryTags />
     </Grid.Column>
-  </Grid.Row>
+  </Grid.Row>,
+)
 
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
-const BaseVariantSearchResultsContent = (
+const BaseVariantSearchResultsContent = React.memo((
   { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
@@ -96,7 +97,7 @@ const BaseVariantSearchResultsContent = (
       </Grid.Column>
     </LargeRow>,
   ]
-}
+})
 
 BaseVariantSearchResultsContent.propTypes = {
   match: PropTypes.object,
@@ -129,7 +130,7 @@ const mapContentDispatchToProps = (dispatch, ownProps) => {
 
 const VariantSearchResultsContent = connect(mapContentStateToProps, mapContentDispatchToProps)(BaseVariantSearchResultsContent)
 
-const BaseVariantSearchResults = (
+const BaseVariantSearchResults = React.memo((
   { match, displayVariants, load, unload, variantsLoading, contextLoading, errorMessage, contentComponent, ...props }) => {
   return (
     <DataLoader
@@ -150,7 +151,7 @@ const BaseVariantSearchResults = (
       {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
     </DataLoader>
   )
-}
+})
 
 BaseVariantSearchResults.propTypes = {
   match: PropTypes.object,
@@ -182,11 +183,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
-const LoadedVariantSearchResults = ({ contentComponent, flattenCompoundHet, ...props }) => (
+const LoadedVariantSearchResults = React.memo(({ contentComponent, flattenCompoundHet, ...props }) => (
   <QueryParamsEditor {...props}>
     <VariantSearchResults contentComponent={contentComponent} flattenCompoundHet={flattenCompoundHet} />
   </QueryParamsEditor>
-)
+))
 
 LoadedVariantSearchResults.propTypes = {
   contentComponent: PropTypes.node,

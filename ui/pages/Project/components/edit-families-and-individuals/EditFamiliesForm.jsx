@@ -9,7 +9,7 @@ import { updateFamilies } from '../../reducers'
 import { getProjectFamiliesByGuid } from '../../selectors'
 
 
-const EditFamiliesForm = props =>
+const EditFamiliesForm = React.memo(props =>
   <EditRecordsForm
     formName="editFamilies"
     modalName={props.modalName}
@@ -19,7 +19,8 @@ const EditFamiliesForm = props =>
     filterColumn={FAMILY_FIELD_ID}
     columns={FAMILY_FIELDS}
     {...props}
-  />
+  />,
+)
 
 EditFamiliesForm.propTypes = {
   records: PropTypes.object.isRequired,

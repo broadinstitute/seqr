@@ -5,7 +5,7 @@ import { EditHPOBulkForm } from './BulkEditForm'
 
 const MODAL_NAME = 'editIndividualsHpoTerms'
 
-export default () => (
+export default React.memo(() => (
   <Modal
     modalName={MODAL_NAME}
     title="Bulk Edit HPO Terms"
@@ -15,5 +15,5 @@ export default () => (
     <EditHPOBulkForm modalName={MODAL_NAME} />
   </Modal>
 
-)
+))
 

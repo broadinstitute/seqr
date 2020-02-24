@@ -41,11 +41,11 @@ const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
  }
 `
 
-const GeneLabel = ({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
+const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
     <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
-}
+})
 
 GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
@@ -55,7 +55,7 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
+const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
   const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
   return (
     compact ?
@@ -85,7 +85,7 @@ const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCom
           )}
         </React.Fragment>
       </CompondHetTagsInLine>)
-}
+})
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
@@ -101,7 +101,7 @@ const mapLocusListStateToProps = state => ({
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 
-const GeneDetailSection = ({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
+const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
     return null
   }
@@ -114,7 +114,7 @@ const GeneDetailSection = ({ details, compact, description, compactLabel, showEm
       {details}
     </div>
   ) : <GeneLabel popupHeader={description} popupContent={details} showEmpty={showEmpty} {...labelProps} />
-}
+})
 
 GeneDetailSection.propTypes = {
   details: PropTypes.node,
@@ -126,7 +126,7 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
+export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
   <div>
     <GeneDetailSection
       compact={compact}
@@ -179,7 +179,8 @@ export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ..
       {...labelProps}
     />
     {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
-  </div>
+  </div>,
+)
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
@@ -188,7 +189,7 @@ GeneDetails.propTypes = {
   areCompoundHets: PropTypes.bool,
 }
 
-const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets }) => {
+const VariantGene = React.memo(({ geneId, gene, project, variant, compact, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -227,7 +228,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets 
         {geneDetails}
       </div>
     )
-}
+})
 
 VariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,

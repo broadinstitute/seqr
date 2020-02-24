@@ -14,7 +14,7 @@ const MATCHMAKER_PROJECT_FIELDS = [
   ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` })),
 ]
 
-const EditProjectButton = props => (
+const EditProjectButton = React.memo(props => (
   props.project && props.project.canEdit ?
     <UpdateButton
       buttonText="Edit Project"
@@ -26,7 +26,7 @@ const EditProjectButton = props => (
       trigger={props.trigger}
       submitButtonText="Save"
     /> : null
-)
+))
 
 EditProjectButton.propTypes = {
   project: PropTypes.object,

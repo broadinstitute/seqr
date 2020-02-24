@@ -35,7 +35,7 @@ const BreadcrumbContainer = styled.div`
   }
 `
 
-export const PageHeaderLayout = ({
+export const PageHeaderLayout = React.memo(({
   entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
   entityLinks, button, description,
 }) => {
@@ -115,7 +115,7 @@ export const PageHeaderLayout = ({
       <Grid.Column width={1} />
     </PageHeaderRow>
   )
-}
+})
 
 PageHeaderLayout.propTypes = {
   entity: PropTypes.string.isRequired,
@@ -133,12 +133,13 @@ PageHeaderLayout.propTypes = {
 }
 
 
-const BaseGenePageHeader = ({ gene, match }) =>
+const BaseGenePageHeader = React.memo(({ gene, match }) =>
   <PageHeaderLayout
     entity="gene_info"
     entityGuid={match.params.geneId}
     title={match.params.geneId && (gene ? gene.geneSymbol : match.params.geneId)}
-  />
+  />,
+)
 
 BaseGenePageHeader.propTypes = {
   gene: PropTypes.object,

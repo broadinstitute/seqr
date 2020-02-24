@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 
 import { Breadcrumb } from 'semantic-ui-react'
 
-const BreadCrumbs = props =>
+const BreadCrumbs = React.memo(props =>
   <div style={{ marginBottom: '10px' }}>
     {
       props.breadcrumbSections.map((label, i) => (
@@ -26,7 +26,8 @@ const BreadCrumbs = props =>
       )
     }
 
-  </div>
+  </div>,
+)
 
 BreadCrumbs.propTypes = {
   breadcrumbSections: PropTypes.array.isRequired,

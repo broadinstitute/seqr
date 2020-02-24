@@ -9,7 +9,7 @@ import BaseFieldView from './BaseFieldView'
 const MARKDOWN_OPTIONS = { breaks: true, linkTarget: '_blank' }
 const INLINE_STYLE = { display: 'inline-block' }
 
-const TextFieldView = (props) => {
+const TextFieldView = React.memo((props) => {
   const { textPopup, textAnnotation, additionalEditFields = [], ...baseProps } = props
   const fields = [{ name: props.field, component: RichTextEditor }, ...additionalEditFields]
   return <BaseFieldView
@@ -30,7 +30,7 @@ const TextFieldView = (props) => {
     formFields={fields}
     {...baseProps}
   />
-}
+})
 
 TextFieldView.propTypes = {
   additionalEditFields: PropTypes.array,

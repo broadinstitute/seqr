@@ -11,7 +11,7 @@ const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = ({ urls, value, displayValue, variant, queryParams }) => {
+const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams }) => {
   let { chrom, pos, genomeVersion } = variant
   if (!urls[genomeVersion] && urls[variant.liftedOverGenomeVersion]) {
     chrom = variant.liftedOverChrom
@@ -35,7 +35,7 @@ const FreqLink = ({ urls, value, displayValue, variant, queryParams }) => {
       {displayValue || value}
     </a>
   )
-}
+})
 
 FreqLink.propTypes = {
   urls: PropTypes.object.isRequired,
@@ -45,7 +45,7 @@ FreqLink.propTypes = {
   queryParams: PropTypes.object,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, precision = 2 }) => {
+const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams, showAC, precision = 2 }) => {
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
@@ -89,7 +89,7 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, pr
       </FreqValue>
     </div>
   )
-}
+})
 
 FreqSummary.propTypes = {
   field: PropTypes.string.isRequired,
@@ -129,7 +129,7 @@ const POPULATIONS = [
   },
 ]
 
-const Frequencies = ({ variant }) => {
+const Frequencies = React.memo(({ variant }) => {
   const { populations } = variant
   const freqContent = (
     <div>
@@ -162,7 +162,7 @@ const Frequencies = ({ variant }) => {
       </Popup>
       : freqContent
   )
-}
+})
 
 Frequencies.propTypes = {
   variant: PropTypes.object,

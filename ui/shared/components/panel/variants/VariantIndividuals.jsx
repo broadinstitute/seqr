@@ -76,7 +76,7 @@ const isHemiUPDVariant = (numAlt, variant, individual) =>
     return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
   })
 
-const Allele = ({ isAlt, variant }) => {
+const Allele = React.memo(({ isAlt, variant }) => {
   const allele = isAlt ? variant.alt : variant.ref
   let alleleText = allele.substring(0, 3)
   if (allele.length > 3) {
@@ -84,14 +84,14 @@ const Allele = ({ isAlt, variant }) => {
   }
 
   return isAlt ? <b><i>{alleleText}</i></b> : alleleText
-}
+})
 
 Allele.propTypes = {
   isAlt: PropTypes.bool,
   variant: PropTypes.object,
 }
 
-export const Alleles = ({ numAlt, variant, isHemiUPD, isHemiX }) =>
+export const Alleles = React.memo(({ numAlt, variant, isHemiUPD, isHemiX }) =>
   <AlleleContainer>
     {isHemiUPD &&
       <Popup
@@ -101,7 +101,8 @@ export const Alleles = ({ numAlt, variant, isHemiUPD, isHemiX }) =>
       />
     }
     <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
-  </AlleleContainer>
+  </AlleleContainer>,
+)
 
 Alleles.propTypes = {
   numAlt: PropTypes.number,
@@ -111,7 +112,7 @@ Alleles.propTypes = {
 }
 
 
-const Genotype = ({ variant, individual }) => {
+const Genotype = React.memo(({ variant, individual }) => {
   if (!variant.genotypes) {
     return null
   }
@@ -186,10 +187,10 @@ const Genotype = ({ variant, individual }) => {
         }
       /> : null,
   ]
-}
+})
 
 
-const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
+const VariantIndividuals = React.memo(({ variant, individuals, familyGuid }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
@@ -214,7 +215,7 @@ const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
     )}
     <ShowReadsButton familyGuid={familyGuid} igvId={variant.variantId} />
   </IndividualsContainer>
-)
+))
 
 VariantIndividuals.propTypes = {
   familyGuid: PropTypes.string,

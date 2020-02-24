@@ -7,14 +7,15 @@ import { BaseSemanticInput } from '../../form/Inputs'
 import { validators } from '../../form/ReduxFormWrapper'
 import { ButtonLink } from '../../StyledComponents'
 
-const RemovableInput = ({ removeField, ...props }) =>
-  <BaseSemanticInput icon={<Icon name="remove" link onClick={removeField} />} inputType="Input" {...props} />
+const RemovableInput = React.memo(({ removeField, ...props }) =>
+  <BaseSemanticInput icon={<Icon name="remove" link onClick={removeField} />} inputType="Input" {...props} />,
+)
 
 RemovableInput.propTypes = {
   removeField: PropTypes.func,
 }
 
-const AddElementButton = ({ addElement, addElementLabel }) =>
+const AddElementButton = React.memo(({ addElement, addElementLabel }) =>
   <ButtonLink
     icon="plus"
     content={addElementLabel}
@@ -22,14 +23,15 @@ const AddElementButton = ({ addElement, addElementLabel }) =>
       e.preventDefault()
       addElement()
     }}
-  />
+  />,
+)
 
 AddElementButton.propTypes = {
   addElementLabel: PropTypes.string,
   addElement: PropTypes.func,
 }
 
-const ListFieldView = ({ addElementLabel, initialValues, ...props }) => {
+const ListFieldView = React.memo(({ addElementLabel, initialValues, ...props }) => {
   const fields = [{
     name: props.field,
     isArrayField: true,
@@ -49,7 +51,7 @@ const ListFieldView = ({ addElementLabel, initialValues, ...props }) => {
     initialValues={defaultedInitialValues}
     {...props}
   />
-}
+})
 
 ListFieldView.propTypes = {
   field: PropTypes.string.isRequired,

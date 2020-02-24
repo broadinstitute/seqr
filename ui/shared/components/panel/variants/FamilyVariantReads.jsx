@@ -24,7 +24,7 @@ const BAM_TRACK_OPTIONS = {
   format: 'bam',
 }
 
-const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideReads }) => {
+const FamilyVariantReads = React.memo(({ variant, activeSamples, individualsByGuid, hideReads }) => {
 
   if (!activeSamples || !activeSamples.length) {
     return null
@@ -94,7 +94,7 @@ const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideRea
       <IGV igvOptions={igvOptions} />
     </Segment>
   )
-}
+})
 
 FamilyVariantReads.propTypes = {
   variant: PropTypes.object,

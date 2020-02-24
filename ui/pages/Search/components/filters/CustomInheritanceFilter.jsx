@@ -17,7 +17,7 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilter = ({ value, onChange, family, individualsByGuid }) => {
+const CustomInheritanceFilter = React.memo(({ value, onChange, family, individualsByGuid }) => {
   if (!family) {
     return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
   }
@@ -81,7 +81,7 @@ const CustomInheritanceFilter = ({ value, onChange, family, individualsByGuid })
       </Table.Body>
     </Table>
   )
-}
+})
 
 
 const mapStateToProps = state => ({

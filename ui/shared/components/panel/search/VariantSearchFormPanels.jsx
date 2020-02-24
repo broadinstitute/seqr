@@ -154,7 +154,7 @@ export const QUALITY_PANEL = {
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }
 
-const HeaderContent = ({ name, title, inputSize, inputProps }) =>
+const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
@@ -164,7 +164,8 @@ const HeaderContent = ({ name, title, inputSize, inputProps }) =>
         </ToggleHeaderFieldColumn>
       }
     </Grid.Row>
-  </Grid>
+  </Grid>,
+)
 
 HeaderContent.propTypes = {
   title: PropTypes.string.isRequired,

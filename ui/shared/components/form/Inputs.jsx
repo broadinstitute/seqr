@@ -46,7 +46,7 @@ export class BaseSemanticInput extends React.Component {
 }
 
 
-export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
+export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) =>
   <BaseSemanticInput
     {...props}
     value={Number.isInteger(value) ? value : ''}
@@ -63,7 +63,8 @@ export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
         onChange(val)
       }
     }}
-  />
+  />,
+)
 
 IntegerInput.propTypes = {
   onChange: PropTypes.func,
@@ -101,14 +102,15 @@ const processOptions = (options, includeCategories) => {
   }, []).map(styledOption)
 }
 
-export const Dropdown = ({ options, includeCategories, ...props }) =>
+export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
     options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
-  />
+  />,
+)
 
 
 Dropdown.propTypes = {
@@ -201,7 +203,7 @@ const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
 
-export const CheckboxGroup = (props) => {
+export const CheckboxGroup = React.memo((props) => {
   const { value, options, label, groupLabel, onChange, ...baseProps } = props
   return (
     <List>
@@ -244,7 +246,7 @@ export const CheckboxGroup = (props) => {
       </List.Item>
     </List>
   )
-}
+})
 
 CheckboxGroup.propTypes = {
   value: PropTypes.any,
@@ -260,7 +262,7 @@ export const AlignedCheckboxGroup = styled(CheckboxGroup)`
 `
 
 
-export const StringValueCheckboxGroup = (props) => {
+export const StringValueCheckboxGroup = React.memo((props) => {
   const { value = '', options, onChange, ...baseProps } = props
   return (
     <InlineFormGroup>
@@ -284,7 +286,7 @@ export const StringValueCheckboxGroup = (props) => {
       )}
     </InlineFormGroup>
   )
-}
+})
 
 StringValueCheckboxGroup.propTypes = {
   value: PropTypes.any,
@@ -293,7 +295,7 @@ StringValueCheckboxGroup.propTypes = {
 }
 
 
-export const RadioGroup = (props) => {
+export const RadioGroup = React.memo((props) => {
   const { value, options, label, onChange, margin, widths, ...baseProps } = props
   return (
     <InlineFormGroup margin={margin} widths={widths}>
@@ -316,7 +318,7 @@ export const RadioGroup = (props) => {
       )}
     </InlineFormGroup>
   )
-}
+})
 
 RadioGroup.propTypes = {
   value: PropTypes.any,
@@ -327,7 +329,7 @@ RadioGroup.propTypes = {
   widths: PropTypes.string,
 }
 
-export const BooleanCheckbox = (props) => {
+export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props
   return <BaseSemanticInput
     {...baseProps}
@@ -335,7 +337,7 @@ export const BooleanCheckbox = (props) => {
     checked={Boolean(value)}
     onChange={data => onChange(data.checked)}
   />
-}
+})
 
 BooleanCheckbox.propTypes = {
   value: PropTypes.any,
@@ -410,7 +412,7 @@ export const LabeledSlider = styled(Slider).attrs({
   }
 `
 
-export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
+export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) =>
   <LabeledSlider
     {...props}
     min={0}
@@ -420,7 +422,8 @@ export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
     value={steps.indexOf(value)}
     valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
     onChange={val => onChange(steps[val])}
-  />
+  />,
+)
 
 
 StepSlider.propTypes = {
@@ -430,12 +433,13 @@ StepSlider.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const Pagination = ({ onChange, value, error, ...props }) =>
+export const Pagination = React.memo(({ onChange, value, error, ...props }) =>
   <PaginationComponent
     activePage={value}
     onPageChange={(e, data) => onChange(data.activePage)}
     {...props}
-  />
+  />,
+)
 
 Pagination.propTypes = {
   value: PropTypes.number,
@@ -444,8 +448,9 @@ Pagination.propTypes = {
 }
 
 const JSON_EDITOR_MODES = ['code', 'tree']
-export const JsonInput = ({ value, onChange }) =>
-  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />
+export const JsonInput = React.memo(({ value, onChange }) =>
+  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />,
+)
 
 JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),

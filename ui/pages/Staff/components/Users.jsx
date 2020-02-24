@@ -29,7 +29,7 @@ const COLUMNS = [
 
 const getUserFilterVal = ({ email, displayName }) => `${email}-${displayName}`
 
-const Users = ({ users, loading, load }) =>
+const Users = React.memo(({ users, loading, load }) =>
   <DataLoader load={load} content loading={false}>
     <DataTable
       striped
@@ -40,7 +40,8 @@ const Users = ({ users, loading, load }) =>
       columns={COLUMNS}
       getRowFilterVal={getUserFilterVal}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 Users.propTypes = {
   users: PropTypes.array,

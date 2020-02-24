@@ -6,9 +6,9 @@ import { updateIgvReadsVisibility } from 'redux/rootReducer'
 import { getActiveAlignmentSamplesByFamily } from 'redux/selectors'
 import { ButtonLink } from '../StyledComponents'
 
-const ShowReadsButton = ({ numAlignmentSamples, showReads, igvId, familyGuid, ...props }) => (
+const ShowReadsButton = React.memo(({ numAlignmentSamples, showReads, igvId, familyGuid, ...props }) => (
   numAlignmentSamples ? <ButtonLink icon="options" content="SHOW READS" onClick={showReads} {...props} /> : null
-)
+))
 
 ShowReadsButton.propTypes = {
   familyGuid: PropTypes.string.isRequired,

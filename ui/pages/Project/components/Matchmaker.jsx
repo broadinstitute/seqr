@@ -77,7 +77,7 @@ const GENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditGenotypesTable = ({ savedVariants, value, load, loading, familyGuid, onChange }) =>
+const BaseEditGenotypesTable = React.memo(({ savedVariants, value, load, loading, familyGuid, onChange }) =>
   <DataLoader content contentId={familyGuid} load={load} loading={false}>
     <SelectableTableFormInput
       idField="variantId"
@@ -88,7 +88,8 @@ const BaseEditGenotypesTable = ({ savedVariants, value, load, loading, familyGui
       onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
       loading={loading}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 BaseEditGenotypesTable.propTypes = {
   savedVariants: PropTypes.array,
@@ -128,7 +129,7 @@ const PHENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditPhenotypesTable = ({ individual, value, onChange }) =>
+const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
   <SelectableTableFormInput
     idField="id"
     defaultSortColumn="label"
@@ -136,7 +137,8 @@ const BaseEditPhenotypesTable = ({ individual, value, onChange }) =>
     data={(individual.phenotipsData || {}).features}
     value={value}
     onChange={newValue => onChange(individual.phenotipsData.features.filter(feature => newValue[feature.id]))}
-  />
+  />,
+)
 
 BaseEditPhenotypesTable.propTypes = {
   individual: PropTypes.object,
@@ -179,7 +181,7 @@ const CONTACT_FIELDS = [
   { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
 ]
 
-const BaseContactHostButton = ({ defaultContactEmail, onSubmit }) =>
+const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) =>
   <UpdateButton
     onSubmit={onSubmit}
     initialValues={defaultContactEmail}
@@ -191,7 +193,8 @@ const BaseContactHostButton = ({ defaultContactEmail, onSubmit }) =>
     showErrorPanel
     submitButtonText="Send"
     buttonFloated="right"
-  />
+  />,
+)
 
 BaseContactHostButton.propTypes = {
   defaultContactEmail: PropTypes.object,
@@ -215,7 +218,7 @@ const contactedLabel = (val) => {
   return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
 }
 
-const BaseMatchStatus = ({ initialValues, onSubmit }) =>
+const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) =>
   <BaseFieldView
     initialValues={initialValues}
     field="matchStatus"
@@ -234,7 +237,8 @@ const BaseMatchStatus = ({ initialValues, onSubmit }) =>
         <p>{val.comments}</p>
         <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
       </div>}
-  />
+  />,
+)
 
 BaseMatchStatus.propTypes = {
   initialValues: PropTypes.object,
@@ -247,7 +251,7 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
-const BaseContactNotes = ({ contact, user, contactNote, onSubmit, ...props }) =>
+const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) =>
   <TextFieldView
     isVisible={user.isStaff}
     fieldName="Contact Notes"
@@ -258,7 +262,8 @@ const BaseContactNotes = ({ contact, user, contactNote, onSubmit, ...props }) =>
     modalTitle={`Edit Shared Notes for "${contact.institution}"`}
     onSubmit={onSubmit}
     {...props}
-  />
+  />,
+)
 
 BaseContactNotes.propTypes = {
   contact: PropTypes.object,
@@ -351,7 +356,7 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
+const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
@@ -455,7 +460,8 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
           />
         </div>}
     </DataLoader>
-  </div>
+  </div>,
+)
 
 BaseMatchmakerIndividual.propTypes = {
   individual: PropTypes.object.isRequired,
@@ -497,14 +503,15 @@ const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMa
 
 const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, canEdit: true, colWidth: 16 }]
 
-const Matchmaker = ({ individuals, family }) =>
+const Matchmaker = React.memo(({ individuals, family }) =>
   <div>
     <Header dividing size="medium" content="Notes" />
     <Family family={family} compact useFullWidth hidePedigree showVariantDetails={false} fields={MME_FAMILY_FIELDS} />
     {individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
       <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
     )}
-  </div>
+  </div>,
+)
 
 Matchmaker.propTypes = {
   family: PropTypes.object,

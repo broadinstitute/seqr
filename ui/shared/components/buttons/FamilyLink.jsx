@@ -13,7 +13,7 @@ import Family from '../panel/family'
 const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
 
 
-const FamilyLink = ({ family, fields, PopupClass = Popup }) =>
+const FamilyLink = React.memo(({ family, fields, PopupClass = Popup }) =>
   React.createElement(PopupClass, {
     hoverable: true,
     style: FAMILY_POPUP_STYLE,
@@ -28,7 +28,8 @@ const FamilyLink = ({ family, fields, PopupClass = Popup }) =>
       />
     ),
     content: <Family family={family} fields={fields} useFullWidth disablePedigreeZoom />,
-  })
+  }),
+)
 
 FamilyLink.propTypes = {
   family: PropTypes.object,

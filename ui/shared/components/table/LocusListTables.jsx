@@ -67,7 +67,7 @@ const PRIVATE_LIST_TABLES = [MY_TABLE, EDITABLE_PUBLIC_TABLE, {
   tableFields: [...CORE_FIELDS, LOCUS_LIST_CURATOR_FIELD_NAME],
 }]
 
-const LocusListTables = ({ locusListsByGuid, fields, omitLocusLists, hidePrivateLists, user, ...tableProps }) => {
+const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, hidePrivateLists, user, ...tableProps }) => {
   let data = Object.values(locusListsByGuid)
   if (omitLocusLists) {
     data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
@@ -100,7 +100,7 @@ const LocusListTables = ({ locusListsByGuid, fields, omitLocusLists, hidePrivate
         />
       </div>,
   )
-}
+})
 
 LocusListTables.propTypes = {
   locusListsByGuid: PropTypes.object,

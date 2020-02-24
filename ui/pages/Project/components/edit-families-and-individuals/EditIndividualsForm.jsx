@@ -11,7 +11,7 @@ import { updateIndividuals } from '../../reducers'
 import { getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
 
-const EditIndividualsForm = props =>
+const EditIndividualsForm = React.memo(props =>
   <EditRecordsForm
     formName="editIndividuals"
     idField="individualGuid"
@@ -20,7 +20,8 @@ const EditIndividualsForm = props =>
     filterColumn={INDIVIDUAL_FIELD_ID}
     columns={INDIVIDUAL_FIELDS}
     {...props}
-  />
+  />,
+)
 
 EditIndividualsForm.propTypes = {
   records: PropTypes.object.isRequired,
