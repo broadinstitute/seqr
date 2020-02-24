@@ -70,7 +70,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, showDiscoveryT
     <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
   )
   const variantIndividuals = variant.familyGuids.map(familyGuid =>
-    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
   )
   return (
     <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
