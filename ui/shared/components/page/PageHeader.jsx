@@ -101,9 +101,9 @@ export const PageHeaderLayout = React.memo(({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(({ popup, ...linkProps }) =>
-              <div key={linkProps.content}>
-                <ButtonLink as={NavLink} {...linkProps} />
+            {entityLinks.map(({ popup, content, ...linkProps }) =>
+              <div key={content}>
+                <ButtonLink as={NavLink} {...linkProps}>{content}</ButtonLink>
                 {popup && <Popup content={popup} trigger={<Icon name="question circle outline" color="grey" />} />}
               </div>,
             )}
