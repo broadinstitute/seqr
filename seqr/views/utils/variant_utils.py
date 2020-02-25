@@ -51,6 +51,10 @@ def reset_cached_search_results(project):
         logger.error("Unable to reset cached search results: {}".format(e))
 
 
+def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
+    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
+
+
 def _retrieve_saved_variants_json(project, variant_tuples):
     xpos_ref_alt_tuples = []
     xpos_ref_alt_family_tuples = []

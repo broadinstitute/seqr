@@ -49,20 +49,16 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   box-shadow: none !important;
 `
 
-const TagFamily = React.memo(({ savedVariant }) =>
+const tagFamily = tag =>
   <LoadedFamilyLabel
-    familyGuid={savedVariant.familyGuid}
-    to={`/project/${savedVariant.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`}
+    familyGuid={tag.savedVariant.familyGuid}
+    to={`/project/${tag.savedVariant.projectGuid}/saved_variants/variant/${tag.savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
-  />,
-)
+  />
 
-TagFamily.propTypes = {
-  savedVariant: PropTypes.object,
-}
 
-const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
+const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
@@ -76,7 +72,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, showDiscoveryT
     <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
-        {showDiscoveryTags && variant.discoveryTags &&
+        {variant.discoveryTags && variant.discoveryTags.length > 0 &&
           <InlinePopup
             on="click"
             position="right center"
@@ -84,7 +80,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, showDiscoveryT
             content={<TagFieldDisplay
               displayFieldValues={variant.discoveryTags}
               popup={taggedByPopup}
-              tagAnnotation={TagFamily}
+              tagAnnotation={tagFamily}
               displayAnnotationFirst
             />}
           />
@@ -120,7 +116,6 @@ Variant.propTypes = {
   variant: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   mainGeneId: PropTypes.string,
-  showDiscoveryTags: PropTypes.bool,
 }
 
 

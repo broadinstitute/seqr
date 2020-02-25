@@ -215,7 +215,7 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyLabel = React.memo(({ family, disableEdit, ...linkProps }) =>
+const FamilyLabel = React.memo(({ family, disableEdit, target, to }) =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <PopupWithModal
@@ -225,9 +225,9 @@ const FamilyLabel = React.memo(({ family, disableEdit, ...linkProps }) =>
       keepInViewPort
       trigger={
         <ColoredLink
-          to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+          to={to || `/project/${family.projectGuid}/family_page/${family.familyGuid}`}
           color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-          {...linkProps}
+          target={target}
         >
           {family.displayName}
         </ColoredLink>
@@ -241,6 +241,8 @@ const FamilyLabel = React.memo(({ family, disableEdit, ...linkProps }) =>
 FamilyLabel.propTypes = {
   family: PropTypes.object,
   disableEdit: PropTypes.bool,
+  to: PropTypes.string,
+  target: PropTypes.string,
 }
 
 export const LoadedFamilyLabel = connect((state, ownProps) => ({

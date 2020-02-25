@@ -14,7 +14,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
+from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -37,11 +37,20 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
-    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
+    discovery_tags_query = None
+    if request.user.is_staff:
+        discovery_tags_query = Q()
+        for variant in variant_query:
+            discovery_tags_query |= Q(Q(xpos_start=variant.xpos_start, ref=variant.ref, alt=variant.alt) & ~Q(family_id=variant.family_id))
+
+    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
     variants = response['savedVariantsByGuid'].values()
     genes = _saved_variant_genes(variants)
     _add_locus_lists([project], variants, genes)
+    discovery_tags = response.pop('discoveryTags', None)
+    if discovery_tags:
+        _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
     return create_json_response(response)
@@ -359,3 +368,12 @@ def _add_locus_lists(projects, variants, genes):
         genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
 
     return [locus_list.guid for locus_list in locus_lists]
+
+
+def _add_discovery_tags(variants, discovery_tags):
+    for variant in variants:
+        tags = discovery_tags.get(get_variant_key(**variant))
+        if tags:
+            if not variant.get('discoveryTags'):
+                variant['discoveryTags'] = []
+            variant['discoveryTags'] += tags
