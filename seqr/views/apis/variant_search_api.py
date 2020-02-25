@@ -35,6 +35,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
+from seqr.views.utils.variant_utils import get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -536,7 +537,7 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
     discovery_variant_q = Q()
     variants_by_id = {}
     for variant in variants:
-        variants_by_id[_get_variant_key(**variant)] = variant
+        variants_by_id[get_variant_key(**variant)] = variant
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
         discovery_variant_q |= Q(Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt']) & ~Q(family__guid__in=variant['familyGuids']))
         if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
@@ -544,16 +545,17 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
                 variant_q |= Q(xpos_start=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families)
-                variants_by_id[_get_variant_key(
+                variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    json = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+    json = get_json_for_saved_variants_with_tags(
+        saved_variants, add_details=True, discovery_tags_query=discovery_variant_q if include_discovery_tags else None)
     variants_to_saved_variants = {}
     for saved_variant in json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id.get(_get_variant_key(**saved_variant))
+        searched_variant = variants_by_id.get(get_variant_key(**saved_variant))
         if not searched_variant:
             # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
             continue
@@ -566,39 +568,14 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
         for family_guid in family_guids:
             variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
 
-    if include_discovery_tags:
-        discovery_tags = get_json_for_variant_tags(VariantTag.objects.filter(
-            variant_tag_type__category='CMG Discovery Tags',
-            saved_variants__in=SavedVariant.objects.filter(discovery_variant_q)
-        ), include_variant_details=True)
-        if discovery_tags:
-            family_guids = set()
-            for tag in discovery_tags:
-                for variant in tag['variants']:
-                    family_guids.update(variant['familyGuids'])
-            families_by_guid = {f.guid: f for f in Family.objects.filter(guid__in=family_guids).prefetch_related('project')}
-            for tag in discovery_tags:
-                for variant in tag.pop('variants'):
-                    variant_family = families_by_guid[variant['familyGuids'][0]]
-                    searched_variant = variants_by_id.get(
-                        _get_variant_key(genomeVersion=variant_family.project.genome_version, **variant))
-                    if searched_variant:
-                        if not searched_variant.get('discoveryTags'):
-                            searched_variant['discoveryTags'] = []
-                        tag_json = {'savedVariant': {
-                            'variantGuid': variant['variantGuid'],
-                            'familyGuid': variant_family.guid,
-                            'projectGuid': variant_family.project.guid,
-                        }}
-                        tag_json.update(tag)
-                        searched_variant['discoveryTags'].append(tag_json)
-            json['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(families_by_guid.values())}
+    for variant_id, tags in json.pop('discoveryTags', {}).items():
+        searched_variant = variants_by_id.get(variant_id)
+        if searched_variant:
+            if not searched_variant.get('discoveryTags'):
+                searched_variant['discoveryTags'] = []
+            searched_variant['discoveryTags'] += tags
 
     return json, variants_to_saved_variants
-
-
-def _get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
-    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
 def _flatten_variants(variants):

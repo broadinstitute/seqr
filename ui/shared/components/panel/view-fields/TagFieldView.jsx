@@ -51,7 +51,7 @@ export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, 
         const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
         const annotation = tagAnnotation && tagAnnotation(tag)
         return (
-          <span key={tag.name}>
+          <span key={tag.tagGuid || tag.name}>
             <HorizontalSpacer width={5} />
             {displayAnnotationFirst && annotation}
             {popup ? popup(tag)(label) : label}
