@@ -12,7 +12,7 @@ import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType, VariantTag, LocusList
+    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
@@ -30,7 +30,6 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_samples, \
     get_json_for_locus_lists, \
     get_json_for_saved_variants_with_tags, \
-    get_json_for_variant_tags, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
