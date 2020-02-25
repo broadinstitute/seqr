@@ -470,7 +470,7 @@ def get_json_for_saved_variants_with_tags(
             families = set()
             response['discoveryTags'] = defaultdict(list)
             for tag in discovery_tags:
-                for variant_guid in tag['variantGuids']:
+                for variant_guid in tag.pop('variantGuids'):
                     variant = discovery_saved_variant_by_guid.get(variant_guid)
                     if variant:
                         families.add(variant.family)

@@ -8,7 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
-from seqr.views.utils.test_utils import _check_login, SAVED_VARIANT_FIELDS, TAG_FIELDS
+from seqr.views.utils.test_utils import _check_login, login_non_staff_user, SAVED_VARIANT_FIELDS, TAG_FIELDS
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -86,7 +86,8 @@ class SavedVariantAPITest(TransactionTestCase):
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById'
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
+            'familiesByGuid',
         })
 
         variants = response_json['savedVariantsByGuid']
@@ -108,6 +109,24 @@ class SavedVariantAPITest(TransactionTestCase):
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
 
+        fields.add('discoveryTags')
+        matched_variant = variants['SV0000002_1248367227_r0390_100']
+        self.assertSetEqual(set(matched_variant.keys()), fields)
+        self.assertListEqual(matched_variant['discoveryTags'], [{
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0003_tes',
+                'familyGuid': 'F000011_11',
+                'projectGuid': 'R0003_test',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0003_tes',
+            'name': 'Tier 1 - Novel gene and phenotype',
+            'category': 'CMG Discovery Tags',
+            'color': '#03441E',
+            'searchHash': None,
+            'lastModifiedDate': '2018-05-29T16:32:51.449Z',
+            'createdBy': None,
+        }])
+
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -123,6 +142,18 @@ class SavedVariantAPITest(TransactionTestCase):
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
+
+        # Test no cross-project discovery for non-staff users
+        login_non_staff_user(self)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById'
+        })
+        variants = response_json['savedVariantsByGuid']
+        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
+        self.assertFalse('discoveryTags' in variants['SV0000002_1248367227_r0390_100'])
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
