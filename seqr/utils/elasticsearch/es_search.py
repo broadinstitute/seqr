@@ -44,7 +44,7 @@ class EsSearch(object):
         if len(self.samples_by_family_index) < 1:
             raise InvalidIndexException('No es index found')
 
-        self._skipped_sample_count = 0
+        self._skipped_sample_count = defaultdict(int)
         if skip_unaffected_families:
             for index, family_samples in self.samples_by_family_index.items():
                 index_skipped_families = []
@@ -54,7 +54,8 @@ class EsSearch(object):
                     ]
                     if not affected_samples:
                         index_skipped_families.append(family_guid)
-                        self._skipped_sample_count += len(samples_by_id) - len(affected_samples)
+
+                        self._skipped_sample_count[index] += len(samples_by_id) - len(affected_samples)
 
                 for family_guid in index_skipped_families:
                     del self.samples_by_family_index[index][family_guid]
@@ -194,7 +195,7 @@ class EsSearch(object):
             genotypes_q = None
             if not quality_filter['min_ab'] and not quality_filter['min_gq'] and \
                     (inheritance_mode == ANY_AFFECTED or not inheritance):
-                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count[index]
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     if inheritance_mode == ANY_AFFECTED:
