@@ -40,7 +40,7 @@ class Command(BaseCommand):
                     _add_user_to_patient(phenotips_readwrite_username, seqr_individual.phenotips_patient_id, allow_edit=True)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
-            variant_tags = VariantTag.objects.filter(saved_variant__family__in=families, variant_tag_type=variant_tag_type)
+            variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
             if variant_tags:
                 print('Updating "{}" tags'.format(variant_tag_type.name))
                 to_tag_type, created = VariantTagType.objects.get_or_create(
