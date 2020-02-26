@@ -26,7 +26,7 @@ import {
   NUM_ALT_OPTIONS,
 } from '../constants'
 
-const DetailLink = styled(ButtonLink)`
+const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
     margin-left: .2em;
     margin-right: 0;
@@ -34,6 +34,7 @@ const DetailLink = styled(ButtonLink)`
     font-style: inherit;
   }
 `
+const DetailLink = props => <BaseDetailLink {...props} />
 
 const SAVED_SEARCH_FIELD = {
   name: 'search',

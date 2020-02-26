@@ -344,7 +344,7 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+const BaseInlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   margin-bottom: 0 !important;
   &:last-child {
     padding-right: 0 !important;
@@ -378,12 +378,14 @@ export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <Boole
     right: 2em !important;
   }
 `
+// This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
+export const InlineToggle = props => <BaseInlineToggle {...props} />
 
-export const LabeledSlider = styled(Slider).attrs({
-  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
-  labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
+export const LabeledSlider = styled(Slider).attrs(props => ({
+  handleLabel: `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
+  labels: { [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max },
   tooltip: false,
-})`
+}))`
   width: 100%;
 
   .rangeslider__fill {

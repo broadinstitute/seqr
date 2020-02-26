@@ -275,18 +275,21 @@ const Family = React.memo((
     })
   }
 
-  const leftContent = hidePedigree ? null : [
-    <InlineHeader
+  let leftContent = null
+  if (!hidePedigree) {
+    const familyHeader = <InlineHeader
       key="name"
-      overrideInline={!compact}
       size="small"
       content={showFamilyPageLink ?
         <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
         family.displayName
       }
-    />,
-    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
-  ]
+    />
+    leftContent = [
+      compact ? familyHeader : <div>{familyHeader}</div>,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
+    ]
+  }
 
   const rightContent = showVariantDetails ? [
     <div key="variants">

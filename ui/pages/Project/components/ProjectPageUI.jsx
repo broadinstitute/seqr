@@ -54,6 +54,16 @@ const ProjectSectionComponent = React.memo(({ loading, label, children, editButt
   ])
 })
 
+ProjectSectionComponent.propTypes = {
+  loading: PropTypes.bool,
+  label: PropTypes.string,
+  children: PropTypes.node,
+  editButton: PropTypes.node,
+  linkPath: PropTypes.string,
+  linkText: PropTypes.string,
+  project: PropTypes.object,
+}
+
 const mapSectionStateToProps = state => ({
   project: getCurrentProject(state),
   loading: getProjectDetailsIsLoading(state),

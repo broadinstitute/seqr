@@ -34,7 +34,7 @@ const FamilyLink = React.memo(({ family, fields, PopupClass = Popup }) =>
 FamilyLink.propTypes = {
   family: PropTypes.object,
   fields: PropTypes.array,
-  PopupClass: PropTypes.node,
+  PopupClass: PropTypes.elementType,
 }
 
 export default FamilyLink

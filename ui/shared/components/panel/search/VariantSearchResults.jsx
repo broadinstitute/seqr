@@ -161,7 +161,7 @@ BaseVariantSearchResults.propTypes = {
   contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
   displayVariants: PropTypes.array,
-  contentComponent: PropTypes.node,
+  contentComponent: PropTypes.elementType,
 }
 
 const mapStateToProps = (state, ownProps) => ({

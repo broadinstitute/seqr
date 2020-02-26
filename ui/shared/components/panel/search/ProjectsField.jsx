@@ -41,7 +41,7 @@ ProjectFilterContent.propTypes = {
   removeField: PropTypes.func,
   projectSamples: PropTypes.object,
   dispatch: PropTypes.func,
-  filterInputComponent: PropTypes.node,
+  filterInputComponent: PropTypes.elementType,
 }
 
 

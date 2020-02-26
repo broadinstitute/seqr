@@ -32,7 +32,7 @@ const CategoryIndicator = React.memo(({ project, projectCategoriesByGuid }) => {
       project={project}
       trigger={
         <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-          <ComputedColoredIcon name={`${categoryNames.length === 0 ? 'empty ' : ''}star`} categoryNames={categoryNames} />
+          <ComputedColoredIcon name={`${categoryNames.length === 0 ? 'outline ' : ''}star`} categoryNames={categoryNames} />
         </a>
       }
       popup={popup}

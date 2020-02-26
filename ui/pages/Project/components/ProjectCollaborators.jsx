@@ -135,7 +135,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
             confirmDialog={
               <div className="content">
                 Are you sure you want to delete <b>{c.displayName || c.email}</b>. They will still have their user account
-                 and be able to log in, but will not be able to access this project anymore.
+                and be able to log in, but will not be able to access this project anymore.
               </div>
             }
           />
@@ -149,6 +149,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func,
 }
 
 const mapDispatchToProps = {

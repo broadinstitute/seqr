@@ -107,6 +107,7 @@ LocusListTables.propTypes = {
   fields: PropTypes.array,
   omitLocusLists: PropTypes.array,
   hidePrivateLists: PropTypes.bool,
+  user: PropTypes.object,
 }
 
 

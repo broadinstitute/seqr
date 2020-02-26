@@ -25,7 +25,7 @@ import {
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { ColoredComponent, NoBorderTable, InlineHeader } from '../../StyledComponents'
+import { ColoredLink, NoBorderTable, InlineHeader } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -36,8 +36,6 @@ const TagTitle = styled.span`
   font-weight: bolder;
   color: #999;
 `
-
-const ColoredLink = ColoredComponent(NavLink)
 
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },

@@ -193,6 +193,12 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   ]
 })
 
+Genotype.propTypes = {
+  variant: PropTypes.object,
+  individual: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
+}
+
 
 const VariantIndividuals = React.memo(({ variant, individuals, familyGuid, isCompoundHet }) => (
   <IndividualsContainer>

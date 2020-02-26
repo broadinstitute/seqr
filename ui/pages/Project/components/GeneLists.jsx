@@ -85,6 +85,10 @@ export const GeneLists = React.memo(({ project }) =>
     />,
   ))
 
+GeneLists.propTypes = {
+  project: PropTypes.object.isRequired,
+}
+
 class AddGeneLists extends React.PureComponent {
 
   static propTypes = {

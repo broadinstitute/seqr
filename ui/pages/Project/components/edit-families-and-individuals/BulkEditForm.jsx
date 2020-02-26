@@ -80,9 +80,9 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
                   <span>
                     download &nbsp;
                     {blankExportConfig &&
-                      <span>
+                    <span>
                       template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
-                      </span>
+                    </span>
                     }
                     <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
                   </span>

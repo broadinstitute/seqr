@@ -133,6 +133,12 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
   return links
 })
 
+BaseSearchLinks.propTypes = {
+  variant: PropTypes.object,
+  mainTranscript: PropTypes.object,
+  mainGene: PropTypes.object,
+}
+
 const mapStateToProps = (state, ownProps) => ({
   mainGene: getGenesById(state)[ownProps.mainTranscript.geneId],
 })

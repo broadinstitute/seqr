@@ -319,18 +319,18 @@ const DISPLAY_FIELDS = [
     width: 3,
     content: 'Contact',
     verticalAlign: 'top',
-    format: ({ patient }) => patient.contact &&
+    format: val => val.patient.contact &&
       <div>
-        <div><b>{patient.contact.institution}</b></div>
-        <div>{patient.contact.name}</div>
-        {patient.contact.email &&
+        <div><b>{val.patient.contact.institution}</b></div>
+        <div>{val.patient.contact.name}</div>
+        {val.patient.contact.email &&
           <div>
-            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+            <BreakWordLink href={val.patient.contact.email}>{val.patient.contact.email.replace('mailto:', '')}</BreakWordLink>
           </div>
         }
-        <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+        <BreakWordLink href={val.patient.contact.href}>{val.patient.contact.href.replace('mailto:', '')}</BreakWordLink>
         <VerticalSpacer height={10} />
-        <ContactNotes contact={patient.contact} modalId={patient.id} />
+        <ContactNotes contact={val.patient.contact} modalId={val.patient.id} />
       </div>,
   },
   {

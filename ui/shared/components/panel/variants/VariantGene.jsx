@@ -13,7 +13,7 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-const GeneLabelContent = styled(
+const BaseGeneLabelContent = styled(
   ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
@@ -22,6 +22,7 @@ const GeneLabelContent = styled(
    white-space: nowrap;
    max-width: ${props => props.maxWidth || 'none'};
 `
+const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -30,7 +31,7 @@ const GeneLinks = styled.div`
   padding-bottom: .5em;
 `
 
-const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
+const ListItemLink = styled(List.Item).attrs({ icon: 'linkify' })`
  .content {
     color: initial;
     cursor: auto;
