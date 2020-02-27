@@ -27,7 +27,7 @@ const FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
 
-const CaseReviewTable = (props) => {
+const CaseReviewTable = React.memo((props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
@@ -46,7 +46,7 @@ const CaseReviewTable = (props) => {
       />
     </div>
   )
-}
+})
 
 
 export { CaseReviewTable as CaseReviewTableComponent }

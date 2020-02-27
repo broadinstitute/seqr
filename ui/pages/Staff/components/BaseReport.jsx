@@ -19,7 +19,7 @@ const LOADING_PROPS = { inline: true }
 
 const getResultHref = page => result => `/staff/${page}/${result.key}`
 
-const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters }) =>
+const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <AwesomeBar
@@ -44,7 +44,8 @@ const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDown
       columns={columns}
       loadingProps={LOADING_PROPS}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 BaseReport.propTypes = {
   page: PropTypes.string,

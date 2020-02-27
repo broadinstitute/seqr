@@ -600,6 +600,14 @@ PARSED_MULTI_GENOME_VERSION_VARIANT.update({
     '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
 
+PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
+PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
+    'familyGuids': ['F000003_3', 'F000011_11'],
+    'genotypes': {
+        'I000007_na20870': {'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None},
+        'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
+    },
+})
 MAPPING_FIELDS = [
     'start',
     'rsid',
@@ -1449,8 +1457,8 @@ class EsUtilsTest(TestCase):
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
             {'bool': {
                 'should': [
-                    {'terms': {'samples_num_alt_1': ['HG00731', 'NA20870', 'NA19675']}},
-                    {'terms': {'samples_num_alt_2': ['HG00731', 'NA20870', 'NA19675']}},
+                    {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
         ], sort=['xpos'])
@@ -1611,6 +1619,42 @@ class EsUtilsTest(TestCase):
             size=5,
             start_index=3,
         )
+
+    def test_multi_project_all_samples_any_affected_get_es_variants(self):
+        search_model = VariantSearch.objects.create(
+            search={'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'}},
+        )
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.all())
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT]
+        self.assertListEqual(variants, expected_variants)
+        self.assertEqual(total_results, 9)
+
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    annotation_query,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['NA20885']}},
+                            {'terms': {'samples_num_alt_2': ['NA20885']}},
+                        ]
+                    }}
+                ], start_index=0, size=2, sort=['xpos'], index=SECOND_INDEX_NAME),
+            dict(
+                filters=[
+                    annotation_query,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                            {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
+                        ]
+                    }},
+                ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
+        ])
 
     def test_multi_project_get_variants_by_id(self):
         search_model = VariantSearch.objects.create(search={

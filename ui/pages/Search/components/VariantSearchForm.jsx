@@ -12,7 +12,7 @@ import { getIntitialSearch, getMultiProjectSearchContextIsLoading } from '../sel
 import { loadProjectFamiliesContext } from '../reducers'
 
 
-const VariantSearchForm = ({ match, history, load, initialSearch, loading, contentLoading }) =>
+const VariantSearchForm = React.memo(({ match, history, load, initialSearch, loading, contentLoading }) =>
   <DataLoader
     contentId={match.params}
     loading={loading}
@@ -29,7 +29,8 @@ const VariantSearchForm = ({ match, history, load, initialSearch, loading, conte
       <VariantSearchFormContent />
     </VariantSearchFormContainer>
     <SaveSearchButton />
-  </DataLoader>
+  </DataLoader>,
+)
 
 VariantSearchForm.propTypes = {
   match: PropTypes.object,

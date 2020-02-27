@@ -24,7 +24,7 @@ const FIELDS = [
   },
 ]
 
-const AnvilFilters = ({ load, match }) =>
+const AnvilFilters = React.memo(({ load, match }) =>
   <ReduxFormWrapper
     onSubmit={values => load(match.params.projectGuid, values)}
     form="anvilFilters"
@@ -32,14 +32,15 @@ const AnvilFilters = ({ load, match }) =>
     noModal
     inline
     submitOnChange
-  />
+  />,
+)
 
 AnvilFilters.propTypes = {
   match: PropTypes.object,
   load: PropTypes.func,
 }
 
-const Anvil = props =>
+const Anvil = React.memo(props =>
   <BaseReport
     page="anvil"
     viewAllCategory="AnVIL"
@@ -48,7 +49,8 @@ const Anvil = props =>
     getDownloadFilename={getDownloadFilename}
     filters={<AnvilFilters {...props} />}
     {...props}
-  />
+  />,
+)
 
 Anvil.propTypes = {
   match: PropTypes.object,

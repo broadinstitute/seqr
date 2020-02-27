@@ -54,7 +54,7 @@ class SavedVariants extends React.PureComponent {
     getUpdateTagUrl: PropTypes.func,
     loadVariants: PropTypes.func,
     additionalFilter: PropTypes.node,
-    tableSummaryComponent: PropTypes.node,
+    tableSummaryComponent: PropTypes.elementType,
   }
 
   navigateToTag = (e, data) => {

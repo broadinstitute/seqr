@@ -113,8 +113,9 @@ class AwesomeBar extends React.PureComponent
 
 export { AwesomeBar as AwesomeBarComponent }
 
-export const AwesomeBarFormInput = ({ onChange, ...props }) =>
-  <AwesomeBar onResultSelect={result => onChange(result.key)} asFormInput {...props} />
+export const AwesomeBarFormInput = React.memo(({ onChange, ...props }) =>
+  <AwesomeBar onResultSelect={result => onChange(result.key)} asFormInput {...props} />,
+)
 
 AwesomeBarFormInput.propTypes = {
   onChange: PropTypes.func,

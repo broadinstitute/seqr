@@ -5,6 +5,7 @@ import { Icon, List } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getGenesById } from 'redux/selectors'
+import { GENOME_VERSION_DISPLAY_LOOKUP } from 'shared/utils/constants'
 import ShowGeneModal from '../buttons/ShowGeneModal'
 
 const PhenotypeListItem = styled(({ maxWidth, observed, ...props }) => <List.Item {...props} />)`
@@ -30,11 +31,6 @@ const NoEmphasis = styled.span`
   color: grey;
 `
 
-const GENOME_VERSION_LOOKUP = {
-  GRCh37: 'hg19',
-  GRCh38: 'hg38',
-}
-
 const variantSummary = (variant, includeGenomeVersion) => (
   <div>
     {variant.chrom}:{variant.pos}
@@ -46,12 +42,12 @@ const variantSummary = (variant, includeGenomeVersion) => (
       </span>
     }
     {includeGenomeVersion && variant.genomeVersion &&
-      <NoEmphasis>({GENOME_VERSION_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
+      <NoEmphasis>({GENOME_VERSION_DISPLAY_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
     }
   </div>
 )
 
-const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch, ...listProps }) =>
+const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesById, dispatch, ...listProps }) =>
   <List {...listProps}>
     {Object.entries(geneVariants.reduce((acc, variant) =>
       ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {}),
@@ -69,7 +65,8 @@ const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch
         }
       </TopAlignedItem>,
     )}
-  </List>
+  </List>,
+)
 
 BaseSubmissionGeneVariants.propTypes = {
   genesById: PropTypes.object,
@@ -84,14 +81,15 @@ const mapGeneStateToProps = state => ({
 
 export const SubmissionGeneVariants = connect(mapGeneStateToProps)(BaseSubmissionGeneVariants)
 
-export const Phenotypes = ({ phenotypes, maxWidth, ...listProps }) =>
+export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) =>
   <List bulleted {...listProps}>
     {phenotypes.map(phenotype =>
       <PhenotypeListItem key={phenotype.id} observed={phenotype.observed} maxWidth={maxWidth}>
         {phenotype.label} ({phenotype.id})
       </PhenotypeListItem>,
     )}
-  </List>
+  </List>,
+)
 
 Phenotypes.propTypes = {
   phenotypes: PropTypes.array,

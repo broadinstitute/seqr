@@ -9,11 +9,11 @@ import { Link } from 'react-router-dom'
 import { ColoredIcon, NoBorderTable } from '../StyledComponents'
 
 
-const BarContainer = styled.div.attrs({
-  w: (props) => { return props.width ? `${props.width}${typeof props.width === 'number' ? 'px' : ''}` : '100%' },
-  h: (props) => { return props.height ? `${props.height}px` : 'auto' },
-  lh: (props) => { return props.height ? `${props.height - 2}px` : 'inherit' },
-})`
+const BarContainer = styled.div.attrs(props => ({
+  w: props.width ? `${props.width}${typeof props.width === 'number' ? 'px' : ''}` : '100%',
+  h: props.height ? `${props.height}px` : 'auto',
+  lh: props.height ? `${props.height - 2}px` : 'inherit',
+}))`
   display: inline-block;
   width: ${props => props.w};
   height: ${props => props.h};

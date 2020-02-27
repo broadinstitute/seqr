@@ -32,7 +32,7 @@ const STATUS_FORM_FIELDS = [{
   options: CASE_REVIEW_STATUS_OPTIONS,
 }]
 
-const CaseReviewStatusDropdown = props =>
+const CaseReviewStatusDropdown = React.memo(props =>
   <StatusContainer>
     <ReduxFormWrapper
       onSubmit={props.updateIndividual}
@@ -58,7 +58,8 @@ const CaseReviewStatusDropdown = props =>
         />
       }
     </div>
-  </StatusContainer>
+  </StatusContainer>,
+)
 
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }

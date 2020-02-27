@@ -6,10 +6,11 @@ import { loadLocusLists, loadLocusListItems } from 'redux/rootReducer'
 import { getLocusListIsLoading, getLocusListsByGuid, getParsedLocusList } from 'redux/selectors'
 import DataLoader from './DataLoader'
 
-const BaseLocusListsLoader = ({ locusListsByGuid, loading, load, children }) =>
+const BaseLocusListsLoader = React.memo(({ locusListsByGuid, loading, load, children }) =>
   <DataLoader content={locusListsByGuid} loading={loading} load={load}>
     {children}
-  </DataLoader>
+  </DataLoader>,
+)
 
 BaseLocusListsLoader.propTypes = {
   load: PropTypes.func,
@@ -30,10 +31,11 @@ const mapListsDispatchToProps = {
 
 export const LocusListsLoader = connect(mapListsStateToProps, mapListsDispatchToProps)(BaseLocusListsLoader)
 
-const BaseLocusListItemsLoader = ({ locusListGuid, locusList, loading, load, children, ...props }) =>
+const BaseLocusListItemsLoader = React.memo(({ locusListGuid, locusList, loading, load, children, ...props }) =>
   <DataLoader contentId={locusListGuid} content={locusList.items} loading={loading} load={load} {...props}>
     {React.cloneElement(children, { locusList })}
-  </DataLoader>
+  </DataLoader>,
+)
 
 BaseLocusListItemsLoader.propTypes = {
   locusList: PropTypes.object,

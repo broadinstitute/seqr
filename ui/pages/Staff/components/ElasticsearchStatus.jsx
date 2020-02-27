@@ -36,7 +36,7 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
-const ElasticsearchStatus = ({ data, loading, load }) =>
+const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
     <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
 
@@ -63,7 +63,8 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
       data={data.indices}
       columns={INDEX_COLUMNS}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 ElasticsearchStatus.propTypes = {
   data: PropTypes.object,

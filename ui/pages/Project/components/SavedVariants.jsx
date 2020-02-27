@@ -37,7 +37,7 @@ const LabelLink = styled(Link)`
   }
 `
 
-const BaseProjectSavedVariants = ({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
+const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
   const { familyGuid, tag, variantGuid, analysisGroupGuid } = props.match.params
 
   const categoryOptions = [...new Set(
@@ -128,7 +128,7 @@ const BaseProjectSavedVariants = ({ project, analysisGroup, loadProjectSavedVari
       {...props}
     />
   )
-}
+})
 
 BaseProjectSavedVariants.propTypes = {
   match: PropTypes.object,

@@ -70,7 +70,7 @@ const PANELS = [
   INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = ({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
+const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -92,7 +92,8 @@ const CustomSearch = ({ match, history, includeAllProjects, loadContext, loading
     {match.params.searchHash &&
       <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />
     }
-  </Grid>
+  </Grid>,
+)
 
 CustomSearch.propTypes = {
   match: PropTypes.object,

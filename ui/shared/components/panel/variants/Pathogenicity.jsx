@@ -35,21 +35,23 @@ const HGMD_CLASS_NAMES = {
 }
 const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
-const ClinvarStars = ({ goldStars }) => goldStars != null &&
+const ClinvarStars = React.memo(({ goldStars }) => goldStars != null &&
   <StarsContainer>
     {Array.from(Array(4).keys()).map(i => (i < goldStars ? <StarIcon key={i} goldstar="yes" /> : <StarIcon key={i} />))}
-  </StarsContainer>
+  </StarsContainer>,
+)
 
 ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
 }
 
 
-const PathogenicityLabel = ({ significance, formatName, goldStars }) =>
+const PathogenicityLabel = React.memo(({ significance, formatName, goldStars }) =>
   <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[significance.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
     {formatName ? formatName(significance) : significance}
     <ClinvarStars goldStars={goldStars} />
-  </Label>
+  </Label>,
+)
 
 PathogenicityLabel.propTypes = {
   significance: PropTypes.string.isRequired,
@@ -57,11 +59,12 @@ PathogenicityLabel.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLink = ({ href, ...labelProps }) =>
+const PathogenicityLink = React.memo(({ href, ...labelProps }) =>
   <a href={href} target="_blank">
     <PathogenicityLabel {...labelProps} />
     <HorizontalSpacer width={5} />
-  </a>
+  </a>,
+)
 
 PathogenicityLink.propTypes = {
   href: PropTypes.string.isRequired,
@@ -74,7 +77,7 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const Pathogenicity = ({ variant, user }) => {
+const Pathogenicity = React.memo(({ variant, user }) => {
   const clinvar = variant.clinvar || {}
   if (!clinvar.variationId && !clinvar.alleleId && !(user.isStaff && (variant.hgmd || {}).class)) {
     return null
@@ -107,7 +110,7 @@ const Pathogenicity = ({ variant, user }) => {
       }
     </span>
   )
-}
+})
 
 Pathogenicity.propTypes = {
   variant: PropTypes.object,

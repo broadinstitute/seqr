@@ -61,7 +61,7 @@ const PAGE_CONFIGS = {
 }
 
 
-export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
+export const PageHeader = React.memo(({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
 
   const { pageType, entityGuid } = match.params
 
@@ -85,7 +85,7 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
       description={description}
     />
   )
-}
+})
 
 PageHeader.propTypes = {
   projectsByGuid: PropTypes.object,

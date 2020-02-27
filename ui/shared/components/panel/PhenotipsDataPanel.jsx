@@ -55,7 +55,7 @@ export const hasPhenotipsDetails = phenotipsData =>
     (phenotipsData.rejectedGenes || []).length > 0 ||
     (phenotipsData.genes || []).length > 0)
 
-const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
+const PhenotipsSection = React.memo(({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
   let fieldData = phenotipsData[field]
   if (fieldData && parseFieldRows) {
     fieldData = parseFieldRows(fieldData)
@@ -77,7 +77,7 @@ const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow
       <VerticalSpacer height={10} />
     </div>
   )
-}
+})
 
 PhenotipsSection.propTypes = {
   phenotipsData: PropTypes.object,
@@ -169,7 +169,7 @@ const PHENOTIPS_SECTIONS = [
   },
 ]
 
-const PhenotipsDataPanel = ({ individual, showDetails, showEditPhenotipsLink, showViewPhenotipsLink = true }) =>
+const PhenotipsDataPanel = React.memo(({ individual, showDetails, showEditPhenotipsLink, showViewPhenotipsLink = true }) =>
   <div>
     <b>PhenoTips{(showDetails && hasPhenotipsDetails(individual.phenotipsData)) ? ':' : ''}</b><HorizontalSpacer width={15} />
     { showViewPhenotipsLink && <ShowPhenotipsModalButton individual={individual} isViewOnly /> }
@@ -201,7 +201,8 @@ const PhenotipsDataPanel = ({ individual, showDetails, showEditPhenotipsLink, sh
         {(individual.phenotipsData && individual.phenotipsData.genes) ? `${individual.phenotipsData.genes.length} candidate genes` : null}
       </CompactContainer>
     }
-  </div>
+  </div>,
+)
 
 PhenotipsDataPanel.propTypes = {
   individual: PropTypes.object.isRequired,

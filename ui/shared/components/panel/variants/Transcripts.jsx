@@ -13,11 +13,11 @@ import { ProteinSequence } from './Annotations'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
 
 
-export const TranscriptLink = styled.a.attrs({
+export const TranscriptLink = styled.a.attrs(({ variant, transcript }) => ({
   target: '_blank',
-  href: ({ variant, transcript }) => `http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`,
-  children: ({ transcript }) => transcript.transcriptId,
-})`
+  href: `http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`,
+  children: transcript.transcriptId,
+}))`
   font-size: 1.3em;
   font-weight: normal;
 `
@@ -33,7 +33,7 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = ({ variant, genesById, updateMainTranscript }) =>
+const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) =>
@@ -104,11 +104,13 @@ const Transcripts = ({ variant, genesById, updateMainTranscript }) =>
       </Segment>
       <VerticalSpacer height={10} />
     </div>,
-  )
+  ),
+)
 
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
   genesById: PropTypes.object.isRequired,
+  updateMainTranscript: PropTypes.func,
 }
 
 const mapStateToProps = state => ({

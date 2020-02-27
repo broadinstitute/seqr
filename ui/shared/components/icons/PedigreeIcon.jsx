@@ -38,7 +38,7 @@ const ICON_LOOKUP = {
   UU: { icon: 'question' },
 }
 
-const PedigreeIcon = (props) => {
+const PedigreeIcon = React.memo((props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
   return <Popup
     trigger={iconProps.iconGroup || <span><Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />{props.label}</span>}
@@ -55,7 +55,7 @@ const PedigreeIcon = (props) => {
     position="top center"
     hoverable
   />
-}
+})
 
 
 PedigreeIcon.propTypes = {

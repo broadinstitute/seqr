@@ -26,7 +26,7 @@ const FIELDS = [
   ...USER_NAME_FIELDS,
 ]
 
-const SetPassword = ({ onSubmit }) =>
+const SetPassword = React.memo(({ onSubmit }) =>
   <Grid>
     <Grid.Column width={4} />
     <Grid.Column width={8}>
@@ -45,7 +45,8 @@ const SetPassword = ({ onSubmit }) =>
       />
     </Grid.Column>
     <Grid.Column width={4} />
-  </Grid>
+  </Grid>,
+)
 
 SetPassword.propTypes = {
   onSubmit: PropTypes.func,

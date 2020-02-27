@@ -11,7 +11,7 @@ import { getProjectAnalysisGroupsByGuid } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 
-const AnalysisGroups = ({ project, analysisGroupsByGuid }) =>
+const AnalysisGroups = React.memo(({ project, analysisGroupsByGuid }) =>
   Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag =>
     <div key={ag.name}>
       <Link to={`/project/${project.projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
@@ -23,7 +23,7 @@ const AnalysisGroups = ({ project, analysisGroupsByGuid }) =>
       />
       <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
       <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly size="tiny" />
-    </div>)
+    </div>))
 
 
 AnalysisGroups.propTypes = {

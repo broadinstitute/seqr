@@ -26,7 +26,7 @@ import {
   NUM_ALT_OPTIONS,
 } from '../constants'
 
-const DetailLink = styled(ButtonLink)`
+const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
     margin-left: .2em;
     margin-right: 0;
@@ -34,6 +34,7 @@ const DetailLink = styled(ButtonLink)`
     font-style: inherit;
   }
 `
+const DetailLink = props => <BaseDetailLink {...props} />
 
 const SAVED_SEARCH_FIELD = {
   name: 'search',
@@ -125,7 +126,7 @@ const STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
   INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
 ]
 
-const VariantSearchFormContent = ({ user, displayAnnotationSecondary }) => {
+const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary }) => {
   let panels
   if (displayAnnotationSecondary) {
     panels = user.isStaff ? STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS : PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS
@@ -143,7 +144,7 @@ const VariantSearchFormContent = ({ user, displayAnnotationSecondary }) => {
       <VariantSearchFormPanels panels={panels} />
     </div>
   )
-}
+})
 
 VariantSearchFormContent.propTypes = {
   user: PropTypes.object,

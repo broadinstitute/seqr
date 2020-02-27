@@ -62,7 +62,7 @@ const ratioLabel = (flag) => {
   return `Ratio ${words[1]}/${words[2]}`
 }
 
-const CaseReviewStatus = ({ individual }) =>
+const CaseReviewStatus = React.memo(({ individual }) =>
   <CaseReviewDropdownContainer>
     <CaseReviewStatusDropdown individual={individual} />
     {
@@ -73,19 +73,21 @@ const CaseReviewStatus = ({ individual }) =>
         </Detail>
       ) : null
     }
-  </CaseReviewDropdownContainer>
+  </CaseReviewDropdownContainer>,
+)
 
 CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const MmeStatusLabel = ({ title, dateField, color, individual, mmeSubmission }) =>
+const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) =>
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
       {title}: {new Date(mmeSubmission[dateField]).toLocaleDateString()}
     </Label>
-  </Link>
+  </Link>,
+)
 
 MmeStatusLabel.propTypes = {
   title: PropTypes.string,
@@ -95,7 +97,7 @@ MmeStatusLabel.propTypes = {
   mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = ({ loadedSamples, individual, mmeSubmission }) =>
+const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
   <div>
     {loadedSamples.map(sample =>
       <div key={sample.sampleGuid}>
@@ -118,7 +120,8 @@ const DataDetails = ({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )
   }
-  </div>
+  </div>,
+)
 
 DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
@@ -126,7 +129,9 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
-const IndividualRow = ({ project, family, individual, editCaseReview, mmeSubmission, samplesByGuid, dispatchUpdateIndividual }) => {
+const IndividualRow = React.memo((
+  { project, family, individual, editCaseReview, mmeSubmission, samplesByGuid, dispatchUpdateIndividual },
+) => {
   const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
   let loadedSamples = sampleGuids.map(
@@ -281,7 +286,7 @@ const IndividualRow = ({ project, family, individual, editCaseReview, mmeSubmiss
       rightContent={rightContent}
     />
   )
-}
+})
 
 IndividualRow.propTypes = {
   project: PropTypes.object.isRequired,

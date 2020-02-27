@@ -9,7 +9,7 @@ import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { isActiveVariantSample } from 'shared/utils/constants'
 
-const ProjectFilterContent = ({ project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props }) => {
+const ProjectFilterContent = React.memo(({ project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props }) => {
   let filterInput
   if (Object.values(projectSamples || {}).some(sample => isActiveVariantSample(sample))) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
@@ -33,7 +33,7 @@ const ProjectFilterContent = ({ project, removeField, projectSamples, value, dis
       <VerticalSpacer height={10} />
     </div>
   )
-}
+})
 
 ProjectFilterContent.propTypes = {
   project: PropTypes.object,
@@ -41,14 +41,15 @@ ProjectFilterContent.propTypes = {
   removeField: PropTypes.func,
   projectSamples: PropTypes.object,
   dispatch: PropTypes.func,
-  filterInputComponent: PropTypes.node,
+  filterInputComponent: PropTypes.elementType,
 }
 
 
-export const ProjectFilter = ({ loading, load, ...props }) =>
+export const ProjectFilter = React.memo(({ loading, load, ...props }) =>
   <DataLoader contentId={props.value} loading={loading} load={load} content={props.project} hideError>
     <ProjectFilterContent {...props} />
-  </DataLoader>
+  </DataLoader>,
+)
 
 ProjectFilter.propTypes = {
   project: PropTypes.object,
@@ -60,7 +61,7 @@ ProjectFilter.propTypes = {
 const PROJECT_SEARCH_CATEGORIES = ['projects']
 const PROJECT_GROUP_SEARCH_CATEGORIES = ['project_groups']
 
-export const AddProjectButton = ({ addElement, addProjectGroup, processAddedElement }) =>
+export const AddProjectButton = React.memo(({ addElement, addProjectGroup, processAddedElement }) =>
   <div>
     <InlineHeader content="Add Project:" />
     <AwesomeBar
@@ -76,7 +77,8 @@ export const AddProjectButton = ({ addElement, addProjectGroup, processAddedElem
       inputwidth="400px"
       onResultSelect={result => addProjectGroup(result.key, addElement)}
     />
-  </div>
+  </div>,
+)
 
 AddProjectButton.propTypes = {
   addElement: PropTypes.func,

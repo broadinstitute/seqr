@@ -113,7 +113,7 @@ class RichTextEditor extends React.PureComponent {
   }
 }
 
-const InlineStyleButtonPanel = props => (
+const InlineStyleButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
     {
       RichTextEditor.INLINE_STYLES.map(type =>
@@ -127,14 +127,14 @@ const InlineStyleButtonPanel = props => (
           toggle
         />)
     }
-  </div>)
+  </div>))
 
 InlineStyleButtonPanel.propTypes = {
   currentInlineStyle: PropTypes.object.isRequired,
   onButtonClick: PropTypes.func.isRequired,
 }
 
-const BlockTypeButtonPanel = props => (
+const BlockTypeButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
     {
       RichTextEditor.BLOCK_TYPES.map(type =>
@@ -149,7 +149,7 @@ const BlockTypeButtonPanel = props => (
         />)
     }
   </div>
-)
+))
 
 BlockTypeButtonPanel.propTypes = {
   currentBlockType: PropTypes.string.isRequired,

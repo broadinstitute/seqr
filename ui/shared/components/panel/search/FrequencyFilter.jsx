@@ -30,7 +30,7 @@ const AF_STEP_LABELS = {
 
 const AF_OPTIONS = AF_STEPS.map(value => ({ value }))
 
-const FrequencyIntegerInput = ({ label, value, field, nullField, inlineAF, onChange }) =>
+const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inlineAF, onChange }) =>
   <IntegerInput
     label={label}
     value={(value || {})[field]}
@@ -44,7 +44,8 @@ const FrequencyIntegerInput = ({ label, value, field, nullField, inlineAF, onCha
       }
       onChange({ ...value, ...updateFields })
     }}
-  />
+  />,
+)
 
 FrequencyIntegerInput.propTypes = {
   value: PropTypes.object,

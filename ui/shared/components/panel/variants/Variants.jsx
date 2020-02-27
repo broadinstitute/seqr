@@ -49,19 +49,16 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   box-shadow: none !important;
 `
 
-const TagFamily = ({ savedVariant }) =>
+const tagFamily = tag =>
   <LoadedFamilyLabel
-    familyGuid={savedVariant.familyGuid}
-    to={`/project/${savedVariant.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`}
+    familyGuid={tag.savedVariant.familyGuid}
+    to={`/project/${tag.savedVariant.projectGuid}/saved_variants/variant/${tag.savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
   />
 
-TagFamily.propTypes = {
-  savedVariant: PropTypes.object,
-}
 
-const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
+const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
@@ -69,13 +66,13 @@ const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
     <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
   )
   const variantIndividuals = variant.familyGuids.map(familyGuid =>
-    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
   )
   return (
     <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
-        {showDiscoveryTags && variant.discoveryTags &&
+        {variant.discoveryTags && variant.discoveryTags.length > 0 &&
           <InlinePopup
             on="click"
             position="right center"
@@ -83,7 +80,7 @@ const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
             content={<TagFieldDisplay
               displayFieldValues={variant.discoveryTags}
               popup={taggedByPopup}
-              tagAnnotation={TagFamily}
+              tagAnnotation={tagFamily}
               displayAnnotationFirst
             />}
           />
@@ -113,17 +110,16 @@ const Variant = ({ variant, isCompoundHet, mainGeneId, showDiscoveryTags }) => {
       </Grid.Column>
     </StyledVariantRow>
   )
-}
+})
 
 Variant.propTypes = {
   variant: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   mainGeneId: PropTypes.string,
-  showDiscoveryTags: PropTypes.bool,
 }
 
 
-const CompoundHets = ({ variants, ...props }) => {
+const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
@@ -156,21 +152,21 @@ const CompoundHets = ({ variants, ...props }) => {
       </StyledCompoundHetRows>
     </StyledVariantRow>
   )
-}
+})
 
 
 CompoundHets.propTypes = {
   variants: PropTypes.array,
 }
 
-const Variants = ({ variants, ...props }) => (
+const Variants = React.memo(({ variants, ...props }) => (
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} {...props} /> :
       <Variant variant={variant} key={variant.variantId} {...props} />
     ))}
   </Grid>
-)
+))
 
 Variants.propTypes = {
   variants: PropTypes.array,

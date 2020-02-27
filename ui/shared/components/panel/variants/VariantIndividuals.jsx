@@ -70,13 +70,16 @@ const isHemiXVariant = (variant, individual) =>
   individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
-const isHemiUPDVariant = (numAlt, variant, individual) =>
-  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some((parentGuid) => {
+const missingParentVariant = (variant, individual) =>
+  [individual.maternalGuid, individual.paternalGuid].some((parentGuid) => {
     const parentGenotype = variant.genotypes[parentGuid] || {}
     return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
   })
 
-const Allele = ({ isAlt, variant }) => {
+const isHemiUPDVariant = (numAlt, variant, individual) =>
+  numAlt === 2 && missingParentVariant(variant, individual)
+
+const Allele = React.memo(({ isAlt, variant }) => {
   const allele = isAlt ? variant.alt : variant.ref
   let alleleText = allele.substring(0, 3)
   if (allele.length > 3) {
@@ -84,34 +87,35 @@ const Allele = ({ isAlt, variant }) => {
   }
 
   return isAlt ? <b><i>{alleleText}</i></b> : alleleText
-}
+})
 
 Allele.propTypes = {
   isAlt: PropTypes.bool,
   variant: PropTypes.object,
 }
 
-export const Alleles = ({ numAlt, variant, isHemiUPD, isHemiX }) =>
+export const Alleles = React.memo(({ numAlt, variant, isHemiX, warning }) =>
   <AlleleContainer>
-    {isHemiUPD &&
+    {warning &&
       <Popup
         flowing
         trigger={<Icon name="warning sign" color="yellow" />}
-        content={<div><b>Warning:</b> Potential UPD/ Hemizygosity</div>}
+        content={<div><b>Warning:</b> {warning}</div>}
       />
     }
     <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
-  </AlleleContainer>
+  </AlleleContainer>,
+)
 
 Alleles.propTypes = {
   numAlt: PropTypes.number,
   variant: PropTypes.object,
-  isHemiUPD: PropTypes.bool,
+  warning: PropTypes.string,
   isHemiX: PropTypes.bool,
 }
 
 
-const Genotype = ({ variant, individual }) => {
+const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   if (!variant.genotypes) {
     return null
   }
@@ -135,7 +139,8 @@ const Genotype = ({ variant, individual }) => {
     { title: 'Phred Likelihoods', value: genotype.pl },
   ]
   const isHemiX = isHemiXVariant(variant, individual)
-  const isHemiUPD = !isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)
+  const hemiUpdWarning = (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) ? 'Potential UPD/ Hemizygosity' : null
+  const compoundHetWarning = (isCompoundHet && missingParentVariant(variant, individual)) ? 'Variant absent in parents' : null
   return [
     genotype.numAlt >= 0 ?
       <Popup
@@ -144,7 +149,7 @@ const Genotype = ({ variant, individual }) => {
         flowing
         trigger={
           <span>
-            <Alleles numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} isHemiUPD={isHemiUPD} />
+            <Alleles numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} warning={hemiUpdWarning || compoundHetWarning} />
             <VerticalSpacer width={5} />
             {genotype.gq || '-'}, {genotype.ab ? genotype.ab.toPrecision(2) : '-'}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
@@ -186,10 +191,16 @@ const Genotype = ({ variant, individual }) => {
         }
       /> : null,
   ]
+})
+
+Genotype.propTypes = {
+  variant: PropTypes.object,
+  individual: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
 }
 
 
-const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
+const VariantIndividuals = React.memo(({ variant, individuals, familyGuid, isCompoundHet }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
@@ -209,17 +220,18 @@ const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
           }
         />
         <br />
-        <Genotype variant={variant} individual={individual} />
+        <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} />
       </IndividualCell>,
     )}
     <ShowReadsButton familyGuid={familyGuid} igvId={variant.variantId} />
   </IndividualsContainer>
-)
+))
 
 VariantIndividuals.propTypes = {
   familyGuid: PropTypes.string,
   variant: PropTypes.object,
   individuals: PropTypes.array,
+  isCompoundHet: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

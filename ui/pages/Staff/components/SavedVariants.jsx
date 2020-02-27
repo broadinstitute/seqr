@@ -56,7 +56,7 @@ const TAG_OPTIONS = [
 
 const getUpdateTagUrl = tag => `/staff/saved_variants/${tag}`
 
-const BaseStaffSavedVariants = ({ loadStaffSavedVariants, ...props }) => {
+const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, ...props }) => {
   const { params } = props.match
   const { tag, gene } = params
 
@@ -103,7 +103,7 @@ const BaseStaffSavedVariants = ({ loadStaffSavedVariants, ...props }) => {
       {...props}
     />
   )
-}
+})
 
 const mapDispatchToProps = {
   updateTable: updateStaffSavedVariantTable,
