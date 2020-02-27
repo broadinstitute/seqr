@@ -70,14 +70,13 @@ const isHemiXVariant = (variant, individual) =>
   individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
-const missingParentVariant = (variant, individual) =>
-  [individual.maternalGuid, individual.paternalGuid].some((parentGuid) => {
-    const parentGenotype = variant.genotypes[parentGuid] || {}
-    return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
-  })
+const missingParentVariant = variant => (parentGuid) => {
+  const parentGenotype = variant.genotypes[parentGuid] || {}
+  return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
+}
 
 const isHemiUPDVariant = (numAlt, variant, individual) =>
-  numAlt === 2 && missingParentVariant(variant, individual)
+  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant))
 
 const Allele = React.memo(({ isAlt, variant }) => {
   const allele = isAlt ? variant.alt : variant.ref
@@ -140,7 +139,9 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   ]
   const isHemiX = isHemiXVariant(variant, individual)
   const hemiUpdWarning = (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) ? 'Potential UPD/ Hemizygosity' : null
-  const compoundHetWarning = (isCompoundHet && missingParentVariant(variant, individual)) ? 'Variant absent in parents' : null
+  const compoundHetWarning = (
+    isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))
+  ) ? 'Variant absent in parents' : null
   return [
     genotype.numAlt >= 0 ?
       <Popup
