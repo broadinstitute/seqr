@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
-from seqr.views.apis.phenotips_api import _add_user_to_patient, _get_patient_data
+from seqr.views.apis.phenotips_api import _add_user_to_patient, _get_patient_data, _update_user_on_patient
 from seqr.views.utils.phenotips_utils import phenotips_patient_exists, get_phenotips_uname_and_pwd_for_project
 
 
@@ -33,11 +33,14 @@ class Command(BaseCommand):
                     seqr_individual.save()
 
                     # update permissions
+                    phenotips_readwrite_username, _ = get_phenotips_uname_and_pwd_for_project(to_project.phenotips_user_id, read_only=False)
+                    _update_user_on_patient(seqr_individual.phenotips_patient_id, {
+                        'transfer-to': 'on',
+                        'owner': 'XWiki.' + str(phenotips_readwrite_username),
+                    })
+
                     phenotips_readonly_username, _ = get_phenotips_uname_and_pwd_for_project(to_project.phenotips_user_id, read_only=True)
                     _add_user_to_patient(phenotips_readonly_username, seqr_individual.phenotips_patient_id, allow_edit=False)
-
-                    phenotips_readwrite_username, _ = get_phenotips_uname_and_pwd_for_project(to_project.phenotips_user_id, read_only=False)
-                    _add_user_to_patient(phenotips_readwrite_username, seqr_individual.phenotips_patient_id, allow_edit=True)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
