@@ -323,14 +323,19 @@ def _add_user_to_patient(username, patient_id, allow_edit=True):
         username (string): PhenoTips username to grant access to.
         patient_id (string): PhenoTips internal patient id.
     """
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
+    return _update_user_on_patient(patient_id, {
         'collaborator': 'XWiki.' + str(username),
-        'patient': patient_id,
         'accessLevel': 'edit' if allow_edit else 'view',
+    })
+
+
+def _update_user_on_patient(patient_id, data):
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data.update({
+        'patient': patient_id,
         'xaction': 'update',
         'submit': 'Update'
-    }
+    })
 
     url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
     make_phenotips_api_call(
