@@ -47,6 +47,7 @@ const StyledCompoundHetRows = styled(Grid)`
 const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   padding: 0.2em !important;
   box-shadow: none !important;
+  z-index: 10 !important;
 `
 
 const tagFamily = tag =>
