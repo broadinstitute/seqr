@@ -1457,8 +1457,8 @@ class EsUtilsTest(TestCase):
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
             {'bool': {
                 'should': [
-                    {'terms': {'samples_num_alt_1': ['HG00731', 'NA20870', 'NA19675']}},
-                    {'terms': {'samples_num_alt_2': ['HG00731', 'NA20870', 'NA19675']}},
+                    {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                    {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
         ], sort=['xpos'])
@@ -1649,8 +1649,8 @@ class EsUtilsTest(TestCase):
                     annotation_query,
                     {'bool': {
                         'should': [
-                            {'terms': {'samples_num_alt_1': ['NA20870', 'NA19675', 'HG00731']}},
-                            {'terms': {'samples_num_alt_2': ['NA20870', 'NA19675', 'HG00731']}},
+                            {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                            {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
                         ]
                     }},
                 ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)

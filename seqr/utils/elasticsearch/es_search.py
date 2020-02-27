@@ -907,6 +907,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
 
 
 def _any_affected_sample_filter(sample_ids):
+    sample_ids = sorted(sample_ids)
     return Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
 
 
