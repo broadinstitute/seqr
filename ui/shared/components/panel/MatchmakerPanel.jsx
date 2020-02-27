@@ -5,6 +5,7 @@ import { Icon, List } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getGenesById } from 'redux/selectors'
+import { GENOME_VERSION_DISPLAY_LOOKUP } from 'shared/utils/constants'
 import ShowGeneModal from '../buttons/ShowGeneModal'
 
 const PhenotypeListItem = styled(({ maxWidth, observed, ...props }) => <List.Item {...props} />)`
@@ -30,11 +31,6 @@ const NoEmphasis = styled.span`
   color: grey;
 `
 
-const GENOME_VERSION_LOOKUP = {
-  GRCh37: 'hg19',
-  GRCh38: 'hg38',
-}
-
 const variantSummary = (variant, includeGenomeVersion) => (
   <div>
     {variant.chrom}:{variant.pos}
@@ -46,7 +42,7 @@ const variantSummary = (variant, includeGenomeVersion) => (
       </span>
     }
     {includeGenomeVersion && variant.genomeVersion &&
-      <NoEmphasis>({GENOME_VERSION_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
+      <NoEmphasis>({GENOME_VERSION_DISPLAY_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
     }
   </div>
 )

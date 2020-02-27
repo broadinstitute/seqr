@@ -7,6 +7,7 @@ import {
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
   SHOW_ALL,
+  GENOME_VERSION_DISPLAY_LOOKUP,
   familyVariantSamples,
   getVariantMainTranscript,
   getVariantMainGeneId,
@@ -357,7 +358,7 @@ export const getMmeDefaultContactEmail = createSelector(
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
 
-    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos }) => {
+    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, genomeVersion }) => {
       const savedVariant = Object.values(savedVariants).find(
         o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
           && o.familyGuids.includes(familyGuid)) || {}
@@ -365,8 +366,9 @@ export const getMmeDefaultContactEmail = createSelector(
       const mainTranscript = getVariantMainTranscript(savedVariant)
       const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
       const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
-
-      return `a ${genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${hgvs ? ` (${hgvs})` : ''}`
+      const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
+      const inheritance = genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'
+      return `a ${inheritance} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${hgvs ? ` (${hgvs})` : ''}`
     }).join(', ')
 
     const submittedPhenotypeList = (phenotypes || []).filter(

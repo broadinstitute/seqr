@@ -26,6 +26,11 @@ export const GENOME_VERSION_FIELD = {
   name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
 }
 
+export const GENOME_VERSION_DISPLAY_LOOKUP = {
+  GRCh37: 'hg19',
+  GRCh38: 'hg38',
+}
+
 // PROJECT FIELDS
 
 export const EDITABLE_PROJECT_FIELDS = [
