@@ -21,7 +21,9 @@ from seqr.utils.xpos_utils import get_chrom_pos
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.file_utils import parse_file
+from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
@@ -148,13 +150,7 @@ def seqr_stats(request):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_export(request, project_guid):
-    if project_guid == 'all':
-        project_guid = None
-
-    if project_guid:
-        projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
-    else:
-        projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='anvil')}
+    projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
 
     individuals = _get_loaded_before_date_project_individuals(projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore'))
 
@@ -207,7 +203,7 @@ def anvil_export(request, project_guid):
             if key.startswith('geneId') and genes_by_id.get(gene_id):
                 row[key.replace('geneId', 'Gene')] = genes_by_id[gene_id]['geneSymbol']
 
-    return create_json_response({'anvilRows': rows})
+    return export_table('{}_AnVIL_Metadata'.format(projects_by_guid.values()[0].name), sorted(rows[0].keys()), rows, 'tsv', titlecase_header=False)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)

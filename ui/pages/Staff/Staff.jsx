@@ -25,7 +25,7 @@ import Users from './components/Users'
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 const STAFF_PAGES = [
-  { path: 'anvil', params: '/:projectGuid?', component: Anvil },
+  { path: 'anvil', component: Anvil },
   { path: 'create_user', component: CreateUser },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },

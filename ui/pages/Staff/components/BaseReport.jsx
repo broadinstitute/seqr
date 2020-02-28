@@ -21,7 +21,7 @@ const getResultHref = page => result => `/staff/${page}/${result.key}`
 
 const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
-    <InlineHeader size="medium" content="Projects:" />
+    <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
       categories={SEARCH_CATEGORIES}
       placeholder="Enter project name"
