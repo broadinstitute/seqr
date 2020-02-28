@@ -112,6 +112,7 @@ from seqr.views.apis.staff_api import \
     upload_qc_pipeline_output, \
     mme_details, \
     seqr_stats, \
+    sample_metadata_export, \
     proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -246,6 +247,7 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'staff/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/success_story/(?P<success_story_types>[^/]+)': success_story,

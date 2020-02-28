@@ -20,6 +20,9 @@ export const getMmeLoading = state => state.mmeLoading.isLoading
 export const getMmeLoadingError = state => state.mmeLoading.errorMessage
 export const getMmeMetrics = state => state.mmeMetrics
 export const getMmeSubmissions = state => state.mmeSubmissions
+export const getSampleMetadataLoading = state => state.sampleMetadataLoading.isLoading
+export const getSampleMetadataLoadingError = state => state.sampleMetadataLoading.errorMessage
+export const getSampleMetadataRows = state => state.sampleMetadataRows
 export const getSearchHashContextLoading = state => state.searchHashContextLoading.isLoading
 export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
 export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage
@@ -28,6 +31,22 @@ export const getQcUploadStats = state => state.qcUploadStats
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,
+  (rawData) => {
+    const maxSavedVariants = Math.max(1, ...rawData.map(({ numSavedVariants }) => numSavedVariants))
+    return CORE_ANVIL_COLUMNS.concat(
+      ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map((col) => {
+        const colName = `${col}-${i + 1}`
+        return {
+          name: colName,
+          content: colName,
+          format: VARIANT_ANVIL_COLUMN_FORMATS[col] && (row => VARIANT_ANVIL_COLUMN_FORMATS[col](row[colName])),
+        }
+      })))
+  },
+)
+
+export const getSampleMetadataColumns = createSelector(
+  getSampleMetadataRows,
   (rawData) => {
     const maxSavedVariants = Math.max(1, ...rawData.map(({ numSavedVariants }) => numSavedVariants))
     return CORE_ANVIL_COLUMNS.concat(

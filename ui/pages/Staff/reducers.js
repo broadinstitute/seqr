@@ -17,6 +17,8 @@ const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
+const REQUEST_SAMPLE_METADATA = 'REQUEST_SAMPLE_METADATA'
+const RECEIVE_SAMPLE_METADATA = 'RECEIVE_SAMPLE_METADATA'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const REQUEST_SEARCH_HASH_CONTEXT = 'REQUEST_SEARCH_HASH_CONTEXT'
 const RECEIVE_SEARCH_HASH_CONTEXT = 'RECEIVE_SEARCH_HASH_CONTEXT'
@@ -38,6 +40,22 @@ export const loadAnvil = (projectGuid, filterValues) => {
         },
         (e) => {
           dispatch({ type: RECEIVE_ANVIL, error: e.message, newValue: [] })
+        },
+      ).get(filterValues)
+    }
+  }
+}
+
+export const loadSampleMetadata = (projectGuid, filterValues) => {
+  return (dispatch) => {
+    if (projectGuid) {
+      dispatch({ type: REQUEST_SAMPLE_METADATA })
+      new HttpRequestHelper(`/api/staff/sample_metadata/${projectGuid}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: responseJson.sampleMetadataRows })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
         },
       ).get(filterValues)
     }
@@ -280,6 +298,8 @@ export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAV
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
+  sampleMetadataLoading: loadingReducer(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA),
+  sampleMetadataRows: createSingleValueReducer(RECEIVE_SAMPLE_METADATA, []),
   discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
   discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),

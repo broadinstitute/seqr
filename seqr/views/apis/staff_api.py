@@ -210,6 +210,70 @@ def anvil_export(request, project_guid):
     return create_json_response({'anvilRows': rows})
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def sample_metadata_export(request, project_guid):
+    if project_guid == 'all':
+        project_guid = None
+
+    if project_guid:
+        projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
+    else:
+        projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='anvil')}
+
+    individuals = _get_loaded_before_date_project_individuals(projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore'))
+
+    saved_variants_by_family = _get_saved_known_gene_variants_by_family(projects_by_guid.values())
+
+    # Handle compound het genes
+    compound_het_gene_id_by_family = {}
+    for family_guid, saved_variants in saved_variants_by_family.items():
+        if len(saved_variants) > 1:
+            potential_compound_het_variants = [
+                variant for variant in saved_variants if all(gen['numAlt'] < 2 for gen in variant['genotypes'].values())
+            ]
+            main_gene_ids = {_get_variant_main_transcript(variant)['geneId'] for variant in potential_compound_het_variants}
+            if len(main_gene_ids) > 1:
+                # This occurs in compound hets where some hits have a primary transcripts in different genes
+                for gene_id in main_gene_ids:
+                    if all(gene_id in variant['transcripts'] for variant in potential_compound_het_variants):
+                        compound_het_gene_id_by_family[family_guid] = gene_id
+
+    rows = _get_json_for_individuals(list(individuals), project_guid=project_guid, family_fields=['family_id', 'coded_phenotype'])
+
+    gene_ids = set()
+    for row in rows:
+        row['Project_ID'] = projects_by_guid[row['projectGuid']].name
+
+        saved_variants = saved_variants_by_family[row['familyGuid']]
+        row['numSavedVariants'] = len(saved_variants)
+        for i, variant in enumerate(saved_variants):
+            main_transcript = _get_variant_main_transcript(variant)
+            genotype = variant['genotypes'].get(row['individualGuid'], {})
+            if genotype.get('numAlt', -1) > 0:
+                gene_id = compound_het_gene_id_by_family.get(row['familyGuid']) or main_transcript['geneId']
+                gene_ids.add(gene_id)
+                variant_fields = {
+                    'Zygosity': 'heterozygous' if genotype['numAlt'] == 1 else 'homozygous',
+                    'Chrom': variant['chrom'],
+                    'Pos': variant['pos'],
+                    'Ref': variant['ref'],
+                    'Alt': variant['alt'],
+                    'hgvsc': main_transcript['hgvsc'],
+                    'hgvsp': main_transcript['hgvsp'],
+                    'Transcript': main_transcript['transcriptId'],
+                    'geneId': gene_id,
+                }
+                row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_fields.items()})
+
+    genes_by_id = get_genes(gene_ids)
+    for row in rows:
+        for key, gene_id in row.items():
+            if key.startswith('geneId') and genes_by_id.get(gene_id):
+                row[key.replace('geneId', 'Gene')] = genes_by_id[gene_id]['geneSymbol']
+
+    return create_json_response({'sampleMetadataRows': rows})
+
+
 def _get_variant_main_transcript(variant):
     main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
     if not main_transcript_id:

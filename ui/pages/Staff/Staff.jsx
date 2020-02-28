@@ -16,6 +16,7 @@ import SuccessStory from './components/SuccessStory'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
+import SampleMetadata from './components/SampleMetadata'
 import SampleQc from './components/SampleQc'
 import SavedVariants from './components/SavedVariants'
 import SeqrStats from './components/SeqrStats'
@@ -32,6 +33,7 @@ const STAFF_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
+  { path: 'sample_metadata', params: '/:projectGuid?', component: SampleMetadata },
   { path: 'sample_qc', component: SampleQc },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats', component: SeqrStats },
