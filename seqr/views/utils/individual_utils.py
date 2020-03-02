@@ -9,7 +9,7 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Sample, Individual
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.phenotips_utils import delete_phenotips_patient, PhenotipsException
-from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.export_utils import export_table
 
 
 logger = logging.getLogger(__name__)

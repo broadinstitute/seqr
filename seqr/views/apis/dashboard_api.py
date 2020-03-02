@@ -8,7 +8,7 @@ from django.db import models
 from django.contrib.auth.decorators import login_required
 
 from seqr.models import ProjectCategory, Sample, Family
-from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view

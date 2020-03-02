@@ -1,8 +1,10 @@
 import datetime
 from collections import OrderedDict
+import csv
 import json
 import openpyxl as xl
 from tempfile import NamedTemporaryFile
+import zipfile
 
 from django.http.response import HttpResponse
 
@@ -82,20 +84,17 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             raise ValueError("Invalid file_format: %s" % file_format)
 
 
-# def export_samples(filename_prefix, samples, file_format):
-#     """Export Projects table.
-#
-#     Args:
-#         filename_prefix (string): Filename wihtout
-#         samples (list): List of Django Sample objects to include in the table
-#         file_format (string): "xls" or "tsv"
-#
-#     Returns:
-#         Django HttpResponse object with the table data as an attachment.
-#     """
-#     header = []
-#     header.extend([
-#         'sample_id',
-#         'created_date',
-#     ])
-
+def export_multiple_files(files, zip_filename, file_format='csv'):
+    with NamedTemporaryFile() as temp_file:
+        with zipfile.ZipFile(temp_file, 'w') as zip_file:
+            for filename, header, rows in files:
+                if file_format == 'csv':
+                    content = ','.join(header) + '\n'
+                    content += '\n'.join([','.join([row.get(key, '') for key in header]) for row in rows])
+                else:
+                    raise ValueError('Invalid file_format: {}'.format(file_format))
+                zip_file.writestr('{}.{}'.format(filename, file_format), content)
+        temp_file.seek(0)
+        response = HttpResponse(temp_file, content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename)
+        return response
