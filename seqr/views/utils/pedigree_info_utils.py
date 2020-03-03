@@ -426,6 +426,8 @@ def _parse_datstat_export_format(rows):
 
 
 def _get_datstat_family_notes(row):
+    row = {k: unicode(v, errors='ignore') for k, v in row.items()}
+
     DC = DatstatConstants
 
     def _get_column_val(column):
@@ -445,7 +447,7 @@ def _get_datstat_family_notes(row):
 
         relatives = json.loads(row[col_config[DC.RELATIVES_KEY]]) if row[col_config[DC.RELATIVES_KEY]] else None
 
-        return u'{name}. Year: {year}, Lab: {lab}, Relatives: {relatives}{other_relatives}'.format(
+        return '{name}. Year: {year}, Lab: {lab}, Relatives: {relatives}{other_relatives}'.format(
             name=name,
             year=row[col_config[DC.YEAR_KEY]] or 'unspecified',
             lab=row[col_config[DC.LAB_KEY]] or 'unspecified',
@@ -531,11 +533,11 @@ def _get_datstat_family_notes(row):
         if _has_test(DC.WGS_TEST):
             all_tests.append(_test_summary(DC.WGS_TEST, 'Whole genome sequencing'))
         if _has_test(DC.OTHER_TEST):
-            all_tests.append(u'Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN] or 'Unspecified'))
+            all_tests.append('Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN] or 'Unspecified'))
 
-        testing = u'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join(all_tests))
+        testing = 'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join(all_tests))
 
-    return u"""#### Clinical Information
+    return """#### Clinical Information
 {tab} __Patient is my:__ {specified_relationship}{relationship}
 {tab} __Current Age:__ {age}
 {tab} __Age of Onset:__ {age_of_onset}
@@ -562,7 +564,7 @@ def _get_datstat_family_notes(row):
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if relationship_code == DC.OTHER_RELATIONSHIP_CODE else '',
         relationship=DC.RELATIONSHIP_MAP[relationship_code][_get_column_val(DC.SEX_COLUMN)],
-        age=u'Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
+        age='Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
             sample_availability=_get_column_val(DC.SAMPLE_AVAILABILITY_COLUMN),
@@ -572,18 +574,18 @@ def _get_datstat_family_notes(row):
         ethnicity=_get_column_val(DC.ETHNICITY_COLUMN),
         description=row[DC.DESCRIPTION_COLUMN],
         clinical_diagnoses=clinical_diagnoses,
-        clinical_diagnoses_specify=u'; {}'.format(row[DC.CLINICAL_DIAGNOSES_SPECIFY_COLUMN]) if clinical_diagnoses == 'Yes' else '',
+        clinical_diagnoses_specify='; {}'.format(row[DC.CLINICAL_DIAGNOSES_SPECIFY_COLUMN]) if clinical_diagnoses == 'Yes' else '',
         genetic_diagnoses=genetic_diagnoses,
-        genetic_diagnoses_specify=u'; {}'.format(row[DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN]) if genetic_diagnoses == 'Yes' else '',
+        genetic_diagnoses_specify='; {}'.format(row[DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN]) if genetic_diagnoses == 'Yes' else '',
         website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
         info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
         physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if _get_column_val(DC.HAS_DOCTOR_COLUMN) == DC.YES else 'None',
         doctors=', '.join(doctors_list).replace('ClinGen', 'Clinical geneticist'),
-        other_doctors=u': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
+        other_doctors=': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
         testing=testing,
         biopses='None' if (_get_column_val(DC.NO_BIOPSY_COLUMN) == DC.YES or not row[DC.BIOPSY_COLUMN]) else _get_list_column_val(DC.BIOPSY_COLUMN),
-        other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in row[DC.BIOPSY_COLUMN] else '',
-        studies=u'Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
+        other_biopses=': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in row[DC.BIOPSY_COLUMN] else '',
+        studies='Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
             study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=_get_column_val(DC.EXPECTING_RESULTS_COLUMN) if row[DC.EXPECTING_RESULTS_COLUMN] else 'Unspecified',
         ) if _get_column_val(DC.HAS_OTHER_STUDIES_COLUMN) == DC.YES else 'No',
