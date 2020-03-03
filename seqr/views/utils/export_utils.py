@@ -1,6 +1,5 @@
 import datetime
 from collections import OrderedDict
-import csv
 import json
 import openpyxl as xl
 from tempfile import NamedTemporaryFile
@@ -69,7 +68,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
                 if isinstance(row, dict):
                     row = [row[column_key] for column_key in column_keys]
                 ws.append(row)
-            except ValueError as e:
+            except ValueError:
                 raise ValueError("Unable to append row to xls writer: " + ','.join(row))
         with NamedTemporaryFile() as temporary_file:
             wb.save(temporary_file.name)
