@@ -50,6 +50,9 @@ export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
 const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
 const CASE_REVIEW_STATUS_WAITLIST = 'W'
 const CASE_REVIEW_STATUS_NMI_REVIEW = 'N'
+const CASE_REVIEW_STATUS_LOST = 'L'
+const CASE_REVIEW_STATUS_INACTIVE = 'V'
+
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -60,6 +63,8 @@ export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
   { value: CASE_REVIEW_STATUS_NMI_REVIEW,                  name: 'NMI Review',            color: '#3827c1' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
+  { value: CASE_REVIEW_STATUS_LOST,                        name: 'Lost To Follow-Up',     color: '#eb7f2f' },
+  { value: CASE_REVIEW_STATUS_INACTIVE,                    name: 'Inactive',              color: '#6c6d85' },
 ]
 
 export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(

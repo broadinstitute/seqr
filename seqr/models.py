@@ -317,6 +317,8 @@ class Individual(ModelWithGUID):
         ('P', 'Pending Results and Records'),
         ('N', 'NMI Review'),
         ('W', 'Waitlist'),
+        ('L', 'Lost To Follow-Up'),
+        ('V', 'Inactive'),
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
