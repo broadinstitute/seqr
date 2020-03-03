@@ -96,7 +96,7 @@ def add_variants_dataset_handler(request, project_guid):
             raise Exception(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
                     ', '.join(sorted(
-                        ['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                        ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
                          for family, missing_indivs in missing_family_individuals.items()]
                     ))))
 
