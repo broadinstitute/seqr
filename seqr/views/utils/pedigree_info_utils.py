@@ -437,7 +437,7 @@ def _get_datstat_family_notes(row):
         return val_code
 
     def _get_list_column_val(column):
-        return ', '.join([DC.VALUE_MAP[column][raw_val.split(':')[0]] for raw_val in row[column].split(',')])
+        return ', '.join([DC.VALUE_MAP[column][raw_val] for raw_val in row[column].split(':')[0].split(',')])
 
     def _has_test(test):
         return _get_column_val('TESTS.{}'.format(test)) == DC.YES
