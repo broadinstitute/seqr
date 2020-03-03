@@ -488,6 +488,7 @@ def _get_datstat_family_notes(row):
             return 'None'
 
         def _bool_condition_val(val, display, unknown_display):
+            val = val or ''
             if val.upper() == 'YES':
                 return display
             elif val.upper() == 'NO':
