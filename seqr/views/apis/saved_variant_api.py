@@ -12,7 +12,8 @@ from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
+    _get_json_for_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
@@ -47,7 +48,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     variants = response['savedVariantsByGuid'].values()
     genes = _saved_variant_genes(variants)
-    _add_locus_lists([project], variants, genes)
+    response['locusListsByGuid'] = _add_locus_lists([project], genes)
     discovery_tags = response.pop('discoveryTags', None)
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
@@ -345,29 +346,21 @@ def _saved_variant_genes(variants):
     return genes
 
 
-def _add_locus_lists(projects, variants, genes):
+def _add_locus_lists(projects, genes, include_all_lists=False):
     locus_lists = LocusList.objects.filter(projects__in=projects)
-    for variant in variants:
-        if isinstance(variant, list):
-            for compound_het in variant:
-                compound_het['locusListGuids'] = []
-        else:
-            variant['locusListGuids'] = []
 
-    locus_list_intervals_by_chrom = defaultdict(list)
-    for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists).select_related('locus_list'):
-        locus_list_intervals_by_chrom[interval.chrom].append(interval)
-    if locus_list_intervals_by_chrom:
-        for variant in variants:
-            for interval in locus_list_intervals_by_chrom[variant['chrom']]:
-                pos = variant['pos'] if variant['genomeVersion'] == interval.genome_version else variant['liftedOverPos']
-                if pos and interval.start <= int(pos) <= interval.end:
-                    variant['locusListGuids'].append(interval.locus_list.guid)
+    if include_all_lists:
+        locus_lists_by_guid = {locus_list.guid: {'intervals': []} for locus_list in locus_lists}
+    else:
+        locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
+    intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
+    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
+        locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
 
     for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
         genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
 
-    return [locus_list.guid for locus_list in locus_lists]
+    return locus_lists_by_guid
 
 
 def _add_discovery_tags(variants, discovery_tags):

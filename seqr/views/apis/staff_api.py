@@ -1078,7 +1078,7 @@ def saved_variants_page(request, tag):
 
     saved_variants = response_json['savedVariantsByGuid'].values()
     genes = _saved_variant_genes(saved_variants)
-    locus_list_guids = _add_locus_lists(project_models_by_guid.values(), saved_variants, genes)
+    locus_lists_by_guid = _add_locus_lists(project_models_by_guid.values(), genes, include_all_lists=True)
 
     projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
     functional_tag_types = get_json_for_variant_functional_data_tag_types()
@@ -1093,15 +1093,15 @@ def saved_variants_page(request, tag):
         project_variant_tags = [
             vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
         project_json.update({
-            'locusListGuids': locus_list_guids,
+            'locusListGuids': locus_lists_by_guid.keys(),
             'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
             'variantFunctionalTagTypes': functional_tag_types,
         })
 
     families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
     individuals_json = _get_json_for_individuals(individuals, user=request.user)
-    locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in
-                           get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_list_guids), request.user)}
+    for locus_list in get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_lists_by_guid.keys()), request.user):
+        locus_lists_by_guid[locus_list['locusListGuid']].update(locus_list)
 
     response_json.update({
         'genesById': genes,

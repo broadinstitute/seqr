@@ -136,11 +136,11 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
   }
 
   return (
-    <StyledVariantRow key={variants.map(v => v.variantId).join()} >
+    <StyledVariantRow>
       <VerticalSpacer height={16} />
       {variants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants.map(v => v.variantId).join()} />
+          <FamilyVariantTags familyGuid={familyGuid} variant={variants} />
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
@@ -163,8 +163,8 @@ CompoundHets.propTypes = {
 const Variants = React.memo(({ variants, ...props }) => (
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant => (Array.isArray(variant) ?
-      <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} {...props} /> :
-      <Variant variant={variant} key={variant.variantId} {...props} />
+      <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} {...props} /> :
+      <Variant variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
     ))}
   </Grid>
 ))

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getFamiliesLocusListIntervalsByChrom } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -145,6 +145,33 @@ const mapStateToProps = (state, ownProps) => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
+const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) => {
+  if (!locusListIntervals || locusListIntervals.length < 1) {
+    return null
+  }
+  const { pos, genomeVersion, liftedOverPos } = variant
+  const locusListGuids = locusListIntervals.filter((interval) => {
+    const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
+    if (!variantPos) {
+      return false
+    }
+    return (variantPos >= interval.start) && (variantPos <= interval.end)
+  }).map(({ locusListGuid }) => locusListGuid)
+
+  return <LocusListLabels locusListGuids={locusListGuids} />
+})
+
+BaseVariantLocusListLabels.propTypes = {
+  locusListIntervals: PropTypes.array,
+  variant: PropTypes.object,
+}
+
+const mapLocusListStateToProps = (state, ownProps) => ({
+  locusListIntervals: getFamiliesLocusListIntervalsByChrom(state, ownProps)[ownProps.variant.chrom],
+})
+
+const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
+
 const Annotations = React.memo(({ variant }) => {
   const { rsid } = variant
   const mainTranscript = getVariantMainTranscript(variant)
@@ -221,7 +248,7 @@ const Annotations = React.memo(({ variant }) => {
         )
       }
       <VerticalSpacer height={5} />
-      <LocusListLabels locusListGuids={variant.locusListGuids} />
+      <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>

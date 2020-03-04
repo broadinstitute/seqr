@@ -87,7 +87,7 @@ class SavedVariantAPITest(TransactionTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
-            'familiesByGuid',
+            'familiesByGuid', 'locusListsByGuid',
         })
 
         variants = response_json['savedVariantsByGuid']
@@ -97,7 +97,7 @@ class SavedVariantAPITest(TransactionTestCase):
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
             'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
-            'transcripts', 'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
+            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variant.keys()), fields)
@@ -149,7 +149,8 @@ class SavedVariantAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById'
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+            'genesById', 'locusListsByGuid',
         })
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
