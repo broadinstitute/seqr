@@ -204,11 +204,61 @@ INHERITANCE_MODE_MAP = {
 def anvil_export(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
-    project_phentoypes = '|'.join([
-        category.name for category in project.projectcategory_set.filter(name__in=PHENOTYPE_PROJECT_CATEGORIES)
-    ])
+    individual_samples = _get_loaded_before_date_project_individual_samples(
+        [project], datetime.now() - timedelta(days=365),
+    )
 
-    individual_samples = _get_loaded_before_date_project_individual_samples([project])
+    subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
+        individual_samples, lambda feature: feature['id'].replace('HP:', ''), project=project)
+
+    variant_columns = []
+    for i in range(max_saved_variants):
+        variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
+
+    return export_multiple_files([
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
+        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
+    ], '{}_AnVIL_Metadata'.format(project.name))
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def sample_metadata_export(request, project_guid):
+    if project_guid == 'all':
+        project_guid = None
+
+    if project_guid:
+        projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
+    else:
+        projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='cmg')}
+
+    mme_family_guids = {family.guid for family in _get_has_mme_submission_families(projects_by_guid.values())}
+
+    loaded_before = request.GET.get('loadedBefore')
+    if loaded_before:
+        loaded_before = datetime.strptime(loaded_before, '%Y-%m-%d')
+    individual_samples = _get_loaded_before_date_project_individual_samples(projects_by_guid.values(), loaded_before)
+
+    subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
+        individual_samples, lambda feature: '{} ({})'.format(feature['id'], feature.get('label', ''))
+    )
+
+    rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
+    for rows in [sample_rows, family_rows, discovery_rows]:
+        for row in rows:
+            rows_by_subject_id[row['subject_id']].update(row)
+
+    rows = rows_by_subject_id.values()
+    for row in rows:
+        row['MME'] = 'Y' if row['family_guid'] in mme_family_guids else 'N'
+        if row['ancestry_detail']:
+            row['ancestry'] = row['ancestry_detail']
+
+    return create_json_response({'sampleMetadataRows': rows})
+
+
+def _parse_anvil_metadata(individual_samples, format_feature, project=None):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     for individual, sample in individual_samples.items():
@@ -222,7 +272,7 @@ def anvil_export(request, project_guid):
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
         )
 
-    saved_variants_by_family = _get_saved_known_gene_variants_by_family(families=samples_by_family.keys())
+    saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -254,32 +304,58 @@ def anvil_export(request, project_guid):
 
     genes_by_id = get_genes(gene_ids)
 
+    mim_numbers = set()
+    for family in samples_by_family.keys():
+        if family.post_discovery_omim_number:
+            mim_numbers.update(family.post_discovery_omim_number.split(','))
     mim_decription_map = {
-        str(o.phenotype_mim_number): o.phenotype_description for o in Omim.objects.filter(phenotype_mim_number__in={
-            f.post_discovery_omim_number for f in samples_by_family.keys() if f.post_discovery_omim_number
-        })
+        str(o.phenotype_mim_number): o.phenotype_description
+        for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
     }
+
+    if project:
+        project_families = {project: samples_by_family.keys()}
+    else:
+        project_families = defaultdict(list)
+        for family in samples_by_family.keys():
+            project_families[family.project].append(family)
+
+    family_project_details = {}
+    for project, families in project_families.items():
+        project_phenotypes = '|'.join([
+            category.name for category in project.projectcategory_set.filter(name__in=PHENOTYPE_PROJECT_CATEGORIES)
+        ])
+        for family in families:
+            family_project_details[family] = {
+                'project_id': project.name,
+                'project_guid': project.guid,
+                'phenotype_group': project_phenotypes,
+            }
 
     subject_rows = []
     sample_rows = []
     family_rows = []
     discovery_rows = []
     for family, family_samples in samples_by_family.items():
+        saved_variants = saved_variants_by_family[family.guid]
+
         family_subject_row = {
-            'project_id': project.name,
+            'family_guid': family.guid,
             'pmid_id': family.pubmed_ids[0].replace('PMID:', '').strip() if family.pubmed_ids else '',
-            'phenotype_group': project_phentoypes,
             'phenotype_description': (family.coded_phenotype or '').replace(',', ';'),
+            'num_saved_variants': len(saved_variants),
         }
+        family_subject_row.update(family_project_details[family])
         if family.post_discovery_omim_number:
+            mim_numbers = family.post_discovery_omim_number.split(',')
             family_subject_row.update({
-                'disease_id': 'OMIM:{}'.format(family.post_discovery_omim_number),
-                'disease_description': mim_decription_map.get(family.post_discovery_omim_number, '').replace(',', ';'),
+                'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
+                'disease_description': ';'.join([
+                    mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
         affected_individual_guids, _ = family_individual_affected_guids[family.guid]
 
-        saved_variants = saved_variants_by_family[family.guid]
         parsed_variants = []
         for variant in saved_variants:
             gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
@@ -308,9 +384,9 @@ def anvil_export(request, project_guid):
             features_absent = []
             for feature in phenotips_data.get('features', []):
                 if feature.get('observed') == 'yes':
-                    features_present.append(feature['id'].replace('HP:', ''))
+                    features_present.append(format_feature(feature))
                 elif feature.get('observed') == 'no':
-                    features_absent.append(feature['id'].replace('HP:', ''))
+                    features_absent.append(format_feature(feature))
 
             subject_row = {
                 'subject_id': individual.individual_id,
@@ -350,7 +426,7 @@ def anvil_export(request, project_guid):
                 family_row['family_history'] = 'Yes'
             family_rows.append(family_row)
 
-            discovery_row = {}
+            discovery_row = {'subject_id': individual.individual_id, 'sample_id': sample.sample_id}
             for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
                 genotype = genotypes.get(individual.guid, {})
                 if genotype.get('numAlt', -1) > 0:
@@ -359,85 +435,9 @@ def anvil_export(request, project_guid):
                     }
                     variant_discovery_row.update(parsed_variant)
                     discovery_row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_discovery_row.items()})
-            if discovery_row:
-                discovery_row.update({'subject_id': individual.individual_id, 'sample_id': sample.sample_id})
-                discovery_rows.append(discovery_row)
+            discovery_rows.append(discovery_row)
 
-    variant_columns = []
-    for i in range(max_saved_variants):
-        variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
-
-    return export_multiple_files([
-        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
-        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
-        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], '{}_AnVIL_Metadata'.format(project.name))
-
-
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def sample_metadata_export(request, project_guid):
-    if project_guid == 'all':
-        project_guid = None
-
-    if project_guid:
-        projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
-    else:
-        projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='anvil')}
-
-    individuals = list(_get_loaded_before_date_project_individual_samples(
-        projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore')).keys())
-
-    saved_variants_by_family = _get_saved_known_gene_variants_by_family(projects=projects_by_guid.values())
-
-    # Handle compound het genes
-    compound_het_gene_id_by_family = {}
-    for family_guid, saved_variants in saved_variants_by_family.items():
-        if len(saved_variants) > 1:
-            potential_compound_het_variants = [
-                variant for variant in saved_variants if all(gen['numAlt'] < 2 for gen in variant['genotypes'].values())
-            ]
-            main_gene_ids = {_get_variant_main_transcript(variant)['geneId'] for variant in potential_compound_het_variants}
-            if len(main_gene_ids) > 1:
-                # This occurs in compound hets where some hits have a primary transcripts in different genes
-                for gene_id in main_gene_ids:
-                    if all(gene_id in variant['transcripts'] for variant in potential_compound_het_variants):
-                        compound_het_gene_id_by_family[family_guid] = gene_id
-
-    rows = _get_json_for_individuals(list(individuals), project_guid=project_guid, family_fields=['family_id', 'coded_phenotype'])
-
-    gene_ids = set()
-    for row in rows:
-        row['Project_ID'] = projects_by_guid[row['projectGuid']].name
-
-        saved_variants = saved_variants_by_family[row['familyGuid']]
-        row['numSavedVariants'] = len(saved_variants)
-        for i, variant in enumerate(saved_variants):
-            main_transcript = _get_variant_main_transcript(variant)
-            genotype = variant['genotypes'].get(row['individualGuid'], {})
-            if genotype.get('numAlt', -1) > 0:
-                gene_id = compound_het_gene_id_by_family.get(row['familyGuid']) or main_transcript['geneId']
-                gene_ids.add(gene_id)
-                variant_fields = {
-                    'Zygosity': 'heterozygous' if genotype['numAlt'] == 1 else 'homozygous',
-                    'Chrom': variant['chrom'],
-                    'Pos': variant['pos'],
-                    'Ref': variant['ref'],
-                    'Alt': variant['alt'],
-                    'hgvsc': main_transcript['hgvsc'],
-                    'hgvsp': main_transcript['hgvsp'],
-                    'Transcript': main_transcript['transcriptId'],
-                    'geneId': gene_id,
-                }
-                row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_fields.items()})
-
-    genes_by_id = get_genes(gene_ids)
-    for row in rows:
-        for key, gene_id in row.items():
-            if key.startswith('geneId') and genes_by_id.get(gene_id):
-                row[key.replace('geneId', 'Gene')] = genes_by_id[gene_id]['geneSymbol']
-
-    return create_json_response({'sampleMetadataRows': rows})
+    return subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants
 
 
 def _get_variant_main_transcript(variant):
@@ -450,31 +450,25 @@ def _get_variant_main_transcript(variant):
             return main_transcript
 
 
-def _get_loaded_before_date_project_individual_samples(projects, loaded_before=None):
-    if loaded_before:
-        max_loaded_date = datetime.strptime(loaded_before, '%Y-%m-%d')
-    else:
-        max_loaded_date = datetime.now() - timedelta(days=365)
+def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         loaded_date__isnull=False,
-        loaded_date__lte=max_loaded_date,
     ).select_related('individual__family__project').order_by('-loaded_date')
+    if max_loaded_date:
+        loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual
     return {sample.individual: sample for sample in loaded_samples}
 
 
-def _get_saved_known_gene_variants_by_family(projects=None, families=None):
+def _get_saved_known_gene_variants_by_family(families):
     tag_type = VariantTagType.objects.get(name='Known gene for phenotype')
 
-    project_saved_variants = SavedVariant.objects.select_related('family').filter(varianttag__variant_tag_type=tag_type)
-    if projects:
-        project_saved_variants = project_saved_variants.filter(family__project__in=projects)
-    elif families:
-        project_saved_variants = project_saved_variants.filter(family__in=families)
-    else:
-        raise ValueError('Invalid usage: families or projects is required')
+    project_saved_variants = SavedVariant.objects.select_related('family').filter(
+        varianttag__variant_tag_type=tag_type,
+        family__in=families,
+    )
 
     project_saved_variants_json = get_json_for_saved_variants(project_saved_variants, add_details=True)
 
@@ -620,7 +614,7 @@ def discovery_sheet(request, project_guid):
 
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
     saved_variants_by_family = _get_saved_discovery_variants_by_family(project)
-    mme_submission_families = _get_has_mme_submission_families(project)
+    mme_submission_families = _get_has_mme_submission_families([project])
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: %s" % project)
@@ -716,10 +710,10 @@ def _get_saved_discovery_variants_by_family(project):
     return saved_variants_by_family
 
 
-def _get_has_mme_submission_families(project):
+def _get_has_mme_submission_families(projects):
     return {
         submission.individual.family for submission in MatchmakerSubmission.objects.filter(
-            individual__family__project=project,
+            individual__family__project__in=projects,
         ).select_related('individual__family')
     }
 

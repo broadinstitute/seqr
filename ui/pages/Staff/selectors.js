@@ -2,7 +2,7 @@ import { formValueSelector } from 'redux-form'
 import { createSelector } from 'reselect'
 
 import {
-  CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMN_FORMATS, STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS,
+  CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS,
 } from './constants'
 
 export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
@@ -29,16 +29,10 @@ export const getQcUploadStats = state => state.qcUploadStats
 export const getSampleMetadataColumns = createSelector(
   getSampleMetadataRows,
   (rawData) => {
-    const maxSavedVariants = Math.max(1, ...rawData.map(({ numSavedVariants }) => numSavedVariants))
+    const maxSavedVariants = Math.max(1, ...rawData.map(row => row.num_saved_variants))
     return CORE_ANVIL_COLUMNS.concat(
-      ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map((col) => {
-        const colName = `${col}-${i + 1}`
-        return {
-          name: colName,
-          content: colName,
-          format: VARIANT_ANVIL_COLUMN_FORMATS[col] && (row => VARIANT_ANVIL_COLUMN_FORMATS[col](row[colName])),
-        }
-      })))
+      ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map(col => ({ name: `${col}-${i + 1}` }))),
+    ).map(({ name, ...props }) => ({ name, content: name, ...props }))
   },
 )
 

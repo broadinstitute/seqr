@@ -64,7 +64,7 @@ Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
 }
 
-export const parseHgvs = hgvs => (hgvs || '').split(':').pop()
+const parseHgvs = hgvs => (hgvs || '').split(':').pop()
 
 export const ProteinSequence = React.memo(({ hgvs }) =>
   <Sequence color="black" sequence={parseHgvs(hgvs)} />,
