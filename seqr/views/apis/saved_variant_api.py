@@ -355,7 +355,7 @@ def _add_locus_lists(projects, variants, genes):
             variant['locusListGuids'] = []
 
     locus_list_intervals_by_chrom = defaultdict(list)
-    for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
+    for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists).select_related('locus_list'):
         locus_list_intervals_by_chrom[interval.chrom].append(interval)
     if locus_list_intervals_by_chrom:
         for variant in variants:
