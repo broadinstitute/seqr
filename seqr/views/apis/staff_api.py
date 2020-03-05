@@ -150,7 +150,7 @@ def seqr_stats(request):
 SUBJECT_TABLE_COLUMNS = [
     'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id',
     'multiple_datasets', 'sex', 'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group',
-    'disease_id', 'disease_description', 'affected_status', 'congenital_status', 'age_of_onset', 'hpo_present',
+    'disease_id', 'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
     'hpo_absent', 'phenotype_description', 'solve_state',
 ]
 SAMPLE_TABLE_COLUMNS = [
@@ -209,7 +209,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        individual_samples, lambda feature: feature['id'].replace('HP:', ''), project=project)
+        individual_samples, lambda feature: feature['id'], project=project)
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -387,13 +387,15 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                     features_present.append(format_feature(feature))
                 elif feature.get('observed') == 'no':
                     features_absent.append(format_feature(feature))
-
+            onset = phenotips_data.get('global_age_of_onset')
+            
             subject_row = {
                 'subject_id': individual.individual_id,
                 'sex': Individual.SEX_LOOKUP[individual.sex],
                 'ancestry': ANCESTRY_MAP.get(individual.population, ''),
                 'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
                 'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
+                'onset_category': onset[0]['label'] if onset else 'Unknown',
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
