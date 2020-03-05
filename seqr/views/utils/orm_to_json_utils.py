@@ -91,24 +91,6 @@ def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
-def get_json_for_sample_dict(sample_dict):
-    """Returns a JSON representation of the given Sample dictionary.
-
-        Args:
-            sample (object): dictionary representation for the Sample.
-        Returns:
-            dict: json object
-        """
-    result = {_to_camel_case(field): sample_dict.get('sample_{}'.format(field)) for field in Sample._meta.json_fields}
-
-    result.update({
-        'projectGuid': sample_dict['project_guid'],
-        'individualGuid': sample_dict['individual_guid'],
-        'sampleGuid': result.pop('guid'),
-    })
-    return result
-
-
 def _get_json_for_user(user):
     """Returns JSON representation of the given User object
 
@@ -624,18 +606,6 @@ def get_json_for_gene_notes(notes, user):
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
-
-
-def get_json_for_gene_note(note, user):
-    """Returns a JSON representation of the given gene note.
-
-    Args:
-        note (object): Django model for the GeneNote.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(note, user=user, get_json_for_models=get_json_for_gene_notes)
 
 
 def get_json_for_gene_notes_by_gene_id(gene_ids, user):

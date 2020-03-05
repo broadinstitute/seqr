@@ -11,22 +11,8 @@ from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub,
     INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS
 
 
-MME_INDIVIDUAL_ID = 'IND_012'
-
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
-FAMILY_GUID = 'F000001_1'
-ANALYSIS_GROUP_GUID = 'AG0000183_test_group'
-
-
-def find_mme_matches(search):
-    return [{
-        'insertion_date': '2018-07-01',
-        'project_id': search['project_id'],
-        'family_id': search.get('family_id'),
-        'seqr_id': MME_INDIVIDUAL_ID,
-        'submitted_data': {},
-    }]
 
 
 class ProjectAPITest(TestCase):
