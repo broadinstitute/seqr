@@ -27,23 +27,6 @@ const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 
 
 // Data actions
-
-export const loadSampleMetadata = (projectGuid, filterValues) => {
-  return (dispatch) => {
-    if (projectGuid) {
-      dispatch({ type: REQUEST_SAMPLE_METADATA })
-      new HttpRequestHelper(`/api/staff/sample_metadata/${projectGuid}`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_SAMPLE_METADATA, newValue: responseJson.sampleMetadataRows })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SAMPLE_METADATA, error: e.message, newValue: [] })
-        },
-      ).get(filterValues)
-    }
-  }
-}
-
 export const loadElasticsearchStatus = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })
@@ -73,19 +56,19 @@ export const loadMme = () => {
   }
 }
 
-export const loadDiscoverySheet = (projectGuid) => {
+const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => {
   return (dispatch) => {
     if (projectGuid === 'all') {
-      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+      dispatch({ type: requestAction })
 
       const errors = new Set()
       const rows = []
       new HttpRequestHelper('/api/staff/projects_for_category/CMG',
         (projectsResponseJson) => {
           Promise.all(projectsResponseJson.projectGuids.map(cmgProjectGuid =>
-            new HttpRequestHelper(`/api/staff/discovery_sheet/${cmgProjectGuid}`,
+            new HttpRequestHelper(`/api/staff/${urlPath}/${cmgProjectGuid}`,
               (responseJson) => {
-                if (responseJson.errors.length) {
+                if (responseJson.errors && responseJson.errors.length) {
                   console.log(responseJson.errors)
                 }
                 rows.push(...responseJson.rows)
@@ -93,33 +76,37 @@ export const loadDiscoverySheet = (projectGuid) => {
               e => errors.add(e.message),
             ).get(),
           )).then(() => {
-            if (errors.length) {
-              dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: [...errors].join(', '), newValue: [] })
+            if (errors.size) {
+              dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })
             } else {
-              dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: rows })
+              dispatch({ type: receiveAction, newValue: rows })
             }
           })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+          dispatch({ type: receiveAction, error: e.message, newValue: [] })
         },
-      ).get()
+      ).get(filterValues)
     }
 
     else if (projectGuid) {
-      dispatch({ type: REQUEST_DISCOVERY_SHEET })
-      new HttpRequestHelper(`/api/staff/discovery_sheet/${projectGuid}`,
+      dispatch({ type: requestAction })
+      new HttpRequestHelper(`/api/staff/${urlPath}/${projectGuid}`,
         (responseJson) => {
           console.log(responseJson.errors)
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: responseJson.rows })
+          dispatch({ type: receiveAction, newValue: responseJson.rows })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+          dispatch({ type: receiveAction, error: e.message, newValue: [] })
         },
-      ).get()
+      ).get(filterValues)
     }
   }
 }
+
+export const loadDiscoverySheet = loadMultiProjectData(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET, 'discovery_sheet')
+
+export const loadSampleMetadata = loadMultiProjectData(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA, 'sample_metadata')
 
 export const loadSuccessStory = (successStoryTypes) => {
   return (dispatch) => {

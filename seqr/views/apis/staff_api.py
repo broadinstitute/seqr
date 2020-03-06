@@ -206,11 +206,11 @@ def anvil_export(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
-        [project], datetime.now() - timedelta(days=365),
+        project, datetime.now() - timedelta(days=365),
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        individual_samples, lambda feature: feature['id'], project=project)
+        project, individual_samples, lambda feature: feature['id'])
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -226,24 +226,18 @@ def anvil_export(request, project_guid):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def sample_metadata_export(request, project_guid):
-    if project_guid == 'all':
-        project_guid = None
+    project = Project.objects.get(guid=project_guid)
 
-    if project_guid:
-        projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
-    else:
-        projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='cmg')}
-
-    mme_family_guids = {family.guid for family in _get_has_mme_submission_families(projects_by_guid.values())}
+    mme_family_guids = {family.guid for family in _get_has_mme_submission_families(project)}
 
     loaded_before = request.GET.get('loadedBefore')
     if loaded_before:
         loaded_before = datetime.strptime(loaded_before, '%Y-%m-%d')
 
-    individual_samples = _get_loaded_before_date_project_individual_samples(projects_by_guid.values(), loaded_before)
+    individual_samples = _get_loaded_before_date_project_individual_samples(project, loaded_before)
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
-        individual_samples, lambda feature: '{} ({})'.format(feature['id'], feature.get('label', ''))
+        project, individual_samples, lambda feature: '{} ({})'.format(feature['id'], feature.get('label', ''))
     )
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
@@ -257,10 +251,10 @@ def sample_metadata_export(request, project_guid):
         if row['ancestry_detail']:
             row['ancestry'] = row['ancestry_detail']
 
-    return create_json_response({'sampleMetadataRows': rows})
+    return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(individual_samples, format_feature, project=None):
+def _parse_anvil_metadata(project, individual_samples, format_feature):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -319,24 +313,13 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
     }
 
-    if project:
-        project_families = {project: samples_by_family.keys()}
-    else:
-        project_families = defaultdict(list)
-        for family in samples_by_family.keys():
-            project_families[family.project].append(family)
-
-    family_project_details = {}
-    for project, families in project_families.items():
-        project_phenotypes = '|'.join([
+    project_details = {
+        'project_id': project.name,
+        'project_guid': project.guid,
+        'phenotype_group': '|'.join([
             category.name for category in project.projectcategory_set.filter(name__in=PHENOTYPE_PROJECT_CATEGORIES)
-        ])
-        for family in families:
-            family_project_details[family] = {
-                'project_id': project.name,
-                'project_guid': project.guid,
-                'phenotype_group': project_phenotypes,
-            }
+        ]),
+    }
 
     subject_rows = []
     sample_rows = []
@@ -351,7 +334,7 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
             'phenotype_description': (family.coded_phenotype or '').replace(',', ';'),
             'num_saved_variants': len(saved_variants),
         }
-        family_subject_row.update(family_project_details[family])
+        family_subject_row.update(project_details)
         if family.post_discovery_omim_number:
             mim_numbers = family.post_discovery_omim_number.split(',')
             family_subject_row.update({
@@ -464,12 +447,12 @@ def _get_variant_main_transcript(variant):
             return main_transcript
 
 
-def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
+def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
     loaded_samples = Sample.objects.filter(
-        individual__family__project__in=projects,
+        individual__family__project=project,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         loaded_date__isnull=False,
-    ).select_related('individual__family__project').order_by('-loaded_date')
+    ).select_related('individual__family').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual
@@ -517,12 +500,13 @@ def _get_sample_airtable_metadata(sample_ids):
             record['Collaborator'] = collaborator
         sample_records[record.get('SeqrCollaboratorSampleID') or record['CollaboratorSampleID']] = record
 
-    collaborator_map = _fetch_airtable_records(
-        'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
-            ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
+    if collaborator_ids:
+        collaborator_map = _fetch_airtable_records(
+            'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
+                ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
 
-    for sample in sample_records.values():
-        sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
+        for sample in sample_records.values():
+            sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
 
     return sample_records
 
@@ -689,7 +673,7 @@ def discovery_sheet(request, project_guid):
 
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
     saved_variants_by_family = _get_saved_discovery_variants_by_family(project)
-    mme_submission_families = _get_has_mme_submission_families([project])
+    mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: %s" % project)
@@ -785,10 +769,10 @@ def _get_saved_discovery_variants_by_family(project):
     return saved_variants_by_family
 
 
-def _get_has_mme_submission_families(projects):
+def _get_has_mme_submission_families(project):
     return {
         submission.individual.family for submission in MatchmakerSubmission.objects.filter(
-            individual__family__project__in=projects,
+            individual__family__project=project,
         ).select_related('individual__family')
     }
 
@@ -952,7 +936,7 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
 
 def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, potential_compound_het_genes):
     inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
-        variant, affected_individual_guids, unaffected_individual_guids)
+        variant.saved_variant_json, affected_individual_guids, unaffected_individual_guids)
     variant.saved_variant_json['inheritance'] = inheritance_models
 
     for gene_id in potential_compound_het_gene_ids:
