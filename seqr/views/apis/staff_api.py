@@ -388,7 +388,7 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                 elif feature.get('observed') == 'no':
                     features_absent.append(format_feature(feature))
             onset = phenotips_data.get('global_age_of_onset')
-            
+
             subject_row = {
                 'subject_id': individual.individual_id,
                 'sex': Individual.SEX_LOOKUP[individual.sex],

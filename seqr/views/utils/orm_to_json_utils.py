@@ -13,7 +13,7 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
+from seqr.models import CAN_EDIT, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
