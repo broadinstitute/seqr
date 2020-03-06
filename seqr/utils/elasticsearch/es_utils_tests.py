@@ -2088,3 +2088,10 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }]}})
+
+        # Affected specified with no other inheritance
+        with self.assertRaises(Exception) as cm:
+            _genotype_inheritance_filter(None, {'affected': affected_status}, samples_by_id, {}, affected_status)
+        self.assertEqual(
+            cm.exception.message, 'Inheritance must be specified if custom affected status is set',
+        )
