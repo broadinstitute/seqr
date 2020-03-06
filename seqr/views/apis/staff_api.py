@@ -239,6 +239,7 @@ def sample_metadata_export(request, project_guid):
     loaded_before = request.GET.get('loadedBefore')
     if loaded_before:
         loaded_before = datetime.strptime(loaded_before, '%Y-%m-%d')
+
     individual_samples = _get_loaded_before_date_project_individual_samples(projects_by_guid.values(), loaded_before)
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
@@ -275,7 +276,7 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
         )
 
-    sample_airtable_metadata = _get_sample_airtable_metadata(sample_ids)
+    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
     saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
@@ -394,6 +395,9 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                     features_absent.append(format_feature(feature))
             onset = phenotips_data.get('global_age_of_onset')
 
+            airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
+            sequencing = airtable_metadata.get('SequencingProduct')
+
             subject_row = {
                 'subject_id': individual.individual_id,
                 'sex': Individual.SEX_LOOKUP[individual.sex],
@@ -404,9 +408,11 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
+                # TODO get mapping from katie which products are multiple
+                'multiple_datasets': 'Yes' if sequencing and (len(sequencing) > 1 or ',' in sequencing[0]) else 'No'
             }
             subject_row.update(family_subject_row)
-            # TODO 'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets' from airtable?
+            # TODO 'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id' from airtable?
             subject_rows.append(subject_row)
 
             sample_row = {
@@ -414,9 +420,9 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                 'sample_id': sample.sample_id,
                 'data_type': sample.sample_type,
                 'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-                'sample_provider': sample_airtable_metadata.get(sample.sample_id, {}).get('CollaboratorName') or '',
+                'sample_provider': airtable_metadata.get('CollaboratorName') or '',
             }
-            # TODO 'dbgap_sample_id', 'sample_provider' from airtable?
+            # TODO 'dbgap_sample_id' from airtable?
             sample_rows.append(sample_row)
 
             family_row = {
@@ -488,16 +494,23 @@ def _get_saved_known_gene_variants_by_family(families):
     return saved_variants_by_family
 
 
+MAX_FILTER_IDS = 500
+
+
 def _get_sample_airtable_metadata(sample_ids):
-    records = _fetch_airtable_records(
-        'Samples', fields=['Collaborator', 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SequencingProduct'],
-        filter_formula='OR({})'.format(','.join([
-            "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
-            for sample_id in sample_ids]))
-    ).values()
+    raw_records = {}
+    # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
+    for index in range(0, len(sample_ids), MAX_FILTER_IDS):
+        raw_records.update(_fetch_airtable_records(
+            'Samples',
+            fields=['Collaborator', 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SequencingProduct'],
+            filter_formula='OR({})'.format(','.join([
+                "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
+                for sample_id in sample_ids[index:index+MAX_FILTER_IDS]]))
+        ))
     sample_records = {}
     collaborator_ids = set()
-    for record in records:
+    for record in raw_records.values():
         if record.get('Collaborator'):
             collaborator = record['Collaborator'][0]
             collaborator_ids.add(collaborator)
@@ -515,16 +528,16 @@ def _get_sample_airtable_metadata(sample_ids):
 
 
 def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):
-    params = {
-        'api_key': AIRTABLE_API_KEY,
-    }
+    headers = {'Authorization': 'Bearer {}'.format(AIRTABLE_API_KEY)}
+
+    params = {}
     if offset:
         params['offset'] = offset
     if fields:
         params['fields[]'] = fields
     if filter_formula:
         params['filterByFormula'] = filter_formula
-    response = requests.get('{}/{}'.format(AIRTABLE_URL, record_type), params=params)
+    response = requests.get('{}/{}'.format(AIRTABLE_URL, record_type), params=params, headers=headers)
     response.raise_for_status()
     if not records:
         records = {}
