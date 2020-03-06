@@ -2,6 +2,7 @@ from collections import defaultdict
 from elasticsearch_dsl import Index
 import json
 import logging
+import requests
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
@@ -35,7 +36,7 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -261,9 +262,11 @@ def sample_metadata_export(request, project_guid):
 def _parse_anvil_metadata(individual_samples, format_feature, project=None):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
+    sample_ids = set()
     for individual, sample in individual_samples.items():
         samples_by_family[individual.family].append(sample)
         individual_id_map[individual.id] = individual.individual_id
+        sample_ids.add(sample.sample_id)
 
     family_individual_affected_guids = {}
     for family, family_samples in samples_by_family.items():
@@ -271,6 +274,8 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
         )
+
+    sample_airtable_metadata = _get_sample_airtable_metadata(sample_ids)
 
     saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
@@ -409,6 +414,7 @@ def _parse_anvil_metadata(individual_samples, format_feature, project=None):
                 'sample_id': sample.sample_id,
                 'data_type': sample.sample_type,
                 'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
+                'sample_provider': sample_airtable_metadata.get(sample.sample_id, {}).get('CollaboratorName') or '',
             }
             # TODO 'dbgap_sample_id', 'sample_provider' from airtable?
             sample_rows.append(sample_row)
@@ -480,6 +486,60 @@ def _get_saved_known_gene_variants_by_family(families):
             saved_variants_by_family[family_guid].append(variant)
 
     return saved_variants_by_family
+
+
+def _get_sample_airtable_metadata(sample_ids):
+    records = _fetch_airtable_records(
+        'Samples', fields=['Collaborator', 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SequencingProduct'],
+        filter_formula='OR({})'.format(','.join([
+            "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
+            for sample_id in sample_ids]))
+    ).values()
+    sample_records = {}
+    collaborator_ids = set()
+    for record in records:
+        if record.get('Collaborator'):
+            collaborator = record['Collaborator'][0]
+            collaborator_ids.add(collaborator)
+            record['Collaborator'] = collaborator
+        sample_records[record.get('SeqrCollaboratorSampleID') or record['CollaboratorSampleID']] = record
+
+    collaborator_map = _fetch_airtable_records(
+        'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
+            ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
+
+    for sample in sample_records.values():
+        sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
+
+    return sample_records
+
+
+def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):
+    params = {
+        'api_key': AIRTABLE_API_KEY,
+    }
+    if offset:
+        params['offset'] = offset
+    if fields:
+        params['fields[]'] = fields
+    if filter_formula:
+        params['filterByFormula'] = filter_formula
+    response = requests.get('{}/{}'.format(AIRTABLE_URL, record_type), params=params)
+    response.raise_for_status()
+    if not records:
+        records = {}
+    try:
+        response_json = response.json()
+        records.update({record['id']: record['fields'] for record in response_json['records']})
+    except (ValueError, KeyError) as e:
+        raise Exception('Unable to retrieve airtable data: {}'.format(e))
+
+    if response_json.get('offset'):
+        return _fetch_airtable_records(
+            record_type, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
+
+    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type))
+    return records
 
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
