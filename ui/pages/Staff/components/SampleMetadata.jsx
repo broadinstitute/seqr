@@ -9,7 +9,7 @@ import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetad
 import BaseReport from './BaseReport'
 
 const getDownloadFilename = (projectGuid, data) => {
-  const projectName = projectGuid && projectGuid !== 'all' && data.length && data[0].Project_ID.replace(/ /g, '_')
+  const projectName = projectGuid && projectGuid !== 'all' && data.length && data[0].project_id.replace(/ /g, '_')
   return `${projectName || 'All_AnVIL_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`
 }
 
@@ -44,10 +44,11 @@ const SampleMetadata = React.memo(props =>
   <BaseReport
     page="sample_metadata"
     viewAllCategory="AnVIL"
-    idField="individualGuid"
-    defaultSortColumn="familyId"
+    idField="subject_id"
+    defaultSortColumn="family_id"
     getDownloadFilename={getDownloadFilename}
     filters={<SampleMetadataFilters {...props} />}
+    rowsPerPage={100}
     {...props}
   />,
 )

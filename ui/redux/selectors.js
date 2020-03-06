@@ -499,3 +499,27 @@ export const getSearchGeneBreakdownValues = createSelector(
       }),
     ),
 )
+
+const getFamiliesLocusListGuids = createSelector(
+  (state, props) => props.familyGuids,
+  getFamiliesByGuid,
+  getProjectsByGuid,
+  (familyGuids, familiesByGuid, projectsByGuid) =>
+    new Set(familyGuids.reduce(
+      (acc, familyGuid) => [...acc, ...projectsByGuid[familiesByGuid[familyGuid].projectGuid].locusListGuids], [])),
+)
+
+export const getFamiliesLocusListIntervalsByChrom = createSelector(
+  getFamiliesLocusListGuids,
+  getLocusListsByGuid,
+  (locusListGuids, locusListsByGuid) =>
+    [...locusListGuids].map(
+      locusListGuid => locusListsByGuid[locusListGuid],
+    ).reduce((acc, { intervals = [] }) => [...acc, ...intervals], []).reduce((acc, interval) => {
+      if (!acc[interval.chrom]) {
+        acc[interval.chrom] = []
+      }
+      acc[interval.chrom].push(interval)
+      return acc
+    }, {}),
+)

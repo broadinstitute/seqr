@@ -37,12 +37,8 @@ VARIANTS = [
     {'alt': 'A', 'ref': 'AAAG', 'chrom': '3', 'pos': 835, 'xpos': 3000000835, 'genomeVersion': '37', 'liftedOverGenomeVersion': '', 'variantId': '3-835-AAAG-A', 'transcripts': {}, 'familyGuids': ['F000001_1'], 'genotypes': {'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
     {'alt': 'T', 'ref': 'TC', 'chrom': '12', 'pos': 48367227, 'xpos': 1248367227, 'genomeVersion': '37', 'liftedOverGenomeVersion': '', 'variantId': '12-48367227-TC-T', 'transcripts': {'ENSG00000233653': {}}, 'familyGuids': ['F000002_2'], 'genotypes': {}},
 ]
-EXPECTED_VARIANTS = deepcopy(VARIANTS)
-EXPECTED_VARIANTS[0]['locusListGuids'] = []
-EXPECTED_VARIANTS[1]['locusListGuids'] = [LOCUS_LIST_GUID]
-EXPECTED_VARIANTS[2]['locusListGuids'] = []
-EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(EXPECTED_VARIANTS)
-EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
+VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS)
+VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
         'familyGuid': 'F000011_11',
@@ -108,9 +104,9 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid', 'familiesByGuid'})
+            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
 
-        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS_WITH_DISCOVERY_TAGS)
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': PROJECT_FAMILIES,
@@ -126,6 +122,12 @@ class VariantSearchAPITest(TestCase):
         )
         self.assertListEqual(
             response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
+        )
+        self.assertSetEqual(set(response_json['locusListsByGuid'].keys()), {LOCUS_LIST_GUID})
+        intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
+        self.assertEqual(len(intervals), 2)
+        self.assertSetEqual(
+            set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
 
@@ -188,8 +190,8 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid'})
-        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS)
+            'variantFunctionalDataByGuid', 'locusListsByGuid'})
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS)
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants
@@ -200,7 +202,6 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertDictEqual(response_json, {
             'searchedVariants': [],
-            'genesById': {},
             'search': {
                 'search': SEARCH,
                 'projectFamilies': PROJECT_FAMILIES,
@@ -323,7 +324,7 @@ class VariantSearchAPITest(TestCase):
              'variantNotesByGuid', 'variantFunctionalDataByGuid'}
         )
 
-        self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS[:1])
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
