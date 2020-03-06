@@ -417,20 +417,6 @@ class SavedVariantAPITest(TransactionTestCase):
         self.assertEqual(updated_variant_note.note, updated_note_response['note'])
         self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response['submitToClinvar'])
 
-        # delete the variant_note for both compound hets
-        delete_variant_note_url = reverse(delete_variant_note_handler,
-                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
-        response = self.client.post(delete_variant_note_url, content_type='application/json')
-
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: {'noteGuids': []}, COMPOUND_HET_2_GUID: {'noteGuids': []}},
-            'variantNotesByGuid': {new_note_guid: None}})
-
-        # check that variant_note was deleted
-        new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
-        self.assertEqual(len(new_variant_note), 0)
-
         # save variant_note as gene_note for both compound hets
         response = self.client.post(
             create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps({
@@ -447,6 +433,39 @@ class SavedVariantAPITest(TransactionTestCase):
         )
         new_gene_note_response = response.json()['genesById'][GENE_GUID_2]['notes'][0]
         self.assertEqual(new_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
+        
+        # delete the variant_note for both compound hets
+        delete_variant_note_url = reverse(delete_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
+        response = self.client.post(delete_variant_note_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {
+                COMPOUND_HET_1_GUID: {'noteGuids': [new_gene_note_guid]}, 
+                COMPOUND_HET_2_GUID: {'noteGuids': [new_gene_note_guid]}
+            },
+            'variantNotesByGuid': {new_note_guid: None}})
+        
+        # check that variant_note was deleted
+        new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
+        self.assertEqual(len(new_variant_note), 0)
+
+        # delete the last variant_note for both compound hets
+        delete_variant_note_url = reverse(delete_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_gene_note_guid])
+        response = self.client.post(delete_variant_note_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: None, COMPOUND_HET_2_GUID: None},
+            'variantNotesByGuid': {new_gene_note_guid: None}})
+
+        # check that variant_note and saved variants was deleted
+        new_variant_note = VariantNote.objects.filter(guid=new_gene_note_guid)
+        self.assertEqual(len(new_variant_note), 0)
+        variants = SavedVariant.objects.filter(guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
+        self.assertEqual(len(variants), 0)
 
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
@@ -473,6 +492,19 @@ class SavedVariantAPITest(TransactionTestCase):
         self.assertSetEqual(
             {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in
                                      VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
+
+        # test delete all
+        response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
+            'tags': [],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'variantTagsByGuid': {excluded_guid: None, 'VT1708633_2103343353_r0390_100': None},
+            'savedVariantsByGuid': {VARIANT_GUID: None},
+        })
+        self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID).count(), 0)
+        self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 0)
 
     def test_update_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
