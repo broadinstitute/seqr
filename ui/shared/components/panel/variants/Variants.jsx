@@ -70,7 +70,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
     <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
   )
   return (
-    <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
+    <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
         {variant.discoveryTags && variant.discoveryTags.length > 0 &&

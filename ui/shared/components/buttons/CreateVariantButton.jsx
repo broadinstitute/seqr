@@ -60,8 +60,9 @@ const GENE_ID_FIELD_NAME = 'geneId'
 const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
+const TAG_FIELD_NAME = 'tags'
 const FORMAT_RESPONSE_FIELDS = [
-  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME,
+  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME,
 ]
 
 const ZYGOSITY_FIELD = {
@@ -72,7 +73,7 @@ const ZYGOSITY_FIELD = {
 }
 
 const TAG_FIELD = {
-  name: 'tags',
+  name: TAG_FIELD_NAME,
   label: 'Tags*',
   width: 16,
   inline: true,
@@ -146,8 +147,10 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     onSubmit: (values) => {
+      console.log(values)
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,
+        tags: values[TAG_FIELD_NAME],
         variant: {
           ...FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
             (acc, name) => ({ ...acc, [name]: values[name] }), {},
