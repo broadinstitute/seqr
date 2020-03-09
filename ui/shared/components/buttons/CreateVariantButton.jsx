@@ -56,13 +56,14 @@ const mapTagInputStateToProps = (state, ownProps) => {
   }
 }
 
+const SV_NAME_FIELD = 'svName'
 const GENE_ID_FIELD_NAME = 'geneId'
 const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
 const TAG_FIELD_NAME = 'tags'
 const FORMAT_RESPONSE_FIELDS = [
-  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME,
+  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, 'divider1', 'divider2',
 ]
 
 const ZYGOSITY_FIELD = {
@@ -91,17 +92,37 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
   return allValues[TRANSCRIPT_ID_FIELD_NAME] ? undefined : `Transcript ID is required to include ${name}`
 }
 
-const FIELDS = [...[
-  {
-    name: GENE_ID_FIELD_NAME,
-    label: 'Gene*',
-    validate: validators.required,
-    width: 16,
-    control: AwesomeBarFormInput,
-    categories: ['genes'],
-    fluid: true,
-    placeholder: 'Search for gene',
-  },
+const validateSVField = (value, allValues, props, name) => {
+  if (value) {
+    return undefined
+  }
+  return allValues[SV_NAME_FIELD] ? `${name} is required for SVs` : undefined
+}
+
+const validateSnvField = (value, allValues, props, name) => {
+  if (value) {
+    return undefined
+  }
+  return allValues[SV_NAME_FIELD] ? undefined : `${name} is required for SNVs`
+}
+
+const DividerField = ({ label }) => <Divider horizontal>{label}</Divider>
+
+DividerField.propTypes = {
+  label: PropTypes.string,
+}
+
+const SV_TYPE_OPTIONS = [
+  { value: 'DEL', text: 'Deletion' },
+  { value: 'DUP', text: 'Duplication' },
+  { value: 'Multiallelic CNV' },
+  { value: 'Insertion' },
+  { value: 'Inversion' },
+  { value: 'Complex SVs' },
+  { value: 'Other' },
+]
+
+const FIELDS = [
   {
     name: 'chrom',
     label: 'Chrom*',
@@ -109,15 +130,42 @@ const FIELDS = [...[
     options: CHROMOSOMES.map(value => ({ value })),
     validate: validators.required,
     width: 2,
+    inline: true,
   },
-  { name: 'pos', label: 'Start Position*', validate: validators.required, component: IntegerInput, width: 7 },
-  { name: 'pos_end', label: 'Stop Position', component: IntegerInput, width: 7 },
-  { name: 'ref', label: 'Ref*', validate: validators.required, width: 8 },
-  { name: 'alt', label: 'Alt*', validate: validators.required, width: 8 },
-  { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
-  { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
-  { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
-].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, TAG_FIELD, ZYGOSITY_FIELD]
+  { name: 'pos', label: 'Start Position*', validate: validators.required, component: IntegerInput, inline: true, width: 7 },
+  { name: 'pos_end', label: 'Stop Position', component: IntegerInput, inline: true, width: 7 },
+  GENOME_VERSION_FIELD,
+  TAG_FIELD,
+  { name: 'divider1', label: 'SV Fields', component: DividerField },
+  { name: SV_NAME_FIELD, label: 'SV Name', inline: true, width: 8 },
+  {
+    name: 'svType',
+    label: 'SV Type',
+    component: Select,
+    options: SV_TYPE_OPTIONS,
+    validate: validateSVField,
+    inline: true,
+    width: 8,
+  },
+  { name: 'divider2', label: 'SNV Fields', component: DividerField },
+  {
+    name: GENE_ID_FIELD_NAME,
+    label: 'Gene',
+    validate: validateSnvField,
+    width: 6,
+    control: AwesomeBarFormInput,
+    categories: ['genes'],
+    fluid: true,
+    inline: true,
+    placeholder: 'Search for gene',
+  },
+  { name: 'ref', label: 'Ref', validate: validateSnvField, inline: true, width: 5 },
+  { name: 'alt', label: 'Alt', validate: validateSnvField, inline: true, width: 5 },
+  { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', inline: true, width: 6 },
+  { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, inline: true, validate: validateHasTranscriptId },
+  { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, inline: true, validate: validateHasTranscriptId },
+  ZYGOSITY_FIELD,
+]
 
 const CreateVariantButton = React.memo(({ project, family, user, onSubmit }) => (
   user.isStaff ? <UpdateButton
@@ -147,23 +195,23 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     onSubmit: (values) => {
-      console.log(values)
+      const variant = FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
+        (acc, name) => ({ ...acc, [name]: values[name] }), {},
+      )
+      variant.variantId = values.svName || `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`
+      if (values[GENE_ID_FIELD_NAME]) {
+        variant.transcripts = {
+          [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
+            transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
+            [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
+            [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
+          }] : [],
+        }
+      }
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,
         tags: values[TAG_FIELD_NAME],
-        variant: {
-          ...FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
-            (acc, name) => ({ ...acc, [name]: values[name] }), {},
-          ),
-          variantId: `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`,
-          transcripts: {
-            [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
-              transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
-              [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
-              [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
-            }] : [],
-          },
-        },
+        variant,
       }
 
       return dispatch(updateVariantTags(formattedValues))

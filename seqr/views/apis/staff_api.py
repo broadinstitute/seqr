@@ -200,6 +200,11 @@ INHERITANCE_MODE_MAP = {
     'AD': 'Autosomal dominant',
 }
 
+SV_TYPE_MAP = {
+    'DUP': 'Duplication',
+    'DEL': 'Deletion',
+}
+
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_export(request, project_guid):
@@ -281,7 +286,8 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
         potential_com_het_gene_variants = defaultdict(list)
         for variant in saved_variants:
             variant['main_transcript'] = _get_variant_main_transcript(variant)
-            gene_ids.add(variant['main_transcript']['geneId'])
+            if variant['main_transcript']:
+                gene_ids.add(variant['main_transcript']['geneId'])
 
             affected_individual_guids, unaffected_individual_guids = family_individual_affected_guids[family_guid]
             inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
@@ -347,24 +353,28 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
 
         parsed_variants = []
         for variant in saved_variants:
-            gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
-            if variant['inheritance_models']:
-                inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
+            if variant.get('svName'):
+                parsed_variant = {'sv_name': variant['svName'], 'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType'])}
             else:
-                inheritance_mode = 'Unknown / Other'
+                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
+                if variant['inheritance_models']:
+                    inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
+                else:
+                    inheritance_mode = 'Unknown / Other'
 
-            parsed_variants.append((variant['genotypes'], {
-                'Gene': genes_by_id[gene_id]['geneSymbol'],
-                'Gene_Class': 'Known',
-                'inheritance_description': inheritance_mode,
-                'Chrom': variant['chrom'],
-                'Pos': str(variant['pos']),
-                'Ref': variant['ref'],
-                'Alt': variant['alt'],
-                'hgvsc': (variant['main_transcript']['hgvsc'] or '').split(':')[-1],
-                'hgvsp': (variant['main_transcript']['hgvsp'] or '').split(':')[-1],
-                'Transcript': variant['main_transcript']['transcriptId'],
-            }))
+                parsed_variant = {
+                    'Gene': genes_by_id[gene_id]['geneSymbol'],
+                    'Gene_Class': 'Known',
+                    'inheritance_description': inheritance_mode,
+                    'Chrom': variant['chrom'],
+                    'Pos': str(variant['pos']),
+                    'Ref': variant['ref'],
+                    'Alt': variant['alt'],
+                    'hgvsc': (variant['main_transcript']['hgvsc'] or '').split(':')[-1],
+                    'hgvsp': (variant['main_transcript']['hgvsp'] or '').split(':')[-1],
+                    'Transcript': variant['main_transcript']['transcriptId'],
+                }
+            parsed_variants.append((variant['genotypes'], parsed_variant))
 
         for sample in family_samples:
             individual = sample.individual
@@ -794,7 +804,7 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
             errors.append("%s - variant annotation not found" % variant)
             return [row]
 
-        if not variant.saved_variant_json['transcripts']:
+        if not variant.saved_variant_json.get('transcripts') and not variant.saved_variant_json.get('svName'):
             errors.append("%s - no gene ids" % variant)
             return [row]
 
@@ -948,7 +958,7 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
             if any(t['transcriptId'] == main_transcript_id for t in transcripts):
                 variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
                 break
-    elif len(variant.saved_variant_json['transcripts']) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
+    elif len(variant.saved_variant_json.get('transcripts', {})) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
         variant.saved_variant_json['mainTranscriptGeneId'] = variant.saved_variant_json['transcripts'].keys()[0]
 
 
@@ -997,7 +1007,7 @@ def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
     # Non-compound het variants are reported in the main transcript gene
     for variant in saved_variants:
         if "AR-comphet" not in variant.saved_variant_json['inheritance']:
-            gene_id = variant.saved_variant_json['mainTranscriptGeneId']
+            gene_id = variant.saved_variant_json.get('mainTranscriptGeneId') or variant.saved_variant_json.get('svName')
             gene_ids_to_saved_variants[gene_id].add(variant)
             gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
             gene_ids_to_inheritance[gene_id].update(variant.saved_variant_json['inheritance'])
@@ -1043,7 +1053,9 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
 
     row["extras_variant_tag_list"] = []
     for variant in variants:
-        variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
+        variant_id = variant.saved_variant_json.get('variantId')
+        if not variant_id:
+            variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
         row["extras_variant_tag_list"] += [
             (variant_id, gene_id, vt.variant_tag_type.name.lower()) for vt in variant.discovery_tags
         ]
@@ -1095,11 +1107,11 @@ def _set_discovery_details(row, variant_tag_names, variants):
 def _update_gene_symbols(rows):
     genes_by_id = get_genes({row['gene_id'] for row in rows if row.get('gene_id')})
     for row in rows:
-        if row.get('gene_id') and genes_by_id.get(row['gene_id']):
-            row['gene_name'] = genes_by_id[row['gene_id']]['geneSymbol']
+        if row.get('gene_id'):
+            row['gene_name'] = genes_by_id.get(row['gene_id'], {}).get('geneSymbol') or row['gene_id']
 
         row["extras_variant_tag_list"] = ["{variant_id}  {gene_symbol}  {tag}".format(
-            variant_id=variant_id, gene_symbol=genes_by_id.get(gene_id, {}).get('geneSymbol'), tag=tag,
+            variant_id=variant_id, gene_symbol=genes_by_id.get(gene_id, {}).get('geneSymbol', ''), tag=tag,
         ) for variant_id, gene_id, tag in row.get("extras_variant_tag_list", [])]
 
 

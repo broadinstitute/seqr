@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Popup, Label, Button } from 'semantic-ui-react'
+import { Grid, Divider, Popup, Label, Button, Header } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -63,7 +63,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
-  const variantGenes = Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
+  const variantGenes = Object.keys(variant.transcripts || {}).filter(geneId => geneId !== mainGeneId).map(geneId =>
     <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
   )
   const variantIndividuals = variant.familyGuids.map(familyGuid =>
@@ -93,10 +93,11 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
         </Grid.Column>,
       )}
       <Grid.Column>
+        {variant.svName && <Header size="medium" content={variant.svName} />}
         {!isCompoundHet && mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
-        {!isCompoundHet && Object.keys(variant.transcripts).length > 1 && <Divider />}
+        {!isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
         {variantGenes}
-        {isCompoundHet && Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
+        {isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <VerticalSpacer height={20} />}
         {isCompoundHet && variantIndividuals}
       </Grid.Column>
       <Grid.Column><Annotations variant={variant} /></Grid.Column>

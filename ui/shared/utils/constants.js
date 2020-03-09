@@ -829,7 +829,7 @@ export const MUTTASTER_MAP = {
   D: { value: 'disease causing' },
 }
 
-export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) => {
+export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
     return (Object.entries(transcripts).find(entry =>
       entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),

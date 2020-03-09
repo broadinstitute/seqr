@@ -96,8 +96,8 @@ def _get_parsed_variant_args(variant_json, family):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
-    ref = variant_json['ref']
-    alt = variant_json['alt']
+    ref = 'X' if variant_json.get('svName') else variant_json['ref']
+    alt = 'X' if variant_json.get('svName') else variant_json['alt']
     var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
     return {
         'xpos': xpos,
@@ -349,9 +349,9 @@ def _saved_variant_genes(variants):
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:
-                gene_ids.update(compound_het['transcripts'].keys())
+                gene_ids.update(compound_het.get('transcripts', {}).keys())
         else:
-            gene_ids.update(variant['transcripts'].keys())
+            gene_ids.update(variant.get('transcripts', {}).keys())
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:
