@@ -205,6 +205,15 @@ SV_TYPE_MAP = {
     'DEL': 'Deletion',
 }
 
+MULTIPLE_DATASET_PRODUCTS = {
+    'G4L WES + Array v1',
+    'G4L WES + Array v2',
+    'Standard Exome Plus GWAS Supplement Array',
+    'Standard Germline Exome v5 Plus GSA Array',
+    'Standard Germline Exome v5 Plus GWAS Supplement Array',
+    'Standard Germline Exome v6 Plus GSA Array',
+}
+
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_export(request, project_guid):
@@ -389,7 +398,10 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             onset = phenotips_data.get('global_age_of_onset')
 
             airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-            sequencing = airtable_metadata.get('SequencingProduct')
+            sequencing = airtable_metadata.get('SequencingProduct') or []
+            multiple_datasets = len(sequencing) > 1 or (len(sequencing) == 1 and sequencing[0] in MULTIPLE_DATASET_PRODUCTS)
+            dbgap_submission = airtable_metadata.get('dbgap_submission') or []
+            has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = {
                 'subject_id': individual.individual_id,
@@ -401,11 +413,16 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
-                # TODO get mapping from katie which products are multiple
-                'multiple_datasets': 'Yes' if sequencing and (len(sequencing) > 1 or ',' in sequencing[0]) else 'No'
+                'multiple_datasets': 'Yes' if multiple_datasets else 'No',
+                'dbgap_submission': 'No',
             }
+            if has_dbgap_submission:
+                subject_row.update({
+                    'dbgap_submission': 'Yes',
+                    'dbgap_study_id': airtable_metadata.get('dbgap_study_id', ''),
+                    'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', ''),
+                })
             subject_row.update(family_subject_row)
-            # TODO 'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id' from airtable?
             subject_rows.append(subject_row)
 
             sample_row = {
@@ -415,7 +432,8 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
                 'sample_provider': airtable_metadata.get('CollaboratorName') or '',
             }
-            # TODO 'dbgap_sample_id' from airtable?
+            if has_dbgap_submission:
+                sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
             sample_rows.append(sample_row)
 
             family_row = {
@@ -488,6 +506,9 @@ def _get_saved_known_gene_variants_by_family(families):
 
 
 MAX_FILTER_IDS = 500
+SAMPLE_ID_FIELDS = ['SeqrCollaboratorSampleID', 'CollaboratorSampleID']
+SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
+LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
 def _get_sample_airtable_metadata(sample_ids):
@@ -496,7 +517,7 @@ def _get_sample_airtable_metadata(sample_ids):
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
         raw_records.update(_fetch_airtable_records(
             'Samples',
-            fields=['Collaborator', 'CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'SequencingProduct'],
+            fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
             filter_formula='OR({})'.format(','.join([
                 "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
                 for sample_id in sample_ids[index:index+MAX_FILTER_IDS]]))
@@ -504,11 +525,25 @@ def _get_sample_airtable_metadata(sample_ids):
     sample_records = {}
     collaborator_ids = set()
     for record in raw_records.values():
+        record_id = next(record[id_field] for id_field in SAMPLE_ID_FIELDS if record.get(id_field))
         if record.get('Collaborator'):
             collaborator = record['Collaborator'][0]
             collaborator_ids.add(collaborator)
             record['Collaborator'] = collaborator
-        sample_records[record.get('SeqrCollaboratorSampleID') or record['CollaboratorSampleID']] = record
+
+        parsed_record = sample_records.get(record_id, {})
+        for field in SINGLE_SAMPLE_FIELDS:
+            if field in record:
+                if field in parsed_record and parsed_record[field] != record[field]:
+                    error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                        record_id, field)
+                    raise Exception(error)
+                parsed_record[field] = record[field]
+        for field in LIST_SAMPLE_FIELDS:
+            if field in record:
+                parsed_record[field] = record[field] + parsed_record.get(field, [])
+
+        sample_records[record_id] = parsed_record
 
     if collaborator_ids:
         collaborator_map = _fetch_airtable_records(
