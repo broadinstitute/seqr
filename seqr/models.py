@@ -288,6 +288,13 @@ class FamilyAnalysedBy(ModelWithGUID):
         json_fields = ['last_modified_date', 'created_by']
 
 
+class YearField(models.PositiveSmallIntegerField):
+    YEAR_CHOICES = [(y, y) for y in range(1900, 2030)] + [(0, 'Unknown')]
+
+    def __init__(self, **options):
+        super(YearField, self).__init__(choices=YearField.YEAR_CHOICES, null=True, **options)
+
+
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
     SEX_FEMALE = 'F'
@@ -321,6 +328,36 @@ class Individual(ModelWithGUID):
         ('V', 'Inactive'),
     )
 
+    ONSET_AGE_CHOICES = [
+        ('G', 'Congenital onset'),
+        ('E', 'Embryonal onset'),
+        ('F', 'Fetal onset'),
+        ('N', 'Neonatal onset'),
+        ('I', 'Infantile onset'),
+        ('C', 'Childhood onset'),
+        ('J', 'Juvenile onset'),
+        ('A', 'Adult onset'),
+        ('Y', 'Young adult onset'),
+        ('M', 'Middle age onset'),
+        ('L', 'Late onset'),
+    ]
+
+    INHERITANCE_CHOICES = [
+        ('S', 'Sporadic'),
+        ('D', 'Autosomal dominant inheritance'),
+        ('L', 'Sex-limited autosomal dominant'),
+        ('A', 'Male-limited autosomal dominant'),
+        ('C', 'Autosomal dominant contiguous gene syndrome'),
+        ('R', 'Autosomal recessive inheritance'),
+        ('G', 'Gonosomal inheritance'),
+        ('X', 'X-linked inheritance'),
+        ('Z', 'X-linked recessive inheritance'),
+        ('Y', 'Y-linked inheritance'),
+        ('W', 'X-linked dominant inheritance'),
+        ('F', 'Multifactorial inheritance'),
+        ('M', 'Mitochondrial inheritance'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -350,6 +387,32 @@ class Individual(ModelWithGUID):
     phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
+
+    birth_year = YearField()
+    death_year = YearField()
+    onset_age = models.CharField(max_length=1, choices=ONSET_AGE_CHOICES, null=True)
+
+    maternal_ethnicity = models.CharField(max_length=50, null=True)
+    paternal_ethnicity = models.CharField(max_length=50, null=True)
+    cosanguinity = models.NullBooleanField()
+    affected_relatives = models.NullBooleanField()
+    expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
+
+    ar_fertility_meds = models.NullBooleanField()
+    ar_iui = models.NullBooleanField()
+    ar_ivf = models.NullBooleanField()
+    ar_icsi = models.NullBooleanField()
+    ar_surrogacy = models.NullBooleanField()
+    ar_donoregg = models.NullBooleanField()
+    ar_donorsperm = models.NullBooleanField()
+
+    features = JSONField(null=True)
+    absent_features = JSONField(null=True)
+    nonstandard_features = JSONField(null=True)
+
+    candidate_genes = JSONField(null=True)
+    rejected_genes = JSONField(null=True)
+    disorders = ArrayField(models.CharField(max_length=10), null=True)
 
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
