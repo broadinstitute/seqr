@@ -424,9 +424,13 @@ class SavedVariantAPITest(TransactionTestCase):
             }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        new_gene_note_guid = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0]
-        self.assertEqual(new_gene_note_guid, response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids'][0])
-
+        note_guids = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids']
+        self.assertListEqual(
+            note_guids,
+            response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids']
+        )
+        self.assertTrue(new_note_guid in note_guids)
+        new_gene_note_guid = next(guid for guid in note_guids if guid != new_note_guid)
         self.assertEqual(
             response_json['variantNotesByGuid'][new_gene_note_guid]['note'],
             'new_compound_hets_variant_note_as_gene_note',
