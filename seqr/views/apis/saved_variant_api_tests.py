@@ -91,7 +91,9 @@ class SavedVariantAPITest(TransactionTestCase):
         })
 
         variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
+        self.assertSetEqual(
+            set(variants.keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
 
         variant = variants['SV0000001_2103343353_r0390_100']
         fields = {
@@ -153,7 +155,10 @@ class SavedVariantAPITest(TransactionTestCase):
             'genesById', 'locusListsByGuid',
         })
         variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
+        self.assertSetEqual(
+            set(variants.keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID}
+        )
         self.assertFalse('discoveryTags' in variants['SV0000002_1248367227_r0390_100'])
 
     def test_create_saved_variant(self):
@@ -299,7 +304,7 @@ class SavedVariantAPITest(TransactionTestCase):
         self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
 
         # save variant_note as gene_note for user selected main gene
-        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=['SV0000003_2246859832_r0390_100'])
+        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         response = self.client.post(create_variant_note_seetced_gene_url, content_type='application/json', data=json.dumps(
             {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
@@ -629,7 +634,7 @@ class SavedVariantAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(response.json().keys()),
             {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100',
-             'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
+            'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
         )
 
     def test_update_variant_main_transcript(self):

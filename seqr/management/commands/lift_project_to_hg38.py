@@ -72,19 +72,8 @@ class Command(BaseCommand):
                                for family, missing_indivs in missing_family_individuals.items()])
                 ))
 
-        # Get and clean up expected saved variants
+        # Get expected saved variants
         saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
-        deleted_no_tags = set()
-        for guid, variant in saved_variant_models_by_guid.items():
-            if not (variant.varianttag_set.count() or variant.variantnote_set.count()):
-                deleted_no_tags.add(guid)
-
-        if deleted_no_tags:
-            if raw_input('Do you want to delete the following {} saved variants with no tags (y/n)?: {} '.format(
-                    len(deleted_no_tags), ', '.join(deleted_no_tags))) == 'y':
-                for guid in deleted_no_tags:
-                    saved_variant_models_by_guid.pop(guid).delete()
-                logger.info('Deleted {} variants'.format(len(deleted_no_tags)))
 
         expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
         missing_families = expected_families - included_families
