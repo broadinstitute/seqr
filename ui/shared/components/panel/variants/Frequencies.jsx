@@ -130,7 +130,7 @@ const POPULATIONS = [
 ]
 
 const Frequencies = React.memo(({ variant }) => {
-  const { populations } = variant
+  const { populations = {} } = variant
   const freqContent = (
     <div>
       {POPULATIONS.map(pop =>
@@ -139,9 +139,9 @@ const Frequencies = React.memo(({ variant }) => {
     </div>
   )
 
-  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field].ac)
+  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac)
   const hasGlobalAfPops = POPULATIONS.filter(
-    pop => populations[pop.field].filter_af && (populations[pop.field].filter_af !== populations[pop.field].af))
+    pop => populations[pop.field] && populations[pop.field].filter_af && (populations[pop.field].filter_af !== populations[pop.field].af))
 
   return (
     (hasAcPops.length || hasGlobalAfPops.length) ?

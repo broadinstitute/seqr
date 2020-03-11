@@ -43,7 +43,7 @@ SampleMetadataFilters.propTypes = {
 const SampleMetadata = React.memo(props =>
   <BaseReport
     page="sample_metadata"
-    viewAllCategory="AnVIL"
+    viewAllCategory="CMG"
     idField="subject_id"
     defaultSortColumn="family_id"
     getDownloadFilename={getDownloadFilename}

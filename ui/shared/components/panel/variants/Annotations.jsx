@@ -27,7 +27,7 @@ const LargeText = styled.div`
 export const getLocus = (chrom, pos, rangeSize) =>
   `chr${chrom}:${pos - rangeSize}-${pos + rangeSize}`
 
-const UcscBrowserLink = ({ variant, useLiftover }) => {
+const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
   const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
   let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
@@ -38,7 +38,7 @@ const UcscBrowserLink = ({ variant, useLiftover }) => {
 
   return (
     <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`} target="_blank">
-      {chrom}:{pos}
+      {chrom}:{pos}{includeEnd && variant.pos_end && `-${variant.pos_end}`}
     </a>
   )
 }
@@ -46,6 +46,7 @@ const UcscBrowserLink = ({ variant, useLiftover }) => {
 UcscBrowserLink.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
+  includeEnd: PropTypes.bool,
 }
 
 const MAX_SEQUENCE_LENGTH = 30
@@ -226,11 +227,15 @@ const Annotations = React.memo(({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} /></b>
+        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
-        <Sequence sequence={variant.ref} />
-        <Icon name="angle right" />
-        <Sequence sequence={variant.alt} />
+        {variant.svType ||
+          <span>
+            <Sequence sequence={variant.ref} />
+            <Icon name="angle right" />
+            <Sequence sequence={variant.alt} />
+          </span>
+        }
       </LargeText>
       {rsid &&
         <div>

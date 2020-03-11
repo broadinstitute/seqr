@@ -96,8 +96,8 @@ def _get_parsed_variant_args(variant_json, family):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
-    ref = variant_json['ref']
-    alt = variant_json['alt']
+    ref = 'X' if variant_json.get('svName') else variant_json['ref']
+    alt = 'X' if variant_json.get('svName') else variant_json['alt']
     var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
     return {
         'xpos': xpos,
@@ -193,11 +193,17 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         check_permissions(project, request.user, CAN_VIEW)
     note.delete()
 
+    saved_variants_by_guid = {}
+    for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids):
+        notes = saved_variant.variantnote_set.all()
+        saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
+        if not notes:
+            if not saved_variant.varianttag_set.count() > 0:
+                saved_variant.delete()
+                saved_variants_by_guid[saved_variant.guid] = None
+
     return create_json_response({
-        'savedVariantsByGuid': {
-            saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
-            for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids)
-        },
+        'savedVariantsByGuid': saved_variants_by_guid,
         'variantNotesByGuid': {note_guid: None},
     })
 
@@ -223,10 +229,17 @@ def update_variant_tags_handler(request, variant_guids):
     tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
     tag_updates.update({guid: None for guid in deleted_tag_guids})
 
+    saved_variants_by_guid = {}
+    for saved_variant in saved_variants:
+        tags = saved_variant.varianttag_set.all()
+        saved_variants_by_guid[saved_variant.guid] = {'tagGuids': [t.guid for t in tags]}
+        if not tags:
+            if not saved_variant.variantnote_set.count() > 0:
+                saved_variant.delete()
+                saved_variants_by_guid[saved_variant.guid] = None
+
     return create_json_response({
-        'savedVariantsByGuid': {saved_variant.guid: {
-            'tagGuids': [t.guid for t in saved_variant.varianttag_set.all()],
-        } for saved_variant in saved_variants},
+        'savedVariantsByGuid': saved_variants_by_guid,
         'variantTagsByGuid': tag_updates,
     })
 
@@ -336,9 +349,9 @@ def _saved_variant_genes(variants):
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:
-                gene_ids.update(compound_het['transcripts'].keys())
+                gene_ids.update(compound_het.get('transcripts', {}).keys())
         else:
-            gene_ids.update(variant['transcripts'].keys())
+            gene_ids.update(variant.get('transcripts', {}).keys())
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:

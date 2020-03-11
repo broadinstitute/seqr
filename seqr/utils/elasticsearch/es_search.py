@@ -880,6 +880,9 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
             if inheritance_mode:
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
+            if inheritance_filter.keys() == ['affected']:
+                raise Exception('Inheritance must be specified if custom affected status is set')
+
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status[family_guid]
             )

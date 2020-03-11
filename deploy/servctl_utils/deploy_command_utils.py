@@ -161,6 +161,7 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/airtable_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
     ]) % settings, errors_to_ignore=["already exists"])
 

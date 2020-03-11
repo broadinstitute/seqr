@@ -154,7 +154,7 @@ def project_page_data(request, project_guid):
 
     gene_ids = set()
     for tag in project_json['discoveryTags']:
-        gene_ids.update(tag['transcripts'].keys())
+        gene_ids.update(tag.get('transcripts', {}).keys())
 
     response.update({
         'projectsByGuid': {project_guid: project_json},
