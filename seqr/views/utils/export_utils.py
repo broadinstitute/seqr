@@ -83,12 +83,15 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             raise ValueError("Invalid file_format: %s" % file_format)
 
 
-def export_multiple_files(files, zip_filename, file_format='csv'):
+def export_multiple_files(files, zip_filename, file_format='csv', add_header_prefix=False):
     with NamedTemporaryFile() as temp_file:
         with zipfile.ZipFile(temp_file, 'w') as zip_file:
             for filename, header, rows in files:
                 if file_format == 'csv':
-                    content = ','.join(header) + '\n'
+                    header_display = map(
+                        lambda (i, k): '{}-{}'.format(str(i + 1).zfill(2), k), enumerate(header)
+                    ) if add_header_prefix else header
+                    content = ','.join(header_display) + '\n'
                     content += '\n'.join([','.join([row.get(key, '') for key in header]) for row in rows])
                 else:
                     raise ValueError('Invalid file_format: {}'.format(file_format))

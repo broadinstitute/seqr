@@ -235,7 +235,7 @@ def anvil_export(request, project_guid):
         ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
         ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], '{}_AnVIL_Metadata'.format(project.name))
+    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
