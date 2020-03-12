@@ -979,8 +979,9 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
             inheritance_models.add("AD")
 
     potential_compound_het_gene_ids = set()
-    if not unaffected_indivs_with_hom_alt_variants and (len(
-            unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+    if not unaffected_indivs_with_hom_alt_variants and (
+        len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants
+    ) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants and 'transcripts' in variant_json:
         potential_compound_het_gene_ids.update(variant_json['transcripts'].keys())
 
     return inheritance_models, potential_compound_het_gene_ids
