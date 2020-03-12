@@ -65,17 +65,28 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
       const rows = []
       new HttpRequestHelper('/api/staff/projects_for_category/CMG',
         (projectsResponseJson) => {
-          Promise.all(projectsResponseJson.projectGuids.map(cmgProjectGuid =>
-            new HttpRequestHelper(`/api/staff/${urlPath}/${cmgProjectGuid}`,
-              (responseJson) => {
-                if (responseJson.errors && responseJson.errors.length) {
-                  console.log(responseJson.errors)
-                }
-                rows.push(...responseJson.rows)
-              },
-              e => errors.add(e.message),
-            ).get(),
-          )).then(() => {
+          const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
+            if (acc[0].length === 5) {
+              acc.unshift([])
+            }
+            acc[0].push(guid)
+            return acc
+          }, [[]])
+          chunkedProjects.reduce((previousPromise, projectsChunk) => {
+            return previousPromise.then(() => {
+              return Promise.all(projectsChunk.map(cmgProjectGuid =>
+                new HttpRequestHelper(`/api/staff/${urlPath}/${cmgProjectGuid}`,
+                  (responseJson) => {
+                    if (responseJson.errors && responseJson.errors.length) {
+                      console.log(responseJson.errors)
+                    }
+                    rows.push(...responseJson.rows)
+                  },
+                  e => errors.add(e.message),
+                ).get(),
+              ))
+            })
+          }, Promise.resolve()).then(() => {
             if (errors.size) {
               dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })
             } else {

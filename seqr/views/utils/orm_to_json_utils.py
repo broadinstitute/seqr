@@ -455,9 +455,6 @@ def get_json_for_saved_variants_with_tags(
             else:
                 missing_ids.add(variant_id)
 
-    variants_by_guid = {
-        variant_guid: variant for variant_guid, variant in variants_by_guid.items()
-        if variant['noteGuids'] or variant['tagGuids']}
     if include_missing_variants and missing_ids:
         variants_by_guid.update({
             variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
