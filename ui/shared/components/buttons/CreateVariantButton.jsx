@@ -17,7 +17,7 @@ const BASE_FORM_ID = 'addVariant-'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
-const ZygosityInput = React.memo(({ individuals, name }) =>
+const ZygosityInput = React.memo(({ individuals, name, error }) =>
   <FormSection name={name}>
     <Divider horizontal>Zygosity</Divider>
     <Grid columns="equal">
@@ -30,6 +30,7 @@ const ZygosityInput = React.memo(({ individuals, name }) =>
             component: Select,
             normalize: numAlt => ({ numAlt }),
             format: value => (value || {}).numAlt,
+            error,
           })}
         </Grid.Column>
       ))}
@@ -40,6 +41,7 @@ const ZygosityInput = React.memo(({ individuals, name }) =>
 ZygosityInput.propTypes = {
   individuals: PropTypes.array,
   name: PropTypes.string,
+  error: PropTypes.bool,
 }
 
 const mapZygosityInputStateToProps = (state, ownProps) => ({
@@ -70,6 +72,7 @@ const ZYGOSITY_FIELD = {
   name: 'genotypes',
   width: 16,
   inline: true,
+  validate: validators.required,
   component: connect(mapZygosityInputStateToProps)(ZygosityInput),
 }
 
