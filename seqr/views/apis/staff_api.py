@@ -362,19 +362,23 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
 
         parsed_variants = []
         for variant in saved_variants:
-            if variant.get('svName'):
-                parsed_variant = {'sv_name': variant['svName'], 'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType'])}
+            if variant['inheritance_models']:
+                inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
             else:
-                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
-                if variant['inheritance_models']:
-                    inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
-                else:
-                    inheritance_mode = 'Unknown / Other'
-
-                parsed_variant = {
+                inheritance_mode = 'Unknown / Other'
+            parsed_variant = {
+                'Gene_Class': 'Known',
+                'inheritance_description': inheritance_mode,
+            }
+            if variant.get('svName'):
+                parsed_variant.update({
+                    'sv_name': variant['svName'], 
+                    'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
+                })
+            else:
+                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']            
+                parsed_variant.update({
                     'Gene': genes_by_id[gene_id]['geneSymbol'],
-                    'Gene_Class': 'Known',
-                    'inheritance_description': inheritance_mode,
                     'Chrom': variant['chrom'],
                     'Pos': str(variant['pos']),
                     'Ref': variant['ref'],
@@ -382,7 +386,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                     'hgvsc': (variant['main_transcript']['hgvsc'] or '').split(':')[-1],
                     'hgvsp': (variant['main_transcript']['hgvsp'] or '').split(':')[-1],
                     'Transcript': variant['main_transcript']['transcriptId'],
-                }
+                })
             parsed_variants.append((variant['genotypes'], parsed_variant))
 
         for sample in family_samples:
