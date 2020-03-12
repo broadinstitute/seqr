@@ -176,7 +176,7 @@ class DataTable extends React.PureComponent {
     } else {
       tableContent = sortedData.map(row => (
         <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selectedRows[row[idField]]}>
-          {selectRows && <Table.Cell content={<Checkbox checked={selectedRows[row[idField]]} />} />}
+          {selectRows && <Table.Cell content={<Checkbox checked={!!selectedRows[row[idField]]} />} />}
           {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
             <Table.Cell
               key={name}
