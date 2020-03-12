@@ -175,7 +175,7 @@ export const addAlignmentDataset = ({ mappingFile, ...values }) => {
     return Promise.all(Object.entries(mappingFile.updatesByIndividualGuid).map(([individualGuid, datasetFilePath]) =>
       new HttpRequestHelper(`/api/individual/${individualGuid}/update_alignment_sample`,
         responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
-        e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.message}`),
+        e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
       ).post({ datasetFilePath, ...values }),
     )).then(() => {
       if (errors.length) {

@@ -261,7 +261,8 @@ def update_individual_alignment_sample(request, individual_guid):
             }
         return create_json_response(response)
     except Exception as e:
-        return create_json_response({}, status=400, reason=e.message or str(e))
+        error = e.message or str(e)
+        return create_json_response({'error': error}, status=400, reason=error)
 
 
 def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path):
