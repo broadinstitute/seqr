@@ -398,9 +398,10 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             onset = phenotips_data.get('global_age_of_onset')
 
             airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-            sequencing = airtable_metadata.get('SequencingProduct') or []
-            multiple_datasets = len(sequencing) > 1 or (len(sequencing) == 1 and sequencing[0] in MULTIPLE_DATASET_PRODUCTS)
-            dbgap_submission = airtable_metadata.get('dbgap_submission') or []
+            sequencing = airtable_metadata.get('SequencingProduct') or set()
+            multiple_datasets = len(sequencing) > 1 or (
+                    len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS)
+            dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
             has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = {
@@ -541,7 +542,9 @@ def _get_sample_airtable_metadata(sample_ids):
                 parsed_record[field] = record[field]
         for field in LIST_SAMPLE_FIELDS:
             if field in record:
-                parsed_record[field] = record[field] + parsed_record.get(field, [])
+                value = parsed_record.get(field, set())
+                value.update(record[field])
+                parsed_record[field] = value
 
         sample_records[record_id] = parsed_record
 
