@@ -372,11 +372,11 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             }
             if variant.get('svName'):
                 parsed_variant.update({
-                    'sv_name': variant['svName'], 
+                    'sv_name': variant['svName'],
                     'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
                 })
             else:
-                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']            
+                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
                 parsed_variant.update({
                     'Gene': genes_by_id[gene_id]['geneSymbol'],
                     'Chrom': variant['chrom'],
