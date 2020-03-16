@@ -2,12 +2,11 @@ version: '2.4'
 
 services:
   postgres:
-    image: gcr.io/seqr-project/postgres
+    image: gcr.io/seqr-project/postgres:gcloud-dev
     ports:
       - 5432:5432
     volumes:
-      - ./data/postgres:/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -15,7 +14,7 @@ services:
       retries: 3
 
   init-postgres:
-    image: gcr.io/seqr-project/postgres
+    image: gcr.io/seqr-project/postgres:gcloud-dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,21 +23,17 @@ services:
       psql -h postgres -U postgres -c 'CREATE DATABASE reference_data_db';
       psql -h postgres -U postgres -c 'CREATE DATABASE xwiki';
       psql -h postgres -U postgres -c \"CREATE ROLE xwiki WITH CREATEDB LOGIN PASSWORD 'xwiki'\";
-      psql -h postgres -U postgres -c 'GRANT ALL PRIVILEGES ON DATABASE xwiki TO xwiki';"
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      psql -h postgres -U postgres -c 'GRANT ALL PRIVILEGES ON DATABASE xwiki TO xwiki';
+      wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz;
+      psql -h postgres -U postgres reference_data_db <  <(gunzip -c gene_reference_data_backup.gz);"
 
   redis:
-    image: gcr.io/seqr-project/redis
+    image: gcr.io/seqr-project/redis:gcloud-dev
     ports:
       - 6379:6379
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch
+    image: gcr.io/seqr-project/elasticsearch:gcloud-dev
     ports:
       - 9200:9200
     volumes:
@@ -51,7 +46,7 @@ services:
       retries: 3
 
   kibana:
-    image: gcr.io/seqr-project/kibana
+    image: gcr.io/seqr-project/kibana:gcloud-dev
     ports:
       - 5601:5601
     environment:
@@ -62,14 +57,14 @@ services:
         condition: service_healthy
 
   phenotips:
-    image: gcr.io/seqr-project/phenotips
+    image: gcr.io/seqr-project/phenotips:gcloud-dev
     ports:
       - 8080:8080
     depends_on:
       - init-postgres
 
   seqr:
-    image: gcr.io/seqr-project/seqr
+    image: gcr.io/seqr-project/seqr:gcloud-dev
     ports:
       - 8000:8000
     environment:
