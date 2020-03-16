@@ -19,7 +19,7 @@ seqr consists of the following components:
 - redis - in-memory cache used to speed up request handling.
 - elasticsearch - NoSQL database used to store variant callsets.
 - kibana - dashboard and visual interface for elasticsearch.
-- mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
+- mongo - legacy NoSQL database originally used for variant callsets and still used now to store logs.
 
 
 ## Install
@@ -28,21 +28,22 @@ seqr can be installed on a laptop or on-prem server(s) using installation script
   
 **[Detailed instructions for local installations](deploy/LOCAL_INSTALL.md)**  
 
-For cloud-based deployments, there are Docker images and Kubernetes configs: 
 
-**[Detailed instructions for Kubernetes deployments](deploy/KUBERNETES.md)**  
+## Updating / Migrating an older seqr Instance
 
+For notes on how to update an older instance, see  
 
-## Updating a local installation from the v01 to the v02 hail/elasticsearch loading pipeline:
-
-For notes on how to update the pipeline, see:
-
-[Pipeline Update Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/UPDATE_TO_v02_PIPELINE.md)
+[Update/Migration Instructions](deploy/MIGRATE.md)
 
 
 ## Data loading pipelines
 
-seqr uses a [hail](http://hail.is)-based pipeline to run VEP, add annotations from reference datasets, and write the annotated variant and genotype records to elasticsearch.
-This pipeline can be executed locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc. In either case, the pipeline must run on a machine or cluster that has network access to the machine(s) running elasticsearch.
-See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) for additional documentation.
+seqr uses [hail](http://hail.is)-based pipelines to run VEP and add in other reference data before loading them into elasticsearch.
+These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc.
+We are working on integrating these pipelines so that they are launched and managed by seqr.
+For now, they must be run manually, as shown in the example below. 
+See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+for additional documentation.
 
+For detailed instructions on running te piepleine locally, see Step 5 of the
+[Local installation instructions](deploy/LOCAL_INSTALL.md)

@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         backup_filename = 'gene_reference_data_backup.gz'
 
-        run("/usr/bin/pg_dump -U postgres --table='reference_*' --host {postgres_host} seqrdb | gzip -c - > {backup_filename}".format(
+        run("/usr/bin/pg_dump -U postgres --host {postgres_host} reference_data_db | gzip -c - > {backup_filename}".format(
             postgres_host=options['postgres_host'], backup_filename=backup_filename
         ))
         run("gsutil mv {backup_filename} gs://seqr-reference-data/{backup_filename}".format(backup_filename=backup_filename))

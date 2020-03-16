@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
-from seqr.models import Sample, Project
+from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_alignment_table_handler, update_individual_alignment_sample
 from seqr.views.utils.test_utils import _check_login
 
@@ -18,7 +18,6 @@ class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: 98765432101234567890)
-    @mock.patch('seqr.views.apis.dataset_api.update_xbrowse_vcfffiles', lambda *args: args)
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
@@ -27,7 +26,6 @@ class DatasetAPITest(TransactionTestCase):
         _check_login(self, url)
 
         # Confirm test DB is as expected
-        self.assertFalse(Project.objects.get(guid=PROJECT_GUID).has_new_search)
         existing_index_sample = Sample.objects.get(sample_id='NA19675', dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
         self.assertEqual(existing_index_sample.elasticsearch_index, INDEX_NAME)
         self.assertNotEqual(existing_index_sample.dataset_file_path, 'test_data.vds')
@@ -108,7 +106,7 @@ class DatasetAPITest(TransactionTestCase):
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19678, NA19675_1).']})
+        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1, NA19678).']})
 
         # Send valid request
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
@@ -137,10 +135,6 @@ class DatasetAPITest(TransactionTestCase):
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
         updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
         self.assertSetEqual(
-            {INDEX_NAME},
-            {sample['elasticsearchIndex'] for sample in updated_samples}
-        )
-        self.assertSetEqual(
             {'test_data.vds'},
             {sample['datasetFilePath'] for sample in
              [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample_guid]]}
@@ -161,7 +155,9 @@ class DatasetAPITest(TransactionTestCase):
         self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
         self.assertTrue(response_json['samplesByGuid'][new_sample_guid]['loadedDate'].startswith(today))
 
-        self.assertTrue(Project.objects.get(guid=PROJECT_GUID).has_new_search)
+        updated_sample_models = Sample.objects.filter(guid__in=[sample['sampleGuid'] for sample in updated_samples])
+        self.assertEqual(len(updated_sample_models), 3)
+        self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_alignment_table_handler, args=[PROJECT_GUID])
@@ -190,9 +186,9 @@ class DatasetAPITest(TransactionTestCase):
             'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
         })
 
-    @mock.patch('seqr.views.utils.dataset_utils.does_google_bucket_file_exist')
-    @mock.patch('seqr.views.utils.dataset_utils.proxy_to_igv')
-    def test_add_alignment_sample(self, mock_igv_proxy, mock_google_bucket_proxy):
+    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
+    @mock.patch('seqr.utils.file_utils.os.path.isfile')
+    def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
         url = reverse(update_individual_alignment_sample, args=['I000001_na19675'])
         _check_login(self, url)
 
@@ -215,15 +211,14 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
 
-        mock_igv_proxy.return_value.content = 'Read error'
-        mock_igv_proxy.return_value.status_code = 400
-        mock_google_bucket_proxy.return_value = False
+        mock_local_file_exists.return_value = False
+        mock_google_bucket_file_exists.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'datasetFilePath': '/readviz/NA19675_new.cram',
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram": Read error')
+        self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram"')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
@@ -233,10 +228,8 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.cram"')
 
         # Send valid request
-        mock_igv_proxy.return_value.status_code = 200
-        mock_igv_proxy.return_value.get.side_effect = lambda \
-            key: 'application/octet-stream' if key == 'Content-Type' else 'gzip'
-        mock_google_bucket_proxy.return_value = True
+        mock_local_file_exists.return_value = True
+        mock_google_bucket_file_exists.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'datasetFilePath': '/readviz/NA19675_new.cram',
@@ -246,7 +239,7 @@ class DatasetAPITest(TransactionTestCase):
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
             'createdDate': '2017-02-05T06:42:55.397Z', 'sampleType': 'WES', 'sampleId': 'NA19675_new', 'isActive': True,
             'datasetFilePath': '/readviz/NA19675_new.cram', 'loadedDate': '2017-02-05T06:42:55.397Z',
-            'datasetType': 'ALIGN', 'elasticsearchIndex': None}}})
+            'datasetType': 'ALIGN'}}})
 
         new_sample_url = reverse(update_individual_alignment_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
@@ -263,7 +256,7 @@ class DatasetAPITest(TransactionTestCase):
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'createdDate': mock.ANY, 'sampleType': 'WGS', 'sampleId': 'NA19679', 'isActive': True,
             'datasetFilePath': 'gs://readviz/NA19679.bam', 'loadedDate': mock.ANY,
-            'datasetType': 'ALIGN', 'elasticsearchIndex': None})
+            'datasetType': 'ALIGN'})
         today = datetime.now().strftime('%Y-%m-%d')
         self.assertTrue(response_json['samplesByGuid'][sample_guid]['loadedDate'].startswith(today))
         self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])

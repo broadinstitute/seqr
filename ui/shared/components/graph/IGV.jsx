@@ -83,7 +83,7 @@ const IGVContainer = styled.div`
   
 `
 
-class IGV extends React.Component {
+class IGV extends React.PureComponent {
 
   static propTypes = {
     igvOptions: PropTypes.object.isRequired,

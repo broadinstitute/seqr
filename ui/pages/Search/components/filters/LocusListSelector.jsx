@@ -31,6 +31,13 @@ class BaseLocusListDropdown extends React.Component
       this.props.onChange({ locusListGuid, rawItems })
     }
   }
+
+  shouldComponentUpdate(nextProps) {
+    return nextProps.projectLocusListOptions !== this.props.projectLocusListOptions ||
+      nextProps.onChange !== this.props.onChange ||
+      nextProps.locusList.locusListGuid !== this.props.locusList.locusListGuid ||
+      (!!this.props.locusList.locusListGuid && nextProps.locusList.rawItems !== this.props.locusList.rawItems)
+  }
 }
 
 const mapStateToProps = state => ({
@@ -45,10 +52,11 @@ BaseLocusListDropdown.propTypes = {
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 
-const LocusListSelector = ({ value, ...props }) =>
+const LocusListSelector = React.memo(({ value, ...props }) =>
   <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
     <LocusListDropdown {...props} />
-  </LocusListItemsLoader>
+  </LocusListItemsLoader>,
+)
 
 LocusListSelector.propTypes = {
   value: PropTypes.object,

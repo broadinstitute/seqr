@@ -33,7 +33,8 @@ if [ -z "$PLATFORM" ]; then
 
 elif [ $PLATFORM = "macos" ]; then
 
-    :
+    brew install ssl
+    cat <(echo "export PATH=/usr/local/opt/openssl/bin:$PATH") ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
 
 elif [ $PLATFORM = "centos" ]; then
 
@@ -84,13 +85,14 @@ wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
 cd ${SEQR_DIR}/
 git pull
 mkdir seqr_settings
-cp deploy/docker/seqr/config/*.py seqr_settings/
+cp deploy/docker/seqr/config/gunicorn_config.py seqr_settings/
 
 # install python dependencies
 sudo $(which pip) install --upgrade --ignore-installed -r requirements.txt
 
 # init seqr db
 psql -U postgres postgres -c "create database seqrdb"
+psql -U postgres postgres -c "create database reference_data_db"
 
 # init django
 python -u manage.py makemigrations
@@ -104,8 +106,7 @@ python -u manage.py loaddata variant_searches
 REFERENCE_DATA_BACKUP_FILE=gene_reference_data_backup.gz
 wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz -O ${REFERENCE_DATA_BACKUP_FILE}
 
-psql -U postgres seqrdb -c "DROP TABLE reference_data_geneinfo CASCADE"
-psql -U postgres seqrdb <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
+psql -U postgres reference_data_db <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
 rm ${REFERENCE_DATA_BACKUP_FILE}
 
 # start gunicorn server

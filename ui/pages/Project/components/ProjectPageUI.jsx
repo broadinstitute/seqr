@@ -5,8 +5,8 @@ import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
 import { getCurrentProject } from 'redux/selectors'
-import SectionHeader from 'shared/components/SectionHeader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { SectionHeader } from 'shared/components/StyledComponents'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -32,31 +32,7 @@ import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
 
-/**
-Add charts:
-- variant tags - how many families have particular tags
-- analysis status
- Phenotypes:
-   Cardio - 32 individuals
-   Eye - 10 individuals
-   Ear - 5 individuals
-   Neuro - 10 individuals
-   Other - 5 individuals
-
- Data:
-    Exome - HaplotypeCaller variant calls (32 samples), read viz (10 samples)
-    Whole Genome - HaplotypeCaller variant calls (32 samples), Manta SV calls (10 samples), read data (5 samples)
-    RNA - HaplotypeCaller variant calls (32 samples)
-
-Phenotypes:
-- how many families have phenotype terms in each category
-
-What's new:
- - variant tags
-
-*/
-
-const ProjectSectionComponent = ({ loading, label, children, editButton, linkPath, linkText, project }) => {
+const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,
     <div key="content">
@@ -76,6 +52,16 @@ const ProjectSectionComponent = ({ loading, label, children, editButton, linkPat
       </div>
     ) : null,
   ])
+})
+
+ProjectSectionComponent.propTypes = {
+  loading: PropTypes.bool,
+  label: PropTypes.string,
+  children: PropTypes.node,
+  editButton: PropTypes.node,
+  linkPath: PropTypes.string,
+  linkText: PropTypes.string,
+  project: PropTypes.object,
 }
 
 const mapSectionStateToProps = state => ({
@@ -92,7 +78,7 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = (props) => {
+const ProjectPageUI = React.memo((props) => {
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },
@@ -147,7 +133,7 @@ const ProjectPageUI = (props) => {
       </Grid.Row>
     </Grid>
   )
-}
+})
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,

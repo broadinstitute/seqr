@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { NavLink } from 'react-router-dom'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -19,9 +19,9 @@ const LOADING_PROPS = { inline: true }
 
 const getResultHref = page => result => `/staff/${page}/${result.key}`
 
-const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters }) =>
+const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters, rowsPerPage }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
-    <InlineHeader size="medium" content="Projects:" />
+    <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
       categories={SEARCH_CATEGORIES}
       placeholder="Enter project name"
@@ -31,7 +31,7 @@ const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDown
     or <NavLink to={`/staff/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
-    <SortableTable
+    <DataTable
       striped
       collapsing
       horizontalScroll
@@ -43,8 +43,10 @@ const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDown
       data={data}
       columns={columns}
       loadingProps={LOADING_PROPS}
+      rowsPerPage={rowsPerPage}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 BaseReport.propTypes = {
   page: PropTypes.string,
@@ -59,6 +61,7 @@ BaseReport.propTypes = {
   loadingError: PropTypes.string,
   load: PropTypes.func,
   filters: PropTypes.node,
+  rowsPerPage: PropTypes.number,
 }
 
 export default BaseReport

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getFamiliesLocusListIntervalsByChrom } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -27,7 +27,7 @@ const LargeText = styled.div`
 export const getLocus = (chrom, pos, rangeSize) =>
   `chr${chrom}:${pos - rangeSize}-${pos + rangeSize}`
 
-const UcscBrowserLink = ({ variant, useLiftover }) => {
+const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
   const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
   let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
@@ -38,7 +38,7 @@ const UcscBrowserLink = ({ variant, useLiftover }) => {
 
   return (
     <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`} target="_blank">
-      {chrom}:{pos}
+      {chrom}:{pos}{includeEnd && variant.pos_end && `-${variant.pos_end}`}
     </a>
   )
 }
@@ -46,27 +46,30 @@ const UcscBrowserLink = ({ variant, useLiftover }) => {
 UcscBrowserLink.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
+  includeEnd: PropTypes.bool,
 }
 
 const MAX_SEQUENCE_LENGTH = 30
 const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
 
-const Sequence = ({ sequence, ...props }) =>
+const Sequence = React.memo(({ sequence, ...props }) =>
   <SequenceContainer {...props}>
     {sequence.length > MAX_SEQUENCE_LENGTH ?
       <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
       sequence
     }
-  </SequenceContainer>
+  </SequenceContainer>,
+)
 
 Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
 }
 
-export const parseHgvs = hgvs => (hgvs || '').split(':').pop()
+const parseHgvs = hgvs => (hgvs || '').split(':').pop()
 
-export const ProteinSequence = ({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />
+export const ProteinSequence = React.memo(({ hgvs }) =>
+  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
+)
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
@@ -82,7 +85,7 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
+const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
@@ -129,6 +132,12 @@ const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
     )
   }
   return links
+})
+
+BaseSearchLinks.propTypes = {
+  variant: PropTypes.object,
+  mainTranscript: PropTypes.object,
+  mainGene: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -137,7 +146,34 @@ const mapStateToProps = (state, ownProps) => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const Annotations = ({ variant }) => {
+const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) => {
+  if (!locusListIntervals || locusListIntervals.length < 1) {
+    return null
+  }
+  const { pos, genomeVersion, liftedOverPos } = variant
+  const locusListGuids = locusListIntervals.filter((interval) => {
+    const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
+    if (!variantPos) {
+      return false
+    }
+    return (variantPos >= interval.start) && (variantPos <= interval.end)
+  }).map(({ locusListGuid }) => locusListGuid)
+
+  return <LocusListLabels locusListGuids={locusListGuids} />
+})
+
+BaseVariantLocusListLabels.propTypes = {
+  locusListIntervals: PropTypes.array,
+  variant: PropTypes.object,
+}
+
+const mapLocusListStateToProps = (state, ownProps) => ({
+  locusListIntervals: getFamiliesLocusListIntervalsByChrom(state, ownProps)[ownProps.variant.chrom],
+})
+
+const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
+
+const Annotations = React.memo(({ variant }) => {
   const { rsid } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
@@ -191,11 +227,15 @@ const Annotations = ({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} /></b>
+        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
-        <Sequence sequence={variant.ref} />
-        <Icon name="angle right" />
-        <Sequence sequence={variant.alt} />
+        {variant.svType ||
+          <span>
+            <Sequence sequence={variant.ref} />
+            <Icon name="angle right" />
+            <Sequence sequence={variant.alt} />
+          </span>
+        }
       </LargeText>
       {rsid &&
         <div>
@@ -213,12 +253,12 @@ const Annotations = ({ variant }) => {
         )
       }
       <VerticalSpacer height={5} />
-      <LocusListLabels locusListGuids={variant.locusListGuids} />
+      <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
   )
-}
+})
 
 Annotations.propTypes = {
   variant: PropTypes.object,

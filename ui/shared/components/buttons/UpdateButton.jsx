@@ -5,7 +5,7 @@ import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
-const UpdateButton = (
+const UpdateButton = React.memo((
   { onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
 ) =>
@@ -18,7 +18,7 @@ const UpdateButton = (
         content={buttonText}
         icon={editIconName || 'write'}
         labelPosition={buttonText && 'right'}
-        size={size}
+        size={size || 'small'}
         disabled={disabled}
         floated={buttonFloated}
       />
@@ -36,7 +36,8 @@ const UpdateButton = (
         confirmCloseIfNotSaved
       />
     ) }) }
-  </Modal>
+  </Modal>,
+)
 
 
 UpdateButton.propTypes = {

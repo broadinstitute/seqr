@@ -4,21 +4,29 @@ import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
 import UpdateButton from '../buttons/UpdateButton'
-import { EDITABLE_PROJECT_FIELDS } from '../../utils/constants'
+import { EDITABLE_PROJECT_FIELDS, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from '../../utils/constants'
 
-const EditProjectButton = props => (
+const MATCHMAKER_PROJECT_FIELDS = [
+  ...EDITABLE_PROJECT_FIELDS,
+  ...[
+    { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'mmePrimaryDataOwner' },
+    { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
+  ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` })),
+]
+
+const EditProjectButton = React.memo(props => (
   props.project && props.project.canEdit ?
     <UpdateButton
       buttonText="Edit Project"
       modalTitle="Edit Project"
       modalId={`editProject-${props.project.projectGuid}`}
       onSubmit={props.updateProject}
-      formFields={EDITABLE_PROJECT_FIELDS}
+      formFields={props.project.isMmeEnabled ? MATCHMAKER_PROJECT_FIELDS : EDITABLE_PROJECT_FIELDS}
       initialValues={props.project}
       trigger={props.trigger}
       submitButtonText="Save"
     /> : null
-)
+))
 
 EditProjectButton.propTypes = {
   project: PropTypes.object,

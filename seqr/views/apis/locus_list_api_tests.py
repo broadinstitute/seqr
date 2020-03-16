@@ -4,11 +4,10 @@ import mock
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
-from seqr.models import LocusList, Project
+from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
     update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.orm_to_json_utils import get_project_locus_list_models
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, LOCUS_LIST_FIELDS, LOCUS_LIST_DETAIL_FIELDS
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -17,6 +16,7 @@ PROJECT_GUID = 'R0001_1kg'
 
 class LocusListAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def test_locus_lists(self):
         url = reverse(locus_lists)
@@ -29,11 +29,9 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(set(locus_lists_dict.keys()), {'LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'})
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
-        self.assertSetEqual(
-            set(locus_list.keys()),
-            {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name'}
-        )
+        fields = {'numProjects'}
+        fields.update(LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(locus_list.keys()), fields)
 
     def test_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
@@ -47,11 +45,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertListEqual(locus_lists_dict.keys(), [LOCUS_LIST_GUID])
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
-        self.assertSetEqual(
-            set(locus_list.keys()),
-            {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name', 'items', 'intervalGenomeVersion'}
-        )
+        self.assertSetEqual(set(locus_list.keys()), LOCUS_LIST_DETAIL_FIELDS)
         self.assertSetEqual(
             {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
             set(response_json['genesById'].keys())
@@ -148,8 +142,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertEqual(len(new_locus_list), 0)
 
     def test_add_and_remove_project_locus_lists(self):
-        project = Project.objects.get(guid=PROJECT_GUID)
-        self.assertListEqual(list(get_project_locus_list_models(project)), [])
+        existing_guid = 'LL00005_retina_proteome'
 
         # add a locus list
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
@@ -157,12 +150,17 @@ class LocusListAPITest(TransactionTestCase):
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [LOCUS_LIST_GUID])
-        self.assertListEqual(list(get_project_locus_list_models(project)), [LocusList.objects.get(guid=LOCUS_LIST_GUID)])
+        self.assertListEqual(response.json()['locusListGuids'], [LOCUS_LIST_GUID, existing_guid])
+        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
+        self.assertEqual(ll_projects.count(), 2)
+        self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
 
         # remove a locus list
         url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [])
-        self.assertListEqual(list(get_project_locus_list_models(project)), [])
+        self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
+        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
+        self.assertEqual(ll_projects.count(), 1)
+        self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})
+

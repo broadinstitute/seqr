@@ -17,7 +17,7 @@ import { ColoredIcon } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getCurrentProject } from 'redux/selectors'
+import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
@@ -62,7 +62,7 @@ const ratioLabel = (flag) => {
   return `Ratio ${words[1]}/${words[2]}`
 }
 
-const CaseReviewStatus = ({ individual }) =>
+const CaseReviewStatus = React.memo(({ individual }) =>
   <CaseReviewDropdownContainer>
     <CaseReviewStatusDropdown individual={individual} />
     {
@@ -73,238 +73,242 @@ const CaseReviewStatus = ({ individual }) =>
         </Detail>
       ) : null
     }
-  </CaseReviewDropdownContainer>
+  </CaseReviewDropdownContainer>,
+)
 
 CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const MmeStatusLabel = ({ title, dateField, color, individual }) =>
+const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) =>
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
-      {title}: {new Date(individual[dateField]).toLocaleDateString()}
+      {title}: {new Date(mmeSubmission[dateField]).toLocaleDateString()}
     </Label>
-  </Link>
+  </Link>,
+)
 
 MmeStatusLabel.propTypes = {
   title: PropTypes.string,
   dateField: PropTypes.string,
   color: PropTypes.string,
   individual: PropTypes.object,
+  mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = ({ loadedSamples, individual }) =>
+const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
   <div>
     {loadedSamples.map(sample =>
       <div key={sample.sampleGuid}>
         <Sample loadedSample={sample} isOutdated={!sample.isActive} />
       </div>,
     )}
-    {individual.mmeSubmittedDate && (
-      individual.mmeDeletedDate ? (
+    {mmeSubmission && (
+      mmeSubmission.deletedDate ? (
         <Popup
           flowing
           trigger={
-            <MmeStatusLabel title="Removed from MME" dateField="mmeDeletedDate" color="red" individual={individual} />
+            <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
           }
           content={
             <div>
-              <b>Originally Submitted: </b>{new Date(individual.mmeSubmittedDate).toLocaleDateString()}
+              <b>Originally Submitted: </b>{new Date(mmeSubmission.createdDate).toLocaleDateString()}
             </div>
           }
         />
-      ) : <MmeStatusLabel title="Submitted to MME" dateField="mmeSubmittedDate" color="violet" individual={individual} />
+      ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )
   }
-  </div>
+  </div>,
+)
 
 DataDetails.propTypes = {
+  mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
   loadedSamples: PropTypes.array,
 }
 
-class IndividualRow extends React.Component
-{
-  static propTypes = {
-    project: PropTypes.object.isRequired,
-    family: PropTypes.object.isRequired,
-    individual: PropTypes.object.isRequired,
-    samplesByGuid: PropTypes.object.isRequired,
-    updateIndividual: PropTypes.func,
-    editCaseReview: PropTypes.bool,
-  }
+const IndividualRow = React.memo((
+  { project, family, individual, editCaseReview, mmeSubmission, samplesByGuid, dispatchUpdateIndividual },
+) => {
+  const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
-  render() {
-    const { project, family, individual, editCaseReview } = this.props
+  let loadedSamples = sampleGuids.map(
+    sampleGuid => samplesByGuid[sampleGuid],
+  ).filter(s => s.datasetType === DATASET_TYPE_VARIANT_CALLS)
+  loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
+  // only show first and latest samples
+  loadedSamples.splice(1, loadedSamples.length - 2)
 
-    const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
-
-    let loadedSamples = sampleGuids.map(
-      sampleGuid => this.props.samplesByGuid[sampleGuid],
-    ).filter(s => s.datasetType === DATASET_TYPE_VARIANT_CALLS)
-    loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
-    // only show first and latest samples
-    loadedSamples.splice(1, loadedSamples.length - 2)
-
-    const leftContent =
+  const leftContent =
+    <div>
       <div>
-        <div>
-          <PedigreeIcon sex={sex} affected={affected} /> {displayName}
-        </div>
-        <div>
-          {
-            (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-              <Detail>
-                child of &nbsp;
-                <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
-                <br />
-              </Detail>
-            ) : null
-          }
-          <Detail>
-            ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
-          </Detail>
-        </div>
+        <PedigreeIcon sex={sex} affected={affected} /> {displayName}
       </div>
+      <div>
+        {
+          (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
+            <Detail>
+              child of &nbsp;
+              <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
+              <br />
+            </Detail>
+          ) : null
+        }
+        <Detail>
+          ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
+        </Detail>
+      </div>
+    </div>
 
-    const rightContent = editCaseReview ?
-      <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} individual={individual} />
+  const rightContent = editCaseReview ?
+    <CaseReviewStatus individual={individual} /> :
+    <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-    const fields = [
-      {
-        content: (
-          <OptionFieldView
-            key="caseReviewStatus"
-            isVisible={!editCaseReview}
-            fieldName="Case Review Status"
-            field="caseReviewStatus"
-            idField="individualGuid"
-            initialValues={individual}
-            tagOptions={CASE_REVIEW_STATUS_OPTIONS}
-            tagAnnotation={value => <ColoredIcon name="stop" color={value.color} />}
-          />
-        ),
-      },
-      {
-        content: (
-          <TextFieldView
-            key="discussion"
-            isVisible={
-              caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
-              || (editCaseReview && caseReviewDiscussion) || false
-            }
-            fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
-            field="caseReviewDiscussion"
-            idField="individualGuid"
-            initialValues={individual}
-          />
-        ),
-      },
-      {
-        content: (
-          <TextFieldView
-            key="notes"
-            isEditable={project.canEdit}
-            fieldName="Individual Notes"
-            field="notes"
-            idField="individualGuid"
-            initialValues={individual}
-            modalTitle={`Notes for Individual ${displayName}`}
-            onSubmit={this.props.updateIndividual}
-          />
-        ),
-      },
-      {
-        content: (
-          <BaseFieldView
-            key="population"
-            isEditable={false}
-            fieldName="Imputed Population"
-            field="population"
-            idField="individualGuid"
-            initialValues={individual}
-            fieldDisplay={population => POPULATION_MAP[population] || population}
+  const fields = [
+    {
+      content: (
+        <OptionFieldView
+          key="caseReviewStatus"
+          isVisible={!editCaseReview}
+          fieldName="Case Review Status"
+          field="caseReviewStatus"
+          idField="individualGuid"
+          initialValues={individual}
+          tagOptions={CASE_REVIEW_STATUS_OPTIONS}
+          tagAnnotation={value => <ColoredIcon name="stop" color={value.color} />}
+        />
+      ),
+    },
+    {
+      content: (
+        <TextFieldView
+          key="discussion"
+          isVisible={
+            caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
+            || (editCaseReview && caseReviewDiscussion) || false
+          }
+          fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
+          field="caseReviewDiscussion"
+          idField="individualGuid"
+          initialValues={individual}
+        />
+      ),
+    },
+    {
+      content: (
+        <TextFieldView
+          key="notes"
+          isEditable={project.canEdit}
+          fieldName="Individual Notes"
+          field="notes"
+          idField="individualGuid"
+          initialValues={individual}
+          modalTitle={`Notes for Individual ${displayName}`}
+          onSubmit={dispatchUpdateIndividual}
+        />
+      ),
+    },
+    {
+      content: (
+        <BaseFieldView
+          key="population"
+          isEditable={false}
+          fieldName="Imputed Population"
+          field="population"
+          idField="individualGuid"
+          initialValues={individual}
+          fieldDisplay={population => POPULATION_MAP[population] || population}
 
-          />
-        ),
-      },
-      {
-        content: (
-          <BaseFieldView
-            key="filterFlags"
-            isEditable={false}
-            fieldName="Sample QC Flags"
-            field="filterFlags"
-            idField="individualGuid"
-            initialValues={individual}
-            fieldDisplay={filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
-              <Label
-                key={flag}
-                basic
-                horizontal
-                color="orange"
-                content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
-              />,
-            )}
-          />
-        ),
-      },
-      {
-        content: (
-          <BaseFieldView
-            key="popPlatformFilters"
-            isEditable={false}
-            fieldName="Population/Platform Specific Sample QC Flags"
-            field="popPlatformFilters"
-            idField="individualGuid"
-            initialValues={individual}
-            fieldDisplay={filterFlags => Object.keys(filterFlags).map(flag =>
-              <Label
-                key={flag}
-                basic
-                horizontal
-                color="orange"
-                content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
-              />,
-            )}
-          />
-        ),
-      },
-      {
-        content: (
-          <PhenotipsDataPanel
-            key="phenotips"
-            individual={individual}
-            showDetails
-            showEditPhenotipsLink={project.canEdit}
-          />
-        ),
-      },
-    ]
+        />
+      ),
+    },
+    {
+      content: (
+        <BaseFieldView
+          key="filterFlags"
+          isEditable={false}
+          fieldName="Sample QC Flags"
+          field="filterFlags"
+          idField="individualGuid"
+          initialValues={individual}
+          fieldDisplay={filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
+            <Label
+              key={flag}
+              basic
+              horizontal
+              color="orange"
+              content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
+            />,
+          )}
+        />
+      ),
+    },
+    {
+      content: (
+        <BaseFieldView
+          key="popPlatformFilters"
+          isEditable={false}
+          fieldName="Population/Platform Specific Sample QC Flags"
+          field="popPlatformFilters"
+          idField="individualGuid"
+          initialValues={individual}
+          fieldDisplay={filterFlags => Object.keys(filterFlags).map(flag =>
+            <Label
+              key={flag}
+              basic
+              horizontal
+              color="orange"
+              content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
+            />,
+          )}
+        />
+      ),
+    },
+    {
+      content: (
+        <PhenotipsDataPanel
+          key="phenotips"
+          individual={individual}
+          showDetails
+          showEditPhenotipsLink={project.canEdit}
+        />
+      ),
+    },
+  ]
 
-    return (
-      <FamilyLayout
-        fields={fields}
-        fieldDisplay={field => field.content}
-        leftContent={leftContent}
-        rightContent={rightContent}
-      />
-    )
-  }
+  return (
+    <FamilyLayout
+      fields={fields}
+      fieldDisplay={field => field.content}
+      leftContent={leftContent}
+      rightContent={rightContent}
+    />
+  )
+})
+
+IndividualRow.propTypes = {
+  project: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
+  individual: PropTypes.object.isRequired,
+  mmeSubmission: PropTypes.object,
+  samplesByGuid: PropTypes.object.isRequired,
+  dispatchUpdateIndividual: PropTypes.func,
+  editCaseReview: PropTypes.bool,
 }
 
 export { IndividualRow as IndividualRowComponent }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   samplesByGuid: getSamplesByGuid(state),
+  mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
 })
 
 
 const mapDispatchToProps = {
-  updateIndividual,
+  dispatchUpdateIndividual: updateIndividual,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

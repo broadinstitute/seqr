@@ -6,7 +6,14 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getGenesById } from 'redux/selectors'
+import {
+  getProjectsByGuid,
+  getFirstSampleByFamily,
+  getUserOptionsIsLoading,
+  getGenesById,
+  getHasActiveVariantSampleByFamily,
+} from 'redux/selectors'
+import CreateVariantButton from '../buttons/CreateVariantButton'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -40,21 +47,28 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
-const BaseFirstSample = ({ firstFamilySample, compact }) =>
-  <Sample loadedSample={firstFamilySample} hoverDetails={compact ? 'first loaded' : null} />
+const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) =>
+  <Sample
+    loadedSample={firstFamilySample}
+    hoverDetails={compact ? 'first loaded' : null}
+    isOutdated={!hasActiveVariantSample}
+  />,
+)
 
 BaseFirstSample.propTypes = {
   firstFamilySample: PropTypes.object,
   compact: PropTypes.bool,
+  hasActiveVariantSample: PropTypes.bool,
 }
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
+const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
     <Select
       loading={loading}
@@ -65,7 +79,8 @@ const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
       search
       {...props}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
@@ -148,7 +163,7 @@ const formatAnalysedByList = analysedByList =>
     `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
   ).join(', ')
 
-export const AnalysedBy = ({ analysedByList, compact }) => {
+export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
   if (compact) {
     return [...analysedByList.reduce(
       (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
@@ -162,29 +177,38 @@ export const AnalysedBy = ({ analysedByList, compact }) => {
     staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
     externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
   ]
-}
+})
 
 AnalysedBy.propTypes = {
   analysedByList: PropTypes.array,
   compact: PropTypes.bool,
 }
 
-export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
+const getContentWidth = (useFullWidth, leftContent, rightContent) => {
+  if (!useFullWidth || (leftContent && rightContent)) {
+    return 10
+  }
+  if (leftContent || rightContent) {
+    return 13
+  }
+  return 16
+}
+
+export const FamilyLayout = React.memo(({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
   <div>
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
-        <Grid.Column width={3}>
-          {leftContent}
-        </Grid.Column>
+        {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
         {compact ? fields.map(field =>
           <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={(useFullWidth && !rightContent) ? 13 : 10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) : <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>
     </FamilyGrid>
-  </div>
+  </div>,
+)
 
 FamilyLayout.propTypes = {
   fieldDisplay: PropTypes.func,
@@ -197,9 +221,9 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const SearchLink = ({ family, disabled, children }) => (
+const SearchLink = React.memo(({ family, disabled, children }) => (
   <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
-)
+))
 
 SearchLink.propTypes = {
   family: PropTypes.object.isRequired,
@@ -207,13 +231,13 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
-const DiscoveryGenes = ({ project, familyGuid, genesById }) => {
+const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
   const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
     (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
   ) : null
-}
+})
 
 DiscoveryGenes.propTypes = {
   project: PropTypes.object.isRequired,
@@ -221,13 +245,16 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const Family = (
+const Family = React.memo((
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, firstFamilySample,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample, hidePedigree,
+    disableEdit,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
+
+  const isEditable = !disableEdit && project.canEdit
 
   const familyField = (field) => {
     const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
@@ -235,7 +262,7 @@ const Family = (
       values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
     return React.createElement(renderDetails.component || TextFieldView, {
       key: field.id,
-      isEditable: project.canEdit && field.canEdit,
+      isEditable: isEditable && field.canEdit,
       isPrivate: renderDetails.internal,
       fieldName: compact ? null : renderDetails.name,
       field: field.id,
@@ -248,31 +275,36 @@ const Family = (
     })
   }
 
-  const leftContent = [
-    <InlineHeader
+  let leftContent = null
+  if (!hidePedigree) {
+    const familyHeader = <InlineHeader
       key="name"
-      overrideInline={!compact}
       size="small"
       content={showFamilyPageLink ?
         <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
         family.displayName
       }
-    />,
-    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
-  ]
+    />
+    leftContent = [
+      compact ? familyHeader : <div>{familyHeader}</div>,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
+    ]
+  }
 
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /></SearchLink>
+      <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
       <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
     </div>,
     !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /> Variant Search</SearchLink>
-        {!firstFamilySample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /> Variant Search</SearchLink>
+        {!hasActiveVariantSample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        <VerticalSpacer height={10} />
+        <CreateVariantButton family={family} />
         <VerticalSpacer height={10} />
         {project.isMmeEnabled &&
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
@@ -291,7 +323,7 @@ const Family = (
     leftContent={leftContent}
     rightContent={rightContent}
   />
-}
+})
 
 export { Family as FamilyComponent }
 
@@ -304,17 +336,19 @@ Family.propTypes = {
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
   showFamilyPageLink: PropTypes.bool,
+  hidePedigree: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   genesById: PropTypes.object,
-  firstFamilySample: PropTypes.object,
+  hasActiveVariantSample: PropTypes.bool,
+  disableEdit: PropTypes.bool,
 }
 
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
   genesById: getGenesById(state),
-  firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {

@@ -15,7 +15,7 @@ const iconColor = (loadedSample, isOutdated) => {
   return isOutdated ? 'grey' : 'green'
 }
 
-const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
+const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) =>
   <Popup
     trigger={
       <span>
@@ -35,7 +35,8 @@ const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
       'no data available'
     }
     position="left center"
-  />
+  />,
+)
 
 Sample.propTypes = {
   loadedSample: PropTypes.object,

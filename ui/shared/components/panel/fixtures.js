@@ -19,12 +19,7 @@ export const VARIANT = {
   chrom: "1",
   clinvar: { clinsig: "", variantId: null },
   familyGuids: ["F011652_1"],
-  functionalData: [
-    { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
-      metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org" },
-    { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
-      name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
-  ],
+  functionalDataGuids: ['VFD0000002_1248367227_r0390_100', 'VFD0000001_1248367227_r0390_100'],
   genomeVersion: "37",
   geneIds: ['ENSG00000228198'],
   genotypes: {
@@ -66,7 +61,7 @@ export const VARIANT = {
   liftedOverChrom: "",
   liftedOverGenomeVersion: "38",
   liftedOverPos: "",
-  notes: [],
+  noteGuids: [],
   origAltAlleles: ["T"],
   projectGuid: 'R0237_1000_genomes_demo',
   pos: 248367227,
@@ -80,21 +75,7 @@ export const VARIANT = {
   },
   predictions: { cadd: '27.2' },
   ref: "TC",
-  tags: [
-    {
-      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-      searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-    },
-    {
-      category: "CMG Discovery Tags",
-      color: "#44AA60",
-      dateSaved: "2018-03-23T19:59:12.262Z",
-      name: "Tier 1 - Phenotype not delineated",
-      searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
-      tagGuid: "VT1708635_1248367227_r0390_100",
-      user: "hsnow@broadinstitute.org",
-    },
-  ],
+  tagGuids: ['VT1708635_1248367227_r0390_100', 'VT1726942_1248367227_r0390_100'],
   transcripts: {
     ENSG00000228198: [
       {
@@ -112,6 +93,7 @@ export const VARIANT = {
     ],
   },
   variantId: "SV0000002_1248367227_r0390_100",
+  variantGuid: "SV0000002_1248367227_r0390_100",
   xpos: 1248367227,
 }
 
@@ -140,7 +122,12 @@ export const LOCUS_LIST = {
   parsedItems: { items:  [{ geneId: 'ENSG00000164458' }], itemMap: { 'TTN': { geneId: 'ENSG00000164458', symbol: 'TTN' } } }
 }
 
+const GENE_ID = 'ENSG00000228198'
+export const SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
+export const SEARCH = { projectFamilies: [{ projectGuid: 'R0237_1000_genomes_demo', familyGuid: 'F011652_1'}], search: {} }
+
 export const STATE1 = {
+  currentProjectGuid: 'R0237_1000_genomes_demo',
   projectsByGuid: {
     R0237_1000_genomes_demo: {
       createdDate: '2016-05-16T05:37:08.634Z',
@@ -148,13 +135,12 @@ export const STATE1 = {
       description: '',
       discoveryTags: [],
       isMmeEnabled: true,
-      isPhenotipsEnabled: true,
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       name: '1000 Genomes Demo',
-      phenotipsUserId: '1kg',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
+      variantTagTypes: [],
     },
   },
   familiesByGuid: {
@@ -162,7 +148,6 @@ export const STATE1 = {
       analysisNotes: 'added note',
       analysisStatus: 'Rcpc',
       analysisSummary: '',
-      causalInheritanceMode: 'unknown',
       description: '',
       displayName: '1',
       familyGuid: 'F011652_1',
@@ -170,6 +155,7 @@ export const STATE1 = {
       internalCaseReviewNotes: '',
       internalCaseReviewSummary: '',
       pedigreeImage: '/media/pedigree_images/1_w677Gyf.png',
+      projectGuid: 'R0237_1000_genomes_demo',
       analysedBy: [],
       individualGuids: [
         'I021476_na19678',
@@ -286,7 +272,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005221',
       sex: 'F',
       sampleGuids: [],
     },
@@ -375,7 +360,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005219',
       sex: 'M',
       sampleGuids: [],
     },
@@ -441,23 +425,22 @@ export const STATE1 = {
           server: 'monarchinitiative.org',
         },
       },
-      phenotipsPatientId: 'P0005220',
       sex: 'M',
       sampleGuids: [],
     },
   },
+  analysisGroupsByGuid: {},
   samplesByGuid: {},
+  mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
     description: '',
     discoveryTags: [],
     isMmeEnabled: true,
-    isPhenotipsEnabled: true,
     lastModifiedDate: '2017-03-14T17:37:32.712Z',
     mmePrimaryDataOwner: 'PI',
     name: '1000 Genomes Demo',
-    phenotipsUserId: '1kg',
     projectCategoryGuids: [],
     projectGuid: 'R0237_1000_genomes_demo',
   },
@@ -487,7 +470,39 @@ export const STATE1 = {
   genesById: { 'ENSG00000228198': GENE },
   genesLoading: {},
   savedVariantsByGuid: { SV0000002_1248367227_r0390_100: VARIANT },
+  variantTagsByGuid: {
+    VT1726942_1248367227_r0390_100: {
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+      tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+    VT1708635_1248367227_r0390_100: {
+      category: "CMG Discovery Tags",
+      color: "#44AA60",
+      dateSaved: "2018-03-23T19:59:12.262Z",
+      name: "Tier 1 - Phenotype not delineated",
+      searchHash: "c2edbeae",
+      tagGuid: "VT1708635_1248367227_r0390_100",
+      user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+  },
+  variantNotesByGuid: {},
+  variantFunctionalDataByGuid: {
+    VFD0000002_1248367227_r0390_100: { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z",
+      metadata: "An updated note", metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'], tagGuid: 'VFD0000002_1248367227_r0390_100' },
+    VFD0000001_1248367227_r0390_100: { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2",
+      metadataTitle: "LOD Score", name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'], tagGuid: 'VFD0000001_1248367227_r0390_100'},
+  },
   locusListsByGuid: { [LOCUS_LIST_GUID]: LOCUS_LIST },
+  locusListsLoading: {},
+  savedVariantsLoading: {},
+  savedVariantTableState: {},
+  searchesByHash: { [SEARCH_HASH]: SEARCH },
+  searchGeneBreakdown: { [SEARCH_HASH]: {[GENE_ID]: { total: 3, families: { F011652_1: 2 }}} },
+  searchGeneBreakdownLoading: { isLoading: false },
 }
 
 export const STATE_WITH_2_FAMILIES = {

@@ -6,7 +6,6 @@ import { Label } from 'semantic-ui-react'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
-import { getNameForCategoryHpoId } from 'shared/utils/hpoUtils'
 
 const IndentedContainer = styled.div`
   padding-left: 20px;
@@ -18,13 +17,45 @@ const CompactContainer = styled.div`
   color: gray;
 `
 
+const UNKNOWN_CATEGORY = 'Other'
+
+const CATEGORY_NAMES = {
+  'HP:0000119': 'Genitourinary',
+  'HP:0000152': 'Head or Neck',
+  'HP:0000478': 'Eye',
+  'HP:0000598': 'Ear',
+  'HP:0000707': 'Nervous System',
+  'HP:0000769': 'Breast',
+  'HP:0000818': 'Endocrine',
+  'HP:0000924': 'Skeletal',
+  'HP:0001197': 'Prenatal or birth',
+  'HP:0001507': 'Growth Abnormality',
+  'HP:0001574': 'Integument',
+  'HP:0001608': 'Voice',
+  'HP:0001626': 'Cardiovascular',
+  'HP:0001871': 'Blood',
+  'HP:0001939': 'Metabolism/Homeostasis',
+  'HP:0002086': 'Respiratory',
+  'HP:0002664': 'Neoplasm',
+  'HP:0002715': 'Immune System',
+  'HP:0003011': 'Musculature',
+  'HP:0003549': 'Connective Tissue',
+  'HP:0025031': 'Digestive',
+  'HP:0040064': 'Limbs',
+  'HP:0045027': 'Thoracic Cavity',
+  'HP:0500014': 'Test Result',
+  'HP:0025354': 'Cellular Phenotype',
+}
+
+const getNameForCategoryHpoId = categoryHpoId => CATEGORY_NAMES[categoryHpoId] || UNKNOWN_CATEGORY
+
 export const hasPhenotipsDetails = phenotipsData =>
   phenotipsData && (
     (phenotipsData.features || []).length > 0 ||
     (phenotipsData.rejectedGenes || []).length > 0 ||
     (phenotipsData.genes || []).length > 0)
 
-const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
+const PhenotipsSection = React.memo(({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
   let fieldData = phenotipsData[field]
   if (fieldData && parseFieldRows) {
     fieldData = parseFieldRows(fieldData)
@@ -46,7 +77,7 @@ const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow
       <VerticalSpacer height={10} />
     </div>
   )
-}
+})
 
 PhenotipsSection.propTypes = {
   phenotipsData: PropTypes.object,
@@ -138,53 +169,46 @@ const PHENOTIPS_SECTIONS = [
   },
 ]
 
-class PhenotipsDataPanel extends React.Component
-{
-  static propTypes = {
-    individual: PropTypes.object.isRequired,
-    showDetails: PropTypes.bool.isRequired,
-    showEditPhenotipsLink: PropTypes.bool.isRequired,
-    showViewPhenotipsLink: PropTypes.bool,
-  }
-
-  render() {
-    const { individual, showDetails, showEditPhenotipsLink, showViewPhenotipsLink = true } = this.props
-    const { phenotipsData } = individual
-
-    return (
-      <div>
-        <b>PhenoTips{(showDetails && hasPhenotipsDetails(phenotipsData)) ? ':' : ''}</b><HorizontalSpacer width={15} />
-        { showViewPhenotipsLink && <ShowPhenotipsModalButton individual={individual} isViewOnly /> }
-        {
-          showEditPhenotipsLink && [
-            <HorizontalSpacer key={1} width={10} />,
-            <ShowPhenotipsModalButton key={2} individual={individual} isViewOnly={false} />,
-          ]
+const PhenotipsDataPanel = React.memo(({ individual, showDetails, showEditPhenotipsLink, showViewPhenotipsLink = true }) =>
+  <div>
+    <b>PhenoTips{(showDetails && hasPhenotipsDetails(individual.phenotipsData)) ? ':' : ''}</b><HorizontalSpacer width={15} />
+    { showViewPhenotipsLink && <ShowPhenotipsModalButton individual={individual} isViewOnly /> }
+    {
+      showEditPhenotipsLink && [
+        <HorizontalSpacer key={1} width={10} />,
+        <ShowPhenotipsModalButton key={2} individual={individual} isViewOnly={false} />,
+      ]
+    }
+    {showDetails ?
+      <IndentedContainer>
+        {individual.phenotipsData && hasPhenotipsDetails(individual.phenotipsData) &&
+          <div>
+            <VerticalSpacer height={10} />
+            {PHENOTIPS_SECTIONS.map(sectionProps =>
+              <PhenotipsSection
+                key={sectionProps.title}
+                phenotipsData={individual.phenotipsData}
+                {...sectionProps}
+              />,
+            )}
+          </div>
         }
-        {showDetails ?
-          <IndentedContainer>
-            {phenotipsData && hasPhenotipsDetails(phenotipsData) &&
-              <div>
-                <VerticalSpacer height={10} />
-                {PHENOTIPS_SECTIONS.map(sectionProps =>
-                  <PhenotipsSection
-                    key={sectionProps.title}
-                    phenotipsData={phenotipsData}
-                    {...sectionProps}
-                  />,
-                )}
-              </div>
-            }
-          </IndentedContainer> :
-          <CompactContainer>
-            <HorizontalSpacer width={30} />
-            {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
-            {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
-            {(phenotipsData && phenotipsData.genes) ? `${phenotipsData.genes.length} candidate genes` : null}
-          </CompactContainer>
-        }
-      </div>)
-  }
+      </IndentedContainer> :
+      <CompactContainer>
+        <HorizontalSpacer width={30} />
+        {(individual.phenotipsData && individual.phenotipsData.features) ? `${individual.phenotipsData.features.length} phenotype terms` : null} &nbsp;
+        {(individual.phenotipsData && individual.phenotipsData.rejectedGenes) ? `${individual.phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
+        {(individual.phenotipsData && individual.phenotipsData.genes) ? `${individual.phenotipsData.genes.length} candidate genes` : null}
+      </CompactContainer>
+    }
+  </div>,
+)
+
+PhenotipsDataPanel.propTypes = {
+  individual: PropTypes.object.isRequired,
+  showDetails: PropTypes.bool.isRequired,
+  showEditPhenotipsLink: PropTypes.bool.isRequired,
+  showViewPhenotipsLink: PropTypes.bool,
 }
 
 export default PhenotipsDataPanel

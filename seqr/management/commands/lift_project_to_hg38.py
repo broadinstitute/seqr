@@ -7,14 +7,13 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Sample, Individual
-from seqr.model_utils import update_xbrowse_vcfffiles
 from seqr.views.apis.dataset_api import _update_variant_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant
 from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
@@ -73,19 +72,8 @@ class Command(BaseCommand):
                                for family, missing_indivs in missing_family_individuals.items()])
                 ))
 
-        # Get and clean up expected saved variants
+        # Get expected saved variants
         saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
-        deleted_no_tags = set()
-        for guid, variant in saved_variant_models_by_guid.items():
-            if not (variant.varianttag_set.count() or variant.variantnote_set.count()):
-                deleted_no_tags.add(guid)
-
-        if deleted_no_tags:
-            if raw_input('Do you want to delete the following {} saved variants with no tags (y/n)?: {} '.format(
-                    len(deleted_no_tags), ', '.join(deleted_no_tags))) == 'y':
-                for guid in deleted_no_tags:
-                    saved_variant_models_by_guid.pop(guid).delete()
-                logger.info('Deleted {} variants'.format(len(deleted_no_tags)))
 
         expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
         missing_families = expected_families - included_families
@@ -176,10 +164,7 @@ class Command(BaseCommand):
         logger.info('Successfully updated {} variants'.format(len(es_variants)))
 
         # Update project and sample data
-        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
-        update_xbrowse_vcfffiles(
-            project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
-        )
+        update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38})
 
         reset_cached_search_results(project)
 

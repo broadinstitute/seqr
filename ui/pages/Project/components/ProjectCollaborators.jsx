@@ -18,7 +18,7 @@ import { updateCollaborator } from '../reducers'
 import { getUserOptions } from '../selectors'
 
 
-const CollaboratorEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
+const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
     <AddableSelect
       loading={loading}
@@ -27,7 +27,8 @@ const CollaboratorEmailDropdown = ({ load, loading, usersByUsername, onChange, v
       value={value.username || value.email}
       {...props}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 CollaboratorEmailDropdown.propTypes = {
   load: PropTypes.func,
@@ -72,7 +73,7 @@ const EDIT_FIELDS = [
 ]
 
 
-const AddCollaboratorButton = ({ project, onSubmit }) => (
+const AddCollaboratorButton = React.memo(({ project, onSubmit }) => (
   project.canEdit ?
     <UpdateButton
       modalId="addCollaborator"
@@ -83,7 +84,7 @@ const AddCollaboratorButton = ({ project, onSubmit }) => (
       buttonText="Add Collaborator"
       showErrorPanel
     /> : null
-)
+))
 
 AddCollaboratorButton.propTypes = {
   project: PropTypes.object,
@@ -104,12 +105,12 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const ProjectCollaborators = ({ project, onSubmit }) => (
+const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
   orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
       <Popup
         position="top center"
-        trigger={<Icon link name={c.hasEditPermissions ? 'star' : ''} />}
+        trigger={<Icon link size="small" name={c.hasEditPermissions ? 'star' : ''} />}
         content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
@@ -125,14 +126,16 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
             formFields={EDIT_FIELDS}
             initialValues={c}
             showErrorPanel
+            size="tiny"
           />
           <DeleteButton
             initialValues={c}
             onSubmit={onSubmit}
+            size="tiny"
             confirmDialog={
               <div className="content">
                 Are you sure you want to delete <b>{c.displayName || c.email}</b>. They will still have their user account
-                 and be able to log in, but will not be able to access this project anymore.
+                and be able to log in, but will not be able to access this project anymore.
               </div>
             }
           />
@@ -141,11 +144,12 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
       }
     </CollaboratorContainer>,
   )
-)
+))
 
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func,
 }
 
 const mapDispatchToProps = {

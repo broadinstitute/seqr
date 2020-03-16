@@ -6,8 +6,8 @@ import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
+import { SORT_BY_XPOS } from 'shared/utils/constants'
+import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import {
   createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
 } from './utils/reducerFactories'
@@ -22,14 +22,16 @@ export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
-const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
-const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
+export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
+export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
+export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
+const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
+const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
 
@@ -90,14 +92,23 @@ export const loadUserOptions = (staffOnly) => {
 
 export const loadStaffOptions = () => loadUserOptions(true)
 
-/**
- * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
- * Accepts a values object that includes any data to be posted as well as the following keys:
- *
- * action: A string representation of the action to perform. Can be "create", "update" or "delete". Defaults to "update"
- * projectGuid: The GUID for the project to update. If omitted, the action will be set to "create"
- * projectField: A specific field to update (e.g. "categories"). Should be used for fields which have special server-side logic for updating
- */
+export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
+  return (dispatch, getState) => {
+    const project = getState().projectsByGuid[projectGuid]
+    if (!project || !project[detailField]) {
+      dispatch({ type: requestType || REQUEST_PROJECTS })
+      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
@@ -200,68 +211,76 @@ export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
 
-export const navigateSavedHashedSearch = (search, navigateSearch) => {
+export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath) => {
   return (dispatch) => {
     const searchHash = hash.MD5(search)
     dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
-    navigateSearch(`/variant_search/results/${searchHash}`)
+    navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
   }
 }
 
-export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
+export const loadSearchedVariants = ({ searchHash }, { displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
     const state = getState()
-    const projectGuid = state.currentProjectGuid
-
-    let url = projectGuid ? `/api/project/${projectGuid}/saved_variants` : `/api/staff/saved_variants/${tag}`
-
-    // Do not load if already loaded
-    let expectedFamilyGuids
-    if (variantGuid) {
-      if (state.savedVariantsByGuid[variantGuid]) {
-        return
-      }
-      url = `${url}/${variantGuid}`
-    } else if (projectGuid) {
-      expectedFamilyGuids = familyGuids
-      if (!expectedFamilyGuids) {
-        expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
-          family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
-      }
-      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
-        return
-      }
-    } else if (tag) {
-      if (state.savedVariantTags[tag]) {
-        return
-      }
-    } else {
+    if (state.searchedVariantsLoading.isLoading) {
       return
     }
 
-    dispatch({ type: REQUEST_SAVED_VARIANTS })
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
+
+    let { sort, page } = displayUpdates || queryParams
+    if (!page) {
+      page = 1
+    }
+    if (!sort) {
+      sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
+    }
+    const apiQueryParams = { sort: sort.toLowerCase(), page }
+
+    // Update search table state and query params
+    dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
+    updateQueryParams(apiQueryParams)
+
+    const url = `/api/search/${searchHash}?${getUrlQueryString(apiQueryParams)}`
+    const search = state.searchesByHash[searchHash]
+
+    // Fetch variants
     new HttpRequestHelper(url,
       (responseJson) => {
-        if (expectedFamilyGuids) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_FAMILIES,
-            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
-          })
-        } else if (tag && !gene) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_TAGS,
-            updates: { [tag]: true },
-          })
-        }
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
       },
       (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
       },
-    ).get(familyGuids ? { families: familyGuids.join(',') } : { gene })
+    ).post(search)
   }
 }
 
+export const unloadSearchResults = () => {
+  return (dispatch) => {
+    dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: [] })
+  }
+}
+
+export const loadGeneBreakdown = (searchHash) => {
+  return (dispatch, getState) => {
+    if (!getState().searchGeneBreakdown[searchHash]) {
+      dispatch({ type: REQUEST_SEARCH_GENE_BREAKDOWN })
+
+      new HttpRequestHelper(`/api/search/${searchHash}/gene_breakdown`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
 
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
@@ -277,14 +296,14 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  if (values.variantGuid) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+  if (values.variantGuids) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuids}/note`, 'noteGuid')
   }
   return updateSavedVariant(values)
 }
 
-export const updateVariantTags = (values) => {
-  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+export const updateVariantTags = (values, tagType = 'tags') => {
+  const urlPath = values.variantGuids ? `${values.variantGuids}/update_${tagType}` : 'create'
   return updateSavedVariant(values, urlPath)
 }
 
@@ -325,9 +344,7 @@ export const updateLocusList = (values) => {
   }
 }
 
-export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
-
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -338,6 +355,7 @@ const rootReducer = combineReducers(Object.assign({
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
+  mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
@@ -346,25 +364,28 @@ const rootReducer = combineReducers(Object.assign({
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
   savedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
+  variantTagsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantTagsByGuid'),
+  variantNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantNotesByGuid'),
+  variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
+  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
+  searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
+  searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
+  searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
-  savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  meta: zeroActionsReducer,
   form: formReducer,
-  savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
-    hideExcluded: false,
-    hideReviewOnly: false,
-    categoryFilter: SHOW_ALL,
-    sort: SORT_BY_FAMILY_GUID,
-    page: 1,
-    recordsPerPage: 25,
-  }, false),
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
+  variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
+    sort: SORT_BY_XPOS,
+    page: 1,
+    recordsPerPage: 100,
+  }, false),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

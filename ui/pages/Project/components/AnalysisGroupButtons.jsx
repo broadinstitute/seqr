@@ -8,7 +8,7 @@ import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
-import { SelectableTableFormInput } from 'shared/components/table/SortableTable'
+import { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import {
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_PEDIGREE,
@@ -31,7 +31,7 @@ const FAMILY_FIELDS = [
 ]
 
 
-const FamilySelectorField = ({ value, onChange, families }) =>
+const FamilySelectorField = React.memo(({ value, onChange, families }) =>
   <div>
     <FileUploadField
       name="uploadedFamilyIds"
@@ -69,7 +69,8 @@ const FamilySelectorField = ({ value, onChange, families }) =>
       value={value.reduce((acc, key) => ({ ...acc, [key]: true }), {})}
       onChange={newValue => onChange(Object.keys(newValue).filter(key => newValue[key]))}
     />
-  </div>
+  </div>,
+)
 
 FamilySelectorField.propTypes = {
   value: PropTypes.array,
@@ -89,13 +90,13 @@ const FORM_FIELDS = [
   },
 ]
 
-export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
+export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
   if (!project.canEdit) {
     return null
   }
   const title = `${analysisGroup ? 'Edit' : 'Create New'} Analysis Group`
   const buttonProps = analysisGroup ?
-    { modalId: `editAnalysisGroup-${analysisGroup.analysisGroupGuid}`, initialValues: analysisGroup } :
+    { modalId: `editAnalysisGroup-${analysisGroup.analysisGroupGuid}`, initialValues: analysisGroup, sie: 'tiny' } :
     { modalId: `createAnalysisGroup-${project.projectGuid}`, initialValues: { projectGuid: project.projectGuid }, editIconName: 'plus' }
 
   const fields = [...FORM_FIELDS]
@@ -109,7 +110,7 @@ export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectF
     showErrorPanel
     {...buttonProps}
   />
-}
+})
 
 UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
@@ -120,7 +121,7 @@ UpdateAnalysisGroup.propTypes = {
 }
 
 
-export const DeleteAnalysisGroup = ({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
+export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
   project.canEdit ? <DeleteButton
     initialValues={analysisGroup}
     onSubmit={onSubmit}
@@ -129,7 +130,7 @@ export const DeleteAnalysisGroup = ({ project, analysisGroup, onSubmit, size, ic
     size={size}
     onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
   /> : null
-)
+))
 
 DeleteAnalysisGroup.propTypes = {
   onSubmit: PropTypes.func,

@@ -13,7 +13,7 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-const GeneLabelContent = styled(
+const BaseGeneLabelContent = styled(
   ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
@@ -22,6 +22,7 @@ const GeneLabelContent = styled(
    white-space: nowrap;
    max-width: ${props => props.maxWidth || 'none'};
 `
+const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -30,7 +31,7 @@ const GeneLinks = styled.div`
   padding-bottom: .5em;
 `
 
-const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
+const ListItemLink = styled(List.Item).attrs({ icon: 'linkify' })`
  .content {
     color: initial;
     cursor: auto;
@@ -41,11 +42,11 @@ const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
  }
 `
 
-const GeneLabel = ({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
+const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
     <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
-}
+})
 
 GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
@@ -55,35 +56,43 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
-  compact ?
-    <GeneDetailSection
-      compact
-      color="teal"
-      compactLabel="Gene Lists"
-      details={locusListGuids.length > 0 &&
-        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-      }
-    /> :
-    <div>
-      {locusListGuids.map(locusListGuid =>
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-        />,
-      )}
-    </div>
-)
+const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
+  const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
+  return (
+    compact ?
+      <GeneDetailSection
+        compact
+        color="teal"
+        compactLabel="Gene Lists"
+        details={locusListGuids.length > 0 &&
+          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+        }
+      /> :
+      <CompondHetTagsInLine
+        inline={areCompoundHets}
+        wrapper={children => <div>{children}</div>}
+      >
+        <React.Fragment>
+          {locusListGuids.map(locusListGuid =>
+            <GeneDetailSection
+              key={locusListGuid}
+              color="teal"
+              maxWidth="7em"
+              showEmpty
+              label={(locusListsByGuid[locusListGuid] || {}).name}
+              description={(locusListsByGuid[locusListGuid] || {}).name}
+              details={(locusListsByGuid[locusListGuid] || {}).description}
+            />,
+          )}
+        </React.Fragment>
+      </CompondHetTagsInLine>)
+})
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -93,7 +102,7 @@ const mapLocusListStateToProps = state => ({
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 
-const GeneDetailSection = ({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
+const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
     return null
   }
@@ -106,7 +115,7 @@ const GeneDetailSection = ({ details, compact, description, compactLabel, showEm
       {details}
     </div>
   ) : <GeneLabel popupHeader={description} popupContent={details} showEmpty={showEmpty} {...labelProps} />
-}
+})
 
 GeneDetailSection.propTypes = {
   details: PropTypes.node,
@@ -118,7 +127,7 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
+export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
   <div>
     <GeneDetailSection
       compact={compact}
@@ -131,7 +140,9 @@ export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
           {gene.omimPhenotypes.map(phenotype =>
             <ListItemLink
               key={phenotype.phenotypeDescription}
-              content={phenotype.phenotypeDescription}
+              content={phenotype.phenotypeInheritance ?
+                <span>{phenotype.phenotypeDescription} (<i>{phenotype.phenotypeInheritance}</i>)</span> :
+                phenotype.phenotypeDescription}
               target="_blank"
               href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
             />,
@@ -168,18 +179,21 @@ export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
          loss-of-function mutations`}
       {...labelProps}
     />
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />}
-  </div>
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
+  </div>,
+)
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
-const VariantGene = ({ geneId, gene, project, variant, compact }) => {
+const VariantGene = React.memo(({ geneId, gene, project, variant, compact, areCompoundHets }) => {
 
-  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].majorConsequence.replace(/_/g, ' ')
+  const geneTranscripts = variant.transcripts[geneId]
+  const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
@@ -198,7 +212,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
     </div>
   )
 
-  const geneDetails = <GeneDetails gene={gene} compact={compact} showLocusLists />
+  const geneDetails = <GeneDetails gene={gene} compact={compact} areCompoundHets={areCompoundHets} showLocusLists />
 
   return compact ?
     <Popup
@@ -215,7 +229,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
         {geneDetails}
       </div>
     )
-}
+})
 
 VariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
@@ -223,6 +237,7 @@ VariantGene.propTypes = {
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

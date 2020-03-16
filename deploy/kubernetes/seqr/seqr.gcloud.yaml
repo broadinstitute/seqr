@@ -10,7 +10,6 @@ spec:
   type: NodePort
   ports:
   - port: {{ SEQR_SERVICE_PORT }}
-    nodePort: {{ SEQR_SERVICE_NODE_PORT }}
   selector:
     name: seqr
 ---
@@ -35,6 +34,9 @@ spec:
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
       - name: seqr-static-files
         gcePersistentDisk:
           # This disk must already exist.
@@ -47,17 +49,14 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
-        securityContext:
-          privileged: true
-          capabilities:
-            add:
-              - SYS_ADMIN
         volumeMounts:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
+        - name: matchbox-secrets-volume
+          mountPath: {{ MME_CONFIG_DIR }}
         - name: seqr-static-files
-          mountPath: /seqr_static_files
+          mountPath: {{ STATIC_MEDIA_DIR }}
         resources:
           requests:
             memory: "0.5Gi"
@@ -89,29 +88,29 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
-        - name: MME_NODE_ADMIN_TOKEN
+        - name: SLACK_TOKEN
           valueFrom:
             secretKeyRef:
               name: seqr-secrets
-              key: mme_node_admin_token
+              key: slack_token
+        - name: AIRTABLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: airtable_key
+        - name: DJANGO_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: django_key
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
         - name: GUNICORN_WORKER_THREADS
           value: "{{ GUNICORN_WORKER_THREADS }}"
-        - name: HOST_MACHINE_IP
-          value: "{{ HOST_MACHINE_IP }}"
-        - name: MATCHBOX_SERVICE_HOSTNAME
-          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
         - name: POSTGRES_SERVICE_HOSTNAME
           value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: PGHOST
-          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: PGUSER
-          value: "{{ POSTGRES_USERNAME }}"
-        - name: MONGO_SERVICE_HOSTNAME
-          value: "{{ MONGO_SERVICE_HOSTNAME }}"
         - name: PHENOTIPS_SERVICE_HOSTNAME
           value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
         - name: ELASTICSEARCH_SERVICE_HOSTNAME
@@ -126,12 +125,10 @@ spec:
           value: "{{ PHENOTIPS_SERVICE_PORT }}"
         - name: POSTGRES_SERVICE_PORT
           value: "{{ POSTGRES_SERVICE_PORT }}"
-        - name: MATCHBOX_SERVICE_PORT
-          value: "{{ MATCHBOX_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-        - name: MONGO_SERVICE_PORT
-          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: KIBANA_SERVICE_PORT
+          value: "{{ KIBANA_SERVICE_PORT }}"
         - name: DEPLOY_TO
           value: "{{ DEPLOY_TO }}"
         - name: DEPLOY_TO_PREFIX
@@ -150,6 +147,10 @@ spec:
           value: "{{ ENABLE_DATABASE_BACKUPS }}"
         - name: UPLOADED_PEDIGREE_FILE_RECIPIENTS
           value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
+        - name: STATIC_MEDIA_DIR
+          value: "{{ STATIC_MEDIA_DIR }}"
+        - name: MME_CONFIG_DIR
+          value: "{{ MME_CONFIG_DIR }}"
         readinessProbe:
           exec:
             command:

@@ -1,7 +1,6 @@
 import json
 import urllib
 from anymail.exceptions import AnymailError
-from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
@@ -13,8 +12,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
-from seqr.model_utils import create_xbrowse_project_collaborator, delete_xbrowse_project_collaborator
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, BASE_URL
 
 
 class CreateUserException(Exception):
@@ -63,7 +61,7 @@ def forgot_password(request):
         {base_url}users/set_password/{password_token}?reset=true
         """.format(
         full_name=user.get_full_name(),
-        base_url=settings.BASE_URL,
+        base_url=BASE_URL,
         password_token=urllib.quote_plus(user.password),
     )
 
@@ -119,7 +117,6 @@ def create_project_collaborator(request, project_guid):
             return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
 
     project.can_view_group.user_set.add(user)
-    create_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -163,9 +160,6 @@ def _update_existing_user(user, project, request_json):
     else:
         project.can_edit_group.user_set.remove(user)
 
-    create_xbrowse_project_collaborator(
-        project, user, collaborator_type='manager' if request_json.get('hasEditPermissions') else 'collaborator')
-
     return create_json_response({
         'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
     })
@@ -189,8 +183,6 @@ def delete_project_collaborator(request, project_guid, username):
 
     project.can_view_group.user_set.remove(user)
     project.can_edit_group.user_set.remove(user)
-
-    delete_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}

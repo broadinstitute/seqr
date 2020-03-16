@@ -5,7 +5,7 @@ import { Table, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -76,7 +76,9 @@ FamilyTableRow.propTypes = {
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props }) =>
+const FamilyTable = React.memo((
+  { visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
+) =>
   <div>
     <ExportContainer>
       {headerStatus &&
@@ -121,7 +123,8 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>
-  </div>
+  </div>,
+)
 
 
 export { FamilyTable as FamilyTableComponent }

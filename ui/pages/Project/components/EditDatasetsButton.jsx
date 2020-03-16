@@ -30,7 +30,7 @@ const SUBMIT_FUNCTIONS = {
   [DATASET_TYPE_READ_ALIGNMENTS]: addAlignmentDataset,
 }
 
-const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
+const BaseUpdateDatasetForm = React.memo(({ datasetType, formFields, onSubmit }) => (
   <ReduxFormWrapper
     form={`upload${datasetType}`}
     modalName={MODAL_NAME}
@@ -41,7 +41,7 @@ const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
     fields={formFields}
     liveValidate={datasetType === DATASET_TYPE_READ_ALIGNMENTS}
   />
-)
+))
 
 BaseUpdateDatasetForm.propTypes = {
   formFields: PropTypes.array.isRequired,
@@ -78,7 +78,7 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
-const AlignmentFileUploadField = ({ projectGuid, ...props }) =>
+const AlignmentFileUploadField = React.memo(({ projectGuid, ...props }) =>
   <FileUploadField
     clearTimeOut={0}
     dropzoneLabel={
@@ -96,7 +96,8 @@ const AlignmentFileUploadField = ({ projectGuid, ...props }) =>
     required
     uploaderStyle={UPLOADER_STYLE}
     {...props}
-  />
+  />,
+)
 
 AlignmentFileUploadField.propTypes = {
   projectGuid: PropTypes.string,
@@ -145,7 +146,7 @@ const PANES = [
     </Tab.Pane>,
 }))
 
-export default () => (
+export default React.memo(() => (
   <Modal
     modalName={MODAL_NAME}
     title="Datasets"
@@ -154,4 +155,4 @@ export default () => (
   >
     <Tab panes={PANES} />
   </Modal>
-)
+))

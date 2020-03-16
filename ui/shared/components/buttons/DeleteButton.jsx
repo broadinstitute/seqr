@@ -3,14 +3,16 @@ import PropTypes from 'prop-types'
 
 import DispatchRequestButton from './DispatchRequestButton'
 
-const DeleteButton = ({ initialValues, onSubmit, buttonText, ...props }) =>
+const DeleteButton = React.memo(({ initialValues, onSubmit, buttonText, size, ...props }) =>
   <DispatchRequestButton
     onSubmit={() => onSubmit({ ...initialValues, delete: true })}
     buttonContent={buttonText}
     icon="trash"
     labelPosition={buttonText && 'right'}
+    size={size || 'small'}
     {...props}
-  />
+  />,
+)
 
 DeleteButton.propTypes = {
   onSubmit: PropTypes.func,

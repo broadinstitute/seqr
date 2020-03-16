@@ -26,13 +26,15 @@ fi
 
 # link to persistent disk dir with static files
 mkdir -p /seqr_static_files/generated_files
-ln -s /seqr_static_files/generated_files /seqr_settings/generated_files
 
 # launch django dev server in background
 cd /seqr
 
-# git pull
-git checkout $SEQR_GIT_BRANCH
+if [ $SEQR_GIT_BRANCH ]; then
+  git pull
+  git checkout $SEQR_GIT_BRANCH
+fi
+
 pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
@@ -52,10 +54,10 @@ chmod 600 ~/.pgpass
 if [ $ENABLE_DATABASE_BACKUPS ]; then
     # set up cron database backups
     echo 'SHELL=/bin/bash
-0 0 * * * python -u -m manage run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 */4 * * * python -u -m manage run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 0 * * 0 python -u -m manage update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
-0 0 * * 0 python -u -m manage update_human_phenotype_ontology >> /var/log/cron.log 2>&1
+0 0 * * * /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 */4 * * * /seqr/manage.py run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 0 * * 0 /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
+0 0 * * 0 /seqr/manage.py update_human_phenotype_ontology >> /var/log/cron.log 2>&1
 ' | crontab -
 
     env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.

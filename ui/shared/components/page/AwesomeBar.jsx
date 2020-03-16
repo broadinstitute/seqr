@@ -6,9 +6,21 @@ import { Search } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
-const AwesomebarSearch = styled(Search)`
+const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props} />)`
   width: ${props => props.inputwidth || '100%'};
   ${props => (props.inputwidth ? 'display: inline-block;' : '')}
+  
+  ${props => (props.asFormInput ? `
+    .input {
+      max-width: none !important;
+      padding: 0 !important;
+       
+      input {
+        padding: 0.67857143em 1em !important;
+        margin: 0 !important;
+      }
+    }
+  ` : '')}
   
   .results {
     min-width: ${props => props.inputwidth || '100%'};
@@ -16,7 +28,7 @@ const AwesomebarSearch = styled(Search)`
   }
 `
 
-class AwesomeBar extends React.Component
+class AwesomeBar extends React.PureComponent
 {
   static propTypes = {
     categories: PropTypes.array,
@@ -26,6 +38,7 @@ class AwesomeBar extends React.Component
     inputwidth: PropTypes.string,
     getResultHref: PropTypes.func,
     onResultSelect: PropTypes.func,
+    asFormInput: PropTypes.bool,
   }
 
   constructor(props) {
@@ -56,6 +69,7 @@ class AwesomeBar extends React.Component
       value={this.state.value}
       minCharacters={1}
       placeholder={this.props.placeholder || 'Search project, family, gene name, etc.'}
+      asFormInput={this.props.asFormInput}
     />
   }
 
@@ -98,6 +112,14 @@ class AwesomeBar extends React.Component
 }
 
 export { AwesomeBar as AwesomeBarComponent }
+
+export const AwesomeBarFormInput = React.memo(({ onChange, ...props }) =>
+  <AwesomeBar onResultSelect={result => onChange(result.key)} asFormInput {...props} />,
+)
+
+AwesomeBarFormInput.propTypes = {
+  onChange: PropTypes.func,
+}
 
 
 export default withRouter(AwesomeBar)

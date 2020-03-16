@@ -6,7 +6,6 @@ export const STATE1 = {
       analysisNotes: 'added note',
       analysisStatus: 'Rcpc',
       analysisSummary: '',
-      causalInheritanceMode: 'unknown',
       description: '',
       displayName: '1',
       familyGuid: 'F011652_1',
@@ -130,7 +129,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005221',
       sampleGuids: [],
       sex: 'F',
     },
@@ -219,7 +217,6 @@ export const STATE1 = {
           server: 'local-omim',
         },
       },
-      phenotipsPatientId: 'P0005219',
       sampleGuids: [],
       sex: 'M',
     },
@@ -285,22 +282,20 @@ export const STATE1 = {
           server: 'monarchinitiative.org',
         },
       },
-      phenotipsPatientId: 'P0005220',
       sampleGuids: [],
       sex: 'M',
     },
   },
   samplesByGuid: {},
+  mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
     description: '',
     isMmeEnabled: true,
-    isPhenotipsEnabled: true,
     lastModifiedDate: '2017-03-14T17:37:32.712Z',
     mmePrimaryDataOwner: 'PI',
     name: '1000 Genomes Demo',
-    phenotipsUserId: '1kg',
     projectCategoryGuids: [],
     projectGuid: 'R0237_1000_genomes_demo',
   },
@@ -373,17 +368,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
-      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
-      mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
-      mmeSubmittedData: {
-        patient: { id: 'NA19675_1', contact: { href: 'mailto:matchmaker@broadinstitute.org,test@test.com'} },
-        phenotypes: [
-          {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
-          {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
-          {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
-        ],
-        geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
-      },
       sampleGuids: [],
       sex: 'M',
     },
@@ -442,7 +426,6 @@ export const STATE_WITH_2_FAMILIES = {
       datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
       datasetName: null,
       datasetType: "VARIANTS",
-      elasticsearchIndex: "cmg_walsh_wes_sep2017",
       individualGuid: "I021476_na19678_2",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: "R0237_1000_genomes_demo",
@@ -469,13 +452,11 @@ export const STATE_WITH_2_FAMILIES = {
       deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
       description: '',
       isMmeEnabled: true,
-      isPhenotipsEnabled: true,
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       mmeContactInstitution: 'Broad',
       mmeContactUrl: 'test@broadinstitute.org',
       name: '1000 Genomes Demo',
-      phenotipsUserId: '1kg',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
       collaborators: [
@@ -560,7 +541,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
-      functionalData: [],
+      functionalDataGuids: [],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -607,21 +588,13 @@ export const STATE_WITH_2_FAMILIES = {
         lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
         majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
       }]},
-      notes: [{
-        dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
-        submitToClinvar: true, user: "hsnow@broadinstitute.org"
-      }],
+      noteGuids: ['VN0727076_116042722_r0390_1000'],
       origAltAlleles: ["T"],
       pos: 45919065,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TTTC",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        },
-      ],
-      variantId: "SV0000004_116042722_r0390_1000",
+      tagGuids: ['VT1726942_1248367227_r0390_101'],
+      variantId: "22-45919065-TTTC-T",
       variantGuid: "SV0000004_116042722_r0390_1000",
       xpos: 22045919065,
     },
@@ -655,12 +628,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "1",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
-      functionalData: [
-        { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
-          metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org" },
-        { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
-          name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
-      ],
+      functionalDataGuids: ['FD_248367227_r0390_100_1', 'FD_248367227_r0390_100_2'],
       genes: [
         {
           constraints: {
@@ -713,29 +681,15 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      notes: [],
+      noteGuids: [],
       origAltAlleles: ["T"],
       mainTranscriptId: 'ENST00000262738',
       transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        },
-        {
-          category: "CMG Discovery Tags",
-          color: "#44AA60",
-          dateSaved: "2018-03-23T19:59:12.262Z",
-          name: "Tier 1 - Phenotype not delineated",
-          searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
-          tagGuid: "VT1708635_1248367227_r0390_100",
-          user: "hsnow@broadinstitute.org",
-        },
-      ],
-      variantId: "SV0000002_1248367227_r0390_100",
+      tagGuids: ["VT1726942_1248367227_r0390_100", "VT1708635_1248367227_r0390_100"],
+      variantId: "1-248367227-TC-T",
       variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
@@ -769,7 +723,7 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
-      functionalData: [],
+      functionalDataGuids: [],
       genes: [
         {
           constraints: {
@@ -824,25 +778,170 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       mainTranscriptId: null,
       transcripts: {},
-      notes: [],
+      noteGuids: [],
       origAltAlleles: ["T"],
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "C",
-      tags: [
-        {
-          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
-        }
-      ],
-      variantId: "SV0000003_2246859832_r0390_100",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367227-C-T",
       variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
+    SV0000005_2246859833_r0390_100: {
+      alt: "T",
+      annotation: {
+        cadd_phred: "27.2",
+        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
+        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
+        vepAnnotations: [
+          {
+            aminoAcids: "P/X",
+            canonical: "YES",
+            cdnaPosition: "897",
+            cdsPosition: "859",
+            codons: "Ccc/cc",
+            consequence: "frameshift_variant",
+            hgvsc: "ENST00000456743.1:c.862delC",
+            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+            isChosenTranscript: true,
+            transcriptId: "ENST00000456743",
+          }
+        ],
+        vepConsequence: "frameshift_variant",
+        vepGroup: "frameshift",
+        worstVepAnnotation: {
+          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
+        }
+      },
+      chrom: "22",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuids: ["F011652_2"],
+      functionalDataGuids: [],
+      genes: [
+        {
+          constraints: {
+            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+          },
+          diseaseDbPhenotypes: [],
+          diseaseGeneLists: [],
+          geneId: "ENSG00000228198",
+          symbol: "OR2M3",
+        }
+      ],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      hgmd: {accession: null, class: null},
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      mainTranscriptId: null,
+      transcripts: {},
+      noteGuids: [],
+      origAltAlleles: ["T"],
+      pos: 248367228,
+      projectGuid: 'R0237_1000_genomes_demo',
+      ref: "C",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367228-C-T",
+      variantGuid: "SV0000005_2246859833_r0390_100",
+      xpos: 22046859833,
+    },
+  },
+  variantTagsByGuid: {
+    VT1726942_1248367227_r0390_101: {
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+      tagGuid: "VT1726942_1248367227_r0390_101", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000004_116042722_r0390_1000']
+    },
+    VT1726942_1248367227_r0390_100:{
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+      tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+    VT1708635_1248367227_r0390_100: {
+      category: "CMG Discovery Tags",
+      color: "#44AA60",
+      dateSaved: "2018-03-23T19:59:12.262Z",
+      name: "Tier 1 - Phenotype not delineated",
+      searchHash: "c2edbeae",
+      tagGuid: "VT1708635_1248367227_r0390_100",
+      user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000002_1248367227_r0390_100'],
+    },
+    VT1726942_1248367227_r0390_102: {
+      category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
+      tagGuid: "VT1726942_1248367227_r0390_102", user: "hsnow@broadinstitute.org",
+      variantGuids: ['SV0000003_2246859832_r0390_100', 'SV0000005_2246859833_r0390_100'],
+    }
+  },
+  variantNotesByGuid: {VN0727076_116042722_r0390_1000: {
+    dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
+    submitToClinvar: true, user: "hsnow@broadinstitute.org", variantGuids: ['SV0000004_116042722_r0390_1000'],
+  }},
+  variantFunctionalDataByGuid: {
+    FD_248367227_r0390_100_1: { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
+      metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org",
+      tagGuid: 'FD_248367227_r0390_100_1', variantGuids: ['SV0000002_1248367227_r0390_100'], },
+    FD_248367227_r0390_100_2: { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2",
+      metadataTitle: "LOD Score", name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org",
+      tagGuid: 'FD_248367227_r0390_100_2', variantGuids: ['SV0000002_1248367227_r0390_100'] },
+  },
+  mmeSubmissionsByGuid: {
+    MS021475_na19675_1: {
+      submissionGuid: 'MS021475_na19675_1',
+      individualGuid: 'I021475_na19675_1',
+      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
+      createdDate: '2018-05-09T10:29:00.000Z',
+      submissionId: 'NA19675_1',
+      contactHref: 'mailto:matchmaker@broadinstitute.org,test@test.com',
+      phenotypes: [
+        {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
+        {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
+        {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
+      ],
+      geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
+    }
   },
   mmeResultsByGuid: {
     MR0005038_HK018_0047: {
-      individualGuid: 'I021475_na19675_1',
+      submissionGuid: 'MS021475_na19675_1',
       geneVariants: [{geneId: "ENSG00000228198"}],
       phenotypes: [
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "yes"},
@@ -869,7 +968,7 @@ export const STATE_WITH_2_FAMILIES = {
     MR0004688_RGP_105_3: {
       geneVariants: [{ geneId: "ENSG00000272333" }],
       id: "10509",
-      individualGuid: "I021475_na19675_1",
+      submissionGuid: "MS021475_na19675_1",
       matchStatus: {
           comments: "",
           createdDate: "2018-07-26T17:36:25.422Z",

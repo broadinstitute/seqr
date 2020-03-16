@@ -4,11 +4,9 @@ from django.utils import timezone
 import random
 
 from seqr.models import Sample, Individual
-from seqr.utils.es_utils import get_es_client, get_index_metadata
-from seqr.utils.file_utils import file_iter
-from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, does_google_bucket_file_exist
+from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
-from seqr.views.utils.proxy_request_utils import proxy_to_igv
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +43,8 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
 
 
 def validate_alignment_dataset_path(dataset_path):
-    if is_google_bucket_file_path(dataset_path):
-        if not does_google_bucket_file_exist(dataset_path):
-            raise Exception('Error accessing "{}"'.format(dataset_path))
-    else:
-        headers = {'Range': 'bytes=0-100'} if dataset_path.endswith('.bam') else {}
-        resp = proxy_to_igv(dataset_path, {'options': '-b,-H'}, method='GET', scheme='http', headers=headers)
-        if resp.status_code >= 400 or (resp.get('Content-Type') != 'application/octet-stream' and resp.get('Content-Encoding') != 'gzip'):
-            raise Exception('Error accessing "{}": {}'.format(dataset_path, resp.content))
+    if not does_file_exist(dataset_path):
+        raise Exception('Error accessing "{}"'.format(dataset_path))
 
 
 def load_mapping_file(mapping_file_path):

@@ -25,7 +25,7 @@ class Command(BaseCommand):
             projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in=projects_to_process))
             logging.info("Processing %s projects" % len(projects))
         else:
-            projects = Project.objects.filter(deprecated_project_id__isnull=False)
+            projects = Project.objects.all()
             logging.info("Processing all %s projects" % len(projects))
 
         success = {}

@@ -9,18 +9,19 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
+from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
-    get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
-    get_json_for_project_collaborator_list, _get_json_for_models
+    get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
+    get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
+from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
+    delete_phenotips_patient
 from seqr.views.utils.individual_utils import export_individuals
 from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
 
@@ -143,27 +144,23 @@ def project_page_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
-    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = _get_project_child_entities(project, request.user)
+    response = _get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
-    project_json['locusListGuids'] = locus_lists_by_guid.keys()
+    project_json['locusListGuids'] = response['locusListsByGuid'].keys()
     project_json['detailsLoaded'] = True
     project_json.update(_get_json_for_variant_tag_types(project))
 
     gene_ids = set()
     for tag in project_json['discoveryTags']:
-        gene_ids.update(tag['transcripts'].keys())
+        gene_ids.update(tag.get('transcripts', {}).keys())
 
-    return create_json_response({
+    response.update({
         'projectsByGuid': {project_guid: project_json},
-        'familiesByGuid': families_by_guid,
-        'individualsByGuid': individuals_by_guid,
-        'samplesByGuid': samples_by_guid,
-        'locusListsByGuid': locus_lists_by_guid,
-        'analysisGroupsByGuid': analysis_groups_by_guid,
         'genesById': get_genes(gene_ids),
     })
+    return create_json_response(response)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -195,14 +192,22 @@ def export_project_individuals_handler(request, project_guid):
 
 def _get_project_child_entities(project, user):
     families_by_guid = _retrieve_families(project.guid, user)
-    individuals_by_guid = _retrieve_individuals(project.guid, user)
+    individuals_by_guid, individual_models = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
+    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid, individual_models)
+    mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
-    locus_lists = get_sorted_project_locus_lists(project, user)
+    locus_lists = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
-    return families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid
+    return {
+        'familiesByGuid': families_by_guid,
+        'individualsByGuid': individuals_by_guid,
+        'samplesByGuid': samples_by_guid,
+        'locusListsByGuid': locus_lists_by_guid,
+        'analysisGroupsByGuid': analysis_groups_by_guid,
+        'mmeSubmissionsByGuid': mme_submissions_by_guid,
+    }
 
 
 def _retrieve_families(project_guid, user):
@@ -244,13 +249,14 @@ def _retrieve_individuals(project_guid, user):
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()
+        i['mmeSubmissionGuid'] = None
         individual_guid = i['individualGuid']
         individuals_by_guid[individual_guid] = i
 
-    return individuals_by_guid
+    return individuals_by_guid, individual_models
 
 
-def _retrieve_samples(project_guid, individuals_by_guid):
+def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
     """Retrieves sample metadata for the given project.
 
         Args:
@@ -260,7 +266,7 @@ def _retrieve_samples(project_guid, individuals_by_guid):
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
-    sample_models = Sample.objects.filter(individual__family__project__guid=project_guid)
+    sample_models = Sample.objects.filter(individual__in=individual_models)
 
     samples = get_json_for_samples(sample_models, project_guid=project_guid)
 
@@ -275,6 +281,22 @@ def _retrieve_samples(project_guid, individuals_by_guid):
     return samples_by_guid
 
 
+def _retrieve_mme_submissions(individuals_by_guid, individual_models):
+    models = MatchmakerSubmission.objects.filter(individual__in=individual_models)
+
+    submissions = get_json_for_matchmaker_submissions(models)
+
+    submissions_by_guid = {}
+    for s in submissions:
+        guid = s['submissionGuid']
+        submissions_by_guid[guid] = s
+
+        individual_guid = s['individualGuid']
+        individuals_by_guid[individual_guid]['mmeSubmissionGuid'] = guid
+
+    return submissions_by_guid
+
+
 def _retrieve_analysis_groups(project):
     group_models = AnalysisGroup.objects.filter(project=project)
     groups = get_json_for_analysis_groups(group_models, project_guid=project.guid)
@@ -282,7 +304,8 @@ def _retrieve_analysis_groups(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    note_counts_by_family = VariantNote.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
+    note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project)\
+        .values('saved_variants__family__guid').annotate(count=Count('*'))
     num_tags = sum(count['count'] for count in note_counts_by_family)
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
@@ -291,12 +314,12 @@ def _get_json_for_variant_tag_types(project):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'is_built_in': True,
         'numTags': num_tags,
-        'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in note_counts_by_family},
+        'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in note_counts_by_family},
     }
 
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
+        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
     project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
     for tag_type in project_variant_tags:
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
@@ -304,19 +327,18 @@ def _get_json_for_variant_tag_types(project):
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         tag_type.update({
             'numTags': num_tags,
-            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+            'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in
                                  current_tag_type_counts},
         })
 
     project_variant_tags.append(note_tag_type)
     project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 
-    discovery_tags = []
-    for tag_type in project_variant_tags:
-        if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
-            tags = VariantTag.objects.filter(saved_variant__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
-            saved_variants = [tag.saved_variant for tag in tags]
-            discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
+    discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
+                                if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0]
+    discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
+        family__project=project, varianttag__variant_tag_type__guid__in=discovery_tag_type_guids,
+    ), add_details=True)
 
     project_functional_tags = []
     for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
@@ -350,12 +372,11 @@ def _create_project(name, description=None, genome_version=None, user=None):
         'name': name,
         'description': description,
         'created_by': user,
-        'deprecated_project_id': _slugify(name),
     }
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = get_or_create_seqr_model(Project, **project_args)
+    project, _ = Project.objects.get_or_create(**project_args)
 
     if PHENOTIPS_SERVER:
         try:
@@ -375,21 +396,21 @@ def _delete_project(project):
     """
 
     Sample.objects.filter(individual__family__project=project).delete()
-    for individual in Individual.objects.filter(family__project=project):
-        delete_seqr_model(individual)
-    for family in Family.objects.filter(project=project):
-        delete_seqr_model(family)
 
-    delete_seqr_model(project)
+    individuals = Individual.objects.filter(family__project=project)
+    for individual in individuals:
+        delete_phenotips_patient(project, individual)
+    individuals.delete()
 
-    # TODO delete PhenoTips, etc. and other objects under this project
+    Family.objects.filter(project=project).delete()
+
+    project.delete()
 
 
 def _enable_phenotips_for_project(project):
     """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
     have edit permissions for patients in the project).
     """
-    project.is_phenotips_enabled = True
     project.phenotips_user_id = _slugify(project.name)
 
     # view-only user

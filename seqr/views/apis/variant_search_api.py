@@ -1,21 +1,24 @@
 import json
 import jmespath
 from collections import defaultdict
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
+import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType
-from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
+from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
+    InvalidIndexException
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
@@ -26,13 +29,15 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_analysis_groups, \
     get_json_for_samples, \
     get_json_for_locus_lists, \
-    get_json_for_saved_variants, \
+    get_json_for_saved_variants_with_tags, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
-    get_project_locus_list_models, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
+from seqr.views.utils.variant_utils import get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
+
+logger = logging.getLogger(__name__)
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -60,6 +65,7 @@ def query_variants_handler(request, search_hash):
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
+        logger.error(e)
         return create_json_response({'error': e.message}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
@@ -67,11 +73,12 @@ def query_variants_handler(request, search_hash):
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
+        logger.error('InvalidIndexException: {}'.format(e))
         return create_json_response({'error': e.message}, status=400, reason=e.message)
-    except ConnectionTimeout as e:
+    except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants, results_model.families.all())
+    response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
@@ -92,9 +99,10 @@ def _get_or_create_results_model(search_hash, search_context, user):
             families = Family.objects.filter(guid__in=all_families)
         elif search_context.get('allProjectFamilies'):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(user)
-                        if project.has_new_search and project not in omit_projects]
+            projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
+        elif search_context.get('projectGuids'):
+            families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:
             raise Exception('Invalid search: no projects/ families specified')
 
@@ -128,25 +136,28 @@ def query_single_variant_handler(request, variant_id):
 
     variant = get_single_es_variant(families, variant_id)
 
-    response = _process_variants([variant], families)
+    response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
 
 
-def _process_variants(variants, families):
+def _process_variants(variants, families, user):
+    if not variants:
+        return {'searchedVariants': variants}
+
     prefetch_related_objects(families, 'project')
     genes = _saved_variant_genes(variants)
-    # TODO add locus lists on the client side (?)
     projects = {family.project for family in families}
-    _add_locus_lists(projects, variants, genes)
-    saved_variants_by_guid, _ = _get_saved_variants(variants, families)
+    locus_lists_by_guid = _add_locus_lists(projects, genes)
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
 
-    return {
+    response_json.update({
         'searchedVariants': variants,
-        'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-    }
+        'locusListsByGuid': locus_lists_by_guid,
+    })
+    return response_json
 
 
 PREDICTION_MAP = {
@@ -154,11 +165,13 @@ PREDICTION_MAP = {
     'T': 'tolerated',
 }
 
+
 POLYPHEN_MAP = {
     'D': 'probably_damaging',
     'P': 'possibly_damaging',
     'B': 'benign',
 }
+
 
 MUTTASTR_MAP = {
     'A': 'disease_causing',
@@ -167,13 +180,16 @@ MUTTASTR_MAP = {
     'P': 'polymorphism',
 }
 
+
 def _get_prediction_val(prediction):
     return PREDICTION_MAP.get(prediction[0]) if prediction else None
+
 
 def _get_variant_main_transcript_field_val(parsed_variant):
     return next(
         (t for t in parsed_variant['transcripts'] if t['transcriptId'] == parsed_variant['mainTranscriptId']), {}
     ).get('value')
+
 
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
@@ -205,10 +221,12 @@ VARIANT_EXPORT_DATA = [
 VARIANT_FAMILY_EXPORT_DATA = [
     {'header': 'family_id'},
     {'header': 'tags', 'process': lambda tags: '|'.join([
-        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in sorted(tags or [], key=lambda tag: tag['lastModifiedDate'], reverse=True)
+        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in
+        sorted(tags or [], key=lambda tag: tag['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
     {'header': 'notes', 'process': lambda notes: '|'.join([
-        '{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in sorted(notes or [], key=lambda note: note['lastModifiedDate'], reverse=True)
+        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in
+        sorted(notes or [], key=lambda note: note['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
 ]
 
@@ -237,8 +255,9 @@ def export_variants_handler(request, search_hash):
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
     variants, _ = get_es_variants(results_model, page=1, load_all=True)
+    variants = _flatten_variants(variants)
 
-    saved_variants_by_guid, variants_to_saved_variants = _get_saved_variants(variants, families)
+    json, variants_to_saved_variants = _get_saved_variants(variants, families)
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -248,8 +267,12 @@ def export_variants_handler(request, search_hash):
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
         for i in range(max_families_per_variant):
             family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
-            family_tags = saved_variants_by_guid.get(variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')) or {}
-            family_tags['family_id'] = family_ids_by_guid.get(family_guid)
+            variant_guid = variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')
+            family_tags = {
+                'family_id': family_ids_by_guid.get(family_guid),
+                'tags': [tag for tag in json['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
+                'notes': [note for note in json['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
+            }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = variant['genotypes'].values()
         for i in range(max_samples_per_variant):
@@ -315,7 +338,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     project_models_by_guid = {project.guid: project for project in projects}
     projects_json = get_json_for_projects(projects, user)
 
-    locus_lists = set()
+    locus_lists = LocusList.objects.filter(projects__in=projects).prefetch_related('projects')
+
+    project_guid = projects[0].guid if len(projects) == 1 else None
 
     functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
     variant_tag_types_by_guid = {
@@ -325,11 +350,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     variant_tag_types = _get_json_for_models(variant_tag_types_by_guid.values())
     for project_json in projects_json:
         project = project_models_by_guid[project_json['projectGuid']]
-        project_locus_lists = get_project_locus_list_models(project)
-        locus_lists.update(project_locus_lists)
 
         project_json.update({
-            'locusListGuids': [locus_list.guid for locus_list in project_locus_lists],
+            'locusListGuids': [locus_list.guid for locus_list in locus_lists if project in locus_list.projects.all()],
             'variantTagTypes': [
                 vtt for vtt in variant_tag_types
                 if variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project is None or
@@ -337,10 +360,40 @@ def _get_projects_details(projects, user, project_category_guid=None):
             'variantFunctionalTagTypes': functional_data_tag_types,
         })
 
-    families = _get_json_for_families(Family.objects.filter(project__in=projects), user)
-    individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=projects), user=user)
-    samples = get_json_for_samples(Sample.objects.filter(individual__family__project__in=projects))
-    analysis_groups = get_json_for_analysis_groups(AnalysisGroup.objects.filter(project__in=projects))
+    family_models = Family.objects.filter(project__in=projects)
+    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
+
+    individual_models = Individual.objects.filter(family__in=family_models)
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, skip_nested=True)
+
+    sample_models = Sample.objects.filter(individual__in=individual_models)
+    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
+
+    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
+
+    if not project_guid:
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        family_id_to_guid = {family.id: family.guid for family in family_models}
+        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+        family_guid_to_project_guid = {}
+        individual_guid_to_project_guid = {}
+        for family in families:
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+            family_guid_to_project_guid[family['familyGuid']] = project_guid
+        for individual in individuals:
+            family_guid = family_id_to_guid[individual.pop('familyId')]
+            project_guid = family_guid_to_project_guid[family_guid]
+            individual['familyGuid'] = family_guid
+            individual['projectGuid'] = project_guid
+            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+        for sample in samples:
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for group in analysis_groups:
+            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
     individual_guids_by_family = defaultdict(list)
     for individual in individuals:
@@ -359,7 +412,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
-        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(list(locus_lists), user)},
+        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
     if project_category_guid:
@@ -473,45 +526,66 @@ def _get_saved_searches(user):
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
-def _get_saved_variants(variants, families):
+def _get_saved_variants(variants, families, include_discovery_tags=False):
     if not variants:
         return {}, {}
+
+    variants = _flatten_variants(variants)
 
     prefetch_related_objects(families, 'project')
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
 
     variant_q = Q()
+    discovery_variant_q = Q()
     variants_by_id = {}
     for variant in variants:
-        variants_by_id[_get_variant_key(**variant)] = variant
+        variants_by_id[get_variant_key(**variant)] = variant
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+        discovery_variant_q |= Q(Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt']) & ~Q(family__guid__in=variant['familyGuids']))
         if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
                 variant_q |= Q(xpos_start=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families)
-                variants_by_id[_get_variant_key(
+                variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
-    saved_variants_by_guid = {}
+    json = get_json_for_saved_variants_with_tags(
+        saved_variants, add_details=True, discovery_tags_query=discovery_variant_q if include_discovery_tags else None)
     variants_to_saved_variants = {}
-    for saved_variant in saved_variants_json:
+    for saved_variant in json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id[_get_variant_key(**saved_variant)]
+        searched_variant = variants_by_id.get(get_variant_key(**saved_variant))
+        if not searched_variant:
+            # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
+            continue
         saved_variant.update(searched_variant)
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
-        saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
+        json['savedVariantsByGuid'][saved_variant['variantGuid']] = saved_variant
         if searched_variant['variantId'] not in variants_to_saved_variants:
             variants_to_saved_variants[searched_variant['variantId']] = {}
         for family_guid in family_guids:
             variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
 
-    return saved_variants_by_guid, variants_to_saved_variants
+    for variant_id, tags in json.pop('discoveryTags', {}).items():
+        searched_variant = variants_by_id.get(variant_id)
+        if searched_variant:
+            if not searched_variant.get('discoveryTags'):
+                searched_variant['discoveryTags'] = []
+            searched_variant['discoveryTags'] += tags
+
+    return json, variants_to_saved_variants
 
 
-def _get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
-    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
+def _flatten_variants(variants):
+    flattened_variants = []
+    for variant in variants:
+        if isinstance(variant, list):
+            for compound_het in variant:
+                flattened_variants.append(compound_het)
+        else:
+            flattened_variants.append(variant)
+    return flattened_variants

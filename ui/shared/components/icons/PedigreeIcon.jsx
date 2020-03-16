@@ -30,15 +30,15 @@ const ICON_LOOKUP = {
   },
 
   FA: { icon: 'circle' },
-  FN: { icon: 'circle thin' },
+  FN: { icon: 'circle outline' },
   FU: { icon: 'question circle outline' },
 
   UA: { icon: 'square', rotated: true },
   UN: { icon: 'square outline', rotated: true },
-  UU: { icon: 'help' },
+  UU: { icon: 'question' },
 }
 
-const PedigreeIcon = (props) => {
+const PedigreeIcon = React.memo((props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
   return <Popup
     trigger={iconProps.iconGroup || <span><Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />{props.label}</span>}
@@ -49,17 +49,19 @@ const PedigreeIcon = (props) => {
         {props.popupContent}
       </div>
     }
+    header={props.popupHeader}
     size="small"
     wide="very"
     position="top center"
     hoverable
   />
-}
+})
 
 
 PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,
   affected: PropTypes.string.isRequired,
+  popupHeader: PropTypes.string,
   popupContent: PropTypes.node,
   label: PropTypes.any,
 }

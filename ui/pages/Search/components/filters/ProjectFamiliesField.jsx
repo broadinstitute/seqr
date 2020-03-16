@@ -1,8 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
-import { Form, Header, Icon, Popup, Message } from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
@@ -10,19 +9,18 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
-import AwesomeBar from 'shared/components/page/AwesomeBar'
-import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
-import { VerticalSpacer } from 'shared/components/Spacers'
+import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getInputProjectsCount } from '../../selectors'
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
 
 
-const ProjectFamiliesFilterInput = ({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
+const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
   const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
   const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
@@ -79,7 +77,7 @@ const ProjectFamiliesFilterInput = ({ familyOptions, analysisGroupOptions, proje
       />
     </Form.Group>
   )
-}
+})
 
 ProjectFamiliesFilterInput.propTypes = {
   familyOptions: PropTypes.array,
@@ -89,55 +87,14 @@ ProjectFamiliesFilterInput.propTypes = {
   onChange: PropTypes.func,
 }
 
-const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, ...props }) => (
-  <div>
-    <Header>
-      <Popup
-        trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
-        content="Remove this project from search"
-      />
-      Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
-    </Header>
-    {project.hasNewSearch ? <ProjectFamiliesFilterInput {...props} /> :
-    <Message
-      color="red"
-      header="This search is not enabled for this project"
-      content="Please contact the seqr team to add this functionality"
-    />}
-    <VerticalSpacer height={10} />
-  </div>
-)
-
-ProjectFamiliesFilterContent.propTypes = {
-  project: PropTypes.object,
-  removeField: PropTypes.func,
-  dispatch: PropTypes.func,
-}
-
-const LoadedProjectFamiliesFilter = ({ loading, load, ...props }) =>
-  <DataLoader
-    contentId={props.value}
-    loading={loading}
-    load={load}
-    content={props.project}
-    hideError
-  >
-    <ProjectFamiliesFilterContent {...props} />
-  </DataLoader>
-
-LoadedProjectFamiliesFilter.propTypes = {
-  project: PropTypes.object,
-  value: PropTypes.object,
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-}
-
 const mapStateToProps = (state, ownProps) => ({
   familyOptions: getFamilyOptions(state, ownProps),
   analysisGroupOptions: getAnalysisGroupOptions(state, ownProps),
   projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
   project: getProjectsByGuid(state)[ownProps.value.projectGuid],
+  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value.projectGuid],
   loading: getSearchContextIsLoading(state),
+  filterInputComponent: ProjectFamiliesFilterInput,
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -157,46 +114,21 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   }
 }
 
-const ProjectFamiliesFilter = connect(mapStateToProps, mapDispatchToProps)(LoadedProjectFamiliesFilter)
+const ProjectFamiliesFilter = connect(mapStateToProps, mapDispatchToProps)(ProjectFilter)
 
-const PROJECT_SEARCH_CATEGORIES = ['projects']
-const PROJECT_GROUP_SEARCH_CATEGORIES = ['project_groups']
-
-const BaseAddProjectButton = ({ addElement, addProjectGroup }) =>
-  <div>
-    <InlineHeader content="Add Project:" />
-    <AwesomeBar
-      categories={PROJECT_SEARCH_CATEGORIES}
-      placeholder="Search for a project"
-      inputwidth="400px"
-      onResultSelect={result => addElement({ projectGuid: result.key })}
-    />
-    <InlineHeader content="Add Project Group:" />
-    <AwesomeBar
-      categories={PROJECT_GROUP_SEARCH_CATEGORIES}
-      placeholder="Search for a project group"
-      inputwidth="400px"
-      onResultSelect={result => addProjectGroup(result.key, addElement)}
-    />
-  </div>
-
-BaseAddProjectButton.propTypes = {
-  addElement: PropTypes.func,
-  addProjectGroup: PropTypes.func,
-}
+const AddProjectFamiliesButton = props =>
+  <AddProjectButton processAddedElement={result => ({ projectGuid: result.key })} {...props} />
 
 const mapAddProjectDispatchToProps = {
   addProjectGroup: loadProjectGroupContext,
 }
-
-const AddProjectButton = connect(null, mapAddProjectDispatchToProps)(BaseAddProjectButton)
 
 const validateFamilies = value => (value && value.familyGuids && value.familyGuids.length ? undefined : 'Families are required for all projects')
 
 const PROJECT_FAMILIES_FIELD = {
   name: 'projectFamilies',
   component: ProjectFamiliesFilter,
-  addArrayElement: AddProjectButton,
+  addArrayElement: connect(null, mapAddProjectDispatchToProps)(AddProjectFamiliesButton),
   validate: validateFamilies,
   isArrayField: true,
 }

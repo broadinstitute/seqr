@@ -7,9 +7,9 @@ import { Link } from 'react-router-dom'
 
 import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -19,7 +19,7 @@ import CreateProjectButton from './CreateProjectButton'
 import FilterSelector from './FilterSelector'
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getVisibleProjects } from '../utils/visibleProjectsSelector'
+import { getVisibleProjects } from '../selectors'
 
 
 const RightAligned = styled.span`
@@ -142,7 +142,7 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
-const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -154,7 +154,7 @@ const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
         <HorizontalSpacer width={45} />
       </RightAligned>
       <VerticalSpacer height={10} />
-      <SortableTable
+      <DataTable
         striped
         stackable
         fixed
@@ -167,7 +167,8 @@ const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
-  </DataLoader>
+  </DataLoader>,
+)
 
 ProjectsTable.propTypes = {
   visibleProjects: PropTypes.array.isRequired,

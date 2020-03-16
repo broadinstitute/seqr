@@ -6,27 +6,21 @@ import { Header, Table } from 'semantic-ui-react'
 
 import DataLoader from 'shared/components/DataLoader'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import {
-  getMmeMetricsLoading,
-  getMmeMetricsLoadingError,
+  getMmeLoading,
+  getMmeLoadingError,
   getMmeMetrics,
-  getMmeSubmissionsLoading,
   getMmeSubmissions,
 } from '../selectors'
-import { loadMmeMetrics, loadMmeSubmissions } from '../reducers'
+import { loadMme } from '../reducers'
 
 const METRICS_FIELDS = [
   { field: 'numberOfCases', title: 'Patients' },
   { field: 'numberOfUniqueGenes', title: 'Genes' },
   { field: 'numberOfUniqueFeatures', title: 'Phenotypes' },
-  { field: 'numberOfCasesWithDiagnosis', title: 'Patients with Diagnosis' },
-  { field: 'meanNumberOfGenesPerCase', title: 'Mean Number of Genes Per Patient', round: true },
-  { field: 'meanNumberOfPhenotypesPerCase', title: 'Mean Number of Phenotypes Per Patient', round: true },
-  { field: 'meanNumberOfVariantsPerCase', title: 'Mean Number of Detailed Variants Per Patient', round: true },
   { field: 'numberOfRequestsReceived', title: 'Match Requests Received' },
   { field: 'numberOfPotentialMatchesSent', title: 'Potential Matches Sent' },
-  { field: 'percentageOfGenesThatMatch', title: 'Percentage of Genes Contributing to Matches', round: true },
   { field: 'numberOfSubmitters', title: 'Submitters' },
 ]
 
@@ -39,26 +33,26 @@ const SUBMISSION_COLUMNS = [
         {row.individualId}
       </Link>,
   },
-  { name: 'mmeSubmittedDate', content: 'Submitted Date', format: row => new Date(row.mmeSubmittedDate).toLocaleDateString() },
+  { name: 'lastModifiedDate', content: 'Submitted Date', format: row => new Date(row.lastModifiedDate).toLocaleDateString() },
   {
-    name: 'mmeSubmittedData.geneVariants',
+    name: 'geneVariants',
     content: 'Genes',
     format: row =>
-      <SubmissionGeneVariants geneVariants={row.mmeSubmittedData.geneVariants} modalId={row.individualGuid} />,
+      <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
   },
-  { name: 'mmeSubmittedData.phenotypes',
+  { name: 'phenotypes',
     content: 'Phenotypes',
-    format: row => <Phenotypes phenotypes={row.mmeSubmittedData.phenotypes} maxWidth="400px" />,
+    format: row => <Phenotypes phenotypes={row.phenotypes} maxWidth="400px" />,
   },
-  { name: 'mmeSubmittedData.patient.label', content: 'MME Patient Label', format: row => row.mmeSubmittedData.patient.label },
+  { name: 'label', content: 'MME Patient Label', format: row => row.label },
 ]
 
-const getRowFilterVal = row => row.geneSymbols + row.mmeSubmittedData.patient.label
+const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, submissionsLoading, loadSubmissions }) =>
+const Matchmaker = React.memo(({ metrics, submissions, error, loading, load }) =>
   <div>
     <Header size="medium" content="Matchmaker Metrics:" />
-    <DataLoader load={loadMetrics} content={Object.keys(metrics).length} loading={metricsLoading} errorMessage={error}>
+    <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error}>
       <Table collapsing basic="very">
         {METRICS_FIELDS.map(({ field, title, round }) =>
           <Table.Row key={field}>
@@ -69,42 +63,37 @@ const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, 
       </Table>
     </DataLoader>
     <Header size="medium" content="Matchmaker Submissions:" />
-    <DataLoader load={loadSubmissions} loading={false} content>
-      <SortableTable
-        collapsing
-        idField="individualGuid"
-        defaultSortColumn="mmeSubmittedDate"
-        defaultSortDescending
-        getRowFilterVal={getRowFilterVal}
-        emptyContent="No MME Submissions Found"
-        loading={submissionsLoading}
-        data={submissions}
-        columns={SUBMISSION_COLUMNS}
-      />
-    </DataLoader>
-  </div>
+    <DataTable
+      collapsing
+      idField="submissionGuid"
+      defaultSortColumn="lastModifiedDate"
+      defaultSortDescending
+      getRowFilterVal={getRowFilterVal}
+      emptyContent="No MME Submissions Found"
+      loading={loading}
+      data={submissions}
+      columns={SUBMISSION_COLUMNS}
+    />
+  </div>,
+)
 
 Matchmaker.propTypes = {
   metrics: PropTypes.object,
-  metricsLoading: PropTypes.bool,
+  loading: PropTypes.bool,
   error: PropTypes.string,
-  loadMetrics: PropTypes.func,
+  load: PropTypes.func,
   submissions: PropTypes.array,
-  submissionsLoading: PropTypes.bool,
-  loadSubmissions: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   metrics: getMmeMetrics(state),
-  metricsLoading: getMmeMetricsLoading(state),
-  error: getMmeMetricsLoadingError(state),
+  loading: getMmeLoading(state),
+  error: getMmeLoadingError(state),
   submissions: getMmeSubmissions(state),
-  submissionsLoading: getMmeSubmissionsLoading(state),
 })
 
 const mapDispatchToProps = {
-  loadMetrics: loadMmeMetrics,
-  loadSubmissions: loadMmeSubmissions,
+  load: loadMme,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Matchmaker)

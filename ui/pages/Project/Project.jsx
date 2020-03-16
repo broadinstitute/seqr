@@ -2,36 +2,33 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
-import { Loader, Header } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 
-import { getCurrentProject } from 'redux/selectors'
-import SavedVariants from 'shared/components/panel/variants/SavedVariants'
-import { loadProject, unloadProject } from './reducers'
+import { getCurrentProject, getUser } from 'redux/selectors'
+import { Error404 } from 'shared/components/page/Errors'
+import { loadCurrentProject, unloadProject } from './reducers'
 import { getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
+import SavedVariants from './components/SavedVariants'
 
-
-// TODO shared 404 component
-const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
-
-
-class Project extends React.Component
+class Project extends React.PureComponent
 {
   static propTypes = {
     project: PropTypes.object,
+    user: PropTypes.object,
     match: PropTypes.object,
     loading: PropTypes.bool.isRequired,
-    loadProject: PropTypes.func.isRequired,
+    loadCurrentProject: PropTypes.func.isRequired,
     unloadProject: PropTypes.func.isRequired,
   }
 
   constructor(props) {
     super(props)
 
-    props.loadProject(props.match.params.projectGuid)
+    props.loadCurrentProject(props.match.params.projectGuid)
   }
 
   componentWillUnmount() {
@@ -43,7 +40,7 @@ class Project extends React.Component
       return (
         <Switch>
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
-          <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />
+          {this.props.user.isStaff && <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />}
           <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid`} component={FamilyPage} />
@@ -59,12 +56,13 @@ class Project extends React.Component
 }
 
 const mapDispatchToProps = {
-  loadProject, unloadProject,
+  loadCurrentProject, unloadProject,
 }
 
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
   loading: getProjectDetailsIsLoading(state),
+  user: getUser(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Project)

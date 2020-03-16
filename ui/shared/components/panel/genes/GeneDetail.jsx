@@ -9,7 +9,7 @@ import { Grid, Popup } from 'semantic-ui-react'
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
 import Gtex from '../../graph/Gtex'
-import SectionHeader from '../../SectionHeader'
+import { SectionHeader } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import TextFieldView from '../view-fields/TextFieldView'
 import { HorizontalSpacer } from '../../Spacers'
@@ -25,7 +25,7 @@ const CompactGrid = styled(Grid)`
   }
 `
 
-const GeneSection = ({ details }) =>
+const GeneSection = React.memo(({ details }) =>
   <CompactGrid>
     {details.map(row => row &&
       <Grid.Row key={row.title}>
@@ -35,7 +35,8 @@ const GeneSection = ({ details }) =>
         <Grid.Column width={14}>{row.content}</Grid.Column>
       </Grid.Row>,
     )}
-  </CompactGrid>
+  </CompactGrid>,
+)
 
 GeneSection.propTypes = {
   details: PropTypes.array,
@@ -76,7 +77,7 @@ const textWithLinks = (text) => {
 export const getOtherGeneNames = gene =>
   (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
 
-const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = React.memo(({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
   }
@@ -163,15 +164,16 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   }
   const linkDetails = [
     gene.mimNumber ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
-    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${[gene.geneSymbol, ...otherGeneNames].join(' OR ')}`, description: 'Search PubMed' },
+    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=(${[gene.geneSymbol, ...otherGeneNames].join(' OR ')})`, description: 'Search PubMed' },
     { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.geneId}`, description: 'Reference of public data for this gene' },
     { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneId}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
-    { title: 'Monarch', link: `http://monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
+    { title: 'Monarch', link: `http://beta.monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneId}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=${gene.geneId}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
+    gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
   ]
   return (
     <div>
@@ -220,21 +222,22 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
       />
     </div>
   )
-}
+})
 
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
   updateGeneNote: PropTypes.func.isRequired,
 }
 
-const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
+const GeneDetail = React.memo(({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
       <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
     <Gtex geneId={geneId} />
-  </div>
+  </div>,
+)
 
 GeneDetail.propTypes = {
   geneId: PropTypes.string.isRequired,

@@ -13,7 +13,7 @@ if [ -z "$SEQR_DIR"  ]; then
     exit 1
 fi
 
-for script in $(ls ${SEQR_DIR}/deploy/install_local.step[1-8]*)
+for script in $(ls ${SEQR_DIR}/deploy/install_local.step[1-7]*)
 do
 
     cd ${SEQR_DIR}/..

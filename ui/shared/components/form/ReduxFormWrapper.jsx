@@ -11,7 +11,7 @@ import flattenDeep from 'lodash/flattenDeep'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
-import RequestStatus from './RequestStatus'
+import { NONE, SUCCEEDED, ERROR } from '../panel/RequestStatus'
 
 export const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
@@ -49,7 +49,7 @@ const renderField = (props) => {
 }
 
 renderField.propTypes = {
-  fieldComponent: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
+  fieldComponent: PropTypes.elementType,
   meta: PropTypes.object,
   input: PropTypes.object,
   submitForm: PropTypes.func,
@@ -182,11 +182,11 @@ class ReduxFormWrapper extends React.Component {
   hideConfirmDialog = () => this.setState({ confirming: false })
 
   render() {
-    let saveStatus = RequestStatus.NONE
+    let saveStatus = NONE
     if (this.props.submitSucceeded) {
-      saveStatus = RequestStatus.SUCCEEDED
+      saveStatus = SUCCEEDED
     } else if (this.props.submitFailed) {
-      saveStatus = RequestStatus.ERROR
+      saveStatus = ERROR
     }
 
     const saveErrorMessage =

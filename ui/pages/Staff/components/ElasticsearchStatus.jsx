@@ -2,9 +2,9 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
-import { Header, Message, Icon } from 'semantic-ui-react'
+import { Header, Message } from 'semantic-ui-react'
 
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { getElasticsearchStatusLoading, getElasticsearchStatusData } from '../selectors'
@@ -28,14 +28,6 @@ const INDEX_COLUMNS = [
       </div>,
     ) : ''),
   },
-  {
-    name: 'hasNestedGenotypes',
-    content: 'Nested Schema?',
-    textAlign: 'center',
-    format: row => (
-      row.hasNestedGenotypes ? <Icon name="check circle" color="green" /> : <Icon name="remove circle" color="red" />
-    ),
-  },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
   { name: 'creationDateString', content: 'Created Date', format: row => row.creationDateString.split('T')[0] },
@@ -44,27 +36,12 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
-const MONGO_COLUMNS = [
-  {
-    name: 'projectGuid',
-    content: 'Project(s)',
-    format: row => (
-      <Link key={row.projectGuid} to={`/project/${row.projectGuid}/project_page`} target="_blank">{row.projectName}</Link>
-    ),
-  },
-  {
-    name: 'sourceFilePaths',
-    content: 'Mongo File Path(s)',
-    format: row => row.sourceFilePaths.map(path => <div key={path}>{path}</div>),
-  },
-]
-
-const ElasticsearchStatus = ({ data, loading, load }) =>
+const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
     <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
 
     <Header size="medium" content="Disk Status:" />
-    <SortableTable
+    <DataTable
       striped
       collapsing
       singleLine
@@ -76,7 +53,7 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
 
     <Header size="medium" content="Loaded Indices:" />
     {data.errors && data.errors.length > 0 && <Message error list={data.errors} />}
-    <SortableTable
+    <DataTable
       striped
       collapsing
       horizontalScroll
@@ -86,18 +63,8 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
       data={data.indices}
       columns={INDEX_COLUMNS}
     />
-
-    <Header size="medium" content="Mongo Projects:" />
-    <SortableTable
-      striped
-      collapsing
-      singleLine
-      idField="projectGuid"
-      defaultSortColumn="projectName"
-      data={data.mongoProjects}
-      columns={MONGO_COLUMNS}
-    />
-  </DataLoader>
+  </DataLoader>,
+)
 
 ElasticsearchStatus.propTypes = {
   data: PropTypes.object,

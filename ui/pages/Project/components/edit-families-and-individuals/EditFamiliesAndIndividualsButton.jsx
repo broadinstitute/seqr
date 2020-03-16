@@ -38,7 +38,7 @@ const PANES = PANE_DETAILS.map(({ formClass, menuItem }) => ({
   menuItem,
 }))
 
-export default () => (
+export default React.memo(() => (
   <Modal
     modalName={MODAL_NAME}
     title="Edit Families & Individuals"
@@ -54,5 +54,5 @@ export default () => (
     <Tab panes={PANES} />
   </Modal>
 
-)
+))
 

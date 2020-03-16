@@ -3,7 +3,7 @@ FROM debian:jessie
 MAINTAINER MacArthur Lab
 
 # install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
     curl \
@@ -13,23 +13,32 @@ RUN apt-get update && apt-get install -y --fix-missing \
     less \
     nano \
     wget \
-    xterm
+    xterm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # install python
-RUN apt-get install -y python-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python-dev \
+    ca-certificates \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
-    && pip install --upgrade pip setuptools
+    && pip install --upgrade pip setuptools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     perl \
     build-essential \
     libcairo2-dev \
     libglib2.0-bin \
     libglib2.0-0 \
     libgtk2.0-dev \
-    libpango1.0-dev
+    libpango1.0-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
@@ -47,17 +56,12 @@ RUN apt-get update \
         nodejs
 
 # install database clients for debugging
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 \
-    && echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.4 main" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list \
-    && apt-get update && apt-get install -y \
-        mongodb-org-tools \
-        mongodb-org-shell
-
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
     && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
     && apt-get update && apt-get install -y \
         postgresql \
-        postgresql-client
+        postgresql-client \
+        libpq-dev
 
 RUN apt-get update && apt-get install -y \
     redis-tools
@@ -71,6 +75,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
         python-setuptools \
         libffi-dev \
         libssl-dev \
+        libpq-dev \
     && pip install gsutil
 
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
@@ -101,15 +106,12 @@ ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
 EXPOSE $SEQR_SERVICE_PORT
 
-ENV PYTHONPATH=/seqr:/seqr_settings
 ENV TERM=xterm
-
-RUN mkdir /seqr_settings
 
 COPY readiness_probe /
 COPY bin/*.sh /usr/local/bin/
 COPY gitconfig /root/.gitconfig
-COPY config/*.py /seqr_settings/
+COPY config/*.py ./
 COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /

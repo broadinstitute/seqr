@@ -21,7 +21,7 @@ class Command(BaseCommand):
         filename = 'seqr_{deployment_type}_settings_{timestamp}.tar.gz'.format(
             deployment_type=options['deployment_type'], timestamp=datetime.datetime.now().strftime('%Y-%m-%d__%H-%M-%S'))
 
-        run('tar czf {} /seqr_settings'.format(filename))
-        run('gsutil mv {filename} gs://{bucket}/settings/'.format(filename=filename, bucket=options['bucket']))
+        run('tar czf {} /seqr_static_files'.format(filename))
+        run('/usr/local/bin/gsutil mv {filename} gs://{bucket}/settings/'.format(filename=filename, bucket=options['bucket']))
 
 

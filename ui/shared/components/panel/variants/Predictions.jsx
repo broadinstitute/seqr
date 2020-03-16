@@ -53,12 +53,12 @@ Prediction.propTypes = {
 
 const PREDICTOR_FIELDS = [
   { field: 'cadd', warningThreshold: 10, dangerThreshold: 20 },
-  { field: 'dann', warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'revel', warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'eigen', warningThreshold: 1, dangerThreshold: 2 },
-  { field: 'mpc', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
+  { field: 'mpc', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8 },
+  { field: 'eigen', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'dann', warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'polyphen', indicatorMap: POLYPHEN_MAP },
   { field: 'sift' },
   { field: 'mut_taster', indicatorMap: MUTTASTER_MAP },

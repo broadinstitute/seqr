@@ -12,6 +12,48 @@ GENOME_VERSION_CHOICES = [
     (GENOME_VERSION_GRCh37, "GRCh37"),
     (GENOME_VERSION_GRCh38, "GRCh38")
 ]
+GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
+
+
+class ReferenceDataRouter(object):
+    """
+    A router to control all database operations on reference data models
+    """
+    def db_for_read(self, model, **hints):
+        """
+        Attempts to read reference_data models go to reference_data_db.
+        """
+        if model._meta.app_label == 'reference_data':
+            return 'reference_data'
+        return None
+
+    def db_for_write(self, model, **hints):
+        """
+        Attempts to write reference_data models go to reference_data_db.
+        """
+        if model._meta.app_label == 'reference_data':
+            return 'reference_data'
+        return None
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """
+        Allow relations if a model in the reference_data app is involved.
+        """
+        if obj1._meta.app_label == 'reference_data' or \
+           obj2._meta.app_label == 'reference_data':
+           return True
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        """
+        Make sure the reference_data app only appears in the 'reference_data_db'
+        database.
+        """
+        if app_label == 'reference_data':
+            return db == 'reference_data'
+        elif db == 'reference_data':
+            return False
+        return None
 
 
 class HumanPhenotypeOntology(models.Model):
@@ -121,7 +163,7 @@ class Omim(models.Model):
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
         unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
 
-        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description']
+        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description', 'phenotype_inheritance']
 
 
 # based on dbNSFPv3.5a_gene fields

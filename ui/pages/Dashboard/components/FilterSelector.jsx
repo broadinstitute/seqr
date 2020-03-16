@@ -1,5 +1,3 @@
-/* eslint-disable react/no-unused-prop-types */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -7,7 +5,8 @@ import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/selectors'
-import { getProjectFilter, updateFilter } from '../reducers'
+import { updateFilter } from '../reducers'
+import { getProjectFilter } from '../selectors'
 import {
   SHOW_ALL,
 } from '../constants'
@@ -18,7 +17,7 @@ const FilterContainer = styled.span`
   font-size: 12px;
 `
 
-const FilterSelector = (props) => {
+const FilterSelector = React.memo((props) => {
   const options = [
     { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
     ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
@@ -36,7 +35,7 @@ const FilterSelector = (props) => {
       />
     </FilterContainer>
   )
-}
+})
 
 
 export { FilterSelector as FilterSelectorComponent }

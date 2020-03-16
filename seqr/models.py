@@ -14,7 +14,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.xpos_utils import get_chrom_pos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
-from django.conf import settings
+from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -85,7 +85,8 @@ class ModelWithGUID(models.Model):
             # can occur if 2 objects are being created simultaneously and both attempt to save without setting guid.
             temp_guid = str(random.randint(10**10, 10**11))
             self.guid = kwargs.pop('guid', temp_guid)
-            self.created_date = current_time
+            # allows for overriding created_date during save, but this should only be used for migrations
+            self.created_date = kwargs.pop('created_date', current_time)
             super(ModelWithGUID, self).save(*args, **kwargs)
 
             self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
@@ -93,10 +94,6 @@ class ModelWithGUID(models.Model):
 
 
 class Project(ModelWithGUID):
-    DISEASE_AREA = [(da.lower().replace(" ", "_"), da) for da in (
-        "Blood", "Cardio", "Kidney", "Muscle", "Neurodev", "Orphan Disease", "Retinal")
-    ]
-
     name = models.TextField()  # human-readable project name
     description = models.TextField(null=True, blank=True)
 
@@ -108,32 +105,22 @@ class Project(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
-    is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     is_mme_enabled = models.BooleanField(default=True)
-    mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
-    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
-    mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
-
-    is_functional_data_enabled = models.BooleanField(default=False)
-    disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
+    mme_primary_data_owner = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_NAME)
+    mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
+    mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     disable_staff_access = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
-    # legacy
-    custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
-    deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
-    has_new_search = models.BooleanField(default=False)
-
     def __unicode__(self):
         return self.name.strip()
 
     def _compute_guid(self):
-        label = (self.name or self.deprecated_project_id).strip()
-        return 'R%04d_%s' % (self.id, _slugify(str(label)))
+        return 'R%04d_%s' % (self.id, _slugify(str(self)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -178,9 +165,8 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
         json_fields = [
-            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
-            'phenotips_user_id', 'deprecated_project_id', 'last_accessed_date', 'has_new_search',
-            'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'mme_contact_institution', 'guid'
+            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid'
         ]
 
 
@@ -223,14 +209,6 @@ class Family(ModelWithGUID):
         ('O', 'Other'),
     )
 
-    CAUSAL_INHERITANCE_MODE_CHOICES = (
-        ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
-        ('u', 'unknown'),
-        ('d', 'dominant'),
-        ('x', 'x-linked recessive'),
-        ('n', 'de novo'),
-    )
-
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
 
     # WARNING: family_id is unique within a project, but not necessarily unique globally.
@@ -252,10 +230,9 @@ class Family(ModelWithGUID):
     ), default=list())
     success_story = models.TextField(null=True, blank=True)
 
+    mme_notes = models.TextField(null=True, blank=True)
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
-
-    causal_inheritance_mode = models.CharField(max_length=20, default='u', choices=CAUSAL_INHERITANCE_MODE_CHOICES)
 
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
@@ -288,8 +265,8 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
+            'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
+            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
@@ -297,7 +274,7 @@ class Family(ModelWithGUID):
         ]
 
 
-# TODO should be an ArrayField directly on family once family fields have audit trail
+# TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/macarthur-lab/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
     family = models.ForeignKey(Family)
 
@@ -313,6 +290,8 @@ class FamilyAnalysedBy(ModelWithGUID):
 
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
+    SEX_FEMALE = 'F'
+    SEX_UNKNOWN = 'U'
     SEX_CHOICES = (
         (SEX_MALE, 'Male'),
         ('F', 'Female'),
@@ -338,6 +317,8 @@ class Individual(ModelWithGUID):
         ('P', 'Pending Results and Records'),
         ('N', 'NMI Review'),
         ('W', 'Waitlist'),
+        ('L', 'Lost To Follow-Up'),
+        ('V', 'Inactive'),
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
@@ -370,12 +351,6 @@ class Individual(ModelWithGUID):
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
-    mme_id = models.CharField(max_length=50, null=True, blank=True)
-    mme_submitted_data = JSONField(null=True)
-    mme_submitted_date = models.DateTimeField(null=True)
-    mme_deleted_date = models.DateTimeField(null=True)
-    mme_deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
@@ -391,36 +366,12 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date', 'mme_submitted_date',
-            'mme_deleted_date', 'filter_flags', 'pop_platform_filters', 'population'
+            'phenotips_data', 'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population'
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',
             'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
         ]
-
-
-class UploadedFileForFamily(models.Model):
-    family = models.ForeignKey(Family, on_delete=models.PROTECT)
-    name = models.TextField()
-    uploaded_file = models.FileField(upload_to="uploaded_family_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    uploaded_date = models.DateTimeField(null=True, blank=True)
-
-
-class UploadedFileForIndividual(models.Model):
-    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
-    name = models.TextField()
-    uploaded_file = models.FileField(upload_to="uploaded_individual_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    uploaded_date = models.DateTimeField(null=True, blank=True)
-
-
-class ProjectLastAccessedDate(models.Model):
-    """Used to provide a user-specific 'last_accessed' column in the project table"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    last_accessed_date = models.DateTimeField(auto_now=True, db_index=True)
 
 
 class Sample(ModelWithGUID):
@@ -485,9 +436,6 @@ class Sample(ModelWithGUID):
     is_active = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
 
-    #funding_source = models.CharField(max_length=20, null=True)
-    #is_external_data = models.BooleanField(default=False)
-
     def __unicode__(self):
         return self.sample_id.strip()
 
@@ -496,12 +444,11 @@ class Sample(ModelWithGUID):
 
     class Meta:
        json_fields = [
-           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
-           'dataset_file_path', 'is_active', 'loaded_date',
+           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
+           'dataset_file_path',
        ]
 
 
-# TODO AliasFields work for lookups, but save/update doesn't work?
 class AliasField(models.Field):
     def contribute_to_class(self, cls, name, private_only=False):
         super(AliasField, self).contribute_to_class(cls, name, private_only=True)
@@ -509,18 +456,6 @@ class AliasField(models.Field):
 
     def __get__(self, instance, instance_type=None):
         return getattr(instance, self.db_column)
-
-
-#class SampleBatch(ModelWithGUID):
-#    """Represents a set of biological samples that were processed together."""
-#
-#    notes = models.TextField(null=True, blank=True)
-#
-#    def __unicode__(self):
-#        return self.name.strip()
-#
-#    def _compute_guid(self):
-#        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
 class SavedVariant(ModelWithGUID):
@@ -570,7 +505,6 @@ class VariantTagType(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
     order = models.FloatField(null=True)
-    is_built_in = models.BooleanField(default=False)  # built-in tags (eg. "Pathogenic") can't be modified by users through the UI
 
     def __unicode__(self):
         return self.name.strip()
@@ -585,38 +519,34 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
     search_hash = models.CharField(max_length=50, null=True)
-    #  TODO deprecate and migrate to search_hash
-    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('variant_tag_type', 'saved_variant')
-
-        json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
+        json_fields = ['guid', 'search_hash', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
-    note = models.TextField(null=True, blank=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
+    note = models.TextField()
     submit_to_clinvar = models.BooleanField(default=False)
 
     # these are for context
     search_hash = models.CharField(max_length=50, null=True)
-    #  TODO deprecate and migrate to search_hash
-    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
@@ -687,23 +617,20 @@ class VariantFunctionalData(ModelWithGUID):
          )),
     )
 
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
     metadata = models.TextField(null=True)
 
     search_hash = models.CharField(max_length=50, null=True)
-    #  TODO deprecate and migrate to search_hash
-    search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.functional_data_tag)
 
     def _compute_guid(self):
         return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('functional_data_tag', 'saved_variant')
-
         json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 
@@ -727,6 +654,7 @@ class LocusList(ModelWithGUID):
     name = models.TextField(db_index=True)
     description = models.TextField(null=True, blank=True)
 
+    projects = models.ManyToManyField('Project')
     is_public = models.BooleanField(default=False)
 
     def __unicode__(self):
@@ -747,8 +675,6 @@ class LocusListGene(ModelWithGUID):
 
     gene_id = models.TextField(db_index=True)
 
-    description = models.TextField(null=True, blank=True)
-
     def __unicode__(self):
         return "%s:%s" % (self.locus_list, self.gene_id)
 
@@ -766,8 +692,6 @@ class LocusListInterval(ModelWithGUID):
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
-
-    description = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return "%s:%s:%s-%s" % (self.locus_list, self.chrom, self.start, self.end)
@@ -805,7 +729,7 @@ class VariantSearch(ModelWithGUID):
     search = JSONField()
 
     def __unicode__(self):
-        return self.name or self.id
+        return self.name or str(self.id)
 
     def _compute_guid(self):
         return 'VS%07d_%s' % (self.id, _slugify(self.name or ''))
@@ -827,43 +751,3 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-
-class MatchmakerResult(ModelWithGUID):
-    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
-    result_data = JSONField()
-
-    last_modified_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    we_contacted = models.BooleanField(default=False)
-    host_contacted = models.BooleanField(default=False)
-    deemed_irrelevant = models.BooleanField(default=False)
-    flag_for_analysis = models.BooleanField(default=False)
-    comments = models.TextField(null=True, blank=True)
-
-    match_removed = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return '{}_{}_result'.format(self.id, str(self.individual))
-
-    def _compute_guid(self):
-        return 'MR%07d_%s' % (self.id, str(self.individual))
-
-    class Meta:
-        json_fields = [
-            'guid', 'comments', 'we_contacted', 'host_contacted', 'deemed_irrelevant', 'flag_for_analysis',
-            'created_date', 'match_removed'
-        ]
-
-
-class MatchmakerContactNotes(ModelWithGUID):
-    institution = models.CharField(max_length=200, db_index=True, unique=True)
-    comments = models.TextField(blank=True)
-
-    def __unicode__(self):
-        return '{}_{}_result'.format(self.id, self.institution)
-
-    def _compute_guid(self):
-        return 'MCN%07d_%s' % (self.id, self.institution.replace(' ', '_'))
-
-    class Meta:
-        json_fields = []
-        internal_json_fields = ['institution', 'comments']

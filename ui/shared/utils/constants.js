@@ -20,6 +20,16 @@ export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
   { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
+export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce((acc, { value, text }) =>
+  ({ ...acc, [value]: text }), {})
+export const GENOME_VERSION_FIELD = {
+  name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
+}
+
+export const GENOME_VERSION_DISPLAY_LOOKUP = {
+  GRCh37: 'hg19',
+  GRCh38: 'hg38',
+}
 
 // PROJECT FIELDS
 
@@ -30,8 +40,17 @@ export const EDITABLE_PROJECT_FIELDS = [
 
 export const PROJECT_FIELDS = [
   ...EDITABLE_PROJECT_FIELDS,
-  { name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS },
+  GENOME_VERSION_FIELD,
 ]
+
+const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
+export const MATCHMAKER_CONTACT_NAME_FIELD = { label: 'Contact Name' }
+export const MATCHMAKER_CONTACT_URL_FIELD = {
+  label: 'Contact URL',
+  parse: val => `mailto:${val}`,
+  format: val => (val || '').replace('mailto:', ''),
+  validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
+}
 
 
 // SAMPLES
@@ -130,6 +149,7 @@ export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
 export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_MME_NOTES = 'mmeNotes'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
@@ -161,6 +181,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes' },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView },
   [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView },
   [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView },
@@ -177,6 +198,7 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_MME_NOTES, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
   { id: FAMILY_FIELD_OMIM_NUMBER, canEdit: true },
   { id: FAMILY_FIELD_PMIDS, canEdit: true },
@@ -276,6 +298,8 @@ export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) =
   return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
 
+export const isActiveVariantSample = sample => sample.isActive && sample.datasetType === DATASET_TYPE_VARIANT_CALLS
+
 // CLINVAR
 
 export const CLINSIG_SEVERITY = {
@@ -303,22 +327,25 @@ export const CLINSIG_SEVERITY = {
 
 // LOCUS LISTS
 
+export const LOCUS_LIST_NAME_FIELD = 'name'
+export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
+export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
 export const LOCUS_LIST_FIELDS = [
   {
-    name: 'name',
+    name: LOCUS_LIST_NAME_FIELD,
     label: 'List Name',
     labelHelp: 'A descriptive name for this gene list',
     validate: value => (value ? undefined : 'Name is required'),
     width: 3,
     isEditable: true,
   },
-  { name: 'numEntries', label: 'Entries', width: 1 },
+  { name: LOCUS_LIST_NUM_ENTRIES_FIELD, label: 'Entries', width: 1 },
   {
-    name: 'description',
+    name: LOCUS_LIST_DESCRIPTION_FIELD,
     label: 'Description',
     labelHelp: 'Some background on how this list is curated',
     width: 9,
@@ -802,10 +829,18 @@ export const MUTTASTER_MAP = {
   D: { value: 'disease causing' },
 }
 
-export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
-  (Object.entries(transcripts).find(entry =>
-    entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
-  ) || [])[0]
+export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
+  if (selectedMainTranscriptId || mainTranscriptId) {
+    return (Object.entries(transcripts).find(entry =>
+      entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
+    ) || [])[0]
+  }
+  if (Object.keys(transcripts).length === 1 && Object.values(transcripts)[0] && Object.values(transcripts)[0].length === 0) {
+    return Object.keys(transcripts)[0]
+  }
+  return null
+}
+
 
 export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
   flatten(Object.values(transcripts)).find(
@@ -827,6 +862,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'cadd', getVal: variant => variant.predictions.cadd },
   { header: 'revel', getVal: variant => variant.predictions.revel },
   { header: 'eigen', getVal: variant => variant.predictions.eigen },
+  { header: 'splice_ai', getVal: variant => variant.predictions.splice_ai },
   { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
   { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
@@ -838,8 +874,53 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+  { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+]
+
+export const ALL_INHERITANCE_FILTER = 'all'
+export const RECESSIVE_FILTER = 'recessive'
+export const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
+export const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
+export const COMPOUND_HET_FILTER = 'compound_het'
+export const DE_NOVO_FILTER = 'de_novo'
+export const ANY_AFFECTED = 'any_affected'
+
+export const INHERITANCE_FILTER_OPTIONS = [
+  { value: ALL_INHERITANCE_FILTER, text: 'All' },
+  {
+    value: RECESSIVE_FILTER,
+    text: 'Recessive',
+    detail: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
+  },
+  {
+    value: HOM_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Homozygous Recessive',
+    detail: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
+  },
+  {
+    value: X_LINKED_RECESSIVE_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'X-Linked Recessive',
+    detail: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
+  },
+  {
+    value: COMPOUND_HET_FILTER,
+    color: 'transparent', // Adds an empty label so option is indented
+    text: 'Compound Heterozygous',
+    detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
+  },
+  {
+    value: DE_NOVO_FILTER,
+    text: 'De Novo/ Dominant',
+    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+  },
+  {
+    value: ANY_AFFECTED,
+    text: 'Any Affected',
+    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
+  },
 ]
 
 // Users

@@ -1,18 +1,19 @@
 import { combineReducers } from 'redux'
 
-import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
-import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
+import {
+  updateEntity,
+  RECEIVE_DATA,
+  RECEIVE_SAVED_SEARCHES,
+  REQUEST_SAVED_SEARCHES,
+  REQUEST_SEARCHED_VARIANTS,
+  RECEIVE_SEARCHED_VARIANTS,
+} from 'redux/rootReducer'
+import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
-import { SORT_BY_XPOS } from 'shared/utils/constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
-const UPDATE_CURRENT_SEARCH = 'UPDATE_CURRENT_SEARCH'
-const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
-const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
-const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
-const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
-const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
+const UPDATE_COMPOUND_HET_DISPLAY = 'UPDATE_COMPOUND_HET_DISPLAY'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
@@ -107,73 +108,26 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
-export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
-  return (dispatch, getState) => {
+export const updateCompoundHetDisplay = ({ updates }) => {
+  return (dispatch) => {
+    dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates.flattenCompoundHet })
+  }
+}
+
+export const loadSingleSearchedVariant = ({ variantId, familyGuid }) => {
+  return (dispatch) => {
+    const url = `/api/search/variant/${variantId}?${getUrlQueryString({ familyGuid })}`
+
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-
-    const state = getState()
-
-    const apiQueryParams = {}
-    if (searchHash) {
-      dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
-
-      let { sort, page } = displayUpdates || queryParams
-      if (!page) {
-        page = 1
-      }
-      if (!sort) {
-        sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
-      }
-
-      apiQueryParams.sort = sort.toLowerCase()
-      apiQueryParams.page = page || 1
-
-      // Update search table state and query params
-      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
-      updateQueryParams(apiQueryParams)
-    } else {
-      apiQueryParams.familyGuid = familyGuid
-    }
-
-    const url = `/api/search/${searchHash || `variant/${variantId}`}?${getUrlQueryString(apiQueryParams)}`
-    const search = state.searchesByHash[searchHash]
-
-    // Fetch variants
-    new HttpRequestHelper(url,
+    return new HttpRequestHelper(url,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
-        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
       },
       (e) => {
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
       },
-    ).post(search)
-  }
-}
-
-export const loadGeneBreakdown = (searchHash) => {
-  return (dispatch, getState) => {
-    if (!getState().searchGeneBreakdown[searchHash]) {
-      dispatch({ type: REQUEST_SEARCH_GENE_BREAKDOWN })
-
-      new HttpRequestHelper(`/api/search/${searchHash}/gene_breakdown`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, updatesById: responseJson })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
-  }
-}
-
-export const unloadSearchResults = () => {
-  return (dispatch) => {
-    dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: null })
-    dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: [] })
+    ).post()
   }
 }
 
@@ -198,18 +152,9 @@ export const loadSavedSearches = () => {
 // reducers
 
 export const reducers = {
-  currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
-  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
-  searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
-  searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
-  searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
   multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
-  variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
-    sort: SORT_BY_XPOS,
-    page: 1,
-    recordsPerPage: 100,
-  }, false),
+  flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
 }
 
 const rootReducer = combineReducers(reducers)

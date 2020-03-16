@@ -45,6 +45,7 @@ from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
     create_saved_variant_handler, \
     update_variant_tags_handler, \
+    update_variant_functional_data_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
     delete_variant_note_handler, \
@@ -71,7 +72,7 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
-from seqr.views.apis.matchmaker_api import \
+from matchmaker.views.matchmaker_api import \
     get_individual_mme_matches, \
     search_individual_mme_matches, \
     update_mme_submission, \
@@ -107,11 +108,11 @@ from seqr.views.apis.staff_api import \
     get_projects_for_category, \
     success_story, \
     elasticsearch_status, \
-    saved_variants, \
+    saved_variants_page, \
     upload_qc_pipeline_output, \
-    mme_metrics_proxy, \
-    mme_submissions, \
+    mme_details, \
     seqr_stats, \
+    sample_metadata_export, \
     proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -121,7 +122,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, export_project_individuals_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis import external_api
+from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -166,7 +167,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
-    'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guid>[^/]+)?': saved_variant_data,
+    'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guids>[^/]+)?': saved_variant_data,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
@@ -200,10 +201,11 @@ api_endpoints = {
     'saved_search/(?P<saved_search_guid>[^/]+)/delete': delete_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/update_functional_data': update_variant_functional_data_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/create': create_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_transcript/(?P<transcript_id>[^/]+)': update_variant_main_transcript,
 
     'genes_info': genes_info,
@@ -220,10 +222,11 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
-    'matchmaker/get_mme_matches/(?P<individual_guid>[\w.|-]+)': get_individual_mme_matches,
-    'matchmaker/search_mme_matches/(?P<individual_guid>[\w.|-]+)': search_individual_mme_matches,
-    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/update': update_mme_submission,
-    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/delete': delete_mme_submission,
+    'matchmaker/get_mme_matches/(?P<submission_guid>[\w.|-]+)': get_individual_mme_matches,
+    'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/submission/create': update_mme_submission,
+    'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/update': update_mme_submission,
+    'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/delete': delete_mme_submission,
     'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
     'matchmaker/send_email/(?P<matchmaker_result_guid>[\w.|-]+)': send_mme_contact_email,
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
@@ -244,13 +247,13 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'staff/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
     'staff/elasticsearch_status': elasticsearch_status,
-    'staff/matchmaker_metrics': mme_metrics_proxy,
-    'staff/matchmaker_submissions': mme_submissions,
-    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
+    'staff/matchmaker': mme_details,
+    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
 
