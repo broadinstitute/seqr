@@ -250,6 +250,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
+            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
     if project_guid or not skip_nested:
         nested_fields = [
@@ -268,6 +269,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
+        prefetch_related_objects(individuals, 'igvsample_set')
 
     return _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
 
@@ -304,7 +306,7 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     return _get_json_for_models(samples, **kwargs)
 
 
-def get_json_for_sample(sample, **kwargs):
+def get_json_for_igv_sample(sample, **kwargs):
     """Returns a JSON representation of the given Sample.
 
     Args:

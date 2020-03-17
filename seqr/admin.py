@@ -6,7 +6,7 @@ from seqr.models import Project, Family, Individual, Sample, LocusList, LocusLis
     FamilyAnalysedBy, VariantSearch, VariantSearchResults
 
 for model_class in [
-    Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag,
+    Project, Family, Individual, Sample, IgvSample, LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag,
     VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, FamilyAnalysedBy,
     VariantSearch, VariantSearchResults, MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult,
     MatchmakerContactNotes

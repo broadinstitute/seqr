@@ -45,7 +45,6 @@ class Command(BaseCommand):
             project=project,
             sample_ids=sample_ids,
             sample_type=sample_type,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             elasticsearch_index=elasticsearch_index,
             sample_id_to_individual_id_mapping={},
         )
@@ -59,7 +58,6 @@ class Command(BaseCommand):
         missing_individuals = Individual.objects.filter(
             family__in=included_families,
             sample__is_active=True,
-            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
         missing_family_individuals = defaultdict(list)
         for individual in missing_individuals:

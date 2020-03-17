@@ -6,7 +6,7 @@ import json
 import logging
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Sample, Individual
+from seqr.models import Sample, IgvSample, Individual
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.phenotips_utils import delete_phenotips_patient, PhenotipsException
 from seqr.views.utils.export_utils import export_table
@@ -35,12 +35,8 @@ def delete_individuals(project, individual_guids):
     individuals_to_delete = Individual.objects.filter(
         family__project=project, guid__in=individual_guids)
 
-    samples_to_delete = Sample.objects.filter(
-        individual__family__project=project, individual__guid__in=individual_guids)
-
-    for sample in samples_to_delete:
-        logger.info("Deleting sample: %s" % sample)
-        sample.delete()
+    Sample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
+    IgvSample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
 
     families = {}
     for individual in individuals_to_delete:
@@ -198,10 +194,7 @@ def export_individuals(
                 row.append(phenotips_fields.get('age_of_onset', ''))
 
         if include_first_loaded_date:
-            first_loaded_sample = i.sample_set.filter(
-                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-                loaded_date__isnull=False,
-            ).order_by('loaded_date').first()
+            first_loaded_sample = i.sample_set.order_by('loaded_date').first()
             row.append(first_loaded_sample.loaded_date if first_loaded_sample else None)
 
         rows.append(row)

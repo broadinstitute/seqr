@@ -8,12 +8,12 @@ from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from seqr.models import Individual, CAN_EDIT, Sample, Family
+from seqr.models import Individual, CAN_EDIT, Sample, Family, IgvSample
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_igv_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -53,7 +53,7 @@ def add_variants_dataset_handler(request, project_guid):
         sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
         validate_index_metadata(index_metadata, project, elasticsearch_index)
         sample_type = index_metadata['sampleType']
-        dataset_path = index_metadata['sourceFilePath']
+        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
@@ -62,7 +62,7 @@ def add_variants_dataset_handler(request, project_guid):
             project=project,
             sample_ids=sample_ids,
             sample_type=sample_type,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            dataset_type=dataset_type,
             elasticsearch_index=elasticsearch_index,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         )
@@ -86,7 +86,7 @@ def add_variants_dataset_handler(request, project_guid):
         missing_individuals = Individual.objects.filter(
             family__in=included_families,
             sample__is_active=True,
-            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            sample__dataset_type=dataset_type,
         ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
         missing_family_individuals = defaultdict(list)
         for individual in missing_individuals:
@@ -100,9 +100,7 @@ def add_variants_dataset_handler(request, project_guid):
                          for family, missing_indivs in missing_family_individuals.items()]
                     ))))
 
-        inactivate_sample_guids = _update_variant_samples(
-            matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
-        )
+        inactivate_sample_guids = _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index)
 
     except Exception as e:
         traceback.print_exc()
@@ -128,27 +126,6 @@ def add_variants_dataset_handler(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_alignment_table_handler(request, project_guid):
-    """Create or update samples for the given dataset
-
-    Args:
-        request: Django request object
-        project_guid (string): GUID of the project that should be updated
-
-    HTTP POST
-        Request body - should contain the following json structure:
-        {
-            'sampleType':  <"WGS", "WES", or "RNA"> (required)
-            'datasetType': <"VARIANTS", or "ALIGN"> (required)
-            'elasticsearchIndex': <String>
-            'datasetPath': <String>
-            'datasetName': <String>
-            'ignoreExtraSamplesInCallset': <Boolean>
-            'mappingFile': { 'uploadedFileId': <Id for temporary uploaded file> }
-        }
-
-        Response body - will contain the following structure:
-
-    """
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
     info = []
 
@@ -168,13 +145,9 @@ def receive_alignment_table_handler(request, project_guid):
 
         info.append('Parsed {} rows from {}'.format(len(individual_dataset_mapping), filename))
 
-        existing_samples = Sample.objects.select_related('individual').filter(
-            individual__in=matched_individuals,
-            dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            is_active=True
-        )
+        existing_samples = IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals)
         unchanged_individual_ids = {s.individual.individual_id for s in existing_samples
-                                    if individual_dataset_mapping[s.individual.individual_id] == s.dataset_file_path}
+                                    if individual_dataset_mapping[s.individual.individual_id] == s.file_path}
         if unchanged_individual_ids:
             info.append('No change detected for {} individuals'.format(len(unchanged_individual_ids)))
 
@@ -197,27 +170,6 @@ def receive_alignment_table_handler(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_individual_alignment_sample(request, individual_guid):
-    """Create or update samples for the given dataset
-
-    Args:
-        request: Django request object
-        individual_guid (string): GUID of the individual that should be updated
-
-    HTTP POST
-        Request body - should contain the following json structure:
-        {
-            'sampleType':  <"WGS", "WES", or "RNA"> (required)
-            'datasetType': <"VARIANTS", or "ALIGN"> (required)
-            'elasticsearchIndex': <String>
-            'datasetPath': <String>
-            'datasetName': <String>
-            'ignoreExtraSamplesInCallset': <Boolean>
-            'mappingFile': { 'uploadedFileId': <Id for temporary uploaded file> }
-        }
-
-        Response body - will contain the following structure:
-
-    """
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
     check_permissions(project, request.user, CAN_EDIT)
@@ -225,39 +177,27 @@ def update_individual_alignment_sample(request, individual_guid):
     request_json = json.loads(request.body)
 
     try:
-        required_fields = ['sampleType', 'datasetFilePath']
+        required_fields = ['filePath']
         if any(field not in request_json for field in required_fields):
             raise ValueError(
                 "request must contain fields: {}".format(', '.join(required_fields)))
 
-        sample_type = request_json['sampleType']
-        if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
-            raise Exception("Sample type not supported: {}".format(sample_type))
+        file_path = request_json['filePath']
+        if not (file_path.endswith(".bam") or file_path.endswith(".cram")):
+            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(file_path))
+        validate_alignment_dataset_path(file_path)
 
-        dataset_path = request_json['datasetFilePath']
-        if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
-            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
-        validate_alignment_dataset_path(dataset_path)
-
-        sample, created = Sample.objects.get_or_create(
-            individual=individual,
-            dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            is_active=True,
-        )
-        sample.dataset_file_path = dataset_path
-        sample.sample_type = sample_type
-        sample.sample_id = dataset_path.split('/')[-1].split('.')[0]
-        if created:
-            sample.loaded_date = timezone.now()
+        sample, created = IgvSample.objects.get_or_create(individual=individual)
+        sample.file_path = file_path
         sample.save()
 
         response = {
-            'samplesByGuid': {
-                sample.guid: get_json_for_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
+            'igvSamplesByGuid': {
+                sample.guid: get_json_for_igv_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
         }
         if created:
             response['individualsByGuid'] = {
-                individual.guid: {'sampleGuids': [s.guid for s in individual.sample_set.all()]}
+                individual.guid: {'igvSampleGuids': [s.guid for s in individual.igvsample_set.all()]}
             }
         return create_json_response(response)
     except Exception as e:
@@ -265,7 +205,7 @@ def update_individual_alignment_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path):
+def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index):
     loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
 
@@ -273,7 +213,6 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
     activated_sample_ids = [sample.id for sample in samples_to_activate]
     samples_to_activate.update(
         elasticsearch_index=elasticsearch_index,
-        dataset_file_path=dataset_path,
         is_active=True,
         loaded_date=loaded_date,
     )
@@ -283,7 +222,6 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
 
     inactivate_samples = Sample.objects.filter(
         individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         is_active=True,
     ).exclude(id__in=updated_samples)
     inactivate_sample_guids = [sample.guid for sample in inactivate_samples]

@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -195,7 +195,10 @@ def _get_project_child_entities(project, user):
     individuals_by_guid, individual_models = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid, individual_models)
+    samples_by_guid = _retrieve_samples(
+        project.guid, individuals_by_guid, Sample.objects.filter(individual__in=individual_models))
+    igv_samples_by_guid = _retrieve_samples(
+        project.guid, individuals_by_guid, IgvSample.objects.filter(individual__in=individual_models))
     mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
     locus_lists = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
@@ -204,6 +207,7 @@ def _get_project_child_entities(project, user):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'igvSamplesByGuid': igv_samples_by_guid,
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': analysis_groups_by_guid,
         'mmeSubmissionsByGuid': mme_submissions_by_guid,
@@ -256,7 +260,7 @@ def _retrieve_individuals(project_guid, user):
     return individuals_by_guid, individual_models
 
 
-def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
+def _retrieve_samples(project_guid, individuals_by_guid, sample_models):
     """Retrieves sample metadata for the given project.
 
         Args:
@@ -266,8 +270,6 @@ def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
-    sample_models = Sample.objects.filter(individual__in=individual_models)
-
     samples = get_json_for_samples(sample_models, project_guid=project_guid)
 
     samples_by_guid = {}
@@ -394,7 +396,7 @@ def _delete_project(project):
     Args:
         project (object): Django ORM model for the project to delete
     """
-
+    IgvSample.objects.filter(individual__family__project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
 
     individuals = Individual.objects.filter(family__project=project)

@@ -62,12 +62,8 @@ def elasticsearch_status(request):
 
     mappings = Index('_all', using=client).get_mapping(doc_type='variant,structural_variant')
 
-    active_samples = Sample.objects.filter(
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        is_active=True,
-        elasticsearch_index__isnull=False,
-    ).prefetch_related('individual', 'individual__family')
-    prefetch_related_objects(active_samples, 'individual__family__project')
+    active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
+
     seqr_index_projects = defaultdict(lambda: defaultdict(set))
     es_projects = set()
     for sample in active_samples:
@@ -484,8 +480,6 @@ def _get_variant_main_transcript(variant):
 def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
     loaded_samples = Sample.objects.filter(
         individual__family__project=project,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date__isnull=False,
     ).select_related('individual__family').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
@@ -790,11 +784,8 @@ def success_story(request, success_story_types):
 
 
 def _get_loaded_samples_by_family(project):
-    loaded_samples = Sample.objects.filter(
-        individual__family__project=project,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date__isnull=False
-    ).select_related('individual__family').order_by('loaded_date')
+    loaded_samples = Sample.objects.filter(individual__family__project=project).select_related(
+        'individual__family').order_by('loaded_date')
 
     loaded_samples_by_family = defaultdict(list)
     for sample in loaded_samples:

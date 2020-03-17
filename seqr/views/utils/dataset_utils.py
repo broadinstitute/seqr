@@ -70,7 +70,7 @@ def match_sample_ids_to_sample_records(
         project,
         sample_ids,
         sample_type,
-        dataset_type,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         elasticsearch_index=None,
         create_sample_records=True,
         sample_id_to_individual_id_mapping=None,

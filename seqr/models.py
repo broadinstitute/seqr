@@ -384,9 +384,11 @@ class Sample(ModelWithGUID):
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
     SAMPLE_TYPE_CHOICES = (
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
     )
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
