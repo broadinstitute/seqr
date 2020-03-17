@@ -147,7 +147,7 @@ export const getIGVSamplesByFamily = createSelector(
   (individualsByFamily, igvSamplesByGuid) => {
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSamplesByGuid || [])], []).map(
+      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSampleGuids || [])], []).map(
         sampleGuid => igvSamplesByGuid[sampleGuid]),
     }), {})
   },

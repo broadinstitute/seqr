@@ -33,11 +33,11 @@ const FamilyVariantReads = React.memo(({ variant, igvSamples, individualsByGuid,
   const igvTracks = igvSamples.map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
 
-    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`
+    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
 
     let trackOptions = BAM_TRACK_OPTIONS
-    if (sample.datasetFilePath.endsWith('.cram')) {
-      if (sample.datasetFilePath.startsWith('gs://')) {
+    if (sample.filePath.endsWith('.cram')) {
+      if (sample.filePath.startsWith('gs://')) {
         trackOptions = {
           format: 'cram',
           indexURL: `${url}.crai`,
@@ -61,7 +61,7 @@ const FamilyVariantReads = React.memo(({ variant, igvSamples, individualsByGuid,
   }).filter(track => track)
 
   // TODO better determiner of genome version?
-  const isBuild38 = igvSamples.some(sample => sample.datasetFilePath.endsWith('.cram'))
+  const isBuild38 = igvSamples.some(sample => sample.filePath.endsWith('.cram'))
   const genome = isBuild38 ? 'hg38' : 'hg19'
 
   const locus = variant && getLocus(
