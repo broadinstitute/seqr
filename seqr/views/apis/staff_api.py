@@ -83,8 +83,9 @@ def elasticsearch_status(request):
     for index in indices:
         index_name = index['index']
         index_mappings = mappings[index_name]['mappings']
-        index_mapping = index_mappings.get('variant') or index_mappings['structural_variant']
-        index.update(index_mapping.get('_meta', {}))
+        doc_type = 'variant' if 'variant' in index_mappings else 'structural_variant'
+        index.update(index_mappings[doc_type].get('_meta', {}))
+        index['docType'] = doc_type
 
         projects_for_index = []
         for index_prefix in seqr_index_projects.keys():
