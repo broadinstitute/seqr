@@ -35,6 +35,16 @@ if [ $SEQR_GIT_BRANCH ]; then
   git checkout $SEQR_GIT_BRANCH
 fi
 
+# init seqrdb unless it already exists
+if ! psql --host postgres -U postgres -l | grep seqrdb; then
+
+  psql --host postgres -U postgres -c 'CREATE DATABASE seqrdb';
+  psql --host postgres -U postgres -c 'CREATE DATABASE reference_data_db';
+  psql --host postgres -U postgres reference_data_db <  <(curl -s https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz | gunzip -c -);
+
+fi
+
+
 pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate

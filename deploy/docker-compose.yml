@@ -7,30 +7,24 @@ services:
       - 5432:5432
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+      - ./initdb.sh:/docker-entrypoint-initdb.d/initdb.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      test: bash -c "psql -h localhost -U xwiki -d xwiki -c 'BEGIN; END;'";  #pg_isready -h postgres -U postgres
+      interval: 5s
+      timeout: 10s
+      retries: 100
 
-  init-postgres:
-    image: gcr.io/seqr-project/postgres:gcloud-dev
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: bash -c "
-      psql -h postgres -U postgres -c 'CREATE DATABASE seqrdb';
-      psql -h postgres -U postgres -c 'CREATE DATABASE reference_data_db';
-      psql -h postgres -U postgres -c 'CREATE DATABASE xwiki';
-      psql -h postgres -U postgres -c \"CREATE ROLE xwiki WITH CREATEDB LOGIN PASSWORD 'xwiki'\";
-      psql -h postgres -U postgres -c 'GRANT ALL PRIVILEGES ON DATABASE xwiki TO xwiki';
-      wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz;
-      psql -h postgres -U postgres reference_data_db <  <(gunzip -c gene_reference_data_backup.gz);"
 
   redis:
     image: gcr.io/seqr-project/redis:gcloud-dev
     ports:
       - 6379:6379
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 100
+
 
   elasticsearch:
     image: gcr.io/seqr-project/elasticsearch:gcloud-dev
@@ -38,12 +32,9 @@ services:
       - 9200:9200
     volumes:
       - ./data/elasticsearch:/elasticsearch-data
-
     healthcheck:
-      test: ["CMD-SHELL", "curl localhost:9200"]
-      interval: 10s
-      timeout: 10s
-      retries: 3
+      test: bash -c "curl -s elasticsearch:9200 | grep search"
+
 
   kibana:
     image: gcr.io/seqr-project/kibana:gcloud-dev
@@ -55,13 +46,26 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s kibana:5601 | grep kibana"
+      interval: 3s
+      timeout: 5s
+      retries: 100
+
 
   phenotips:
     image: gcr.io/seqr-project/phenotips:gcloud-dev
     ports:
       - 8080:8080
     depends_on:
-      - init-postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s 'http://localhost:8080/bin/login/XWiki/XWikiLogin' | grep phenotips"
+      interval: 5s
+      timeout: 10s
+      retries: 100
+
 
   seqr:
     image: gcr.io/seqr-project/seqr:gcloud-dev
@@ -78,9 +82,14 @@ services:
       - PGHOST=postgres
       - PGUSER=postgres
       - GUNICORN_WORKER_THREADS=4
-
     depends_on:
-      - init-postgres
-      - elasticsearch
-      - redis
-      - phenotips
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      phenotips:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s 'http://localhost:8000' | grep html"
