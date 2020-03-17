@@ -128,7 +128,7 @@ def add_variants_dataset_handler(request, project_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def receive_alignment_table_handler(request, project_guid):
+def receive_igv_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
     info = []
 
@@ -172,7 +172,7 @@ def receive_alignment_table_handler(request, project_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_individual_alignment_sample(request, individual_guid):
+def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
     check_permissions(project, request.user, CAN_EDIT)

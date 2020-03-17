@@ -13,7 +13,6 @@ import {
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
-  DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
   isActiveVariantSample,
@@ -25,6 +24,7 @@ export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
+export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
@@ -141,16 +141,14 @@ export const getHasActiveVariantSampleByFamily = createSelector(
   },
 )
 
-export const getActiveAlignmentSamplesByFamily = createSelector(
+export const getIGVSamplesByFamily = createSelector(
   getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (individualsByFamily, samplesByGuid) => {
+  getIgvSamplesByGuid,
+  (individualsByFamily, igvSamplesByGuid) => {
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.sampleGuids || [])], []).map(
-        sampleGuid => samplesByGuid[sampleGuid]).filter(
-        sample => sample.isActive && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
-      ),
+      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSamplesByGuid || [])], []).map(
+        sampleGuid => igvSamplesByGuid[sampleGuid]),
     }), {})
   },
 )

@@ -5,14 +5,13 @@ import styled from 'styled-components'
 import { Tab } from 'semantic-ui-react'
 
 import { getProjectGuid } from 'redux/selectors'
-import { SAMPLE_TYPE_OPTIONS, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from 'shared/utils/constants'
 import Modal from 'shared/components/modal/Modal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
-import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
-import { addVariantsDataset, addAlignmentDataset } from '../reducers'
+import { addVariantsDataset, addIGVDataset } from '../reducers'
 
 const DropzoneLabel = styled.span`
   text-align: left;
@@ -25,33 +24,36 @@ const UPLOADER_STYLE = { textAlign: 'left' }
 
 const MODAL_NAME = 'Datasets'
 
+const ADD_VARIANT_FORM = 'variants'
+const ADD_IGV_FORM = 'igv'
+
 const SUBMIT_FUNCTIONS = {
-  [DATASET_TYPE_VARIANT_CALLS]: addVariantsDataset,
-  [DATASET_TYPE_READ_ALIGNMENTS]: addAlignmentDataset,
+  [ADD_VARIANT_FORM]: addVariantsDataset,
+  [ADD_IGV_FORM]: addIGVDataset,
 }
 
-const BaseUpdateDatasetForm = React.memo(({ datasetType, formFields, onSubmit }) => (
+const BaseUpdateDatasetForm = React.memo(({ formType, formFields, onSubmit }) => (
   <ReduxFormWrapper
-    form={`upload${datasetType}`}
+    form={`upload${formType}`}
     modalName={MODAL_NAME}
     onSubmit={onSubmit}
     confirmCloseIfNotSaved
     showErrorPanel
     size="small"
     fields={formFields}
-    liveValidate={datasetType === DATASET_TYPE_READ_ALIGNMENTS}
+    liveValidate={formType === ADD_IGV_FORM}
   />
 ))
 
 BaseUpdateDatasetForm.propTypes = {
   formFields: PropTypes.array.isRequired,
-  datasetType: PropTypes.string.isRequired,
+  formType: PropTypes.string.isRequired,
   onSubmit: PropTypes.func,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: (values) => {
-    return dispatch(SUBMIT_FUNCTIONS[ownProps.datasetType](values))
+    return dispatch(SUBMIT_FUNCTIONS[ownProps.formType](values))
   },
 })
 
@@ -78,7 +80,7 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
-const AlignmentFileUploadField = React.memo(({ projectGuid, ...props }) =>
+const IGVFileUploadField = React.memo(({ projectGuid, ...props }) =>
   <FileUploadField
     clearTimeOut={0}
     dropzoneLabel={
@@ -91,7 +93,7 @@ const AlignmentFileUploadField = React.memo(({ projectGuid, ...props }) =>
         <b>Column 2:</b> gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual<br />
       </DropzoneLabel>
     }
-    url={`/api/project/${projectGuid}/upload_alignment_dataset`}
+    url={`/api/project/${projectGuid}/upload_igv_dataset`}
     auto
     required
     uploaderStyle={UPLOADER_STYLE}
@@ -99,7 +101,7 @@ const AlignmentFileUploadField = React.memo(({ projectGuid, ...props }) =>
   />,
 )
 
-AlignmentFileUploadField.propTypes = {
+IGVFileUploadField.propTypes = {
   projectGuid: PropTypes.string,
 }
 
@@ -107,18 +109,10 @@ const mapStateToProps = state => ({
   projectGuid: getProjectGuid(state),
 })
 
-const UPLOAD_ALIGNMENT_FIELDS = [
-  {
-    name: 'sampleType',
-    label: 'Sample Type',
-    labelHelp: 'Biological sample type',
-    component: Select,
-    options: SAMPLE_TYPE_OPTIONS,
-    validate: value => (value ? undefined : 'Specify the Sample Type'),
-  },
+const UPLOAD_IGV_FIELDS = [
   {
     name: 'mappingFile',
-    component: connect(mapStateToProps)(AlignmentFileUploadField),
+    component: connect(mapStateToProps)(IGVFileUploadField),
     validate: validateUploadedFile,
   },
 ]
@@ -127,20 +121,20 @@ const UPLOAD_ALIGNMENT_FIELDS = [
 const PANES = [
   {
     title: 'Upload New Callset',
-    datasetType: DATASET_TYPE_VARIANT_CALLS,
+    formType: ADD_VARIANT_FORM,
     formFields: UPLOAD_CALLSET_FIELDS,
   },
   {
     title: 'Add BAM/CRAM Paths',
-    datasetType: DATASET_TYPE_READ_ALIGNMENTS,
-    formFields: UPLOAD_ALIGNMENT_FIELDS,
+    formType: ADD_IGV_FORM,
+    formFields: UPLOAD_IGV_FIELDS,
   },
-].map(({ title, datasetType, formFields }) => ({
+].map(({ title, formType, formFields }) => ({
   menuItem: title,
   render: () =>
-    <Tab.Pane key={datasetType}>
+    <Tab.Pane key={formType}>
       <UpdateDatasetForm
-        datasetType={datasetType}
+        formType={formType}
         formFields={formFields}
       />
     </Tab.Pane>,

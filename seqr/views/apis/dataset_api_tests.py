@@ -6,7 +6,7 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import Sample
-from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_alignment_table_handler, update_individual_alignment_sample
+from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -153,7 +153,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
 
     def test_receive_alignment_table_handler(self):
-        url = reverse(receive_alignment_table_handler, args=[PROJECT_GUID])
+        url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
         _check_login(self, url)
 
         # Send invalid requests
@@ -182,7 +182,7 @@ class DatasetAPITest(TransactionTestCase):
     @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
-        url = reverse(update_individual_alignment_sample, args=['I000001_na19675'])
+        url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
         _check_login(self, url)
 
         # Send invalid requests
@@ -221,7 +221,7 @@ class DatasetAPITest(TransactionTestCase):
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
             'filePath': '/readviz/NA19675_new.cram'}}})
 
-        new_sample_url = reverse(update_individual_alignment_sample, args=['I000003_na19679'])
+        new_sample_url = reverse(update_individual_igv_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
             'filePath': 'gs://readviz/NA19679.bam',
         }))
