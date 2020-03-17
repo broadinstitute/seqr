@@ -60,7 +60,7 @@ def elasticsearch_status(request):
     for alias in client.cat.aliases(format="json", h='alias,index'):
         aliases[alias['alias']].append(alias['index'])
 
-    mappings = Index('_all', using=client).get_mapping(doc_type='variant')
+    mappings = Index('_all', using=client).get_mapping(doc_type='variant,structural_variant')
 
     active_samples = Sample.objects.filter(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
@@ -82,7 +82,8 @@ def elasticsearch_status(request):
 
     for index in indices:
         index_name = index['index']
-        index_mapping = mappings[index_name]['mappings']['variant']
+        index_mappings = mappings[index_name]['mappings']
+        index_mapping = index_mappings.get('variant') or index_mappings['structural_variant']
         index.update(index_mapping.get('_meta', {}))
 
         projects_for_index = []
