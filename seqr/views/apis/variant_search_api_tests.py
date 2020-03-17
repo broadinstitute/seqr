@@ -223,7 +223,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', }
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -236,7 +236,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', }
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -249,7 +249,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', }
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -262,7 +262,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', 'projectCategoriesByGuid'}
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'projectCategoriesByGuid'}
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -288,7 +288,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', }
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -301,7 +301,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json),
             {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
-             'locusListsByGuid', 'analysisGroupsByGuid', }
+             'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
@@ -321,7 +321,7 @@ class VariantSearchAPITest(TestCase):
             set(response_json.keys()),
             {'searchedVariants', 'savedVariantsByGuid', 'genesById', 'projectsByGuid', 'familiesByGuid',
              'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'variantTagsByGuid',
-             'variantNotesByGuid', 'variantFunctionalDataByGuid'}
+             'variantNotesByGuid', 'variantFunctionalDataByGuid', 'igvSamplesByGuid', }
         )
 
         self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])

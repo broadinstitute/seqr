@@ -303,10 +303,10 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     else:
         kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, **kwargs)
+    return _get_json_for_models(samples, guid_key='sampleGuid', **kwargs)
 
 
-def get_json_for_igv_sample(sample, **kwargs):
+def get_json_for_sample(sample, **kwargs):
     """Returns a JSON representation of the given Sample.
 
     Args:

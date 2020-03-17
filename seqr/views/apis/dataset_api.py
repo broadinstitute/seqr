@@ -13,7 +13,7 @@ from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, v
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_igv_sample
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -58,6 +58,7 @@ def add_variants_dataset_handler(request, project_guid):
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
 
+        loaded_date = timezone.now()
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
             sample_ids=sample_ids,
@@ -65,6 +66,7 @@ def add_variants_dataset_handler(request, project_guid):
             dataset_type=dataset_type,
             elasticsearch_index=elasticsearch_index,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            loaded_date=loaded_date,
         )
 
         unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
@@ -100,7 +102,8 @@ def add_variants_dataset_handler(request, project_guid):
                          for family, missing_indivs in missing_family_individuals.items()]
                     ))))
 
-        inactivate_sample_guids = _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index)
+        inactivate_sample_guids = _update_variant_samples(
+            matched_sample_id_to_sample_record, elasticsearch_index, loaded_date)
 
     except Exception as e:
         traceback.print_exc()
@@ -193,7 +196,7 @@ def update_individual_alignment_sample(request, individual_guid):
 
         response = {
             'igvSamplesByGuid': {
-                sample.guid: get_json_for_igv_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
+                sample.guid: get_json_for_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
         }
         if created:
             response['individualsByGuid'] = {
@@ -205,8 +208,9 @@ def update_individual_alignment_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index):
-    loaded_date = timezone.now()
+def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, loaded_date=None):
+    if not loaded_date:
+        loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
 
     samples_to_activate = Sample.objects.filter(id__in=updated_samples, is_active=False)

@@ -26,9 +26,8 @@ class DatasetAPITest(TransactionTestCase):
         _check_login(self, url)
 
         # Confirm test DB is as expected
-        existing_index_sample = Sample.objects.get(sample_id='NA19675', dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+        existing_index_sample = Sample.objects.get(sample_id='NA19675')
         self.assertEqual(existing_index_sample.elasticsearch_index, INDEX_NAME)
-        self.assertNotEqual(existing_index_sample.dataset_file_path, 'test_data.vds')
         self.assertTrue(existing_index_sample.is_active)
         existing_index_sample_guid = existing_index_sample.guid
         existing_old_index_sample = Sample.objects.get(sample_id='NA19678')
@@ -37,7 +36,6 @@ class DatasetAPITest(TransactionTestCase):
         existing_old_index_sample_guid = existing_old_index_sample.guid
         existing_sample = Sample.objects.get(sample_id='NA19679')
         self.assertEqual(existing_sample.elasticsearch_index, INDEX_NAME)
-        self.assertNotEqual(existing_sample.dataset_file_path, 'test_data.vds')
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
@@ -128,17 +126,12 @@ class DatasetAPITest(TransactionTestCase):
             {existing_index_sample_guid, existing_sample_guid, existing_old_index_sample_guid, new_sample_guid}
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
-            'I000001_na19675': {'sampleGuids': [existing_index_sample_guid, 'S000145_na19675']},
+            'I000001_na19675': {'sampleGuids': [existing_index_sample_guid]},
             'I000002_na19678': {'sampleGuids': [new_sample_guid, existing_old_index_sample_guid]},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
         })
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
         updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
-        self.assertSetEqual(
-            {'test_data.vds'},
-            {sample['datasetFilePath'] for sample in
-             [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample_guid]]}
-        )
         self.assertSetEqual(
             {'WES'},
             {sample['sampleType'] for sample in updated_samples}
@@ -195,18 +188,10 @@ class DatasetAPITest(TransactionTestCase):
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'request must contain fields: sampleType, datasetFilePath')
+        self.assertEqual(response.reason_phrase, 'request must contain fields: filePath')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'sampleType': 'NOT_A_TYPE',
-            'datasetFilePath': '/readviz/NA19675_new.cram',
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Sample type not supported: NOT_A_TYPE')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'sampleType': 'WES',
-            'datasetFilePath': 'invalid_path.txt',
+            'filePath': 'invalid_path.txt',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
@@ -214,15 +199,13 @@ class DatasetAPITest(TransactionTestCase):
         mock_local_file_exists.return_value = False
         mock_google_bucket_file_exists.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'sampleType': 'WES',
-            'datasetFilePath': '/readviz/NA19675_new.cram',
+            'filePath': '/readviz/NA19675_new.cram',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram"')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'sampleType': 'WES',
-            'datasetFilePath': 'gs://readviz/NA19675_new.cram',
+            'filePath': 'gs://readviz/NA19675_new.cram',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.cram"')
@@ -231,36 +214,28 @@ class DatasetAPITest(TransactionTestCase):
         mock_local_file_exists.return_value = True
         mock_google_bucket_file_exists.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'sampleType': 'WES',
-            'datasetFilePath': '/readviz/NA19675_new.cram',
+            'filePath': '/readviz/NA19675_new.cram',
         }))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'samplesByGuid': {'S000145_na19675': {
+        self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'createdDate': '2017-02-05T06:42:55.397Z', 'sampleType': 'WES', 'sampleId': 'NA19675_new', 'isActive': True,
-            'datasetFilePath': '/readviz/NA19675_new.cram', 'loadedDate': '2017-02-05T06:42:55.397Z',
-            'datasetType': 'ALIGN'}}})
+            'filePath': '/readviz/NA19675_new.cram'}}})
 
         new_sample_url = reverse(update_individual_alignment_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
-            'sampleType': 'WGS',
-            'datasetFilePath': 'gs://readviz/NA19679.bam',
+            'filePath': 'gs://readviz/NA19679.bam',
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid'})
-        self.assertEqual(len(response_json['samplesByGuid']), 1)
-        sample_guid = response_json['samplesByGuid'].keys()[0]
-        self.assertDictEqual(response_json['samplesByGuid'][sample_guid], {
+        self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
+        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
+        sample_guid = response_json['igvSamplesByGuid'].keys()[0]
+        self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
-            'createdDate': mock.ANY, 'sampleType': 'WGS', 'sampleId': 'NA19679', 'isActive': True,
-            'datasetFilePath': 'gs://readviz/NA19679.bam', 'loadedDate': mock.ANY,
-            'datasetType': 'ALIGN'})
-        today = datetime.now().strftime('%Y-%m-%d')
-        self.assertTrue(response_json['samplesByGuid'][sample_guid]['loadedDate'].startswith(today))
+            'filePath': 'gs://readviz/NA19679.bam'})
         self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
         self.assertSetEqual(
-            set(response_json['individualsByGuid']['I000003_na19679']['sampleGuids']),
-            {'S000131_na19679', sample_guid}
+            set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
+            {sample_guid}
         )
