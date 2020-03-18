@@ -55,7 +55,8 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 // SAMPLES
 
-// export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_SV_CALLS = 'SV'
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'

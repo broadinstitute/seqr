@@ -10,15 +10,20 @@ from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 
 logger = logging.getLogger(__name__)
 
+SAMPLE_FIELDS_MAP = {
+    Sample.DATASET_TYPE_VARIANT_CALLS: 'samples_num_alt_1',
+    Sample.DATASET_TYPE_SV_CALLS: 'samples',
+}
 
-def get_elasticsearch_index_samples(elasticsearch_index):
+
+def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     es_client = get_es_client()
 
-    index_metadata = get_index_metadata(elasticsearch_index, es_client).get(elasticsearch_index)
+    index_metadata = get_index_metadata(elasticsearch_index, es_client, dataset_type=dataset_type).get(elasticsearch_index)
 
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
-    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=10000))
+    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=SAMPLE_FIELDS_MAP[dataset_type], size=10000))
     response = s.execute()
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
@@ -38,8 +43,9 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
     dataset_path = index_metadata['sourceFilePath']
-    if not dataset_path.endswith('.vds') and not dataset_path.endswith('.vcf.gz') and not dataset_path.endswith('.vcf.bgz'):
-        raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
+    dataset_suffixes = ('.vds', '.vcf.gz', '.vcf.bgz', '.bed')
+    if not dataset_path.endswith(dataset_suffixes):
+        raise Exception("Variant call dataset path must end with .vcf.gz or .vds or .bed")
 
 
 def validate_alignment_dataset_path(dataset_path):

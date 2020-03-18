@@ -397,6 +397,7 @@ class Sample(ModelWithGUID):
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
     )
+    DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
