@@ -198,7 +198,8 @@ def _get_project_child_entities(project, user):
     samples_by_guid = _retrieve_samples(
         project.guid, individuals_by_guid, Sample.objects.filter(individual__in=individual_models))
     igv_samples_by_guid = _retrieve_samples(
-        project.guid, individuals_by_guid, IgvSample.objects.filter(individual__in=individual_models))
+        project.guid, individuals_by_guid, IgvSample.objects.filter(individual__in=individual_models),
+        sample_guid_key='igvSampleGuids')
     mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
     locus_lists = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
@@ -253,6 +254,7 @@ def _retrieve_individuals(project_guid, user):
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()
+        i['igvSampleGuids'] = set()
         i['mmeSubmissionGuid'] = None
         individual_guid = i['individualGuid']
         individuals_by_guid[individual_guid] = i
@@ -260,7 +262,7 @@ def _retrieve_individuals(project_guid, user):
     return individuals_by_guid, individual_models
 
 
-def _retrieve_samples(project_guid, individuals_by_guid, sample_models):
+def _retrieve_samples(project_guid, individuals_by_guid, sample_models, sample_guid_key='sampleGuids'):
     """Retrieves sample metadata for the given project.
 
         Args:
@@ -278,7 +280,7 @@ def _retrieve_samples(project_guid, individuals_by_guid, sample_models):
         samples_by_guid[sample_guid] = s
 
         individual_guid = s['individualGuid']
-        individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
+        individuals_by_guid[individual_guid][sample_guid_key].add(sample_guid)
 
     return samples_by_guid
 

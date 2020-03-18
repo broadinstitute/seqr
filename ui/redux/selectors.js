@@ -15,7 +15,6 @@ import {
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
-  isActiveVariantSample,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -135,7 +134,7 @@ export const getHasActiveVariantSampleByFamily = createSelector(
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
       [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
-        sampleGuid => isActiveVariantSample(samplesByGuid[sampleGuid]),
+        sampleGuid => samplesByGuid[sampleGuid].isActive,
       )),
     }), {})
   },

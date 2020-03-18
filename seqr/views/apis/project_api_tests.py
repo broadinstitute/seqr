@@ -104,7 +104,7 @@ class ProjectAPITest(TestCase):
         self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
         self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), INTERNAL_FAMILY_FIELDS)
-        individual_fields = {'sampleGuids', 'mmeSubmissionGuid'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
         self.assertSetEqual(set(response_json['samplesByGuid'].values()[0].keys()), SAMPLE_FIELDS)

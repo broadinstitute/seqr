@@ -223,7 +223,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
             matches=u'{}\n{}'.format(match1, match2),
-            emails='test_user@broadinstitute.org, UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org'
+            emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org, test_user@broadinstitute.org'
         ))
 
         mock_email.assert_has_calls([
