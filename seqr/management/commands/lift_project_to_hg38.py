@@ -6,7 +6,7 @@ from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant, Sample, Individual
+from seqr.models import Project, SavedVariant, Individual
 from seqr.views.apis.dataset_api import _update_variant_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples

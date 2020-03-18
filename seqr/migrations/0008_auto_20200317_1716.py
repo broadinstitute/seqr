@@ -49,8 +49,8 @@ def move_igv_models_to_alignment_samples(apps, schema_editor):
             ) for sample in alignment_samples])
         print('Deleting old sample models')
         alignment_samples.delete()
-        
-        
+
+
 def set_missing_es_indices(apps, schema_editor):
     Sample = apps.get_model("seqr", "Sample")
     db_alias = schema_editor.connection.alias
