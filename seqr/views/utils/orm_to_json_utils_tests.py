@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from reference_data.models import GeneInfo
-from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tags, \
@@ -9,7 +9,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
     get_json_for_saved_search, get_json_for_saved_variants_with_tags
 from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS, \
-    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS
+    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS, IGV_SAMPLE_FIELDS
 
 
 class JSONUtilsTest(TestCase):
@@ -53,6 +53,12 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_sample(sample)
 
         self.assertSetEqual(set(json.keys()), SAMPLE_FIELDS)
+
+    def test_json_for_igv_sample(self):
+        sample = IgvSample.objects.first()
+        json = get_json_for_sample(sample)
+
+        self.assertSetEqual(set(json.keys()), IGV_SAMPLE_FIELDS)
 
     def test_json_for_saved_variant(self):
         variant = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100')
