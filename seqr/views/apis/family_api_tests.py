@@ -5,16 +5,31 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_fields_handler, update_family_analysed_by
+from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_fields_handler, update_family_analysed_by, edit_families_handler
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
 
+PROJECT_GUID = 'R0001_1kg'
+EMPTY_PROJECT_GUID = 'R0002_empty'
 
 class ProjectAPITest(TestCase):
-    fixtures = ['users', '1kg_project']
-
+    fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
     #  TODO test other family api methods
+
+    def test_edit_families_handler(self):
+        url = reverse(edit_families_handler, args=[PROJECT_GUID])
+        _check_login(self, url)
+
+        # send request
+        req_values = {'families': [{'familyGuid': FAMILY_GUID, 'description': 'Test'}]}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(response_json.keys(), ['familiesByGuid'])
+        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test')
 
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
@@ -25,8 +40,8 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), ['F000001_1'])
-        self.assertEqual(response_json['F000001_1']['analysedBy'][0]['createdBy']['fullName'], 'Test User')
+        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test User')
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
