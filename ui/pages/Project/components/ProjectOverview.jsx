@@ -15,6 +15,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
+  DATASET_TYPE_SV_CALLS,
 } from 'shared/utils/constants'
 import {
   getAnalysisStatusCounts,
@@ -31,6 +32,8 @@ import EditDatasetsButton from './EditDatasetsButton'
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
+
+const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
@@ -100,9 +103,33 @@ const ProjectOverview = React.memo((
 
   const loadedProjectSamples = Object.values(samplesByGuid).reduce((acc, sample) => {
     const loadedDate = (sample.loadedDate).split('T')[0]
-    const currentTypeSamplesByDate = acc[sample.sampleType] || {}
-    return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
+    if (!acc[sample.sampleType]) {
+      acc[sample.sampleType] = {}
+    }
+    if (!acc[sample.sampleType][sample.datasetType]) {
+      acc[sample.sampleType][sample.datasetType] = {}
+    }
+    acc[sample.sampleType][sample.datasetType] = {
+      ...acc[sample.sampleType][sample.datasetType],
+      [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
+    }
+    return acc
   }, {})
+
+  const datasetSections = Object.keys(loadedProjectSamples).sort().reduce((acc, sampleType) => ([
+    ...acc,
+    ...Object.entries(loadedProjectSamples[sampleType]).map(([datasetType, loadedSampleCounts]) => ({
+      key: `${sampleType}-${datasetType}`,
+      title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
+      content: Object.keys(loadedSampleCounts).sort().map(loadedDate =>
+        <div key={loadedDate}>
+          { new Date(loadedDate).toLocaleDateString()} - {loadedSampleCounts[loadedDate]} samples
+        </div>,
+      ),
+    }))]), [])
+  if (!datasetSections.length) {
+    datasetSections.push({ title: 'Datasets', content: 'No Datasets Loaded', key: 'blank' })
+  }
 
   let editIndividualsButton = null
   if (user.isStaff) {
@@ -149,22 +176,12 @@ const ProjectOverview = React.memo((
       </Grid.Column>
       <Grid.Column width={5}>
         <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[project.genomeVersion]} />
-        {Object.keys(loadedProjectSamples).length > 0 ?
-          Object.keys(loadedProjectSamples).sort().map((sampleType, i) => (
-            <DetailSection
-              key={sampleType}
-              title={`${SAMPLE_TYPE_LOOKUP[sampleType].text} Datasets`}
-              content={
-                Object.keys(loadedProjectSamples[sampleType]).sort().map(loadedDate =>
-                  <div key={loadedDate}>
-                    { new Date(loadedDate).toLocaleDateString()} - {loadedProjectSamples[sampleType][loadedDate]} samples
-                  </div>,
-                )
-              }
-              button={(Object.keys(loadedProjectSamples).length - 1 === i && project.canEdit) ? <EditDatasetsButton /> : null}
-            />
-          )) : <DetailSection title="Datasets" content="No Datasets Loaded" button={project.canEdit ? <EditDatasetsButton /> : null} />
-        }
+        {datasetSections.map((sectionProps, i) =>
+          <DetailSection
+            {...sectionProps}
+            button={(datasetSections.length - 1 === i && project.canEdit) ? <EditDatasetsButton /> : null}
+          />,
+        )}
       </Grid.Column>
       <Grid.Column width={6}>
         <DetailSection
