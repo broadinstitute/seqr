@@ -62,12 +62,8 @@ def elasticsearch_status(request):
 
     mappings = Index('_all', using=client).get_mapping(doc_type='variant,structural_variant')
 
-    active_samples = Sample.objects.filter(
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        is_active=True,
-        elasticsearch_index__isnull=False,
-    ).prefetch_related('individual', 'individual__family')
-    prefetch_related_objects(active_samples, 'individual__family__project')
+    active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
+
     seqr_index_projects = defaultdict(lambda: defaultdict(set))
     es_projects = set()
     for sample in active_samples:
@@ -151,19 +147,20 @@ def seqr_stats(request):
 
 
 SUBJECT_TABLE_COLUMNS = [
-    'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id',
-    'multiple_datasets', 'sex', 'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group',
-    'disease_id', 'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
-    'hpo_absent', 'phenotype_description', 'solve_state',
+    'entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_submission', 'dbgap_study_id',
+    'dbgap_subject_id', 'multiple_datasets', 'sex', 'ancestry', 'ancestry_detail', 'age_at_last_observation',
+    'phenotype_group', 'disease_id', 'disease_description', 'affected_status', 'onset_category', 'age_of_onset',
+    'hpo_present', 'hpo_absent', 'phenotype_description', 'solve_state',
 ]
 SAMPLE_TABLE_COLUMNS = [
-    'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source', 'sample_provider', 'data_type', 'date_data_generation'
+    'entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source', 'sample_provider', 'data_type',
+    'date_data_generation'
 ]
 FAMILY_TABLE_COLUMNS = [
-    'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'family_relationship', 'consanguinity',
-    'consanguinity_detail', 'pedigree_image', 'pedigree_detail', 'family_history', 'family_onset',
+    'entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'family_relationship',
+    'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail', 'family_history', 'family_onset',
 ]
-DISCOVERY_TABLE_CORE_COLUMNS = ['subject_id', 'sample_id']
+DISCOVERY_TABLE_CORE_COLUMNS = ['entity:discovery_id', 'subject_id', 'sample_id']
 DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance',
@@ -237,7 +234,7 @@ def anvil_export(request, project_guid):
         ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
         ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True)
+    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -411,6 +408,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = {
+                'entity:subject_id': individual.individual_id,
                 'subject_id': individual.individual_id,
                 'sex': Individual.SEX_LOOKUP[individual.sex],
                 'ancestry': ANCESTRY_MAP.get(individual.population, ''),
@@ -433,6 +431,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             subject_rows.append(subject_row)
 
             sample_row = {
+                'entity:sample_id': individual.individual_id,
                 'subject_id': individual.individual_id,
                 'sample_id': sample.sample_id,
                 'data_type': sample.sample_type,
@@ -444,6 +443,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             sample_rows.append(sample_row)
 
             family_row = {
+                'entity:family_id': individual.individual_id,
                 'subject_id': individual.individual_id,
                 'family_id': family.family_id,
                 'paternal_id': individual_id_map.get(individual.father_id, ''),
@@ -458,7 +458,11 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 family_row['family_history'] = 'Yes'
             family_rows.append(family_row)
 
-            discovery_row = {'subject_id': individual.individual_id, 'sample_id': sample.sample_id}
+            discovery_row = {
+                'entity:discovery_id': individual.individual_id,
+                'subject_id': individual.individual_id,
+                'sample_id': sample.sample_id,
+            }
             for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
                 genotype = genotypes.get(individual.guid, {})
                 if genotype.get('numAlt', -1) > 0:
@@ -485,8 +489,6 @@ def _get_variant_main_transcript(variant):
 def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
     loaded_samples = Sample.objects.filter(
         individual__family__project=project,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date__isnull=False,
     ).select_related('individual__family').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
@@ -791,11 +793,8 @@ def success_story(request, success_story_types):
 
 
 def _get_loaded_samples_by_family(project):
-    loaded_samples = Sample.objects.filter(
-        individual__family__project=project,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date__isnull=False
-    ).select_related('individual__family').order_by('loaded_date')
+    loaded_samples = Sample.objects.filter(individual__family__project=project).select_related(
+        'individual__family').order_by('loaded_date')
 
     loaded_samples_by_family = defaultdict(list)
     for sample in loaded_samples:

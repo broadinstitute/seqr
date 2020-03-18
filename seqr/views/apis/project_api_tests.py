@@ -8,7 +8,7 @@ from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, export_project_individuals_handler
 from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub, PROJECT_FIELDS, \
-    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS
+    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -83,7 +83,7 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
-             'analysisGroupsByGuid', 'genesById', 'mmeSubmissionsByGuid'}
+             'analysisGroupsByGuid', 'genesById', 'mmeSubmissionsByGuid', 'igvSamplesByGuid'}
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
@@ -104,10 +104,11 @@ class ProjectAPITest(TestCase):
         self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
         self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), INTERNAL_FAMILY_FIELDS)
-        individual_fields = {'sampleGuids', 'mmeSubmissionGuid'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
         self.assertSetEqual(set(response_json['samplesByGuid'].values()[0].keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(response_json['igvSamplesByGuid'].values()[0].keys()), IGV_SAMPLE_FIELDS)
         self.assertSetEqual(set(response_json['locusListsByGuid'].values()[0].keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(
             set(response_json['analysisGroupsByGuid'].values()[0].keys()),
@@ -129,7 +130,7 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
-             'analysisGroupsByGuid', 'genesById', 'mmeSubmissionsByGuid'}
+             'analysisGroupsByGuid', 'genesById', 'mmeSubmissionsByGuid', 'igvSamplesByGuid'}
         )
         self.assertListEqual(response_json['projectsByGuid'].keys(), [EMPTY_PROJECT_GUID])
         self.assertDictEqual(response_json['familiesByGuid'], {})
