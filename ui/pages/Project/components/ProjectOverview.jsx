@@ -14,7 +14,6 @@ import DataTable from 'shared/components/table/DataTable'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
-  DATASET_TYPE_VARIANT_CALLS,
   GENOME_VERSION_LOOKUP,
 } from 'shared/utils/constants'
 import {
@@ -99,10 +98,8 @@ const ProjectOverview = React.memo((
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
 
-  const loadedProjectSamples = Object.values(samplesByGuid).filter(sample =>
-    sample.datasetType === DATASET_TYPE_VARIANT_CALLS,
-  ).reduce((acc, sample) => {
-    const loadedDate = (sample.loadedDate || '').split('T')[0]
+  const loadedProjectSamples = Object.values(samplesByGuid).reduce((acc, sample) => {
+    const loadedDate = (sample.loadedDate).split('T')[0]
     const currentTypeSamplesByDate = acc[sample.sampleType] || {}
     return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
   }, {})
