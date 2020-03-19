@@ -5,7 +5,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_fields_handler, update_family_analysed_by, edit_families_handler
+from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
+    update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
@@ -13,23 +14,52 @@ FAMILY_GUID = 'F000001_1'
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
 
+FAMILY_ID_FIELD = 'familyId'
+PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
+
+
 class ProjectAPITest(TestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
+    fixtures = ['users', '1kg_project']
+
     #  TODO test other family api methods
 
     def test_edit_families_handler(self):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
         _check_login(self, url)
 
-        # send request
-        req_values = {'families': [{'familyGuid': FAMILY_GUID, 'description': 'Test'}]}
-        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        # send request with a "families" attribute
+        req_values = {
+            'families': [
+                {'familyGuid': FAMILY_GUID, 'description': 'Test'},
+                {PREVIOUS_FAMILY_ID_FIELD: '1', 'description': 'Test'},
+                {FAMILY_ID_FIELD: '13', 'description': 'Test'}
+            ]
+        }
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
         self.assertListEqual(response_json.keys(), ['familiesByGuid'])
         self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test')
+
+    def test_delete_families_handler(self):
+        url = reverse(delete_families_handler, args=[PROJECT_GUID])
+        _check_login(self, url)
+
+        # send request with a "families" attribute
+        req_values = {
+            'families': [
+                {'familyGuid': FAMILY_GUID}
+            ]
+        }
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
+        self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID])
 
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
@@ -75,12 +105,14 @@ class ProjectAPITest(TestCase):
         _check_login(self, url)
 
         # send invalid username (without permission)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'assigned_analyst_username': 'invalid_username'}))
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({'assigned_analyst_username': 'invalid_username'}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'specified user does not exist')
 
         # send valid request
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'assigned_analyst_username': 'test_user'}))
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({'assigned_analyst_username': 'test_user'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
@@ -100,7 +132,8 @@ class ProjectAPITest(TestCase):
         _check_login(self, url)
 
         # send valid request
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': ['O', 'D']}))
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json['F000001_1']['successStoryTypes'], ['O', 'D'])
