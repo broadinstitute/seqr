@@ -5,7 +5,7 @@ import json
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.individual_api import edit_individuals_handler
+from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
@@ -34,6 +34,16 @@ CHILD_UPDATE_GUID = "I000001_na19675"
 
 class IndividualAPITest(TestCase):
     fixtures = ['users', '1kg_project']
+
+    def test_update_individual_handler(self):
+        edit_individuals_url = reverse(update_individual_handler, args=[ID_UPDATE_GUID])
+        _check_login(self, edit_individuals_url)
+
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps(INDIVIDUAL_FAMILY_UPDATE_DATA))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), [ID_UPDATE_GUID])
 
     def test_edit_individuals(self):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
