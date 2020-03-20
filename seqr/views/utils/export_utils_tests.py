@@ -48,6 +48,7 @@ class ExportTableUtilsTest(TestCase):
 
         header1 = ['col1', 'col2']
         header2 = ['col1']
+        header3 = ['col2', 'col3', 'col1']
         rows = [{'col2': 'row1_v2', 'col1': 'row1_v1'}, {'col1': 'row2_v1'}]
 
         # test csv format
@@ -71,12 +72,12 @@ class ExportTableUtilsTest(TestCase):
         mock_zip_content = {}
 
         response = export_multiple_files(
-            [['file1', header1, rows], ['file2', header2, rows]], 'zipfile', add_header_prefix=True, blank_value='X')
+            [['file1', header1, rows], ['file2', header3, rows]], 'zipfile', add_header_prefix=True, blank_value='X')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('content-disposition'), 'attachment; filename="zipfile.zip"')
         self.assertDictEqual(mock_zip_content, {
-            'file1.csv': '01-col1,02-col2\nrow1_v1,row1_v2\nrow2_v1,X',
-            'file2.csv': '01-col1\nrow1_v1\nrow2_v1',
+            'file1.csv': 'col1,01-col2\nrow1_v1,row1_v2\nrow2_v1,X',
+            'file2.csv': 'col2,01-col3,02-col1\nrow1_v2,X,row1_v1\nX,X,row2_v1',
         })
         mock_zip_content = {}
 
