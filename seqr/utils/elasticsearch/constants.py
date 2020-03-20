@@ -1,12 +1,8 @@
 from reference_data.models import Omim, GeneConstraint
-from seqr.models import Individual, Sample
+from seqr.models import Individual
 
 VARIANT_DOC_TYPE = 'variant'
 SV_DOC_TYPE = 'structural_variant'
-DOC_TYPE_MAPPING = {
-    Sample.DATASET_TYPE_VARIANT_CALLS: VARIANT_DOC_TYPE,
-    Sample.DATASET_TYPE_SV_CALLS: SV_DOC_TYPE,
-}
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 7500
@@ -72,6 +68,11 @@ HGMD_CLASS_MAP = {
 }
 
 POPULATIONS = {
+    'sv_callset': {
+        'AF': 'sf',
+        'filter_AF': [],
+        'AC': 'sc',
+    },
     'callset': {
         'AF': 'AF',
         'filter_AF': [],
@@ -193,7 +194,7 @@ SORT_FIELDS = {
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
-HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2']
+HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
@@ -210,6 +211,7 @@ CORE_FIELDS_CONFIG = {
     'ref': {},
     'rsid': {},
     'start': {'response_key': 'pos', 'format_value': long},
+    'end': {'response_key': 'pos_end', 'format_value': long},
     'variantId': {},
     'xpos': {'format_value': long},
 }
@@ -235,6 +237,11 @@ GENOTYPE_FIELDS_CONFIG = {
     'dp': {},
     'gq': {},
     'pl': {},
+    'cn': {'format_value': int, 'default_value': -1},
+    'end': {},
+    'start': {},
+    'qs': {},
+    'defragged': {'format_value': bool},
     'sample_id': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }

@@ -448,6 +448,8 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
+        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
+            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -464,7 +466,7 @@ class EsSearch(object):
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
-            'mainTranscriptId': sorted_transcripts[0]['transcriptId'] if len(sorted_transcripts) else None,
+            'mainTranscriptId': main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
@@ -909,7 +911,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
 
 def _any_affected_sample_filter(sample_ids):
     sample_ids = sorted(sample_ids)
-    return Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
+    return Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids) | Q('terms', samples=sample_ids)
 
 
 def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id, individual_affected_status):

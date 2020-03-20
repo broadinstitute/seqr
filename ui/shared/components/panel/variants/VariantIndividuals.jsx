@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Label, Icon } from 'semantic-ui-react'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
@@ -93,7 +93,7 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-export const Alleles = React.memo(({ numAlt, variant, isHemiX, warning }) =>
+export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
       <Popup
@@ -102,12 +102,17 @@ export const Alleles = React.memo(({ numAlt, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+    {cn >= 0 ?
+      <span>CN: {cn === 2 ? cn : <b>{cn}</b>}</span> :
+      <span>
+        <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+      </span>}
   </AlleleContainer>,
 )
 
 Alleles.propTypes = {
   numAlt: PropTypes.number,
+  cn: PropTypes.number,
   variant: PropTypes.object,
   warning: PropTypes.string,
   isHemiX: PropTypes.bool,
@@ -134,25 +139,33 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     { title: 'Read Depth', value: genotype.dp },
     { title: 'Genotype Quality', value: genotype.gq },
     { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
-    { title: 'Filter', value: variant.genotypeFilters },
+    { title: 'Filter', value: variant.genotypeFilters, shouldHide: (variant.genotypeFilters || []).length < 1 },
     { title: 'Phred Likelihoods', value: genotype.pl },
+    { title: 'Quality Score', value: genotype.qs },
+    { title: 'Start', value: genotype.start },
+    { title: 'End', value: genotype.end },
   ]
   const isHemiX = isHemiXVariant(variant, individual)
-  const hemiUpdWarning = (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) ? 'Potential UPD/ Hemizygosity' : null
-  const compoundHetWarning = (
-    isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))
-  ) ? 'Variant absent in parents' : null
-  return [
-    genotype.numAlt >= 0 ?
+
+  let warning
+  if (genotype.defragged) {
+    warning = 'Defragged'
+  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
+    warning = 'Potential UPD/ Hemizygosity'
+  } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
+    warning = 'Variant absent in parents'
+  }
+
+  return (
+    (genotype.cn >= 0 || genotype.numAlt >= 0) ?
       <Popup
-        key="alleles"
         position="top center"
         flowing
         trigger={
           <span>
-            <Alleles numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} warning={hemiUpdWarning || compoundHetWarning} />
+            <Alleles cn={genotype.cn} numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} warning={warning} />
             <VerticalSpacer width={5} />
-            {genotype.gq || '-'}, {genotype.ab ? genotype.ab.toPrecision(2) : '-'}
+            {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
           </span>
         }
@@ -163,35 +176,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
           })
         }
       />
-      : <b key="no-call">NO CALL</b>,
-    // TODO currently not returned from ES
-    (genotype.cnvs && genotype.cnvs.cn !== null) ?
-      <Popup
-        key="cnvs"
-        position="top center"
-        content={
-          <span>
-            Copy Number: {genotype.cnvs.cn}<br />
-            LRR median:{genotype.cnvs.LRR_median}<br />
-            LRR stdev: {genotype.cnvs.LRR_sd}<br />
-            SNPs supporting call: {genotype.cnvs.snps}<br />
-            Size: {genotype.cnvs.size}<br />
-            Found in: {parseInt(genotype.cnvs.freq, 10) - 1} other samples<br />
-            Type: {genotype.cnvs.type}<br />
-            Array: {genotype.cnvs.array.replace(/_/g, ' ')}<br />
-            Caller: {genotype.cnvs.caller}<br />
-          </span>
-        }
-        trigger={
-          <span>
-            <HorizontalSpacer width={5} />
-            <Label color="red" size="small" horizontal>
-              CNV: {genotype.cnvs.cn > 2 ? 'Duplication' : 'Deletion'}
-            </Label>
-          </span>
-        }
-      /> : null,
-  ]
+      : <b>NO CALL</b>
+  )
 })
 
 Genotype.propTypes = {

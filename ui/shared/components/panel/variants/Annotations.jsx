@@ -24,8 +24,8 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
-export const getLocus = (chrom, pos, rangeSize) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + rangeSize}`
+export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
+  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
 
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
@@ -33,12 +33,14 @@ const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
   genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
 
-  const highlight = `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
-  const position = getLocus(chrom, pos, 10)
+  const highlight = variant.ref && `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
+  const highlightQ = highlight ? `highlight=${highlight}&` : ''
+  const endOffset = variant.pos_end && variant.pos_end - variant.pos
+  const position = getLocus(chrom, pos, 10, endOffset || 0)
 
   return (
-    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`} target="_blank">
-      {chrom}:{pos}{includeEnd && variant.pos_end && `-${variant.pos_end}`}
+    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank">
+      {chrom}:{pos}{includeEnd && endOffset && `-${pos + endOffset}`}
     </a>
   )
 }
@@ -90,13 +92,16 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 
-    const variations = [
-      `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
-      `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
-      `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
-      `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
-      `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
-    ]
+    const variations = []
+    if (variant.ref) {
+      variations.unshift(
+        `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
+        `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
+        `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
+        `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
+        `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
+      )
+    }
 
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
@@ -120,13 +125,20 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
       )
     }
 
+    let pubmedSearch = `(${geneNames.join(' OR ')})`
+    if (variations.length) {
+      pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+      links.push(
+        <span key="dividerGoogle"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+        <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
+          google
+        </a>,
+      )
+    }
+
     links.push(
-      <span key="divider1"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-      <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
-        google
-      </a>,
-      <span key="divider2"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=(${geneNames.join(' OR ')}) AND ( ${variations.join(' OR ')})`} target="_blank">
+      <span key="dividerPubmed"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`} target="_blank">
         pubmed
       </a>,
     )
@@ -150,13 +162,20 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) 
   if (!locusListIntervals || locusListIntervals.length < 1) {
     return null
   }
-  const { pos, genomeVersion, liftedOverPos } = variant
+  const { pos, pos_end: posEnd, genomeVersion, liftedOverPos } = variant
   const locusListGuids = locusListIntervals.filter((interval) => {
     const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
     if (!variantPos) {
       return false
     }
-    return (variantPos >= interval.start) && (variantPos <= interval.end)
+    if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
+      return true
+    }
+    if (posEnd) {
+      const variantPosEnd = variantPos + (posEnd - pos)
+      return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
+    }
+    return false
   }).map(({ locusListGuid }) => locusListGuid)
 
   return <LocusListLabels locusListGuids={locusListGuids} />
@@ -227,9 +246,9 @@ const Annotations = React.memo(({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
+        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType || !variant.ref} /></b>
         <HorizontalSpacer width={10} />
-        {variant.svType ||
+        {variant.ref &&
           <span>
             <Sequence sequence={variant.ref} />
             <Icon name="angle right" />
@@ -247,7 +266,7 @@ const Annotations = React.memo(({ variant }) => {
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>
-            hg19: <UcscBrowserLink variant={variant} useLiftover />
+            hg19: <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
           </div>
           : <div>hg19: liftover failed</div>
         )

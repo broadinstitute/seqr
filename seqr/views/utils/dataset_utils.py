@@ -19,7 +19,7 @@ SAMPLE_FIELDS_MAP = {
 def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     es_client = get_es_client()
 
-    index_metadata = get_index_metadata(elasticsearch_index, es_client, dataset_type=dataset_type).get(elasticsearch_index)
+    index_metadata = get_index_metadata(elasticsearch_index, es_client).get(elasticsearch_index)
 
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
