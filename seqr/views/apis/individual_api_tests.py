@@ -5,7 +5,7 @@ import json
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler
+from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, delete_individuals_handler
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
@@ -72,3 +72,21 @@ class IndividualAPITest(TestCase):
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['maternalId'], UPDATED_MATERNAL_ID)
         self.assertEqual(response_json['individualsByGuid'][CHILD_UPDATE_GUID]['paternalId'], UPDATED_ID)
+
+    def test_delete_individuals(self):
+        individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
+        _check_login(self, individuals_url)
+
+        # send invalid requests
+        response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
+            'individualsX': [INDIVIDUAL_IDS_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 400)
+
+        # send valid requests
+        response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
