@@ -13,6 +13,6 @@ class ProjectCategoriesAPITest(TestCase):
         _check_login(self, url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'categories': []
+            'categories': ['PC000002_categry_with_unicde', 'PC000003_categry_with_unicde']
         }))
         self.assertEqual(response.status_code, 200)
