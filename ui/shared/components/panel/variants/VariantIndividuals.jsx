@@ -102,11 +102,12 @@ export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {cn >= 0 ?
-      <span>CN: {cn === 2 ? cn : <b>{cn}</b>}</span> :
+    {numAlt >= 0 ?
       <span>
         <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
-      </span>}
+      </span> :
+      <span>CN: {cn === 2 ? cn : <b><i>{cn}</i></b>}</span>
+    }
   </AlleleContainer>,
 )
 
@@ -157,7 +158,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   }
 
   return (
-    (genotype.cn >= 0 || genotype.numAlt >= 0) ?
+    (genotype.numAlt >= 0 || (variant.svType && genotype.cn >= 0)) ?
       <Popup
         position="top center"
         flowing

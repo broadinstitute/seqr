@@ -13,6 +13,10 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
+const INLINE_STYLE = {
+  display: 'inline-block',
+}
+
 const BaseGeneLabelContent = styled(
   ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
@@ -127,8 +131,8 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
-  <div>
+export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompoundHets, containerStyle, ...labelProps }) =>
+  <div style={containerStyle}>
     <GeneDetailSection
       compact={compact}
       color="orange"
@@ -188,9 +192,10 @@ GeneDetails.propTypes = {
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
   areCompoundHets: PropTypes.bool,
+  containerStyle: PropTypes.object,
 }
 
-const VariantGene = React.memo(({ geneId, gene, project, variant, compact, areCompoundHets }) => {
+const VariantGene = React.memo(({ geneId, gene, project, variant, compact, showInlineDetails, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -199,22 +204,42 @@ const VariantGene = React.memo(({ geneId, gene, project, variant, compact, areCo
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
   }
 
+  const compactDetails = compact && !showInlineDetails
+
+  const geneDetails = (
+    <GeneDetails
+      gene={gene}
+      compact={compactDetails}
+      areCompoundHets={areCompoundHets}
+      containerStyle={showInlineDetails && INLINE_STYLE}
+      margin={showInlineDetails ? '1em .5em 0px 0px' : null}
+      horizontal={showInlineDetails}
+      showLocusLists
+    />
+  )
+
+  let summaryDetail
+  if (compact) {
+    summaryDetail = showInlineDetails ? geneDetails : geneConsequence
+  } else {
+    summaryDetail = (
+      <GeneLinks>
+        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
+        {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
+        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
+      </GeneLinks>
+    )
+  }
+
   const geneSummary = (
     <div>
       <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
-      {compact ? geneConsequence :
-      <GeneLinks>
-        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
-      </GeneLinks>}
+      {summaryDetail}
     </div>
   )
 
-  const geneDetails = <GeneDetails gene={gene} compact={compact} areCompoundHets={areCompoundHets} showLocusLists />
-
-  return compact ?
+  return compactDetails ?
     <Popup
       header="Gene Details"
       size="tiny"
@@ -226,7 +251,7 @@ const VariantGene = React.memo(({ geneId, gene, project, variant, compact, areCo
     /> : (
       <div>
         {geneSummary}
-        {geneDetails}
+        {!showInlineDetails && geneDetails}
       </div>
     )
 })
@@ -237,6 +262,7 @@ VariantGene.propTypes = {
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
+  showInlineDetails: PropTypes.bool,
   areCompoundHets: PropTypes.bool,
 }
 

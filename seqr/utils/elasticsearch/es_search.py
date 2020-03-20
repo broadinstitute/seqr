@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
-    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, SV_DOC_TYPE
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -415,6 +415,12 @@ class EsSearch(object):
                 samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
                 for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
             })
+            if len(samples_by_id) != len(genotypes) and raw_hit.meta.doc_type == SV_DOC_TYPE:
+                # Family members with no variants are not included in the SV index
+                genotypes.update({
+                    sample.individual.guid: _get_field_values({}, GENOTYPE_FIELDS_CONFIG)
+                    for sample in samples_by_id.values() if sample.individual.guid not in genotypes
+                })
 
         genome_version = self.index_metadata[index_name]['genomeVersion']
         lifted_over_genome_version = None

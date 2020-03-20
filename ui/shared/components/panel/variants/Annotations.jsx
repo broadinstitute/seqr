@@ -246,7 +246,7 @@ const Annotations = React.memo(({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType || !variant.ref} /></b>
+        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
         {variant.ref &&
           <span>
