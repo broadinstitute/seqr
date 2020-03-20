@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
-    update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler
+    update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, receive_families_table_handler
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
@@ -145,3 +145,31 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
+
+    def test_receive_families_table_handler(self):
+        url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
+        _check_login(self, url)
+
+        # send request with a "families" attribute
+        data = b'Family ID	Display Name	Description	Coded Phenotype\n\
+"1"	"1"	"sf"	"LEFT VENTRICULAR NONCOMPACTION 10; LVNC10"\n\
+"2"	"2"	"sz test"	""'
+
+        f = SimpleUploadedFile("1000_genomes demo_families.tsv", data)
+
+        response = self.client.post(url, {'f': f})
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings', 'uploadedFileId'])
+
+        url = reverse(edit_families_handler, args=[PROJECT_GUID])
+        # _check_login(self, url)
+
+        response = self.client.post(url, content_type='application/json',
+                data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(response_json.keys(), ['familiesByGuid'])
+>>>>>>> dea11f4b3... Added testcase for uploading the family table.
