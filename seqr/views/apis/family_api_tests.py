@@ -164,7 +164,6 @@ class ProjectAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings', 'uploadedFileId'])
 
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
-        # _check_login(self, url)
 
         response = self.client.post(url, content_type='application/json',
                 data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
