@@ -17,6 +17,7 @@ from seqr.views.utils.test_utils import _check_login, login_non_staff_user
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
 SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
+SEARCH_HASH1 = 'd380ed0fd28c3127d07a64ea2ba90000'
 SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 VARIANTS = [
@@ -133,6 +134,17 @@ class VariantSearchAPITest(TestCase):
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
+
+        # Test new search with allProjectFamilies
+        url1 = reverse(query_variants_handler, args=[SEARCH_HASH1])
+        response = self.client.post(url1, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
