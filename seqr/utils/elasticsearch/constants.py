@@ -233,6 +233,7 @@ PREDICTION_FIELDS_CONFIG = {
     'splice_ai_delta_score': {'response_key': 'splice_ai'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
+    'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 GENOTYPE_FIELDS_CONFIG = {
     'ab': {},
