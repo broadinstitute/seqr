@@ -87,12 +87,15 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
+const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
-  if (mainGene) {
-    const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
+  const mainGene = genesById[mainTranscript.geneId]
+  let geneNames
+  const variations = []
 
-    const variations = []
+  if (mainGene) {
+    geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
+
     if (variant.ref) {
       variations.unshift(
         `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
@@ -124,7 +127,17 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
         ...geneNames.map(geneName => `${geneName}:${hgvsc}`), //TTN:78674T>C
       )
     }
+  } else {
+    geneNames = Object.keys(variant.transcripts || {}).reduce((acc, geneId) => {
+      const gene = genesById[geneId]
+      if (gene) {
+        return [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc]
+      }
+      return acc
+    }, [])
+  }
 
+  if (geneNames && geneNames.length) {
     let pubmedSearch = `(${geneNames.join(' OR ')})`
     if (variations.length) {
       pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
@@ -143,17 +156,18 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
       </a>,
     )
   }
+
   return links
 })
 
 BaseSearchLinks.propTypes = {
   variant: PropTypes.object,
   mainTranscript: PropTypes.object,
-  mainGene: PropTypes.object,
+  genesById: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  mainGene: getGenesById(state)[ownProps.mainTranscript.geneId],
+const mapStateToProps = state => ({
+  genesById: getGenesById(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
@@ -193,7 +207,7 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid } = variant
+  const { rsid, svType, num_exon: numExon, pos, pos_end: posEnd } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -206,7 +220,7 @@ const Annotations = React.memo(({ variant }) => {
       : null,
   ] : null
 
-  const transcriptPopupProps = {
+  const transcriptPopupProps = mainTranscript.transcriptId && {
     content: <TranscriptLink variant={variant} transcript={mainTranscript} />,
     size: 'mini',
     hoverable: true,
@@ -214,17 +228,23 @@ const Annotations = React.memo(({ variant }) => {
 
   return (
     <div>
-      { mainTranscript.majorConsequence &&
+      { (mainTranscript.majorConsequence || svType) &&
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<ButtonLink>{mainTranscript.majorConsequence.replace(/_/g, ' ')}</ButtonLink>}
+          trigger={
+            <ButtonLink size={svType && 'big'}>
+              {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
+            </ButtonLink>
+          }
           popup={transcriptPopupProps}
         >
           <Transcripts variant={variant} />
         </Modal>
       }
+      {svType && posEnd && <b><HorizontalSpacer width={5} />{((posEnd - pos) / 1000).toPrecision(3)}kb</b>}
+      {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />
@@ -244,7 +264,7 @@ const Annotations = React.memo(({ variant }) => {
           <b>HGVS.P</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsp} />
         </div>
       }
-      { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
+      { (svType || Object.keys(mainTranscript).length > 0) && <VerticalSpacer height={10} />}
       <LargeText>
         <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
