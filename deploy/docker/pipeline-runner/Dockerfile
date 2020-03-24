@@ -46,6 +46,9 @@ RUN python3 -m pip install --upgrade pip
 # python packages
 RUN python3 -m pip install hail
 
+# install gcs connector
+RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
+
 #RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -o $(python3 -c "from pyspark.find_spark_home import _find_spark_home; print(_find_spark_home())")/jars/gcs-connector-hadoop2-latest.jar
 
 RUN python3 -m pip install ipython
