@@ -70,10 +70,11 @@ def match_sample_ids_to_sample_records(
         project,
         sample_ids,
         sample_type,
-        dataset_type,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         elasticsearch_index=None,
         create_sample_records=True,
         sample_id_to_individual_id_mapping=None,
+        loaded_date=None,
     ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -141,6 +142,7 @@ def match_sample_ids_to_sample_records(
                     elasticsearch_index=elasticsearch_index,
                     individual=individual,
                     created_date=timezone.now(),
+                    loaded_date=loaded_date or timezone.now(),
                 ) for sample_id, individual in sample_id_to_individual_record.items()]
             sample_id_to_sample_record.update({
                 sample.sample_id: sample for sample in Sample.objects.bulk_create(new_samples)

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { updateIgvReadsVisibility } from 'redux/rootReducer'
-import { getActiveAlignmentSamplesByFamily } from 'redux/selectors'
+import { getIGVSamplesByFamily } from 'redux/selectors'
 import { ButtonLink } from '../StyledComponents'
 
 const ShowReadsButton = React.memo(({ numAlignmentSamples, showReads, igvId, familyGuid, ...props }) => (
@@ -18,7 +18,7 @@ ShowReadsButton.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  numAlignmentSamples: (getActiveAlignmentSamplesByFamily(state)[ownProps.familyGuid] || []).length,
+  numAlignmentSamples: (getIGVSamplesByFamily(state)[ownProps.familyGuid] || []).length,
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

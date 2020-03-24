@@ -375,66 +375,42 @@ class Individual(ModelWithGUID):
 
 
 class Sample(ModelWithGUID):
-    """This model represents a single data type (eg. Read Alignments, Variant Calls, or SV Calls) that's generated from
-    a single biological sample (eg. WES, WGS, RNA, Array).
+    """This model represents a single data type (eg. Variant Calls, or SV Calls) that's generated from a single
+    biological sample (eg. WES, WGS).
 
-    It stores metadata on both the dataset (fields: dataset_type, dataset_file_path, loaded_date, etc.) and the
-    underlying sample (fields: sample_type)
-
-    A sample can have be used to generate multiple types of analysis results, depending on the
-    sample type. For example, an exome, genome or rna sample can be used to generate an aligned bam,
-    a variant callset, CNV callset, etc., and an rna sample can also yield ASE, and splice junction
-    data.
-
-    For now, all meta-data on these analysis results is stored in the sample record, but
-    if versioning is needed for analysis results, it'll be necessary to create a separate table
-    for each analysis type, where records have a many(analysis-versions)-to-one(sample) relationship with this table.
+    It stores metadata on both the dataset (fields: dataset_type, loaded_date, etc.) and the underlying sample
+    (fields: sample_type, sample_id etc.)
     """
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
     SAMPLE_TYPE_RNA = 'RNA'
-    SAMPLE_TYPE_ARRAY = 'ARRAY'
     SAMPLE_TYPE_CHOICES = (
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
         (SAMPLE_TYPE_RNA, 'RNA'),
-        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
-        # ('ILLUMINA_INFINIUM_250K', ),
     )
 
-    DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
     DATASET_TYPE_SV_CALLS = 'SV'
-    DATASET_TYPE_BREAKPOINTS = 'BREAK'
-    DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
-    DATASET_TYPE_ASE = 'ASE'
     DATASET_TYPE_CHOICES = (
-        (DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
-        (DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
-        (DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        (DATASET_TYPE_ASE, 'Allele Specific Expression'),
     )
 
-    individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
-    sample_type = models.CharField(max_length=20, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
-    dataset_type = models.CharField(max_length=20, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
+    sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    # only set for data stored in elasticsearch
-    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
-
-    # source file
-    dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
+    elasticsearch_index = models.TextField(db_index=True)
 
     # sample status
     is_active = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField(null=True, blank=True)
+    loaded_date = models.DateTimeField()
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -445,8 +421,25 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-           'dataset_file_path',
        ]
+
+
+class IgvSample(ModelWithGUID):
+    """This model represents a single data type that can be displayed in IGV (eg. Read Alignments) that's generated from
+    a single biological sample (eg. WES, WGS, RNA, Array).
+    """
+
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    file_path = models.TextField()
+
+    def __unicode__(self):
+        return self.file_path.split('/')[-1].split('.')[0].strip()
+
+    def _compute_guid(self):
+        return 'S%010d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+       json_fields = ['guid', 'file_path',]
 
 
 class AliasField(models.Field):
