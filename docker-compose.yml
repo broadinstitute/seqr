@@ -33,7 +33,9 @@ services:
       - ./data/elasticsearch:/elasticsearch-data
     healthcheck:
       test: bash -c "curl -s elasticsearch:9200 | grep search"
-
+      interval: 3s
+      timeout: 5s
+      retries: 100
 
   kibana:
     image: gcr.io/seqr-project/kibana:gcloud-dev
