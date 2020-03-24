@@ -44,11 +44,11 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 RUN python3 -m pip install --upgrade pip
 
 # python packages
-RUN python3 -m pip install --upgrade hail
+RUN python3 -m pip install hail
 
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -o $(python3 -c "from pyspark.find_spark_home import _find_spark_home; print(_find_spark_home())")/jars/gcs-connector-hadoop2-latest.jar
+#RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -o $(python3 -c "from pyspark.find_spark_home import _find_spark_home; print(_find_spark_home())")/jars/gcs-connector-hadoop2-latest.jar
 
-RUN python3 -m pip install --upgrade ipython
+RUN python3 -m pip install ipython
 
 #hl.hadoop_exists("gs://seqr-datasets/GRCh37/1kg/1kg.mt")
 
