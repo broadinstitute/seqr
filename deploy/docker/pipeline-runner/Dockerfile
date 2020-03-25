@@ -41,19 +41,17 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 	&& make install \
 	&& make clean
 
+# install gcloud tools
 RUN python3 -m pip install --upgrade pip
+
+RUN python3 -m pip install gsutil
+RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
+RUN tar xzf google-cloud-sdk-286.0.0-linux-x86_64.tar.gz && rm google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
+RUN /google-cloud-sdk/install.sh -q
 
 # python packages
 RUN python3 -m pip install hail
-
-# install gcs connector
-RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
-
-#RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -o $(python3 -c "from pyspark.find_spark_home import _find_spark_home; print(_find_spark_home())")/jars/gcs-connector-hadoop2-latest.jar
-
 RUN python3 -m pip install ipython
-
-#hl.hadoop_exists("gs://seqr-datasets/GRCh37/1kg/1kg.mt")
 
 COPY entrypoint.sh /
 CMD [ "/entrypoint.sh" ]
