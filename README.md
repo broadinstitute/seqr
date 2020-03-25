@@ -42,7 +42,7 @@ seqr uses [hail](http://hail.is)-based pipelines to run VEP and add in other ref
 These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc.
 We are working on integrating these pipelines so that they are launched and managed by seqr.
 For now, they must be run manually, as shown in the example below. 
-See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines/luigi)
 for additional documentation.
 
 For detailed instructions on running te piepleine locally, see Step 5 of the
