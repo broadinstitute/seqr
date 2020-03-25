@@ -949,7 +949,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
 
         if genotype:
-            not_allowed_num_alt =  [
+            not_allowed_num_alt = [
                 num_alt for num_alt in GENOTYPE_QUERY_MAP[genotype].get('not_allowed_num_alt', [])
                 if num_alt in index_fields
             ]
