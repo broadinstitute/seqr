@@ -18,11 +18,14 @@ REF_ALT = 'ref_alt'
 HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 GENOTYPE_QUERY_MAP = {
-    REF_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_1', 'num_alt_2']},
-    REF_ALT: {'allowed_num_alt': ['num_alt_1']},
-    ALT_ALT: {'allowed_num_alt': ['num_alt_2']},
-    HAS_ALT: {'allowed_num_alt': ['num_alt_1', 'num_alt_2']},
-    HAS_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_2']},
+    REF_REF: {'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_1', 'samples_num_alt_2', 'samples']},
+    REF_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples']},
+    ALT_ALT: {'allowed_num_alt': ['samples_num_alt_2', 'samples_cn_0', 'samples_cn_4', 'samples_cn_5', 'samples_cn_6']},
+    HAS_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples_num_alt_2', 'samples']},
+    HAS_REF: {
+        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2'],
+        'allowed_num_alt': ['samples_cn_1', 'samples_cn_3'],
+    },
 }
 
 RECESSIVE = 'recessive'
