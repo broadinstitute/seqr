@@ -423,10 +423,11 @@ class EsSearch(object):
             })
             if len(samples_by_id) != len(genotypes) and raw_hit.meta.doc_type == SV_DOC_TYPE:
                 # Family members with no variants are not included in the SV index
-                genotypes.update({
-                    sample.individual.guid: _get_field_values({}, GENOTYPE_FIELDS_CONFIG)
-                    for sample in samples_by_id.values() if sample.individual.guid not in genotypes
-                })
+                for sample in samples_by_id.values():
+                    if sample.individual.guid not in genotypes:
+                        genotypes[sample.individual.guid] = _get_field_values({}, GENOTYPE_FIELDS_CONFIG)
+                        if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
+                            genotypes[sample.individual.guid]['cn'] = 1
 
         genome_version = self.index_metadata[index_name]['genomeVersion']
         lifted_over_genome_version = None

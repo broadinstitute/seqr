@@ -106,7 +106,7 @@ export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
       <span>
         <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
       </span> :
-      <span>CN: {cn === 2 ? cn : <b><i>{cn}</i></b>}</span>
+      <span>CN: {cn === (isHemiX ? 1 : 2) ? cn : <b><i>{cn}</i></b>}</span>
     }
   </AlleleContainer>,
 )
