@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -261,55 +261,21 @@ export const AlignedCheckboxGroup = styled(CheckboxGroup)`
   text-align: left;
 `
 
-
-export const StringValueCheckboxGroup = React.memo((props) => {
-  const { value = '', options, onChange, ...baseProps } = props
+const BaseRadioGroup = React.memo((props) => {
+  const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, ...baseProps } = props
   return (
-    <InlineFormGroup>
-      {options.map(option =>
-        <BaseSemanticInput
-          {...baseProps}
-          key={option.value}
-          inputType="Checkbox"
-          defaultChecked={value && value.includes(option.value)}
-          label={option.name}
-          onChange={({ checked }) => {
-            let newValue
-            if (checked) {
-              newValue = value + option.value
-            } else {
-              newValue = value.replace(option.value, '')
-            }
-            onChange(newValue)
-          }}
-        />,
-      )}
-    </InlineFormGroup>
-  )
-})
-
-StringValueCheckboxGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
-  onChange: PropTypes.func,
-}
-
-
-export const RadioGroup = React.memo((props) => {
-  const { value, options, label, onChange, margin, widths, ...baseProps } = props
-  return (
-    <InlineFormGroup margin={margin} widths={widths}>
+    <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
       {options.map(option =>
         <BaseSemanticInput
           {...baseProps}
+          {...getOptionProps(option, value, onChange)}
           key={option.value}
           inline
           inputType="Radio"
-          checked={value === option.value}
-          label={option.text}
-          onChange={({ checked }) => {
+          onChange={({ checked, ...val }) => {
+            console.log(val)
             if (checked) {
               onChange(option.value)
             }
@@ -320,14 +286,45 @@ export const RadioGroup = React.memo((props) => {
   )
 })
 
-RadioGroup.propTypes = {
+BaseRadioGroup.propTypes = {
   value: PropTypes.any,
   options: PropTypes.array,
   onChange: PropTypes.func,
   label: PropTypes.node,
+  formGroupAs: PropTypes.any,
   margin: PropTypes.string,
   widths: PropTypes.string,
+  getOptionProps: PropTypes.func,
 }
+
+const getRadioOptionProps = (option, value, onChange) => ({
+  checked: value === option.value,
+  label: option.text,
+  onChange: ({ checked }) => {
+    if (checked) {
+      onChange(option.value)
+    }
+  },
+})
+
+export const RadioGroup = React.memo((props) => {
+  return <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />
+})
+
+const getButtonRadioOptionProps = (option, value, onChange) => ({
+  active: value === option.value,
+  basic: value !== option.value,
+  color: value === option.value ? 'grey' : 'black',
+  content: option.text,
+  onClick: (e) => {
+    e.preventDefault()
+    onChange(option.value)
+  },
+})
+
+export const ButtonRadioGroup = React.memo((props) => {
+  return <BaseRadioGroup as={Button} formGroupAs={Button.Group} getOptionProps={getButtonRadioOptionProps} {...props} />
+})
 
 export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props

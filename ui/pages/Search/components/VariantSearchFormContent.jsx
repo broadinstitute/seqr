@@ -8,12 +8,12 @@ import { getUser, getAnnotationSecondary } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
-import { Select } from 'shared/components/form/Inputs'
+import { Select, ButtonRadioGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   STAFF_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
-import { ALL_INHERITANCE_FILTER } from 'shared/utils//constants'
+import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -25,6 +25,7 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
+import { getHasMultipleDatasetTypes } from '../selectors'
 
 const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
@@ -40,6 +41,18 @@ const SAVED_SEARCH_FIELD = {
   name: 'search',
   component: SavedSearchDropdown,
   format: val => val || {},
+}
+
+const DATASET_TYPE_FIELD = {
+  name: 'search.datasetType',
+  component: ButtonRadioGroup,
+  format: val => val || null,
+  options: [
+    { value: null, text: 'All' },
+    { value: DATASET_TYPE_VARIANT_CALLS, text: 'SNV/ Indel' },
+    { value: DATASET_TYPE_SV_CALLS, text: 'SV' },
+  ],
+  margin: '0em',
 }
 
 const INHERITANCE_PANEL = {
@@ -126,7 +139,7 @@ const STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
   INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
 ]
 
-const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary }) => {
+const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, hasMultipleDatasetTypes }) => {
   let panels
   if (displayAnnotationSecondary) {
     panels = user.isStaff ? STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS : PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS
@@ -141,6 +154,12 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary 
       <VerticalSpacer height={10} />
       <InlineHeader content="Saved Search:" />
       {configuredField(SAVED_SEARCH_FIELD)}
+      {hasMultipleDatasetTypes &&
+        <div>
+          <InlineHeader content="Dataset Type:" />
+          {configuredField(DATASET_TYPE_FIELD)}
+        </div>
+      }
       <VariantSearchFormPanels panels={panels} />
     </div>
   )
@@ -149,11 +168,13 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary 
 VariantSearchFormContent.propTypes = {
   user: PropTypes.object,
   displayAnnotationSecondary: PropTypes.bool,
+  hasMultipleDatasetTypes: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
+  hasMultipleDatasetTypes: getHasMultipleDatasetTypes(state),
 })
 
 export default connect(mapStateToProps)(VariantSearchFormContent)

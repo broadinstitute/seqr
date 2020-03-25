@@ -49,7 +49,7 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
 
     if (Object.keys(contextParams).length) {
       dispatch({ type: REQUEST_SEARCH_CONTEXT })
-      new HttpRequestHelper('/api/search_context',
+      const request = new HttpRequestHelper('/api/search_context',
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
@@ -61,6 +61,9 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
       ).post(contextParams)
+      if (onSuccess) {
+        request.then(() => onSuccess(getState()))
+      }
     } else if (onSuccess) {
       onSuccess(getState())
     }

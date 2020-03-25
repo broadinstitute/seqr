@@ -9,6 +9,7 @@ import {
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
@@ -49,6 +50,8 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
       projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
       familyGuids: [familyGuid],
     }
+  } else if (params.searchHash) {
+    return params
   }
   return null
 }
@@ -139,6 +142,19 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
     return [{ value: null }, ...locusListOptions]
   },
 )
+
+export const getHasMultipleDatasetTypes = createSelector(
+  getProjectsInput,
+  getSamplesGroupedByProjectGuid,
+  getLocusListsByGuid,
+  (projectGuids, samplesByProjectGuid) => {
+    const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
+      new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
+    return datasetTypes.size > 1
+  },
+)
+
 
 const getSingleFamlilyGuidInput = createSelector(
   getProjectsFamiliesFieldInput,
