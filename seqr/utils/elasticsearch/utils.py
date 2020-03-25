@@ -3,6 +3,7 @@ from elasticsearch_dsl import Q
 import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME
+from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
@@ -28,7 +29,7 @@ def get_index_metadata(index_name, client):
         return cached_metadata
 
     try:
-        mappings = client.indices.get_mapping(index=index_name, doc_type=[VARIANT_DOC_TYPE, SV_DOC_TYPE])
+        mappings = client.indices.get_mapping(index=index_name)
     except Exception as e:
         raise InvalidIndexException('Error accessing index "{}": {}'.format(
             index_name, e.error if hasattr(e, 'error') else e.message))
@@ -57,7 +58,9 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
         if chrom == 'M':
             chrom = 'MT'
         variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
+    variants = EsSearch(
+        families, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+    ).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 
@@ -78,7 +81,12 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
     if invalid_items:
         raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
 
-    es_search = es_search_cls(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
+    es_search = es_search_cls(
+        search_model.families.all(),
+        previous_search_results=previous_search_results,
+        skip_unaffected_families=search.get('inheritance'),
+        dataset_type=search.get('datasetType')
+    )
 
     if search.get('customQuery'):
         custom_q = search['customQuery']

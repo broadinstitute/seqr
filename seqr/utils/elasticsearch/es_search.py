@@ -28,15 +28,16 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False, return_all_queried_families=False):
+    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False,
+                 return_all_queried_families=False, dataset_type=None):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
-        for s in Sample.objects.filter(
-            is_active=True,
-            individual__family__in=families
-        ).select_related('individual__family'):
+        samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+        if dataset_type:
+            samples = samples.filter(dataset_type=dataset_type)
+        for s in samples.select_related('individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
         if len(self.samples_by_family_index) < 1:
