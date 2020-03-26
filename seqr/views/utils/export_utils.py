@@ -104,7 +104,9 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
                 content += '\n'.join([
                     DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
                 ])
-                zip_file.writestr('{}.{}'.format(filename, file_format), unicode(content, errors='ignore'))
+                if type(content) != unicode:
+                    content = unicode(content, errors='ignore')
+                zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename)
