@@ -9,6 +9,9 @@ from django.contrib.auth.models import User
 class AuthAPITest(TestCase):
     fixtures = ['users']
 
+    def setUp(self):
+        User.objects.create_user('test_new_user', 'test_new_user@test.com', 'password123')
+
     def test_login_view(self):
         url = reverse(login_view)
 
@@ -47,7 +50,6 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
 
         # send login request with a correct password
-        User.objects.create_user('test_new_user', 'test_new_user@test.com', 'password123')
         req_values = {
             'email': 'test_new_user@test.com',
             'password': 'password123'
@@ -60,7 +62,6 @@ class AuthAPITest(TestCase):
 
     def test_logout_view(self):
         url = reverse(login_view)
-        User.objects.create_user('test_new_user', 'test_new_user@test.com', 'password123')
         req_values = {
             'email': 'test_new_user@test.com',
             'password': 'password123'
