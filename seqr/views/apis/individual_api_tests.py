@@ -24,6 +24,12 @@ INDIVIDUAL_IDS_UPDATE_DATA = {
     "paternalId": "",
 }
 
+INDIVIDUAL_UPDATE_GUID = "I000007_na20870"
+INDIVIDUAL_UPDATE_NAME = "test name"
+INDIVIDUAL_UPDATE_DATA = {
+    "display_name": INDIVIDUAL_UPDATE_NAME
+}
+
 FAMILY_UPDATE_GUID = "I000007_na20870"
 INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "individualGuid": FAMILY_UPDATE_GUID,
@@ -38,15 +44,16 @@ class IndividualAPITest(TestCase):
     fixtures = ['users', '1kg_project']
 
     def test_update_individual_handler(self):
-        edit_individuals_url = reverse(update_individual_handler, args=[ID_UPDATE_GUID])
+        edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
         _check_login(self, edit_individuals_url)
 
         response = self.client.post(edit_individuals_url, content_type='application/json',
-                                    data=json.dumps(INDIVIDUAL_FAMILY_UPDATE_DATA))
+                                    data=json.dumps(INDIVIDUAL_UPDATE_DATA))
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [ID_UPDATE_GUID])
+        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], INDIVIDUAL_UPDATE_NAME)
 
     def test_edit_individuals(self):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
