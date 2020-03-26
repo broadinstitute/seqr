@@ -94,13 +94,18 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
     with NamedTemporaryFile() as temp_file:
         with zipfile.ZipFile(temp_file, 'w') as zip_file:
             for filename, header, rows in files:
-                header_display = map(
-                    lambda (i, k): '{}-{}'.format(str(i + 1).zfill(2), k), enumerate(header)
-                ) if add_header_prefix else header
+                header_display = header
+                if add_header_prefix:
+                    header_display = map(
+                        lambda (i, k): '{}-{}'.format(str(i).zfill(2), k), enumerate(header)
+                    )
+                    header_display[0] = header[0]
                 content = DELIMITERS[file_format].join(header_display) + '\n'
                 content += '\n'.join([
                     DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
                 ])
+                if type(content) != unicode:
+                    content = unicode(content, errors='ignore')
                 zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')
