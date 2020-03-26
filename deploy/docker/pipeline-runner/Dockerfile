@@ -65,9 +65,44 @@ RUN install_packages python-pkg-resources
 COPY spark-defaults.conf /usr/local/lib/python3.7/site-packages/pyspark/conf/spark-defaults.conf
 RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -O /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
 
-COPY entrypoint.sh /
+RUN mkdir /vep /vep/GRCh37 /vep/GRCh38
+
+# install VEP for GRCh37 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh37.sh and gs://hail-us-vep/vep85-loftee-gcloud.json
+COPY --from=konradjk/vep85_loftee:1.0.3  /vep/loftee /vep/GRCh37/loftee
+COPY --from=konradjk/vep85_loftee:1.0.3  /vep/ensembl-tools-release-85 /vep/GRCh37/ensembl-tools-release-85
+
+# install VEP for GRCh38 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh38.sh and gs://hail-us-vep/vep95-GRCh38-loftee-gcloud.json
+COPY --from=konradjk/vep95_loftee:0.2  /opt/vep /vep/GRCh38
+
+RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
+# VEP dependencies
+RUN /usr/bin/cpanm --notest Set::IntervalTree
+RUN /usr/bin/cpanm --notest PerlIO::gzip
+RUN /usr/bin/cpanm --notest DBI
+RUN /usr/bin/cpanm --notest CGI
+RUN /usr/bin/cpanm --notest JSON
+# LoFTEE dependencies
+RUN /usr/bin/cpanm --notest DBD::SQLite
+RUN /usr/bin/cpanm --notest  List::MoreUtils
+
+# install htslib
+ENV SAMTOOLS_VERSION="1.9"
+RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION}/htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& tar xjf htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& rm htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& cd htslib-${SAMTOOLS_VERSION} \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& make clean
+
+
+COPY vep85-loftee-gcloud.json /vep/GRCh37/vep85-GRCh37-loftee-gcloud.json
+COPY vep95-GRCh38-loftee-gcloud.json /vep/GRCh38/vep95-GRCh38-loftee-gcloud.json
 
 ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:$PATH
 ENV PYTHONPATH=".:/hail-elasticsearch-pipelines"
+
+COPY entrypoint.sh /
 
 CMD [ "/entrypoint.sh" ]
