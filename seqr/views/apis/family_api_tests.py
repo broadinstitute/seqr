@@ -172,4 +172,3 @@ class ProjectAPITest(TestCase):
         response_json = response.json()
 
         self.assertListEqual(response_json.keys(), ['familiesByGuid'])
->>>>>>> dea11f4b3... Added testcase for uploading the family table.
