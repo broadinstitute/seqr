@@ -52,7 +52,7 @@ RUN /google-cloud-sdk/install.sh -q
 RUN python3 -m pip install hail
 RUN python3 -m pip install ipython
 RUN python3 -m pip install --upgrade gsutil
-ENV PYTHONPATH=".:/hail-elasticsearch-pipelines"
+
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
 RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
@@ -63,7 +63,7 @@ RUN install_packages python-pkg-resources
 # install GCS connector using the same steps as in https://raw.githubusercontent.com/broadinstitute/install-gcs-connector/master/install_gcs_connector.py
 # assumes ~/.config/gcloud/application_default_credentials.json will be mounted into the docker container
 COPY spark-defaults.conf /usr/local/lib/python3.7/site-packages/pyspark/conf/spark-defaults.conf
-RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -o /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
+RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -O /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
 
 COPY entrypoint.sh /
 
