@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
@@ -32,7 +31,8 @@ class CaseReviewAPITest(TestCase):
         self.assertListEqual(response_json.keys(), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
         self.assertEqual(response_json[FAMILY_GUID]['internalCaseReviewNotes'], req_values['value'])
-        # send request with a "value" attribute
+
+        # send request with a invalid "value" attribute
         req_values = {
             'valueX': 'some case review notes'
         }
