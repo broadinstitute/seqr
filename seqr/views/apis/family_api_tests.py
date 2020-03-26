@@ -32,7 +32,7 @@ class ProjectAPITest(TestCase):
         req_values = {
             'families': [
                 {'familyGuid': FAMILY_GUID, 'description': 'Test description 1'},
-                {PREVIOUS_FAMILY_ID_FIELD: '2', 'description': 'Test description 2'},
+                {PREVIOUS_FAMILY_ID_FIELD: '2', FAMILY_ID_FIELD: '22', 'description': 'Test description 2'},
                 {FAMILY_ID_FIELD: '13', 'description': 'Test description 13'}
             ]
         }
@@ -43,7 +43,8 @@ class ProjectAPITest(TestCase):
 
         self.assertListEqual(response_json.keys(), ['familiesByGuid'])
         self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test description 1')
-        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID2]['description'], 'Test description 2')
+        self.assertEqual(response_json['familiesByGuid']['F000002_2'][FAMILY_ID_FIELD], '22')
+        self.assertEqual(response_json['familiesByGuid']['F000002_2']['description'], 'Test description 2')
         self.assertEqual(response_json['familiesByGuid']['F000013_13']['description'], 'Test description 13')
 
     def test_delete_families_handler(self):
