@@ -22,4 +22,3 @@ class ProjectCategoriesAPITest(TestCase):
 
         self.assertListEqual(response_json.keys(), ['projectsByGuid', 'projectCategoriesByGuid'])
         self.assertListEqual(response_json['projectsByGuid'].keys(), [PROJECT_GUID])
-
