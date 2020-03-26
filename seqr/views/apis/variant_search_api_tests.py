@@ -135,17 +135,6 @@ class VariantSearchAPITest(TestCase):
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
 
-        # Test new search with allProjectFamilies
-        url1 = reverse(query_variants_handler, args=[SEARCH_HASH1])
-        response = self.client.post(url1, content_type='application/json', data=json.dumps({
-            'allProjectFamilies': True, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
-
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -220,6 +209,25 @@ class VariantSearchAPITest(TestCase):
                 'totalResults': 0,
             }
         })
+
+    # Test new search with allProjectFamilies
+    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    def test_query_variants_all_project(self, mock_get_variants):
+        url = reverse(query_variants_handler, args=[SEARCH_HASH])
+        _check_login(self, url)
+
+        mock_get_variants.side_effect = _get_es_variants
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
+
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
