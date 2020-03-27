@@ -104,7 +104,7 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
                 content += '\n'.join([
                     DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
                 ])
-                if type(content) != unicode:
+                if not isinstance(content, unicode):
                     content = unicode(content, errors='ignore')
                 zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
