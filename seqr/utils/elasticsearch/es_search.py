@@ -426,6 +426,7 @@ class EsSearch(object):
                 for sample in samples_by_id.values():
                     if sample.individual.guid not in genotypes:
                         genotypes[sample.individual.guid] = _get_field_values({}, GENOTYPE_FIELDS_CONFIG)
+                        genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
 
@@ -579,15 +580,18 @@ class EsSearch(object):
 
     def _filter_invalid_family_compound_hets(self, gene_id, family_compound_het_pairs, family_unaffected_individual_guids):
         for family_guid, variants in family_compound_het_pairs.items():
-            unaffected_individuals_num_alts = [
-                [variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
-                for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
+            unaffected_genotypes = [
+                [variant['genotypes'].get(individual_guid, {}) for variant in variants]
+                for individual_guid in family_unaffected_individual_guids.get(family_guid, [])
+            ]
 
             def _is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
                 # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
-                for unaffected_individual_num_alts in unaffected_individuals_num_alts:
-                    is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1
-                                                  for variant_index in [variant_1_index, variant_2_index])
+                for genotype in unaffected_genotypes:
+                    is_valid_for_individual = any(
+                        genotype[variant_index].get('numAlt') == 0 or genotype[variant_index].get('isRef')
+                        for variant_index in [variant_1_index, variant_2_index]
+                    )
                     if not is_valid_for_individual:
                         return False
                 return True
@@ -941,6 +945,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
                     and individual.sex == Individual.SEX_MALE:
                 individual_genotype_filter[individual.guid] = REF_REF
 
+    is_sv_comp_het = inheritance_mode == COMPOUND_HET and 'samples' in index_fields
     for sample_id, sample in samples_by_id.items():
 
         individual_guid = sample.individual.guid
@@ -949,6 +954,10 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
 
         if genotype:
+            if is_sv_comp_het and affected == Individual.AFFECTED_STATUS_UNAFFECTED:
+                # Unaffected individuals for SV compound het search can have any genotype so are not included
+                continue
+
             not_allowed_num_alt = [
                 num_alt for num_alt in GENOTYPE_QUERY_MAP[genotype].get('not_allowed_num_alt', [])
                 if num_alt in index_fields
