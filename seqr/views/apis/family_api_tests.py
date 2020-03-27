@@ -153,8 +153,8 @@ class ProjectAPITest(TestCase):
 
         # send request with a "families" attribute
         data = b'Family ID	Display Name	Description	Coded Phenotype\n\
-"1"	"1"	"sf"	"LEFT VENTRICULAR NONCOMPACTION 10; LVNC10"\n\
-"2"	"2"	"sz test"	""'
+"1"	"1"	"family one description"	""\n\
+"2"	"2"	"family two description"	""'
 
         f = SimpleUploadedFile("1000_genomes demo_families.tsv", data)
 
@@ -172,3 +172,6 @@ class ProjectAPITest(TestCase):
         response_json = response.json()
 
         self.assertListEqual(response_json.keys(), ['familiesByGuid'])
+        self.assertListEqual(response_json['familiesByGuid'].keys(), [FAMILY_GUID2, FAMILY_GUID])
+        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'family one description')
+        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID2]['description'], 'family two description')
