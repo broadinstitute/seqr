@@ -43,13 +43,13 @@ class ExportTableUtilsTest(TestCase):
     def test_export_multiple_files(self, mock_zip):
         mock_zip_content = {}
         def mock_write_zip(file, content):
-            mock_zip_content[file] = content
+            mock_zip_content[file] = unicode(content)
         mock_zip.return_value.__enter__.return_value.writestr.side_effect = mock_write_zip
 
         header1 = ['col1', 'col2']
         header2 = ['col1']
         header3 = ['col2', 'col3', 'col1']
-        rows = [{'col2': 'row1_v2', 'col1': 'row1_v1'}, {'col1': 'row2_v1'}]
+        rows = [{'col2': 'row1_v2', 'col1': 'row1_v1\xe2'}, {'col1': 'row2_v1'}]
 
         # test csv format
         response = export_multiple_files([['file1', header1, rows], ['file2', header2, rows]], 'zipfile')
