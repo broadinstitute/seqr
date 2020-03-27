@@ -54,9 +54,9 @@ def add_variants_dataset_handler(request, project_guid):
         if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
             raise ValueError('Invalid dataset type "{}"'.format(dataset_type))
 
-        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
+        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index, dataset_type=dataset_type)
         if not sample_ids:
-            raise ValueError('No samples found in the index')
+            raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
         validate_index_metadata(index_metadata, project, elasticsearch_index)
         sample_type = index_metadata['sampleType']
 
