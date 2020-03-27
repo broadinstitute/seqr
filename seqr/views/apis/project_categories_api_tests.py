@@ -28,6 +28,8 @@ class ProjectCategoriesAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectsByGuid', 'projectCategoriesByGuid'])
         self.assertListEqual(response_json['projectsByGuid'].keys(), [PROJECT_GUID])
         self.assertListEqual(response_json['projectCategoriesByGuid'].keys(), [PROJECT_CAT_GUID3, PROJECT_CAT_GUID2])
+        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID2])
+        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID3])
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'categories': ['PC000002_categry_with_unicde', NEW_PROJECT_CAT_NAME]
@@ -39,3 +41,4 @@ class ProjectCategoriesAPITest(TestCase):
         self.assertListEqual(response_json['projectsByGuid'].keys(), [PROJECT_GUID])
         self.assertListEqual(response_json['projectCategoriesByGuid'].keys(), [PROJECT_CAT_GUID4, PROJECT_CAT_GUID5])
         self.assertEqual(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID4]['name'], NEW_PROJECT_CAT_NAME)
+        self.assertEqual(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID5]['name'], PROJECT_CAT_GUID2)
