@@ -60,43 +60,40 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
-  const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
-  return (
-    compact ?
-      <GeneDetailSection
-        compact
-        color="teal"
-        compactLabel="Gene Lists"
-        details={locusListGuids.length > 0 &&
-          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-        }
-      /> :
-      <CompondHetTagsInLine
-        inline={areCompoundHets}
-        wrapper={children => <div>{children}</div>}
-      >
-        <React.Fragment>
-          {locusListGuids.map(locusListGuid =>
-            <GeneDetailSection
-              key={locusListGuid}
-              color="teal"
-              maxWidth="7em"
-              showEmpty
-              label={(locusListsByGuid[locusListGuid] || {}).name}
-              description={(locusListsByGuid[locusListGuid] || {}).name}
-              details={(locusListsByGuid[locusListGuid] || {}).description}
-            />,
-          )}
-        </React.Fragment>
-      </CompondHetTagsInLine>)
-})
+const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps }) => (
+  compact ?
+    <GeneDetailSection
+      compact
+      color="teal"
+      compactLabel="Gene Lists"
+      details={locusListGuids.length > 0 &&
+        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+      }
+    /> :
+    <div style={containerStyle}>
+      <React.Fragment>
+        {locusListGuids.map(locusListGuid =>
+          <GeneDetailSection
+            key={locusListGuid}
+            color="teal"
+            maxWidth="7em"
+            showEmpty
+            label={(locusListsByGuid[locusListGuid] || {}).name}
+            description={(locusListsByGuid[locusListGuid] || {}).name}
+            details={(locusListsByGuid[locusListGuid] || {}).description}
+            containerStyle={containerStyle}
+            {...labelProps}
+          />,
+        )}
+      </React.Fragment>
+    </div>),
+)
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
-  areCompoundHets: PropTypes.bool,
+  containerStyle: PropTypes.object,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -183,7 +180,7 @@ const GENE_DETAIL_SECTIONS = [
   },
 ]
 
-export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompoundHets, containerStyle, ...labelProps }) =>
+export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containerStyle, ...labelProps }) =>
   <div style={containerStyle}>
     {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) =>
       <GeneDetailSection
@@ -194,7 +191,7 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, areCompo
         {...labelProps}
       />,
     )}
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} containerStyle={containerStyle} {...labelProps} />}
   </div>,
 )
 
@@ -202,7 +199,6 @@ GeneDetails.propTypes = {
   gene: PropTypes.object,
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
-  areCompoundHets: PropTypes.bool,
   containerStyle: PropTypes.object,
 }
 
@@ -221,8 +217,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, variant, compact, s
     <GeneDetails
       gene={gene}
       compact={compactDetails}
-      areCompoundHets={areCompoundHets}
-      containerStyle={showInlineDetails && INLINE_STYLE}
+      containerStyle={(showInlineDetails || areCompoundHets) && INLINE_STYLE}
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       showLocusLists
