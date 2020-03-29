@@ -229,6 +229,9 @@ class VariantSearchAPITest(TestCase):
 
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
 
+        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
+
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
         _check_login(self, search_context_url)
