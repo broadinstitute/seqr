@@ -1,89 +1,52 @@
-The installation scripts work on MacOSX and Linux (CentOS7 or Ubuntu). 
-We appreciate modifications that add support for other platforms.  
-
 
 #### Prerequisites
- - *Hardware:*  At least **16 Gb RAM**, **2 CPUs**, **50 Gb disk space**  
+ - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
- - *Software:*  
-     - python2.7    
-     - on MacOS only: [homebrew](http://brew.sh/) package manager  
-     - on Linux only: root access with sudo
-    
+ - *Software:* 
+   - python2.7
+   - [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+   - [docker](https://docs.docker.com/install/)
+     - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
+   - [docker-compose](https://docs.docker.com/compose/install/)       
+   - [gcloud](https://cloud.google.com/sdk/install)
 
-#### Step 1: Install dependencies
 
-cd to the directory where you want to install seqr, and run: 
-
-```
-SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-``` 
-
-This command:
-- clones the seqr repo to the current directory
-- adds `PYTHONPATH`, `PLATFORM` and `SEQR_DIR` env. vars to .bashrc:
-- adjusts system settings such as `vm.max_map_count` to work with elasticsearch
-- uses brew/yum/apt-get to make sure `java1.8`, `gcc`, `git` and other dependencies are installed 
-
-#### Step 2: Install seqr components
-
-To install all components using one script, run:
+#### Starting seqr:
 
 ```
-SCRIPT=install_local.all_steps.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
+git clone https://github.com/macarthur-lab/seqr.git   # clone the seqr repo
+cd seqr
+git checkout local_hail_v02   # switch to the local_hail_v02 branch
+docker-compose up -d seqr   # use docker-compose to start seqr in the background after also starting other components it depends on (postgres, redis, elasticsearch, phenotips)
+
+docker-compose logs -f seqr  # (optional) print seqr logs. Type Ctrl-C to stop. 
+docker-compose exec seqr python manage.py createsuperuser  # create an Admin user 
+
+open http://localhost     # log into seqr using the email and password from the previous step
 ```
-This runs the `install_local.*.sh` scripts in order.  
-
-To install components one at a time, run the `install_local.*.sh` scripts in order: 
-
+   
+   
+##### Loading data:
+   
 ```
-SCRIPT=install_local.step1.install_pipeline_runner.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step2.install_postgres.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step3.elasticsearch.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step4.kibana.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step5.install_redis.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step6.install_seqr.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step7.install_phenotips.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-```
+gcloud auth application-default login  # authenticate to your gcloud account
 
-Once these complete, the seqr gunicorn web server will be running on 0.0.0.0 port 8000. 
+cd seqr
 
+mkdir -p vep_data/homo_sapiens
+cd vep_data/homo_sapiens
 
-#### Step 3: Create admin. user
+# download VEP data - TODO share via non-requestor-pays buckets
+gsutil -u $PROJECT cat gs://hail-us-vep/homo-sapiens/85_GRCh37.tar | tar xf - &
+gsutil -u $RPOJECT cat gs://hail-us-vep/homo-sapiens/95_GRCh38.tar | tar xf  - & 
 
-To create an admin user, run:
-```
-cd ${SEQR_DIR}; python manage.py createsuperuser
-```
+docker run -v $(pwd)/vep_data/:/vep_data/ -v ~/.config:/root/.config -it --network seqr_default gcr.io/seqr-project/pipeline-runner:gcloud-dev /bin/bash
+   
+# inside the pipeline-runner docker container:
+~$ cd hail-elasticsearch-pipelines/luigi_pipeline/
 
-
-#### Step 4: Create a seqr project
-
-A project in seqr represents a group of collaborators working together on one or more datasets.
-
-1. Open your browser to [http://localhost:8000/login](http://localhost:8000/login)
-2. Login using the account you entered in step 3. 
-3. On the dashboard page, click on "Create Project".  
-4. Click on the new project.
-5. Click on Edit Families & Individuals > Bulk Upload and upload a .fam file with individuals for the project.
-
-
-#### Step 5: Load dataset
-
-To VEP-annotate and load a new VCF into Elasticsearch, run: 
-```
-source ~/.bashrc  
-cd ${SEQR_DIR}/hail_elasticsearch_pipelines/  
-  
-GENOME_VERSION="37"        # should be "37" or "38"
-SAMPLE_TYPE="WES"          # can be "WES" or "WGS"
-DATASET_TYPE="VARIANTS"    # can be "VARIANTS" (for GATK VCFs) or "SV" (for Manta VCFs)
-PROJECT_GUID="R001_test"   # should match the ID in the url of the project page 
-INPUT_VCF="test.vcf.gz"    # local path of VCF file
-OUTPUT_MATRIX_TABLE="test.mt"  # hail matrix table that caches annotated variants & genotypes (results of the annotation step)
- 
-python3 -u gcloud_dataproc/submit.py --run-locally --hail-version 0.2  luigi_pipeline/seqr_loading.py SeqrVCFToMTTask --local-scheduler --genome-version 38 --sample-type=WGS --source-paths  $INPUT_VCF --dest-path $OUTPUT_MATRIX_TABLE
-
+# example command
+~$ python3 seqr_loading.py SeqrMTToESTask --local-scheduler --source-paths gs://seqr-datasets/GRCh37/1kg/1kg.vcf.gz --dest-path gs://seqr-datasets/GRCh37/1kg/1kg.mt --genome-version 37 --reference-ht-path gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht --clinvar-ht-path gs://seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.ht --hgmd-ht-path gs://seqr-reference-data-private/GRCh37/HGMD/hgmd_pro_2018.4_hg19_without_db_field.ht --sample-type WES --es-host elasticsearch --es-index 1kg --es-index-min-num-shards 3 --vep-config-json-path /vep85-GRCh37-loftee-gcloud.json
 ```
 
 Now that the dataset is loaded into elasticsearch, it can be added to the project:
@@ -95,6 +58,6 @@ Now that the dataset is loaded into elasticsearch, it can be added to the projec
 After this you can click "Variant Search" for each family, or "Gene Search" to search across families.
 
 
-#### Step 6 (optional): Enable read viewing in the browser
+#### (optional): Enable read viewing in the browser
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](deploy/READVIZ_SETUP.md)**      
