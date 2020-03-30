@@ -63,20 +63,18 @@ RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connecto
 
 RUN mkdir /vep /vep/GRCh37
 
-# install VEP for GRCh37 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh37.sh and gs://hail-us-vep/vep85-loftee-gcloud.json
-COPY --from=konradjk/vep85_loftee:1.0.3  /vep/loftee /vep/GRCh37/loftee
-COPY --from=konradjk/vep85_loftee:1.0.3  /vep/ensembl-tools-release-85 /vep/ensembl-tools-release-85
-
 # install VEP for GRCh38 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh38.sh and gs://hail-us-vep/vep95-GRCh38-loftee-gcloud.json
 #COPY --from=konradjk/vep95_loftee:0.2  /opt/vep /vep/GRCh38
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
-# VEP dependencies
+# install VEP dependencies
+RUN /usr/bin/cpanm --notest Module::Build
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
+RUN /usr/bin/cpanm --notest Try::Tiny
 # LoFTEE dependencies
 RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
