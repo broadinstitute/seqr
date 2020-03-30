@@ -11,4 +11,6 @@ COPY bashrc /root/.bashrc
 
 COPY restore_database_backup.sh /root/restore_database_backup.sh
 
+COPY postgresql.conf /etc/postgresql/postgresql.conf
+
 ENV PGDATA=/var/lib/postgresql/data/pgdata
