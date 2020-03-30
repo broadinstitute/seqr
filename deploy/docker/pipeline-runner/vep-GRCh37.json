@@ -1,5 +1,5 @@
 {"command": [
-    "perl", "/vep/GRCh37/ensembl-tools-release-85/scripts/variant_effect_predictor/variant_effect_predictor.pl",
+    "perl", "/vep/ensembl-tools-release-85/scripts/variant_effect_predictor/variant_effect_predictor.pl",
     "--format", "vcf",
     "__OUTPUT_FORMAT_FLAG__",
     "--everything",
