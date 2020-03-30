@@ -17,17 +17,17 @@
 git clone https://github.com/macarthur-lab/seqr.git   # clone the seqr repo
 cd seqr
 git checkout local_hail_v02   # switch to the local_hail_v02 branch
-docker-compose up -d seqr   # use docker-compose to start seqr in the background after also starting other components it depends on (postgres, redis, elasticsearch, phenotips)
+docker-compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch, phenotips). This may take 10+ minutes.
+docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 
-docker-compose logs -f seqr  # (optional) print seqr logs. Type Ctrl-C to stop. 
-docker-compose exec seqr python manage.py createsuperuser  # create an Admin user 
+docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin user 
 
-open http://localhost     # log into seqr using the email and password from the previous step
+open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
    
    
-##### Loading data:
-   
+#### Loading data (not done testing this section):
+
 ```
 gcloud auth application-default login  # authenticate to your gcloud account
 
@@ -51,13 +51,13 @@ docker run -v $(pwd)/vep_data/:/vep_data/ -v ~/.config:/root/.config -it --netwo
 
 Now that the dataset is loaded into elasticsearch, it can be added to the project:
 
-1. Go to the projet page
+1. Go to the project page
 2. Click on Edit Datasets
 3. Enter the index name that the pipeline printed out when it completed, and submit the form.
 
 After this you can click "Variant Search" for each family, or "Gene Search" to search across families.
 
 
-#### (optional): Enable read viewing in the browser
+#### Enable read viewing in the browser (optional): 
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](deploy/READVIZ_SETUP.md)**      
