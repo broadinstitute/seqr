@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
-    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, SV_DOC_TYPE
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, SV_DOC_TYPE, QUALITY_FIELDS
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -165,14 +165,10 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
-        quality_filter = dict({'min_ab': 0, 'min_gq': 0}, **(quality_filter or {}))
-        if quality_filter['min_ab'] % 5 != 0:
-            raise Exception('Invalid ab filter {}'.format(quality_filter['min_ab']))
-        if quality_filter['min_gq'] % 5 != 0:
-            raise Exception('Invalid gq filter {}'.format(quality_filter['min_gq']))
-
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
+
+        quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index)
 
         annotations_secondary_search = None
         if annotations_secondary:
@@ -185,17 +181,21 @@ class EsSearch(object):
         if annotations or pathogenicity_filter:
             self.filter_by_annotations(annotations, pathogenicity_filter)
 
-        for index, family_samples_by_id in self.samples_by_family_index.items():
-            affected_status = None
-            if inheritance_filter or inheritance_mode:
-                affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                self._family_individual_affected_status.update(affected_status)
+        if inheritance_filter or inheritance_mode:
+            for index, family_samples_by_id in self.samples_by_family_index.items():
+                    affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
+                    self._family_individual_affected_status.update(affected_status)
 
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
+            self._filter_compound_hets(inheritance_filter, quality_filters_by_family, annotations_secondary_search)
+            if inheritance_mode == COMPOUND_HET:
+                return
+
+        for index, family_samples_by_id in self.samples_by_family_index.items():
             index_fields = self.index_metadata[index]['fields']
 
             genotypes_q = None
-            if not quality_filter['min_ab'] and not quality_filter['min_gq'] and \
-                    (inheritance_mode == ANY_AFFECTED or not inheritance):
+            if not quality_filters_by_family and (inheritance_mode == ANY_AFFECTED or not inheritance):
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count[index]
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
@@ -204,7 +204,7 @@ class EsSearch(object):
                         for family_guid, samples_by_id in family_samples_by_id.items():
                             sample_ids += [
                                 sample_id for sample_id, sample in samples_by_id.items()
-                                if affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
+                                if self._family_individual_affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
                         genotypes_q = _any_affected_sample_filter(sample_ids)
                         self._any_affected_sample_filters = True
                     else:
@@ -215,30 +215,28 @@ class EsSearch(object):
 
             if not genotypes_q:
                 genotypes_q = _genotype_inheritance_filter(
-                    inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter, affected_status,
-                    index_fields
+                    inheritance_mode, inheritance_filter, family_samples_by_id, quality_filters_by_family,
+                    self._family_individual_affected_status, index_fields
                 )
 
-            compound_het_q = None
-            if inheritance_mode == COMPOUND_HET:
-                compound_het_q = genotypes_q
-            else:
-                self._index_searches[index].append(self._search.filter(genotypes_q))
+            self._index_searches[index].append(self._search.filter(genotypes_q))
 
-            if inheritance_mode == RECESSIVE:
-                compound_het_q = _genotype_inheritance_filter(
-                    COMPOUND_HET, inheritance_filter, family_samples_by_id, quality_filter, affected_status,
-                    index_fields
-                )
+    def _filter_compound_hets(self, inheritance_filter, quality_filters_by_family, annotations_secondary_search):
+        for index, family_samples_by_id in self.samples_by_family_index.items():
+            index_fields = self.index_metadata[index]['fields']
 
-            if compound_het_q and not has_previous_compound_hets:
-                compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
-                compound_het_search.aggs.bucket(
-                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES+1
-                ).metric(
-                    'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
-                )
-                self._index_searches[index].append(compound_het_search)
+            compound_het_q = _genotype_inheritance_filter(
+                COMPOUND_HET, inheritance_filter, family_samples_by_id, quality_filters_by_family,
+                self._family_individual_affected_status, index_fields
+            )
+
+            compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
+            compound_het_search.aggs.bucket(
+                'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES + 1
+            ).metric(
+                'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
+            )
+            self._index_searches[index].append(compound_het_search)
 
     def search(self,  **kwargs):
         indices = self.samples_by_family_index.keys()
@@ -867,25 +865,12 @@ def _get_family_affected_status(family_samples_by_id, inheritance_filter):
     return affected_status
 
 
-def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter, affected_status, index_fields):
+def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_samples_by_id, quality_filters_by_family, affected_status, index_fields):
     genotypes_q = None
     for family_guid in sorted(family_samples_by_id.keys()):
         samples_by_id = family_samples_by_id[family_guid]
         # Filter samples by quality
-        quality_q = None
-        if quality_filter.get('min_ab') or quality_filter.get('min_gq'):
-            quality_q = Q()
-            for sample_id in samples_by_id.keys():
-                if quality_filter['min_ab']:
-                    q = _build_or_filter('term', [
-                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_ab'], 5)
-                    ])
-                    #  AB only relevant for hets
-                    quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                if quality_filter['min_gq']:
-                    quality_q &= ~Q(_build_or_filter('term', [
-                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_gq'], 5)
-                    ]))
+        quality_q = quality_filters_by_family.get(family_guid)
 
         # Filter samples by inheritance
         if inheritance_mode == ANY_AFFECTED:
@@ -924,6 +909,36 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
             genotypes_q |= family_samples_q
 
     return genotypes_q
+
+
+def _quality_filters_by_family(quality_filter, samples_by_family_index):
+    quality_field_configs = {
+        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_FIELDS.items()
+    }
+    quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
+    for field, config in quality_field_configs.items():
+        if quality_filter[field] % config['step'] != 0:
+            raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
+
+    quality_filters_by_family = {}
+    if any(quality_filter[field] for field in quality_field_configs.keys()):
+        for family_samples_by_id in samples_by_family_index.values():
+            for family_guid, samples_by_id in family_samples_by_id.items():
+                quality_q = Q()
+                for sample_id in samples_by_id.keys():
+                    for field, config in quality_field_configs.items():
+                        if quality_filter[field]:
+                            q = _build_or_filter('term', [
+                                {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
+                                for i in range(0, quality_filter[field], config['step'])
+                            ])
+                            if field == 'min_ab':
+                                #  AB only relevant for hets
+                                quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
+                            else:
+                                quality_q &= ~Q(q)
+                quality_filters_by_family[family_guid] = quality_q
+    return quality_filters_by_family
 
 
 def _any_affected_sample_filter(sample_ids):

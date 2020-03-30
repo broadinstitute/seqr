@@ -238,21 +238,21 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
+
+QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
 GENOTYPE_FIELDS_CONFIG = {
-    'ab': {},
     'ad': {},
     'dp': {},
-    'gq': {},
     'pl': {},
     'cn': {'format_value': int, 'default_value': 2},
     'end': {},
     'start': {},
     'num_exon': {},
-    'qs': {},
     'defragged': {'format_value': bool},
     'sample_id': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
+GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})
 
 QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
