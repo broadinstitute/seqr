@@ -61,14 +61,14 @@ RUN install_packages python-pkg-resources
 COPY spark-defaults.conf /usr/local/lib/python3.7/site-packages/pyspark/conf/spark-defaults.conf
 RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -O /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
 
-RUN mkdir /vep /vep/GRCh37 /vep/GRCh38
+RUN mkdir /vep /vep/GRCh37
 
 # install VEP for GRCh37 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh37.sh and gs://hail-us-vep/vep85-loftee-gcloud.json
 COPY --from=konradjk/vep85_loftee:1.0.3  /vep/loftee /vep/GRCh37/loftee
-COPY --from=konradjk/vep85_loftee:1.0.3  /vep/ensembl-tools-release-85 /vep/GRCh37/ensembl-tools-release-85
+COPY --from=konradjk/vep85_loftee:1.0.3  /vep/ensembl-tools-release-85 /vep/ensembl-tools-release-85
 
 # install VEP for GRCh38 - based on  https://github.com/hail-is/hail/blob/master/hail/python/hailtop/hailctl/dataproc/resources/vep-GRCh38.sh and gs://hail-us-vep/vep95-GRCh38-loftee-gcloud.json
-COPY --from=konradjk/vep95_loftee:0.2  /opt/vep /vep/GRCh38
+#COPY --from=konradjk/vep95_loftee:0.2  /opt/vep /vep/GRCh38
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
 # VEP dependencies
@@ -96,8 +96,8 @@ RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
 RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
-COPY vep85-loftee-gcloud.json /vep/GRCh37/vep85-GRCh37-loftee-gcloud.json
-COPY vep95-GRCh38-loftee-gcloud.json /vep/GRCh38/vep95-GRCh38-loftee-gcloud.json
+COPY vep-GRCh37.json /vep/
+COPY vep-GRCh38.json /vep/
 
 ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:$PATH
 ENV PYTHONPATH=".:/hail-elasticsearch-pipelines"
