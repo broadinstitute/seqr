@@ -53,10 +53,6 @@ RUN python3 -m pip install hail
 RUN python3 -m pip install ipython
 RUN python3 -m pip install --upgrade gsutil
 
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
-RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
-
 RUN install_packages python-pkg-resources
 
 
@@ -96,6 +92,9 @@ RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION
 	&& make install \
 	&& make clean
 
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
+RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
 COPY vep85-loftee-gcloud.json /vep/GRCh37/vep85-GRCh37-loftee-gcloud.json
 COPY vep95-GRCh38-loftee-gcloud.json /vep/GRCh38/vep95-GRCh38-loftee-gcloud.json
