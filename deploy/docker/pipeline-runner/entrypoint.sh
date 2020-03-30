@@ -2,5 +2,5 @@
 
 set -x
 
-# sleep to keep image running even if the jupyter notebook is killed / restarted
+# sleep to keep container running and available for kicking off pipelines
 sleep 1000000000000

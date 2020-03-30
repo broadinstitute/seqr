@@ -1,0 +1,15 @@
+export PS1="\h:\w]$ "
+
+export SHELL=/bin/bash
+
+export LS_OPTIONS='--color=auto'
+eval "`dircolors`"
+alias ll="ls -al"
+alias less='less -m -g -i--underline-special --SILENT'
+alias more='less'
+
+echo
+echo This shell is in the PIPELINE-RUNNER container.
+echo
+
+alias gs='gsutil'

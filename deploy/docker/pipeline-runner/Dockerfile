@@ -99,6 +99,9 @@ RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requi
 COPY vep-GRCh37.json /vep/
 COPY vep-GRCh38.json /vep/
 
+COPY bashrc /root/.bashrc
+COPY gitconfig /root/.gitconfig
+
 ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:$PATH
 ENV PYTHONPATH=".:/hail-elasticsearch-pipelines"
 
