@@ -103,7 +103,7 @@ COPY bashrc /root/.bashrc
 COPY gitconfig /root/.gitconfig
 
 ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:$PATH
-ENV PYTHONPATH=".:/hail-elasticsearch-pipelines"
+ENV PYTHONPATH=".:/hail-elasticsearch-pipelines:/hail-elasticsearch-pipelines/luigi_pipeline"
 
 COPY entrypoint.sh /
 

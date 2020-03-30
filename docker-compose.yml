@@ -99,6 +99,7 @@ services:
     image: gcr.io/seqr-project/pipeline-runner:gcloud-dev
     volumes:
       - ./data/vep_data:/vep_data
+      - ./data/input_vcfs:/input_vcfs
       - ~/.config:/root/.config
     depends_on:
       elasticsearch:
