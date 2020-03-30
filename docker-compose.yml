@@ -71,7 +71,7 @@ services:
   seqr:
     image: gcr.io/seqr-project/seqr:gcloud-dev
     ports:
-      - 8000:8000
+      - 80:8000
     environment:
       - SEQR_GIT_BRANCH=dev
       - PYTHONPATH=/seqr
