@@ -24,11 +24,11 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
    
-#### Annotating a VCF callset on a Google Dataproc cluster
+#### Annotating and loading a VCF callset using a Google Dataproc cluster
 
 TODO 
    
-#### Annotating a VCF callset locally
+#### Annotating and loading a VCF callset on-prem
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU.
 
