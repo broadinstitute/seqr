@@ -25,4 +25,4 @@ The seqr production instance runs on Google Kubernetes Engine (GKE) and data is 
 
 seqr can also be installed on a laptop or on-prem server(s) using docker-compose as described here:
   
-**[Local installs via docker-compose](deploy/LOCAL_INSTALL.md)**  
+**[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**  
