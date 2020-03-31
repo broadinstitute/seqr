@@ -37,13 +37,14 @@ To do this, first download VEP reference data:
 # authenticate to your gcloud account so you can download public reference data
 gcloud auth application-default login  
 
-# download VEP reference data - TODO share reference data in non-requestor-pays buckets
-mkdir -p ${SEQR_DIR}/data/vep_data/homo_sapiens  ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
+# download VEP reference data
+mkdir -p ${SEQR_DIR}/data/vep_data/homo_sapiens
+cd ${SEQR_DIR}/data/vep_data
+curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz | tar xzf - &   # for the VEP GRCh37 cache
+curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz | tar xzf - &   # for the VEP GRCh38 cache (can have both the GRCh37 and GRCh38 caches at the same time)
 
-cd ${SEQR_DIR}/data/vep_data/homo_sapiens
-gsutil -u your-gcloud-project-name cat gs://hail-us-vep/homo-sapiens/85_GRCh37.tar | tar xf - &   # for the VEP GRCh37 cache
-gsutil -u your-gcloud-project-name cat gs://hail-us-vep/homo-sapiens/95_GRCh38.tar | tar xf  - &   # for the VEP GRCh38 cache, run (can have both GRCh37 and GRCh38 at the same time)
-
+#  - TODO share reference data in non-requestor-pays buckets
+mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
 cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
 gsutil -u your-gcloud-project-name cat gs://hail-us-vep/loftee-beta/GRCh37.tar  | tar xf  - & 
 ```
