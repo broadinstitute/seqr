@@ -31,14 +31,13 @@ open http://localhost     # open the seqr landing page in your browser. Log in t
 Google Dataproc makes it easy to parallelize annotation across many machines.
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
-0. authenticate into your google account
+1. authenticate into your google account
    ```
-   # authenticate to your gcloud account so you can download public reference data
    gcloud auth application-default login  
    ```
-0. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh37/your-callset.vcf.gz`
+1. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh37/your-callset.vcf.gz`
 
-0. start a pipeline-runner container which has the necessary tools and environment pre-installed.
+1. start a pipeline-runner container which has the necessary tools and environment pre-installed.
    ```
    SEQR_DIR=$(pwd)
    
@@ -47,7 +46,7 @@ The steps below describe how to annotate a callset and then load it into your on
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
    ```
-0. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), submit the annotation job, and when that's done, load the annotated dataset into your local elasticsearch instance.
+1. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), submit the annotation job, and when that's done, load the annotated dataset into your local elasticsearch instance.
    ```
    cd /hail-elasticsearch-pipelines/luigi_pipeline
    
