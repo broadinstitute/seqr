@@ -11,6 +11,8 @@
 
 #### Starting seqr
 
+The steps below describe how to create a new empty seqr instance with a single Admin user account.
+
 ```
 SEQR_DIR=$(pwd)
 
@@ -24,15 +26,56 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
    
-#### Annotating and loading a VCF callset using a Google Dataproc cluster
+#### Annotating a VCF callset on a Google Dataproc cluster and loading it into an on-prem seqr instance 
 
-TODO 
+Google Dataproc makes it easy to parallelize annotation across many machines.
+The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
+
+0. authenticate into your google account
+   ```
+   # authenticate to your gcloud account so you can download public reference data
+   gcloud auth application-default login  
+   ```
+0. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh37/your-callset.vcf.gz`
+
+0. start a pipeline-runner container which has the necessary tools and environment pre-installed.
+   ```
+   SEQR_DIR=$(pwd)
+   
+   wget https://raw.githubusercontent.com/macarthur-lab/seqr/local_hail_v02/docker-compose.yml
+   
+   docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
+   ```
+0. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), and then submit the annotation job.
+   ```
+   cd /hail-elasticsearch-pipelines/luigi_pipeline
+   
+   hailctl dataproc start \
+       --pkgs luigi,google-api-python-client \
+       --vep GRCh38 \
+       --max-idle 30m \
+       --num-workers 2 \
+       --num-preemptible-workers 12 \
+       seqr-loading-cluster
+
+   hailctl dataproc submit seqr-loading-cluster \
+       seqr_loading.py --pyfiles "lib,../hail_scripts" \
+       SeqrVCFToMTTask --local-scheduler \
+            --source-paths gs://your-bucket/data/GRCh38/your-callset.vcf.gz \
+            --dest-path gs://your-bucket/data/GRCh37/your-callset.mt \
+            --genome-version 38 \
+            --sample-type WES \
+            --reference-ht-path  gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
+            --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.ht
+   ``` 
+
    
 #### Annotating and loading a VCF callset on-prem
 
-Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU.
+Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, but it can be done.
 
-To do this, first download VEP reference data:
+To annotate a callset on-prem, first download VEP reference data:
 ```
 # authenticate to your gcloud account so you can download public reference data
 gcloud auth application-default login  
