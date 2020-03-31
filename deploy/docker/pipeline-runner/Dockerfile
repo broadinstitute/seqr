@@ -41,6 +41,9 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 	&& make install \
 	&& make clean
 
+RUN install_packages python-pkg-resources
+
+
 # install gcloud tools
 RUN python3 -m pip install --upgrade pip
 
@@ -49,15 +52,11 @@ RUN tar xzf google-cloud-sdk-286.0.0-linux-x86_64.tar.gz && rm google-cloud-sdk-
 RUN /google-cloud-sdk/install.sh -q
 
 # python packages
-RUN python3 -m pip install hail
-RUN python3 -m pip install ipython
 RUN python3 -m pip install --upgrade gsutil
-
-RUN install_packages python-pkg-resources
-
 
 # install GCS connector using the same steps as in https://raw.githubusercontent.com/broadinstitute/install-gcs-connector/master/install_gcs_connector.py
 # assumes ~/.config/gcloud/application_default_credentials.json will be mounted into the docker container
+RUN python3 -m pip install hail
 COPY spark-defaults.conf /usr/local/lib/python3.7/site-packages/pyspark/conf/spark-defaults.conf
 RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -O /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
 
@@ -71,10 +70,6 @@ RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION
 	&& make \
 	&& make install \
 	&& make clean
-
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
-RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
 # install VEP dependencies
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
@@ -97,6 +92,11 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 # install VEP
 RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
+
+# clone and hail-elasticsearch-pipelines repo
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
+RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
 COPY vep-GRCh37.json /
 COPY vep-GRCh38.json /
