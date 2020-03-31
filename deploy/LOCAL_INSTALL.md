@@ -47,10 +47,11 @@ The steps below describe how to annotate a callset and then load it into your on
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
    ```
-0. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), and then submit the annotation job.
+0. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), submit the annotation job, and when that's done, load the annotated dataset into your local elasticsearch instance.
    ```
    cd /hail-elasticsearch-pipelines/luigi_pipeline
    
+   # create dataproc cluster
    hailctl dataproc start \
        --pkgs luigi,google-api-python-client \
        --vep GRCh38 \
@@ -59,6 +60,7 @@ The steps below describe how to annotate a callset and then load it into your on
        --num-preemptible-workers 12 \
        seqr-loading-cluster
 
+   # submit annotation job to dataproc cluster
    hailctl dataproc submit seqr-loading-cluster \
        seqr_loading.py --pyfiles "lib,../hail_scripts" \
        SeqrVCFToMTTask --local-scheduler \
@@ -68,6 +70,15 @@ The steps below describe how to annotate a callset and then load it into your on
             --sample-type WES \
             --reference-ht-path  gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
             --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.ht
+   
+   gcloud dataproc jobs list    # run this to get the dataproc job id
+   gcloud dataproc jobs wait ce9fcc69a5034522b3ea2cb8e83c444d   # view jobs logs and wait for the job to complete
+   
+   # load the annotated dataset into your local elasticsearch instance
+   python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
+        --dest-path gs://your-bucket/data/GRCh37/your-callset.mt \
+        --es-host elasticsearch  \
+        --es-index your-callset-name
    ``` 
 
    
