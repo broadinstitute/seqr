@@ -26,7 +26,7 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
    
-#### Annotating a VCF callset on a Google Dataproc cluster and loading it into an on-prem seqr instance 
+#### Annotating and loading VCF callsets - option #1: annotate on a Google Dataproc cluster, then load in to an on-prem seqr instance 
 
 Google Dataproc makes it easy to parallelize annotation across many machines.
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
@@ -81,9 +81,9 @@ The steps below describe how to annotate a callset and then load it into your on
    ``` 
 
    
-#### Annotating and loading a VCF callset on-prem
+#### #### Annotating and loading VCF callsets - option #2: annotate and load on-prem
 
-Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, but it can be done.
+Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
 To annotate a callset on-prem, first download VEP reference data:
 ```
