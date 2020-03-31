@@ -150,7 +150,7 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 
 1. Go to the project page
 2. Click on Edit Datasets
-3. Enter the elasticsearch index name (set via the `--es-index` arg at loading time. The pipeline also prints this out when it completes). Submit the form.
+3. Enter the elasticsearch index name (set via the `--es-index` arg at loading time), and submit the form.
 
 
 #### Enable read viewing in the browser (optional): 
