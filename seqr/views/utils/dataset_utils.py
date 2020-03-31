@@ -28,7 +28,8 @@ def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DAT
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
 
-def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None):
+def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None,
+                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
     if any(field not in (index_metadata or {}) for field in metadata_fields):
         raise ValueError("Index metadata must contain fields: {}".format(', '.join(metadata_fields)))
@@ -46,6 +47,11 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
     dataset_suffixes = ('.vds', '.vcf.gz', '.vcf.bgz', '.bed')
     if not dataset_path.endswith(dataset_suffixes):
         raise Exception("Variant call dataset path must end with .vcf.gz or .vds or .bed")
+
+    if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
+        raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
+            elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
+        ))
 
 
 def validate_alignment_dataset_path(dataset_path):
