@@ -4,7 +4,7 @@ from django.urls.base import reverse
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.utils.test_utils import _check_login
 
-from seqr.models import Project, ProjectCategory
+from seqr.models import Project
 
 PROJECT_GUID = 'R0001_1kg'
 PROJECT_CAT_GUID2 = 'PC000002_categry_with_unicde'
@@ -38,7 +38,7 @@ class ProjectCategoriesAPITest(TestCase):
                 # The old guid must not be updated
                 self.assertNotIn(project_category.guid, updated_guid_set)
             else:
-                # The new project category must have as name as given one
+                # The new project category must have the same name as the given one
                 self.assertEqual(project_category.name, NEW_PROJECT_CAT_NAME)
                 self.assertIn(project_category.guid, updated_guid_set)
             project_category_guids_in_db.add(project_category.guid)
