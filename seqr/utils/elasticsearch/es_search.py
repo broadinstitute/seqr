@@ -221,7 +221,7 @@ class EsSearch(object):
             if not genotypes_q:
                 for family_guid in sorted(family_samples_by_id.keys()):
                     samples_by_id = family_samples_by_id[family_guid]
-                    affected_status = self._family_individual_affected_status[family_guid]
+                    affected_status = self._family_individual_affected_status.get(family_guid)
 
                     # Filter samples by inheritance
                     if inheritance_mode == ANY_AFFECTED:
