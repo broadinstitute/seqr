@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Header, List } from 'semantic-ui-react'
+import { Header, List, Form } from 'semantic-ui-react'
 
 import { getUser, getAnnotationSecondary } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -15,8 +15,9 @@ import VariantSearchFormPanels, {
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, QUALITY_FILTER_FIELDS,
+  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
 } from 'shared/components/panel/search/constants'
+import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
 import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
@@ -150,6 +151,22 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
+const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+  <Form.Group inline>
+    <AfFilter
+      value={value[SV_CALLSET_FREQUENCY]}
+      onChange={val => onChange({ ...value, [SV_CALLSET_FREQUENCY]: val })}
+      inline
+      label="Callset"
+      width={16}
+    />
+  </Form.Group>
+
+SVFrequecyHeaderFilter.propTypes = {
+  value: PropTypes.any,
+  onChange: PropTypes.func,
+}
+
 const QS_FILTER_FIELD = {
   name: 'min_qs',
   label: 'Quality Score',
@@ -167,13 +184,28 @@ const PANELS = [
   },
   ANNOTATION_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
-  FREQUENCY_PANEL,
+  {
+    ...FREQUENCY_PANEL,
+    [DATASET_TYPE_VARIANT_CALLS]: {
+      ...FREQUENCY_PANEL,
+      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name !== SV_CALLSET_FREQUENCY),
+    },
+    [DATASET_TYPE_SV_CALLS]: {
+      ...FREQUENCY_PANEL,
+      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name === SV_CALLSET_FREQUENCY),
+      headerProps: {
+        ...FREQUENCY_PANEL.headerProps,
+        inputSize: 3,
+        inputProps: { component: SVFrequecyHeaderFilter },
+      },
+    },
+  },
   LOCATION_PANEL_WITH_GENE_LIST,
   {
     ...QUALITY_PANEL,
     [ALL_DATASET_TYPE]: {
       ...QUALITY_PANEL,
-      fields: [...QUALITY_FILTER_FIELDS, QS_FILTER_FIELD],
+      fields: [...QUALITY_PANEL.fields, QS_FILTER_FIELD],
     },
     [DATASET_TYPE_SV_CALLS]: {
       ...QUALITY_PANEL,

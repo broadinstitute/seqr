@@ -292,6 +292,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
+export const SV_CALLSET_FREQUENCY = 'sv_callset'
 export const FREQUENCIES = [
   {
     name: 'g1k',
@@ -328,6 +329,12 @@ export const FREQUENCIES = [
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+  },
+  {
+    name: SV_CALLSET_FREQUENCY,
+    label: 'SV Callset',
+    homHemi: false,
+    labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
   },
 ]
 
