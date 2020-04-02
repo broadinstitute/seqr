@@ -136,7 +136,7 @@ const FIELDS = [
     inline: true,
   },
   { name: 'pos', label: 'Start Position*', validate: validators.required, component: IntegerInput, inline: true, width: 7 },
-  { name: 'pos_end', label: 'Stop Position', component: IntegerInput, inline: true, width: 7 },
+  { name: 'end', label: 'Stop Position', component: IntegerInput, inline: true, width: 7 },
   GENOME_VERSION_FIELD,
   TAG_FIELD,
   { name: 'divider1', label: 'SV Fields', component: DividerField },
@@ -169,6 +169,8 @@ const FIELDS = [
   { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, inline: true, validate: validateHasTranscriptId },
   ZYGOSITY_FIELD,
 ]
+
+// TODO fix to work with new SV schema
 
 const CreateVariantButton = React.memo(({ project, family, user, onSubmit }) => (
   user.isStaff ? <UpdateButton

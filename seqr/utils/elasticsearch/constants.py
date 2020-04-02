@@ -246,9 +246,9 @@ NESTED_FIELDS = {
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
-    'end': {'response_key': 'pos_end', 'format_value': long},
+    'end': {'format_value': long},
     'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
-    'num_exon': {},
+    'num_exon': {'response_key': 'numExon'},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},

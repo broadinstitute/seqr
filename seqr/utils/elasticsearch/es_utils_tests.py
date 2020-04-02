@@ -487,9 +487,9 @@ PARSED_VARIANTS = [
         },
         'variantId': '1-248367227-TC-T',
         'xpos': 1248367227,
-        'pos_end': None,
+        'end': None,
         'svType': None,
-        'num_exon': None,
+        'numExon': None,
         '_sort': [1248367227],
     },
     {
@@ -546,9 +546,9 @@ PARSED_VARIANTS = [
         },
         'variantId': '2-103343353-GAGA-G',
         'xpos': 2103343353,
-        'pos_end': None,
+        'end': None,
         'svType': None,
-        'num_exon': None,
+        'numExon': None,
         '_sort': [2103343353],
     },
 ]
@@ -602,6 +602,10 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
 PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
+
+PARSED_DESCENDING_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
+for var in PARSED_DESCENDING_SORT_VARIANTS:
+    var['_sort'][0] = var['_sort'][0]  * -1
 
 PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_MULTI_INDEX_VARIANT.update({
@@ -1155,9 +1159,9 @@ class EsUtilsTest(TestCase):
 
         # Test successful search
         results_model.families.set(self.families)
-        variants, total_results = get_es_variants(results_model, sort='protein_consequence', num_results=2)
+        variants, total_results = get_es_variants(results_model, sort='cadd', num_results=2)
 
-        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertListEqual(variants, PARSED_DESCENDING_SORT_VARIANTS)
         self.assertEqual(total_results, 5)
 
         self.assertExecutedSearch(filters=[
@@ -1365,7 +1369,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=['mainTranscript_major_consequence_rank', 'xpos'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}, 'xpos'])
 
     def test_compound_het_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={

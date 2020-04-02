@@ -35,7 +35,7 @@ const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
 
   const highlight = variant.ref && `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
   const highlightQ = highlight ? `highlight=${highlight}&` : ''
-  const endOffset = variant.pos_end && variant.pos_end - variant.pos
+  const endOffset = variant.end && variant.end - variant.pos
   const position = getLocus(chrom, pos, 10, endOffset || 0)
 
   return (
@@ -176,7 +176,7 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) 
   if (!locusListIntervals || locusListIntervals.length < 1) {
     return null
   }
-  const { pos, pos_end: posEnd, genomeVersion, liftedOverPos } = variant
+  const { pos, end, genomeVersion, liftedOverPos } = variant
   const locusListGuids = locusListIntervals.filter((interval) => {
     const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
     if (!variantPos) {
@@ -185,8 +185,8 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) 
     if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
       return true
     }
-    if (posEnd) {
-      const variantPosEnd = variantPos + (posEnd - pos)
+    if (end) {
+      const variantPosEnd = variantPos + (end - pos)
       return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
     }
     return false
@@ -207,7 +207,7 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, num_exon: numExon, pos, pos_end: posEnd } = variant
+  const { rsid, svType, numExon, pos, end } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -243,7 +243,7 @@ const Annotations = React.memo(({ variant }) => {
           <Transcripts variant={variant} />
         </Modal>
       }
-      {svType && posEnd && <b><HorizontalSpacer width={5} />{((posEnd - pos) / 1000).toPrecision(3)}kb</b>}
+      {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
       {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
         <span>
