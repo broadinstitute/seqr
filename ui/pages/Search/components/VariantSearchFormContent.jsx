@@ -14,7 +14,9 @@ import VariantSearchFormPanels, {
   STAFF_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
-import { HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS } from 'shared/components/panel/search/constants'
+import {
+  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, QUALITY_FILTER_FIELDS,
+} from 'shared/components/panel/search/constants'
 import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
@@ -148,6 +150,15 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
+const QS_FILTER_FIELD = {
+  name: 'min_qs',
+  label: 'Quality Score',
+  labelHelp: 'The quality scors (QS) represents the quality of a Structural Variant call.',
+  min: 0,
+  max: 1000,
+  step: 10,
+}
+
 const PANELS = [
   INHERITANCE_PANEL,
   {
@@ -158,7 +169,17 @@ const PANELS = [
   ANNOTATION_SECONDARY_PANEL_MAP,
   FREQUENCY_PANEL,
   LOCATION_PANEL_WITH_GENE_LIST,
-  QUALITY_PANEL,
+  {
+    ...QUALITY_PANEL,
+    [ALL_DATASET_TYPE]: {
+      ...QUALITY_PANEL,
+      fields: [...QUALITY_FILTER_FIELDS, QS_FILTER_FIELD],
+    },
+    [DATASET_TYPE_SV_CALLS]: {
+      ...QUALITY_PANEL,
+      fields: [QS_FILTER_FIELD],
+    },
+  },
 ]
 
 const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, ''].reduce((typeAcc, type) => {

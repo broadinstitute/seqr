@@ -393,6 +393,7 @@ export const ALL_QUALITY_FILTER = {
     vcf_filter: null,
     min_gq: 0,
     min_ab: 0,
+    min_qs: 0,
   },
 }
 
@@ -404,6 +405,7 @@ export const QUALITY_FILTER_OPTIONS = [
       vcf_filter: 'pass',
       min_gq: 20,
       min_ab: 25,
+      min_qs: 100,
     },
   },
   {
@@ -412,6 +414,7 @@ export const QUALITY_FILTER_OPTIONS = [
       vcf_filter: 'pass',
       min_gq: 0,
       min_ab: 0,
+      min_qs: 10,
     },
   },
 ]
