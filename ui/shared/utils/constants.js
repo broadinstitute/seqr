@@ -689,8 +689,9 @@ const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 
 
 const clinsigSeverity = (variant, user) => {
-  const clinvarSignificance = variant.clinvar.clinicalSignificance && variant.clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.isStaff && variant.hgmd.class
+  const { clinvar = {}, hgmd = {} } = variant
+  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
+  const hgmdSignificance = user.isStaff && hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {

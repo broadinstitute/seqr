@@ -1135,7 +1135,7 @@ def _get_sort(sort_key):
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if not (isinstance(val_func, dict) or isinstance(val_func, list)):
+            if not (isinstance(val_func, dict) or isinstance(val_func, list) or isinstance(val_func, str)):
                 sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:

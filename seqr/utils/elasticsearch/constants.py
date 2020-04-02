@@ -131,7 +131,7 @@ CLINVAR_SORT = {
         'type': 'number',
         'script': {
            'source': """
-                if (doc['clinvar_clinical_significance'].empty ) {
+                if (!doc.containsKey('clinvar_clinical_significance') || doc['clinvar_clinical_significance'].empty ) {
                     return 2;
                 }
                 String clinsig = doc['clinvar_clinical_significance'].value;
@@ -152,32 +152,49 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "(!doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
+               'source': "(doc.containsKey('hgmd_class') && !doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
             }
         }
     }],
     'in_omim': [{
         '_script': {
             'type': 'number',
+            'order': 'desc',
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
                         phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
-                'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
+                'source': """
+                    int total = 0; 
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.omim_gene_ids.contains(doc['geneIds'][i])) {
+                            total += 1;
+                            if (doc.containsKey('mainTranscript_gene_id') && 
+                                doc['geneIds'][i] == doc['mainTranscript_gene_id'].value) {
+                                total += 1
+                            }
+                        }
+                    } 
+                    return total
+                """
             }
         }
     }],
-    'protein_consequence': ['mainTranscript_major_consequence_rank'],
-    'gnomad': [{POPULATIONS['gnomad_genomes']['AF']: {'missing': '_first'}}],
-    'exac': [{POPULATIONS['exac']['AF']: {'missing': '_first'}}],
-    '1kg': [{POPULATIONS['g1k']['AF']: {'missing': '_first'}}],
-    'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
-    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc'}}],
-    'eigen': [{'eigen_Eigen_phred': {'order': 'desc'}}],
-    'mpc': [{'mpc_MPC': {'order': 'desc'}}],
-    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc'}}],
-    'primate_ai': [{'primate_ai_score': {'order': 'desc'}}],
+    'protein_consequence': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': "doc.containsKey('svType') ? 4.5 : doc['mainTranscript_major_consequence_rank'].value"
+            }
+        }
+    }],
+    'cadd': [{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'eigen': [{'eigen_Eigen_phred': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'mpc': [{'mpc_MPC': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'primate_ai': [{'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}],
     'constraint': [{
         '_script': {
             'order': 'asc',
@@ -188,12 +205,31 @@ SORT_FIELDS = {
                         constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
                         for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
                 },
-                'source': "params.constraint_ranks_by_gene.getOrDefault(doc['mainTranscript_gene_id'].value, 1000000000)"
+                'source': """
+                    int min = 1000000000; 
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.constraint_ranks_by_gene.getOrDefault(doc['geneIds'][i], 1000000000) < min) {
+                            min = params.constraint_ranks_by_gene.get(doc['geneIds'][i])
+                        }
+                    } 
+                    return min
+                """
             }
-        }
+        },
     }],
     XPOS_SORT_KEY: ['xpos'],
 }
+POPULATION_SORTS = {
+    sort: [{
+        '_script': {
+            'type': 'number',
+            'script': {
+                'params': {'field': POPULATIONS[pop_key]['AF']},
+                'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
+            }
+        }
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
+SORT_FIELDS.update(POPULATION_SORTS)
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
