@@ -143,7 +143,7 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   },
 )
 
-export const getHasMultipleDatasetTypes = createSelector(
+export const getDatasetTypes = createSelector(
   getProjectsInput,
   getSamplesGroupedByProjectGuid,
   getLocusListsByGuid,
@@ -151,8 +151,15 @@ export const getHasMultipleDatasetTypes = createSelector(
     const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
       new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
         ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
-    return datasetTypes.size > 1
+    return [...datasetTypes]
   },
+)
+
+
+export const getSelectedDatasetTypes = createSelector(
+  getSearchInput,
+  getDatasetTypes,
+  (search, datasetTypes) => ((search || {}).datasetType ? search.datasetType : datasetTypes.sort().join(',')),
 )
 
 

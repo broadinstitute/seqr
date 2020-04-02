@@ -403,6 +403,7 @@ export const VEP_GROUP_FRAMESHIFT = 'frameshift'
 export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
+export const VEP_GROUP_SV = 'structural'
 
 
 const ORDERED_VEP_CONSEQUENCES = [
@@ -439,6 +440,18 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'frameshift_variant',
     group: VEP_GROUP_FRAMESHIFT,
     so: 'SO:0001589',
+  },
+  {
+    description: 'A large deletion',
+    text: 'Deletion',
+    value: 'DEL',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A large duplication',
+    text: 'Duplication',
+    value: 'DUP',
+    group: VEP_GROUP_SV,
   },
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',

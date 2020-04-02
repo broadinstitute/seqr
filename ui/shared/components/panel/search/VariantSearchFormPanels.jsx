@@ -104,26 +104,30 @@ export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
+export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
+  ...annotationGroups.map(groups =>
+    <Form.Field key={groups[0]} width={3}>
+      {groups.map(group =>
+        <div key={group}>
+          {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
+          <VerticalSpacer height={20} />
+        </div>,
+      )}
+    </Form.Field>,
+  ),
+  !hideOther ? (
+    <Form.Field key={VEP_GROUP_OTHER} width={4}>
+      {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
+    </Form.Field>
+  ) : null,
+].filter(fields => fields)
+
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: fieldComponents => [
-    ...[HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS].map(groups =>
-      <Form.Field key={groups[0]} width={3}>
-        {groups.map(group =>
-          <div key={group}>
-            {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
-            <VerticalSpacer height={20} />
-          </div>,
-        )}
-      </Form.Field>,
-    ),
-    <Form.Field key={VEP_GROUP_OTHER} width={4}>
-      {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
-    </Form.Field>,
-  ],
+  fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
 }
 
 export const FREQUENCY_PANEL = {
@@ -197,22 +201,21 @@ PanelContent.propTypes = {
 }
 
 class VariantSearchFormPanels extends React.PureComponent {
-  state = { activeIndex: [] }
+  state = { active: {} }
 
   expandAll = (e) => {
     e.preventDefault()
-    this.setState({ activeIndex: this.props.panels })
+    this.setState({ active: this.props.panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
   }
 
   collapseAll = (e) => {
     e.preventDefault()
-    this.setState({ activeIndex: [] })
+    this.setState({ active: {} })
   }
 
-  handleTitleClick = (e, { index }) => {
-    const { activeIndex } = this.state
-    activeIndex[index] = !activeIndex[index]
-    this.setState({ activeIndex: [...activeIndex] })
+  handleTitleClick = name => () => {
+    const { active } = this.state
+    this.setState({ active: { ...active, [name]: !active[name] } })
   }
 
 
@@ -228,7 +231,7 @@ class VariantSearchFormPanels extends React.PureComponent {
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
             {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
-              const isActive = !!this.state.activeIndex[i]
+              const isActive = !!this.state.active[name]
               let attachedTitle = true
               if (i === 0) {
                 attachedTitle = 'top'
@@ -240,7 +243,7 @@ class VariantSearchFormPanels extends React.PureComponent {
                   key={`${name}-title`}
                   active={isActive}
                   index={i}
-                  onClick={this.handleTitleClick}
+                  onClick={this.handleTitleClick(name)}
                   as={ToggleHeader}
                   attached={attachedTitle}
                 >
