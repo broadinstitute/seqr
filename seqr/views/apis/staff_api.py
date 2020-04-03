@@ -88,8 +88,8 @@ def elasticsearch_status(request):
                 projects_for_index += seqr_index_projects.pop(index_prefix).keys()
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    errors = [u'{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join([u'{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
     ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
     return create_json_response({
