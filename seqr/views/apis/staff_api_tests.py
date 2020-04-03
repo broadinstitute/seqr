@@ -142,6 +142,7 @@ TEST_INDEX_EXPECTED_DICT = {
     "storeSize": "14.9gb",
     "creationDateString": "2019-11-04T19:33:47.522Z",
     "gencodeVersion": "25",
+    "docType": "variant",
     "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
 }
 
@@ -155,6 +156,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "creationDateString": "2019-10-03T19:53:53.846Z",
     "datasetType": "VARIANTS",
     "gencodeVersion": "19",
+    "docType": "variant",
     "projects": []
 }
 
