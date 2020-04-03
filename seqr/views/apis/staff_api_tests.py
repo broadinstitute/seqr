@@ -7,101 +7,159 @@ from django.urls.base import reverse
 from seqr.views.apis.staff_api import elasticsearch_status
 from seqr.views.utils.test_utils import _check_login
 
-ES_CAT_ALLOCATION=[{
+ES_CAT_ALLOCATION = [{
     u'node': u'node-1',
     u'disk.used': u'67.2gb',
     u'disk.avail': u'188.6gb',
     u'disk.percent': u'26'
-  },
-  {u'node': u'UNASSIGNED',
-   u'disk.used': None,
-   u'disk.avail': None,
-   u'disk.percent': None
-  }]
+},
+    {u'node': u'UNASSIGNED',
+     u'disk.used': None,
+     u'disk.avail': None,
+     u'disk.percent': None
+     }]
 
-MISSED_INDEX="test_index_old"
+EXPECTED_DISK_ALLOCATION = [{
+    u'node': u'node-1',
+    u'diskUsed': u'67.2gb',
+    u'diskAvail': u'188.6gb',
+    u'diskPercent': u'26'
+},
+    {u'node': u'UNASSIGNED',
+     u'diskUsed': None,
+     u'diskAvail': None,
+     u'diskPercent': None
+     }]
 
-ES_CAT_INDICES=[{
+ES_CAT_INDICES = [{
     "index": "test_index",
     "docs.count": "122674997",
     "store.size": "14.9gb",
     "creation.date.string": "2019-11-04T19:33:47.522Z"
-  },
-  {
-    "index": "test_index_second",
-    "docs.count": "672312",
-    "store.size": "233.4mb",
-    "creation.date.string": "2019-10-03T19:53:53.846Z"
-  },
-  {
-    "index": "1kg_test_index",
-    "docs.count": "672312",
-    "store.size": "233.4mb",
-    "creation.date.string": "2019-10-03T19:53:53.846Z"
-  }]
+},
+    {
+        "index": "test_index_alias_1",
+        "docs.count": "672312",
+        "store.size": "233.4mb",
+        "creation.date.string": "2019-10-03T19:53:53.846Z"
+    },
+    {
+        "index": "test_index_alias_2",
+        "docs.count": "672312",
+        "store.size": "233.4mb",
+        "creation.date.string": "2019-10-03T19:53:53.846Z"
+    },
+    {
+        "index": "test_index_no_project",
+        "docs.count": "672312",
+        "store.size": "233.4mb",
+        "creation.date.string": "2019-10-03T19:53:53.846Z"
+    }
+]
 
-ES_CAT_ALIAS=[
-  {
-    "alias": "010203d4c1452eef3f8725bfdee23476",
-    "index": "test_index"
-  },
-  {
-    "alias": "1531a081753f4a135eef25b3496316dd",
-    "index": "1kg_test_index"
-  }]
+ES_CAT_ALIAS = [
+    {
+        "alias": "test_index_second",
+        "index": "test_index_alias_1"
+    },
+    {
+        "alias": "test_index_second",
+        "index": "test_index_alias_2"
+    }]
 
-TEST_INDEX_SRC_PATH="test_index_src_path"
-TEST_INDEX_SECOND_SRC_PATH="test_index_second_src_path"
-TEST_INDEX_1KG_SRC_PATH="test_index_1kg_src_path"
-ES_INDEX_MAPPING={
-  "test_index": {
-    "mappings": {
-      "variant": {
-        "_meta": {
-          "gencodeVersion": "25",
-          "genomeVersion": "38",
-          "sampleType": "WES",
-          "sourceFilePath": TEST_INDEX_SRC_PATH,
-        },
-        "_all": {
-          "enabled": False
+ES_INDEX_MAPPING = {
+    "test_index": {
+        "mappings": {
+            "variant": {
+                "_meta": {
+                    "gencodeVersion": "25",
+                    "genomeVersion": "38",
+                    "sampleType": "WES",
+                    "sourceFilePath": "test_index_file_path",
+                },
+                "_all": {
+                    "enabled": False
+                }
+            }
         }
-      }
+    },
+    "test_index_alias_1": {
+        "mappings": {
+            "variant": {
+                "_meta": {
+                    "gencodeVersion": "25",
+                    "hail_version": "0.2.24",
+                    "genomeVersion": "37",
+                    "sampleType": "WGS",
+                    "sourceFilePath": "test_index_alias_1_path",
+                },
+                "_all": {
+                    "enabled": False
+                },
+            }
+        }
+    },
+    "test_index_alias_2": {
+        "mappings": {
+            "variant": {
+                "_meta": {
+                    "gencodeVersion": "19",
+                    "genomeVersion": "37",
+                    "sampleType": "WES",
+                    "datasetType": "VARIANTS",
+                    "sourceFilePath": "test_index_alias_2_path"
+                },
+                "_all": {
+                    "enabled": False
+                },
+            }
+        }
+    },
+    "test_index_no_project": {
+        "mappings": {
+            "variant": {
+                "_meta": {
+                    "gencodeVersion": "19",
+                    "genomeVersion": "37",
+                    "sampleType": "WGS",
+                    "datasetType": "VARIANTS",
+                    "sourceFilePath": "test_index_no_project_path"
+                },
+                "_all": {
+                    "enabled": False
+                },
+            }
+        }
     }
-  },
-  "test_index_second": {
-    "mappings": {
-      "variant": {
-        "_meta": {
-          "gencodeVersion": "25",
-          "hail_version": "0.2.24",
-          "genomeVersion": "38",
-         "sampleType": "WGS",
-          "sourceFilePath": TEST_INDEX_SECOND_SRC_PATH,
-        },
-        "_all": {
-          "enabled": False
-        },
-      }
-    }
-  },
-  "1kg_test_index": {
-    "mappings": {
-      "variant": {
-        "_meta": {
-          "gencodeVersion": "19",
-          "genomeVersion": "37",
-          "sampleType": "WES",
-          "datasetType": "VARIANTS",
-          "sourceFilePath": TEST_INDEX_1KG_SRC_PATH
-        },
-        "_all": {
-          "enabled": False
-        },
-      }
-    }
-  }
 }
+
+TEST_INDEX_EXPECTED_DICT = {
+    "index": "test_index",
+    "sampleType": "WES",
+    "genomeVersion": "38",
+    "sourceFilePath": "test_index_file_path",
+    "docsCount": "122674997",
+    "storeSize": "14.9gb",
+    "creationDateString": "2019-11-04T19:33:47.522Z",
+    "gencodeVersion": "25",
+    "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
+}
+
+TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
+    "index": "test_index_no_project",
+    "sampleType": "WGS",
+    "genomeVersion": "37",
+    "sourceFilePath": "test_index_no_project_path",
+    "docsCount": "672312",
+    "storeSize": "233.4mb",
+    "creationDateString": "2019-10-03T19:53:53.846Z",
+    "datasetType": "VARIANTS",
+    "gencodeVersion": "19",
+    "projects": []
+}
+
+EXPECTED_ERRORS = [
+    u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
 
 class StaffAPITest(TestCase):
@@ -123,20 +181,17 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['indices', 'errors', 'diskStats', 'elasticsearchHost'])
-        for index in response_json['indices']:
-            index_id = index['index']
-            mapping_var_meta = ES_INDEX_MAPPING[index_id]['mappings']['variant']['_meta']
-            for key in mapping_var_meta.keys():
-                self.assertEqual(mapping_var_meta[key], index[key])
-            if index_id == '1kg_test_index':
-                self.assertListEqual(index['projects'], [])
 
-        self.assertIn(MISSED_INDEX, response_json['errors'][0])
+        self.assertEqual(len(response_json['indices']), 4)
+        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
+        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
 
-        node_list = [node['node'] for node in response_json['diskStats']]
-        self.assertListEqual(node_list, ['node-1', 'UNASSIGNED'])
+        self.assertListEqual(response_json['errors'], EXPECTED_ERRORS)
+
+        self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
 
         mock_es_client.cat.allocation.assert_called_with(format="json", h="node,disk.avail,disk.used,disk.percent")
-        mock_es_client.cat.indices.assert_called_with(format="json", h="index,docs.count,store.size,creation.date.string")
+        mock_es_client.cat.indices.assert_called_with(format="json",
+                                                      h="index,docs.count,store.size,creation.date.string")
         mock_es_client.cat.aliases.assert_called_with(format="json", h="alias,index")
         mock_get_mapping.assert_called_with(doc_type='variant,structural_variant')
