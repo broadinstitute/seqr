@@ -146,7 +146,6 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
 export const getDatasetTypes = createSelector(
   getProjectsInput,
   getSamplesGroupedByProjectGuid,
-  getLocusListsByGuid,
   (projectGuids, samplesByProjectGuid) => {
     const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
       new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
