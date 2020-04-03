@@ -346,7 +346,7 @@ class SavedVariantAPITest(TransactionTestCase):
         _check_login(self, create_saved_variant_url)
 
         request_body = {
-            'variant': [COMPOUND_HET_5_JSON, {'variantId': 'abc123', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
+            'variant': [COMPOUND_HET_5_JSON, {'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
             'note': 'one_saved_one_not_saved_compount_hets_note',
             'submitToClinvar': True,
             'familyGuid': 'F000001_1',
@@ -623,7 +623,7 @@ class SavedVariantAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
     def test_update_saved_variant_json(self, mock_retrieve_variants):
         mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
-            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'familyGuids': [var[3].guid]} for var in variant_tuples]
+            [{'variantId': var[0], 'familyGuids': [var[1].guid]} for var in variant_tuples]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         _check_login(self, url)

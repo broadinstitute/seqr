@@ -12,6 +12,7 @@ from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
+ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
 class DatasetAPITest(TransactionTestCase):
@@ -47,10 +48,10 @@ class DatasetAPITest(TransactionTestCase):
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['"elasticsearchIndex" is required']})
+        self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
 
         mock_get_index_metadata.return_value = {}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
 
@@ -59,7 +60,7 @@ class DatasetAPITest(TransactionTestCase):
             'genomeVersion': '37',
             'sourceFilePath': 'invalidpath.txt',
         }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Sample type not supported: NOT_A_TYPE']})
 
@@ -68,7 +69,7 @@ class DatasetAPITest(TransactionTestCase):
             'genomeVersion': '38',
             'sourceFilePath': 'invalidpath.txt',
         }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 38 but this project uses version 37']})
 
@@ -77,30 +78,31 @@ class DatasetAPITest(TransactionTestCase):
             'genomeVersion': '37',
             'sourceFilePath': 'invalidpath.txt',
         }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
             'genomeVersion': '37',
             'sourceFilePath': 'invalidpath.txt',
         }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
             'genomeVersion': '37',
             'sourceFilePath': 'test_data.vds',
         }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
+            'datasetType': 'VARIANTS',
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
@@ -114,6 +116,7 @@ class DatasetAPITest(TransactionTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
+            'datasetType': 'VARIANTS',
         }))
         self.assertEqual(response.status_code, 200)
 
