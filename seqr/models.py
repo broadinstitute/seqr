@@ -458,8 +458,9 @@ class SavedVariant(ModelWithGUID):
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
+    variant_id = models.TextField(db_index=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
@@ -472,9 +473,9 @@ class SavedVariant(ModelWithGUID):
         return 'SV%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        unique_together = ('xpos_start', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'selected_main_transcript_id']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
 
 
 class VariantTagType(ModelWithGUID):

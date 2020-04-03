@@ -40,6 +40,7 @@ from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
+# TODO fix reporting for SVs
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def elasticsearch_status(request):

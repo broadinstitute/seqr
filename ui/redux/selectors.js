@@ -55,7 +55,7 @@ export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAnnotationSecondary = (state) => {
   try {
-    return state.form.variantSearch.values.search.inheritance.annotationSecondary
+    return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
   }
   catch (err) {
     return false

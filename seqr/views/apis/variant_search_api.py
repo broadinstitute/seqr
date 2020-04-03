@@ -552,8 +552,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
     variants_by_id = {}
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
-        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
-        discovery_variant_q |= Q(Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt']) & ~Q(family__guid__in=variant['familyGuids']))
+        variant_q |= Q(variant_id=variant['variantId'], family__guid__in=variant['familyGuids'])
+        discovery_variant_q |= Q(Q(variant_id=variant['variantId']) & ~Q(family__guid__in=variant['familyGuids']))
         if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
