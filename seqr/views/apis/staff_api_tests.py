@@ -8,6 +8,7 @@ from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_st
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
+NON_PROJECT_GUID ='NON_A_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 
 PROJECT_CATEGRORY_NAME = 'test category name'
@@ -201,6 +202,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 EXPECTED_ERRORS = [
     u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
+EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'13', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
 
 class StaffAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
@@ -265,13 +267,27 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectGuids'])
 
     def test_discovery_sheet(self):
-        url = reverse(discovery_sheet, args=[PROJECT_GUID])
-        _check_login(self, url)
+        non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
+        _check_login(self, non_project_url)
 
+        response = self.client.get(non_project_url)
+        self.assertEqual(response.status_code, 500)
+
+        empty_project_url = reverse(discovery_sheet, args=[PROJECT_EMPTY_GUID])
+
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertListEqual(response_json['rows'], [])
+        self.assertListEqual(response_json['errors'], ["No data loaded for project: Empty Project"])
+
+        url = reverse(discovery_sheet, args=[PROJECT_GUID])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
@@ -281,3 +297,16 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['rows'])
+
+        self.assertEqual(len(response_json['rows']), 2)
+        self.assertDictEqual(response_json['rows'][1], EXPECTED_SUCCESS_STORY)
+
+        url = reverse(success_story, args=['A,T'])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['rows'])
+
+        self.assertEqual(len(response_json['rows']), 1)
+        self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
