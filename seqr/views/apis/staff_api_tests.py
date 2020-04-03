@@ -54,7 +54,13 @@ ES_CAT_INDICES = [{
         "docs.count": "672312",
         "store.size": "233.4mb",
         "creation.date.string": "2019-10-03T19:53:53.846Z"
-    }
+    },
+    {
+        "index": "test_index_sv",
+        "docs.count": "672312",
+        "store.size": "233.4mb",
+        "creation.date.string": "2019-10-03T19:53:53.846Z"
+    },
 ]
 
 ES_CAT_ALIAS = [
@@ -130,7 +136,20 @@ ES_INDEX_MAPPING = {
                 },
             }
         }
-    }
+    },
+    "test_index_sv": {
+        "mappings": {
+            "structural_variant": {
+                "_meta": {
+                    "gencodeVersion": "29",
+                    "genomeVersion": "38",
+                    "sampleType": "WES",
+                    "datasetType": "SV",
+                    "sourceFilePath": "test_sv_index_path"
+                },
+            }
+        }
+    },
 }
 
 TEST_INDEX_EXPECTED_DICT = {
@@ -143,6 +162,20 @@ TEST_INDEX_EXPECTED_DICT = {
     "creationDateString": "2019-11-04T19:33:47.522Z",
     "gencodeVersion": "25",
     "docType": "variant",
+    "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
+}
+
+TEST_SV_INDEX_EXPECTED_DICT = {
+    "index": "test_index_sv",
+    "sampleType": "WES",
+    "genomeVersion": "38",
+    "sourceFilePath": "test_sv_index_path",
+    "docsCount": "672312",
+    "storeSize": "233.4mb",
+    "creationDateString": "2019-10-03T19:53:53.846Z",
+    "gencodeVersion": "29",
+    "docType": "structural_variant",
+    "datasetType": "SV",
     "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
 }
 
@@ -184,9 +217,10 @@ class StaffAPITest(TestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['indices', 'errors', 'diskStats', 'elasticsearchHost'])
 
-        self.assertEqual(len(response_json['indices']), 4)
+        self.assertEqual(len(response_json['indices']), 5)
         self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
         self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
+        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
 
         self.assertListEqual(response_json['errors'], EXPECTED_ERRORS)
 

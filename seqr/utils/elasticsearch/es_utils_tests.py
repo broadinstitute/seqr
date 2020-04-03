@@ -11,6 +11,7 @@ from seqr.utils.elasticsearch.es_search import _get_family_affected_status
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
+SV_INDEX_NAME = 'test_index_sv'
 
 ES_VARIANTS = [
     {
@@ -335,6 +336,49 @@ BUILD_38_ES_VARIANT['_source'].update({
     'variantId': '2-103343363-GAGA-G'
 })
 
+ES_SV_VARIANT = {
+    '_source': {
+      'genotypes': [
+        {
+          'qs': 33,
+          'cn': 1,
+          'defragged': False,
+          'sample_id': 'HG00731',
+          'num_exon': 1,
+        }
+      ],
+      'xpos': 1049045487,
+      'end': 49045898,
+      'start': 49045487,
+      'xstart': 1049045487,
+      'num_exon': 2,
+      'pos': 49045487,
+      'StrVCTVRE_score': 0.374,
+      'svType': 'DEL',
+      'xstop': 1049045898,
+      'variantId': 'prefix_19107_DEL',
+      'samples': ['HG00731'],
+      'sc': 7,
+      'contig': '1',
+      'sortedTranscriptConsequences': [
+        {
+          'transcript_id': 'ENST00000371839',
+          'biotype': 'protein_coding',
+          'gene_id': 'ENSG00000186094'
+        },
+        {
+          'transcript_id': 'ENST00000416121',
+          'biotype': 'protein_coding',
+          'gene_id': 'ENSG00000186094'
+        },
+      ],
+      'geneIds': ['ENSG00000186094'],
+      'sf': 0.000693825,
+      'sn': 10088
+    },
+    'matched_queries': {SV_INDEX_NAME: ['F000002_2']},
+  }
+
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
 transcripts = OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences']
 transcripts[0]['major_consequence'] = 'frameshift_variant'
@@ -354,7 +398,7 @@ COMPOUND_HET_INDEX_VARIANTS = {
     '{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
 }
 
-INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT]}
+INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT], SV_INDEX_NAME: [ES_SV_VARIANT]}
 
 TRANSCRIPT_1 = {
   'aminoAcids': 'LL/L',
@@ -552,6 +596,64 @@ PARSED_VARIANTS = [
         '_sort': [2103343353],
     },
 ]
+PARSED_SV_VARIANT = {
+    'alt': None,
+    'chrom': '1',
+    'familyGuids': ['F000002_2'],
+    'genotypes': {
+        'I000004_hg00731': {
+            'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
+            'cn': 1, 'end': None, 'start': None, 'numExon': 1, 'defragged': False, 'qs': 33,
+        },
+        'I000005_hg00732': {
+            'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+        },
+    },
+    'genomeVersion': '37',
+    'genotypeFilters': '',
+    'liftedOverChrom': None,
+    'liftedOverGenomeVersion': None,
+    'liftedOverPos': None,
+    'mainTranscriptId': None,
+    'originalAltAlleles': None,
+    'populations': {
+        'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None},
+        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None},
+    },
+    'pos': 49045487,
+    'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
+                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
+                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374},
+    'ref': None,
+    'rsid': None,
+    'transcripts': {
+        'ENSG00000186094': [
+            {
+              'transcript_id': 'ENST00000371839',
+              'biotype': 'protein_coding',
+              'gene_id': 'ENSG00000186094'
+            },
+            {
+              'transcript_id': 'ENST00000416121',
+              'biotype': 'protein_coding',
+              'gene_id': 'ENSG00000186094'
+            },
+        ],
+    },
+    'variantId': 'prefix_19107_DEL',
+    'xpos': 1049045898,
+    'end': 49045898,
+    'svType': 'DEL',
+    'numExon': 2,
+    '_sort': [1049045898],
+}
+
 PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_ANY_AFFECTED_VARIANTS[1]['familyGuids'] = ['F000003_3']
 PARSED_ANY_AFFECTED_VARIANTS[1]['genotypes'] = {'I000007_na20870': PARSED_ANY_AFFECTED_VARIANTS[1]['genotypes']['I000007_na20870']}
@@ -732,16 +834,38 @@ MAPPING_FIELDS = [
     'topmed_AN',
     'gnomad_genomes_FAF_AF',
 ]
+SV_MAPPING_FIELDS = [
+    'start',
+    'end',
+    'xpos',
+    'contig',
+    'variantId',
+    'sortedTranscriptConsequences',
+    'genotypes',
+    'samples',
+    'samples_cn_0',
+    'samples_cn_1',
+    'samples_cn_2',
+    'samples_cn_3',
+    'samples_cn_gte_4',
+    'sf',
+    'sc',
+    'sn',
+    'num_exon',
+    'svType',
+    'StrVCTVRE_score',
+]
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF', 'samples', 'sv_callset_Hemi', 'sv_callset_Hom', 'sf',
-    'sc', 'sn', 'num_exon', 'svType', 'StrVCTVRE_score',
+    'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
-SOURCE_FIELDS.remove('samples_no_call')
+SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
+SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
 INDEX_METADATA = {
     INDEX_NAME: {'genomeVersion': '37', 'fields': MAPPING_FIELDS},
-    SECOND_INDEX_NAME: {'genomeVersion': '38', 'fields': MAPPING_FIELDS},
+    SECOND_INDEX_NAME: {'genomeVersion': '38', 'fields': MAPPING_FIELDS, 'datasetType': 'VARIANTS'},
+    SV_INDEX_NAME: {'genomeVersion': '37', 'fields': SV_MAPPING_FIELDS, 'datasetType': 'SV'},
 }
 
 ALL_INHERITANCE_QUERY = {
@@ -1085,7 +1209,7 @@ class EsUtilsTest(TestCase):
         )
 
     def test_get_es_variants(self):
-        search_model = VariantSearch.objects.create(search={})
+        search_model = VariantSearch.objects.create(search={'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
@@ -1145,7 +1269,8 @@ class EsUtilsTest(TestCase):
                 'topmed': {'ac': 2, 'af': None},
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
-            'inheritance': {'mode': 'de_novo'}
+            'inheritance': {'mode': 'de_novo'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
 
@@ -1376,6 +1501,7 @@ class EsUtilsTest(TestCase):
             'qualityFilter': {'min_gq': 10},
             'annotations': {'other': []},
             'inheritance': {'mode': 'compound_het'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1407,7 +1533,8 @@ class EsUtilsTest(TestCase):
             'qualityFilter': {'min_gq': 10},
             'annotations': {'other': []},
             'inheritance': {'mode': 'compound_het'},
-            'annotations_secondary': {'other': []}
+            'annotations_secondary': {'other': []},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1441,7 +1568,8 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10, 'vcf_filter': 'pass'},
-            'inheritance': {'mode': 'recessive'}
+            'inheritance': {'mode': 'recessive'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1502,7 +1630,9 @@ class EsUtilsTest(TestCase):
         self.assertIsNone(self.executed_search)
 
     def test_all_samples_all_inheritance_get_es_variants(self):
-        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS, # TODO test with SVs
+        })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
@@ -1514,7 +1644,9 @@ class EsUtilsTest(TestCase):
 
     def test_all_samples_any_affected_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'}})
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
+        })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
@@ -1537,7 +1669,8 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
-            'inheritance': {'mode': 'recessive'}
+            'inheritance': {'mode': 'recessive'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
@@ -1648,7 +1781,10 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearches([project_2_search, project_1_search])
 
     def test_multi_project_all_samples_all_inheritance_get_es_variants(self):
-        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+        })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
@@ -1691,8 +1827,10 @@ class EsUtilsTest(TestCase):
         )
 
     def test_multi_project_all_samples_any_affected_get_es_variants(self):
-        search_model = VariantSearch.objects.create(
-            search={'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'}},
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS, # TODO test with SVs
+        },
         )
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
@@ -1731,6 +1869,7 @@ class EsUtilsTest(TestCase):
     def test_multi_project_get_variants_by_id(self):
         search_model = VariantSearch.objects.create(search={
             'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
@@ -1756,7 +1895,8 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
-            'inheritance': {'mode': 'recessive'}
+            'inheritance': {'mode': 'recessive'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5']))
@@ -1790,7 +1930,8 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
-            'inheritance': {'mode': 'recessive'}
+            'inheritance': {'mode': 'recessive'},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2', 'F000005_5']))
@@ -1849,7 +1990,10 @@ class EsUtilsTest(TestCase):
         self.assertCachedResults(results_model, expected_cached_results)
 
     def test_multi_project_all_samples_all_inheritance_get_es_variant_gene_counts(self):
-        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
+        })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
@@ -1915,7 +2059,8 @@ class EsUtilsTest(TestCase):
 
     def test_get_family_affected_status(self):
         samples_by_id = {'F000002_2': {
-            sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
+            sample_id: Sample.objects.get(sample_id=sample_id, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+            for sample_id in ['HG00731', 'HG00732', 'HG00733']
         }}
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
         custom_multi_affected = {'I000005_hg00732': 'A'}
@@ -1942,7 +2087,10 @@ class EsUtilsTest(TestCase):
 
         def _execute_inheritance_search(mode=None, filter=None):
             _set_cache(cache_key, None)
-            search_model.search = {'inheritance': {'mode': mode, 'filter': filter}}
+            search_model.search = {
+                'inheritance': {'mode': mode, 'filter': filter},
+                'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+            }
             search_model.save()
             get_es_variants(results_model, num_results=2)
 

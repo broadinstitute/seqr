@@ -42,9 +42,10 @@ def get_index_metadata(index_name, client):
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id, return_all_queried_families=False):
+def get_single_es_variant(families, variant_id, return_all_queried_families=False,
+                          dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families
+        families, return_all_queried_families=return_all_queried_families, dataset_type=dataset_type,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
