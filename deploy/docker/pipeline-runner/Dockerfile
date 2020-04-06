@@ -95,7 +95,7 @@ RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-RUN cd hail-elasticsearch-pipelines && git checkout fix_hail_common_dependencies
+RUN cd hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
 COPY vep-GRCh37.json /
