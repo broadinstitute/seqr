@@ -5,7 +5,7 @@ from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story
+from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story, anvil_export
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
@@ -380,3 +380,12 @@ class StaffAPITest(TestCase):
 
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
+
+    def test_anvil_export(self):
+        url = reverse(anvil_export, args=[PROJECT_GUID])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['individualCount', 'familyCount', 'sampleCountByType'])
