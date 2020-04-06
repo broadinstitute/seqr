@@ -12,17 +12,18 @@ from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
+SV_INDEX_NAME = 'test_new_sv_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
 class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: 98765432101234567890)
+    @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
-    def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter):
+    def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         _check_login(self, url)
 
@@ -41,15 +42,27 @@ class DatasetAPITest(TransactionTestCase):
         existing_sample_guid = existing_sample.guid
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
 
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
-            {'key': 'NA19679'}, {'key': 'NA19678_1'},
-        ]
+        mock_random.return_value = 98765432101234567890
+        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = []
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
 
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': INDEX_NAME, 'datasetType': 'NOT_A_TYPE'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
+
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
+
+        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
+            {'key': 'NA19679'}, {'key': 'NA19678_1'},
+        ]
         mock_get_index_metadata.return_value = {}
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -85,11 +98,12 @@ class DatasetAPITest(TransactionTestCase):
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
             'genomeVersion': '37',
-            'sourceFilePath': 'invalidpath.txt',
+            'sourceFilePath': 'test_data.vds',
+            'datasetType': 'SV',
         }}
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
+        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
@@ -154,6 +168,39 @@ class DatasetAPITest(TransactionTestCase):
         updated_sample_models = Sample.objects.filter(guid__in=[sample['sampleGuid'] for sample in updated_samples])
         self.assertEqual(len(updated_sample_models), 3)
         self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
+
+        # Adding an SV index works additively with the regular variants index
+        mock_random.return_value = 1234567
+        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
+            {'key': 'NA19675_1'}
+        ]
+        mock_get_index_metadata.return_value = {SV_INDEX_NAME: {
+            'sampleType': 'WES',
+            'genomeVersion': '37',
+            'sourceFilePath': 'test_data.bed',
+            'datasetType': 'SV',
+        }}
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': SV_INDEX_NAME,
+            'datasetType': 'SV',
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
+        sv_sample_guid = 'S1234567_NA19675_1'
+        self.assertDictEqual(response_json['familiesByGuid'], {})
+        self.assertListEqual(response_json['samplesByGuid'].keys(), [sv_sample_guid])
+        self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
+        self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
+        self.assertDictEqual(response_json['individualsByGuid'], {
+            'I000001_na19675': {'sampleGuids': [sv_sample_guid, existing_index_sample_guid]},
+        })
+        # Regular variant sample should still be active
+        sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
+        self.assertEqual(len(sample_models), 2)
+        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid}, {sample.guid for sample in sample_models})
+        self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
