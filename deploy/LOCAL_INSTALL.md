@@ -8,7 +8,18 @@
    - [docker-compose](https://docs.docker.com/compose/install/)       
    - [gcloud](https://cloud.google.com/sdk/install)
 
-
+ - OS settings for elasticsearch:
+    - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
+       ```
+       echo '
+       vm.max_map_count=262144
+       ' | sudo tee -a /etc/sysctl.conf
+         
+       sudo sysctl -w vm.max_map_count=262144
+       ```
+       This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+    
+    
 #### Starting seqr
 
 The steps below describe how to create a new empty seqr instance with a single Admin user account.
@@ -28,16 +39,23 @@ open http://localhost     # open the seqr landing page in your browser. Log in t
    
 #### Annotating and loading VCF callsets - option #1: annotate on a Google Dataproc cluster, then load in to an on-prem seqr instance 
 
-Google Dataproc makes it easy to parallelize annotation across many machines.
+Google Dataproc makes it easy to start a spark cluster which can be used to parallelize annotation across many machines.
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
-1. authenticate into your google account
+1. authenticate into your google cloud account.
    ```
    gcloud auth application-default login  
    ```
 1. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh37/your-callset.vcf.gz`
 
-1. start a pipeline-runner container which has the necessary tools and environment pre-installed.
+1. start an elasticsearch container.
+   ```
+   docker-compose up -d elasticsearch
+   docker-compose logs -f elasticsearch  # (optional) continuously print elasticsearch logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs.
+   curl localhost:9200   # (optional) once the container is done starting up, this should print a JSON message indicating elasticsearch is running and ready to accept requests. 
+   ```
+    
+1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
    ```
    SEQR_DIR=$(pwd)
    
@@ -79,9 +97,10 @@ The steps below describe how to annotate a callset and then load it into your on
         --es-host elasticsearch  \
         --es-index your-callset-name
    ``` 
-
-   
-#### #### Annotating and loading VCF callsets - option #2: annotate and load on-prem
+  
+  
+  
+#### Annotating and loading VCF callsets - option #2: annotate and load on-prem
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
