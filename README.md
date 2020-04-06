@@ -20,5 +20,13 @@ seqr consists of the following components:
 ## Install
 
 The seqr production instance runs on Google Kubernetes Engine (GKE) and data is loaded using Google Dataproc Spark clusters. 
-  
+
+On-prem installs can be created using docker-compose:
 **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**  
+
+
+## Updating / Migrating an older seqr Instance	
+
+For notes on how to update an older instance, see  	
+
+[Update/Migration Instructions](deploy/MIGRATE.md)
