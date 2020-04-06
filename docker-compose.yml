@@ -2,7 +2,7 @@ version: '2.4'
 
 services:
   postgres:
-    image: gcr.io/seqr-project/postgres:gcloud-dev
+    image: gcr.io/seqr-project/postgres:gcloud-prod
     ports:
       - 5432:5432
     volumes:
@@ -15,7 +15,7 @@ services:
 
 
   redis:
-    image: gcr.io/seqr-project/redis:gcloud-dev
+    image: gcr.io/seqr-project/redis:gcloud-prod
     ports:
       - 6379:6379
     healthcheck:
@@ -26,7 +26,7 @@ services:
 
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch:gcloud-dev
+    image: gcr.io/seqr-project/elasticsearch:gcloud-prod
     ports:
       - 9200:9200
     volumes:
@@ -38,7 +38,7 @@ services:
       retries: 100
 
   kibana:
-    image: gcr.io/seqr-project/kibana:gcloud-dev
+    image: gcr.io/seqr-project/kibana:gcloud-prod
     ports:
       - 5601:5601
     environment:
@@ -55,7 +55,7 @@ services:
 
 
   phenotips:
-    image: gcr.io/seqr-project/phenotips:gcloud-dev
+    image: gcr.io/seqr-project/phenotips:gcloud-prod
     ports:
       - 8080:8080
     depends_on:
@@ -69,7 +69,7 @@ services:
 
 
   seqr:
-    image: gcr.io/seqr-project/seqr:gcloud-dev
+    image: gcr.io/seqr-project/seqr:gcloud-prod
     ports:
       - 80:8000
     environment:
@@ -96,7 +96,7 @@ services:
       test: bash -c "curl -s 'http://localhost:8000' | grep html"
 
   pipeline-runner:
-    image: gcr.io/seqr-project/pipeline-runner:gcloud-dev
+    image: gcr.io/seqr-project/pipeline-runner:gcloud-prod
     volumes:
       - ./data/vep_data:/vep_data
       - ./data/input_vcfs:/input_vcfs
