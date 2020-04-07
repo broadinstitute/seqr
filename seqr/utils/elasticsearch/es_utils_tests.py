@@ -1092,10 +1092,10 @@ def create_mock_response(search, index=INDEX_NAME):
                                           for var in deepcopy(index_vars.get(bucket['key'], ES_VARIANTS))]
         else:
             for bucket in mock_response.aggregations.genes.buckets:
-                for sample_field in ['samples_num_alt_1', 'samples_num_alt_2']:
+                for sample_field in ['samples', 'samples_num_alt_1', 'samples_num_alt_2']:
                     gene_samples = defaultdict(int)
                     for var in index_vars.get(bucket['key'], ES_VARIANTS):
-                        for sample in var['_source'][sample_field]:
+                        for sample in var['_source'].get(sample_field, []):
                             gene_samples[sample] += 1
                     bucket[sample_field] = {'buckets': [{'key': k, 'doc_count': v} for k, v in gene_samples.items()]}
     else:
@@ -2113,7 +2113,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
             'qualityFilter': {'min_gq': 10},
             'inheritance': {'mode': 'recessive'},
-            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5']))
@@ -2226,6 +2226,7 @@ class EsUtilsTest(TestCase):
             filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
             size=1,
             gene_count_aggs={
+                'samples': {'terms': {'field': 'samples', 'size': 10000}},
                 'samples_num_alt_1': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}},
                 'samples_num_alt_2': {'terms': {'field': 'samples_num_alt_2', 'size': 10000}}
             }
