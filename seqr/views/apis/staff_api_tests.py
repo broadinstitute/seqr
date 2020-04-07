@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import mock
+from datetime import datetime
 
 from django.test import TestCase
 from django.urls.base import reverse
@@ -204,6 +205,17 @@ EXPECTED_ERRORS = [
 
 EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'13', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
 
+EXPECTED_MME_DETAILS_METRICS = {
+    u'numberOfPotentialMatchesSent': 1,
+    u'numberOfUniqueGenes': 4,
+    u'numberOfCases': 3,
+    u'numberOfRequestsReceived': 3,
+    u'numberOfSubmitters': 2,
+    u'numberOfUniqueFeatures': 5,
+    u'dateGenerated': datetime.now().strftime('%Y-%m-%d')
+}
+
+
 class StaffAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
     multi_db = True
@@ -247,6 +259,10 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['metrics', 'genesById', 'submissions'])
+        self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
+        self.assertEqual(len(response_json['genesById']), 4)
+        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'])
+        self.assertEqual(len(response_json['submissions']), 3)
 
     def test_seqr_stats(self):
         url = reverse(seqr_stats)
@@ -256,6 +272,9 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['individualCount', 'familyCount', 'sampleCountByType'])
+        self.assertEqual(response_json['individualCount'], 16)
+        self.assertEqual(response_json['familyCount'], 13)
+        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
     def test_get_projects_for_category(self):
         url = reverse(get_projects_for_category, args=[PROJECT_CATEGRORY_NAME])
@@ -265,6 +284,7 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['projectGuids'])
+        self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
 
     def test_discovery_sheet(self):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
@@ -288,6 +308,7 @@ class StaffAPITest(TestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
         self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
+        self.assertEqual(len(response_json['rows']), 10)
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
