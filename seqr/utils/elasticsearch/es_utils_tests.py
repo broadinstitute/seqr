@@ -364,15 +364,15 @@ ES_SV_VARIANT = {
         {
           'transcript_id': 'ENST00000371839',
           'biotype': 'protein_coding',
-          'gene_id': 'ENSG00000186094'
+          'gene_id': 'ENSG00000228198'
         },
         {
           'transcript_id': 'ENST00000416121',
           'biotype': 'protein_coding',
-          'gene_id': 'ENSG00000186094'
+          'gene_id': 'ENSG00000228198'
         },
       ],
-      'geneIds': ['ENSG00000186094'],
+      'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
     },
@@ -396,6 +396,8 @@ COMPOUND_HET_INDEX_VARIANTS = {
         'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
     },
     '{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
+    SV_INDEX_NAME: {'ENSG00000228198': [ES_SV_VARIANT], 'ENSG00000135953': []},
+    '{},{}'.format(INDEX_NAME, SV_INDEX_NAME): {'ENSG00000228198': [ES_SV_VARIANT, ES_VARIANTS[1]], 'ENSG00000135953': []},
 }
 
 INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT], SV_INDEX_NAME: [ES_SV_VARIANT]}
@@ -607,18 +609,20 @@ PARSED_SV_VARIANT = {
         },
         'I000005_hg00732': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
         },
     },
+    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+    'hgmd': {'accession': None, 'class': None},
     'genomeVersion': '37',
-    'genotypeFilters': '',
+    'genotypeFilters': [],
     'liftedOverChrom': None,
     'liftedOverGenomeVersion': None,
     'liftedOverPos': None,
     'mainTranscriptId': None,
-    'originalAltAlleles': None,
+    'originalAltAlleles': [],
     'populations': {
-        'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None},
+        'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
@@ -633,25 +637,25 @@ PARSED_SV_VARIANT = {
     'ref': None,
     'rsid': None,
     'transcripts': {
-        'ENSG00000186094': [
+        'ENSG00000228198': [
             {
-              'transcript_id': 'ENST00000371839',
+              'transcriptId': 'ENST00000371839',
               'biotype': 'protein_coding',
-              'gene_id': 'ENSG00000186094'
+              'geneId': 'ENSG00000228198'
             },
             {
-              'transcript_id': 'ENST00000416121',
+              'transcriptId': 'ENST00000416121',
               'biotype': 'protein_coding',
-              'gene_id': 'ENSG00000186094'
+              'geneId': 'ENSG00000228198'
             },
         ],
     },
     'variantId': 'prefix_19107_DEL',
-    'xpos': 1049045898,
+    'xpos': 1049045487,
     'end': 49045898,
     'svType': 'DEL',
     'numExon': 2,
-    '_sort': [1049045898],
+    '_sort': [1049045487],
 }
 
 PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
@@ -662,6 +666,10 @@ PARSED_COMPOUND_HET_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_COMPOUND_HET_VARIANTS[0]['_sort'] = [1248367327]
 PARSED_COMPOUND_HET_VARIANTS[1]['_sort'] = [2103343453]
 PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000003_3']
+
+PARSED_SV_COMPOUND_HET_VARIANTS = [deepcopy(PARSED_SV_VARIANT), deepcopy(PARSED_COMPOUND_HET_VARIANTS[1])]
+PARSED_SV_COMPOUND_HET_VARIANTS[0]['_sort'] = [1049045587]
+PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
 for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
@@ -1020,14 +1028,18 @@ class MockHit:
 
     def __init__(self, matched_queries=None, _source=None, increment_sort=False, no_matched_queries=False, sort=None, index=INDEX_NAME):
         self.meta = mock.MagicMock()
+        self.meta.index = index
         if no_matched_queries:
             del self.meta.matched_queries
         else:
             self.meta.matched_queries = []
             for subindex in index.split(','):
-                self.meta.matched_queries += matched_queries[subindex]
-        self.meta.index = index
+                if subindex in matched_queries:
+                    self.meta.index = subindex
+                    self.meta.matched_queries += matched_queries[subindex]
         self.meta.id = _source['variantId']
+        if SV_INDEX_NAME in index:
+            self.meta.doc_type = 'structural_variant'
         if sort or increment_sort:
             sort = _source['xpos']
             if increment_sort:
@@ -1131,7 +1143,11 @@ class EsUtilsTest(TestCase):
         self.assertIsInstance(self.executed_search, list)
         self.assertEqual(len(self.executed_search), len(searches)*2)
         for i, expected_search in enumerate(searches):
-            self.assertDictEqual(self.executed_search[i*2], {'index': [expected_search.get('index', INDEX_NAME)]})
+            try:
+                self.assertDictEqual(self.executed_search[i*2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
+            except Exception as e:
+                import pdb;
+                pdb.set_trace()
             self.assertSameSearch(self.executed_search[(i*2)+1], expected_search)
         self.executed_search = None
         self.searched_indices = []
@@ -1165,6 +1181,10 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
+        if executed_search != expected_search:
+            exp = expected_search_params['filters']
+            act = executed_search['query']['bool']['filter']
+            import pdb;pdb.set_trace()
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -1496,12 +1516,53 @@ class EsUtilsTest(TestCase):
             }}
         ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}, 'xpos'])
 
+    def test_sv_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['DEL']},
+            'freqs': {'sv_callset': {'af': 0.1}},
+            'qualityFilter': {'min_qs': 20},
+            'inheritance': {'mode': 'de_novo'},
+            'datasetType': Sample.DATASET_TYPE_SV_CALLS,
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, _ = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, [PARSED_SV_VARIANT])
+
+        self.assertExecutedSearch(filters=[
+            {'bool': {
+                'should': [
+                    {'bool': {'must_not': [{'exists': {'field': 'sf'}}]}},
+                    {'range': {'sf': {'lte': 0.1}}}
+                ]
+            }},
+            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'bool': {
+                'must': [
+                    {'bool': {
+                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                        'must': [{'term': {'samples': 'HG00731'}}],
+                    }},
+                    {'bool': {
+                        'must_not': [
+                            {'term': {'samples_qs_0_to_10': 'HG00731'}},
+                            {'term': {'samples_qs_10_to_20': 'HG00731'}},
+                            {'term': {'samples_qs_0_to_10': 'HG00732'}},
+                            {'term': {'samples_qs_10_to_20': 'HG00732'}},
+                        ],
+                    }}
+                ],
+                '_name': 'F000002_2'
+            }}
+        ], sort=['xpos'], index=SV_INDEX_NAME)
+
     def test_compound_het_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'qualityFilter': {'min_gq': 10},
             'annotations': {'other': []},
             'inheritance': {'mode': 'compound_het'},
-            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1629,9 +1690,165 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
 
+    def test_multi_datatype_recessive_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant'], 'structural': ['DEL']},
+            'inheritance': {'mode': 'recessive'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, _ = get_es_variants(results_model, num_results=10)
+        self.assertEqual(len(variants), 5)
+        self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
+        self.assertDictEqual(variants[1][0], PARSED_SV_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[1][1], PARSED_SV_COMPOUND_HET_VARIANTS[1])
+        self.assertDictEqual(variants[2], PARSED_VARIANTS[0])
+        self.assertDictEqual(variants[3][0], PARSED_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[3][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertDictEqual(variants[4], PARSED_VARIANTS[1])
+
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    annotation_query,
+                    {'bool': {
+                        '_name': 'F000002_2',
+                        'must': [{
+                            'bool': {
+                                'should': [
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'term': {'samples_cn_0': 'HG00731'}},
+                                            {'term': {'samples_cn_2': 'HG00731'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                        ],
+                                        'must': [{
+                                            'bool': {
+                                                'minimum_should_match': 1,
+                                                'should': [
+                                                    {'term': {'samples_cn_1': 'HG00732'}},
+                                                    {'term': {'samples_cn_3': 'HG00732'}},
+                                                ]}
+                                        }]
+                                    }},
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'term': {'samples_cn_0': 'HG00731'}},
+                                            {'term': {'samples_cn_2': 'HG00731'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                        ],
+                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must': [{'match': {'contig': 'X'}}],
+                                    }}
+                                ]
+                            }
+                        }]
+                    }}
+                ], start_index=0, size=10, sort=['xpos'], index=SV_INDEX_NAME,
+            ),
+            dict(
+                filters=[annotation_query, {'bool': {
+                    '_name': 'F000002_2',
+                    'must': [
+                        {'bool': {
+                            'should': [
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                }},
+                                {'term': {'samples': 'HG00731'}},
+                            ]
+                        }},
+                    ]
+                    }},
+                 ],
+                gene_aggs=True,
+                sort=['xpos'],
+                start_index=0,
+                size=1,
+                index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            ),
+            dict(
+                filters=[
+                    annotation_query,
+                    {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
+                ],
+                gene_aggs=True,
+                sort=['xpos'],
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    annotation_query,
+                    {
+                        'bool': {
+                            'should': [
+                                {'bool': {
+                                    '_name': 'F000002_2',
+                                    'must': [
+                                        {'bool': {
+                                            'should': [
+                                                {'bool': {
+                                                    'must_not': [
+                                                        {'term': {'samples_no_call': 'HG00732'}},
+                                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                        {'term': {'samples_no_call': 'HG00733'}},
+                                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                                    ],
+                                                    'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
+                                                }},
+                                                {'bool': {
+                                                    'must_not': [
+                                                        {'term': {'samples_no_call': 'HG00732'}},
+                                                        {'term': {'samples_num_alt_1': 'HG00732'}},
+                                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                        {'term': {'samples_no_call': 'HG00733'}},
+                                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                                    ],
+                                                    'must': [
+                                                        {'match': {'contig': 'X'}},
+                                                        {'term': {'samples_num_alt_2': 'HG00731'}}
+                                                    ]
+                                                }}
+                                            ]
+                                        }},
+                                    ]
+                                }},
+                                {'bool': {
+                                    '_name': 'F000003_3',
+                                    'must': [
+                                        {'bool': {
+                                            'should': [
+                                                {'bool': {'must': [
+                                                    {'match': {'contig': 'X'}},
+                                                    {'term': {'samples_num_alt_2': 'NA20870'}}
+                                                ]}},
+                                                {'term': {'samples_num_alt_2': 'NA20870'}},
+                                            ]
+                                        }}
+                                    ]
+                                }},
+                            ]
+                        }
+                    }
+                ], start_index=0, size=10, sort=['xpos'],
+            ),
+        ])
+
     def test_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'frameshift': ['frameshift_variant']}, 'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS, # TODO test with SVs
+            'annotations': {'frameshift': ['frameshift_variant']}, 'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
@@ -1783,7 +2000,7 @@ class EsUtilsTest(TestCase):
     def test_multi_project_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
-            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
@@ -1829,7 +2046,7 @@ class EsUtilsTest(TestCase):
     def test_multi_project_all_samples_any_affected_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
-            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS, # TODO test with SVs
+            'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,
         },
         )
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -2085,11 +2302,11 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(guid='F000002_2'))
         cache_key = 'search_results__{}__xpos'.format(results_model.guid)
 
-        def _execute_inheritance_search(mode=None, filter=None):
+        def _execute_inheritance_search(mode=None, filter=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
             _set_cache(cache_key, None)
             search_model.search = {
                 'inheritance': {'mode': mode, 'filter': filter},
-                'datasetType': Sample.DATASET_TYPE_VARIANT_CALLS,  # TODO test with SVs
+                'datasetType': dataset_type,
             }
             search_model.save()
             get_es_variants(results_model, num_results=2)
@@ -2128,6 +2345,15 @@ class EsUtilsTest(TestCase):
                         {'term': {'samples_num_alt_1': 'HG00731'}},
                         {'term': {'samples_num_alt_2': 'HG00731'}}
                     ]
+                }
+            }]}}])
+
+        _execute_inheritance_search(mode='de_novo', dataset_type='SV')
+        self.assertExecutedSearch(sort=['xpos'], index=SV_INDEX_NAME, filters=[
+            {'bool': {'_name': 'F000002_2', 'must': [{
+                'bool': {
+                    'must_not': [{'term': {'samples': 'HG00732'}}],
+                    'must': [{'term': {'samples': 'HG00731'}}],
                 }
             }]}}])
 
@@ -2189,6 +2415,24 @@ class EsUtilsTest(TestCase):
                 ]
             }
         }
+        sv_recessive_filter = {
+            'bool': {
+                'minimum_should_match': 1,
+                'should': [
+                    {'term': {'samples_cn_0': 'HG00731'}},
+                    {'term': {'samples_cn_2': 'HG00731'}},
+                    {'term': {'samples_cn_gte_4': 'HG00731'}},
+                ],
+                'must': [{
+                    'bool': {
+                        'minimum_should_match': 1,
+                        'should': [
+                            {'term': {'samples_cn_1': 'HG00732'}},
+                            {'term': {'samples_cn_3': 'HG00732'}},
+                    ]}
+                }]
+            }
+        }
         custom_affected_recessive_filter = {
             'bool': {
                 'must_not': [
@@ -2206,6 +2450,10 @@ class EsUtilsTest(TestCase):
         # homozygous recessive
         _execute_inheritance_search(mode='homozygous_recessive')
         self.assertExecutedSearch(sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [recessive_filter]}}])
+
+        _execute_inheritance_search(mode='homozygous_recessive', dataset_type='SV')
+        self.assertExecutedSearch(
+            sort=['xpos'], index=SV_INDEX_NAME, filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_recessive_filter]}}])
 
         _execute_inheritance_search(mode='homozygous_recessive', filter={'affected': custom_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
@@ -2226,6 +2474,8 @@ class EsUtilsTest(TestCase):
             }
         }
 
+        sv_com_het_filter = {'term': {'samples': 'HG00731'}}
+
         custom_affected_comp_het_filter = {
             'bool': {
                 'must_not': [
@@ -2243,6 +2493,10 @@ class EsUtilsTest(TestCase):
         _execute_inheritance_search(mode='compound_het')
         self.assertExecutedSearch(
             sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [com_het_filter]}}], gene_aggs=True, size=1)
+        _execute_inheritance_search(mode='compound_het', dataset_type='SV')
+        self.assertExecutedSearch(
+            sort=['xpos'], index=SV_INDEX_NAME, gene_aggs=True, size=1,
+            filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_com_het_filter]}}])
         _execute_inheritance_search(mode='compound_het', filter={'affected': custom_affected})
         self.assertExecutedSearch(
             sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [custom_affected_comp_het_filter]}}],
@@ -2265,6 +2519,19 @@ class EsUtilsTest(TestCase):
             }
         }
 
+        sv_x_linked_filter = {
+            'bool': {
+                'minimum_should_match': 1,
+                'should': [
+                    {'term': {'samples_cn_0': 'HG00731'}},
+                    {'term': {'samples_cn_2': 'HG00731'}},
+                    {'term': {'samples_cn_gte_4': 'HG00731'}},
+                ],
+                'must_not': [{'term': {'samples': 'HG00732'}}],
+                'must': [{'match': {'contig': 'X'}}],
+            }
+        }
+
         custom_affected_x_linked_filter = {
             'bool': {
                 'must_not': [
@@ -2281,8 +2548,11 @@ class EsUtilsTest(TestCase):
         }
 
         _execute_inheritance_search(mode='x_linked_recessive')
-        self.assertExecutedSearch(sort=['xpos'], filters=[
-            {'bool': {'_name': 'F000002_2', 'must': [x_linked_filter]}}])
+        self.assertExecutedSearch(sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [x_linked_filter]}}])
+
+        _execute_inheritance_search(mode='x_linked_recessive', dataset_type='SV')
+        self.assertExecutedSearch(
+            sort=['xpos'], index=SV_INDEX_NAME, filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_x_linked_filter]}}])
 
         _execute_inheritance_search(mode='x_linked_recessive', filter={'affected': custom_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
@@ -2296,6 +2566,14 @@ class EsUtilsTest(TestCase):
             dict(sort=['xpos'], start_index=0, size=2, filters=[{'bool': {'_name': 'F000002_2', 'must': [{
                 'bool': {'should': [recessive_filter, x_linked_filter]}
             }]}}]),
+        ])
+
+        _execute_inheritance_search(mode='recessive', dataset_type='SV')
+        self.assertExecutedSearches([
+            dict(sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_com_het_filter]}}],
+                 gene_aggs=True, start_index=0, size=1, index=SV_INDEX_NAME),
+            dict(sort=['xpos'], start_index=0, size=2, index=SV_INDEX_NAME, filters=[{'bool': {
+                '_name': 'F000002_2', 'must': [{'bool': {'should': [sv_recessive_filter, sv_x_linked_filter]}}]}}]),
         ])
 
         _execute_inheritance_search(mode='recessive', filter={'affected': custom_affected})

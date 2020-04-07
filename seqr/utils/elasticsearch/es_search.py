@@ -194,7 +194,8 @@ class EsSearch(object):
         self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family)
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family):
-        all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not inheritance_filter)
+        has_inheritance_filter = inheritance_filter or inheritance_mode
+        all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
             index_fields = self.index_metadata[index]['fields']
@@ -229,7 +230,7 @@ class EsSearch(object):
                         sample_ids = [sample_id for sample_id, sample in samples_by_id.items()
                                       if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
                         family_samples_q = _any_affected_sample_filter(sample_ids)
-                    elif inheritance_filter or inheritance_mode:
+                    elif has_inheritance_filter:
                         if inheritance_mode:
                             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
@@ -507,9 +508,10 @@ class EsSearch(object):
             })
             if len(samples_by_id) != len(genotypes) and raw_hit.meta.doc_type == SV_DOC_TYPE:
                 # Family members with no variants are not included in the SV index
-                for sample in samples_by_id.values():
+                for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
-                        genotypes[sample.individual.guid] = _get_field_values({}, GENOTYPE_FIELDS_CONFIG)
+                        genotypes[sample.individual.guid] = _get_field_values(
+                            {'sample_id': sample_id}, GENOTYPE_FIELDS_CONFIG)
                         genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
@@ -569,7 +571,7 @@ class EsSearch(object):
             'predictions': _get_field_values(
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
             ),
-            'transcripts': transcripts,
+            'transcripts': dict(transcripts),
         })
         return result
 
@@ -594,16 +596,22 @@ class EsSearch(object):
             # Variants are returned if any transcripts have the filtered consequence, but to be compound het
             # the filtered consequence needs to be present in at least one transcript in the gene of interest
             if self._allowed_consequences:
+                for variant in gene_variants:
+                    variant['gene_consequences'] = {
+                        k: [variant['svType']] if variant.get('svType') else [
+                            transcript['majorConsequence'] for transcript in transcripts
+                        ] for k, transcripts in variant['transcripts'].items()}
+
                 gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in self._allowed_consequences + (self._allowed_consequences_secondary or [])
-                    for transcript in variant['transcripts'][gene_id]
+                    consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
+                    for consequence in variant['gene_consequences'].get(gene_id, [])
                 )]
 
             if len(gene_variants) < 2:
                 continue
 
             # Do not include groups multiple times if identical variants are in the same multiple genes
-            if any(all(t['transcriptId'] != variant['mainTranscriptId']
+            if any((not variant['mainTranscriptId']) or all(t['transcriptId'] != variant['mainTranscriptId']
                        for t in variant['transcripts'][gene_id]) for variant in gene_variants):
                 if not self._is_primary_compound_het_gene(gene_id, gene_variants, compound_het_pairs_by_gene):
                     continue
@@ -620,6 +628,7 @@ class EsSearch(object):
                 for variant in compound_het_pair:
                     variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
                                               if len(family_compound_het_pairs[family_guid]) > 0]
+                    variant.pop('gene_consequences', None)
             gene_compound_het_pairs = [compound_het_pair for compound_het_pair in gene_compound_het_pairs
                                        if compound_het_pair[0]['familyGuids'] and compound_het_pair[1]['familyGuids']]
             if gene_compound_het_pairs:
@@ -636,17 +645,18 @@ class EsSearch(object):
     def _is_primary_compound_het_gene(self, gene_id, gene_variants, compound_het_pairs_by_gene):
         primary_genes = set()
         for variant in gene_variants:
-            for gene, transcripts in variant['transcripts'].items():
-                if any(t['transcriptId'] == variant['mainTranscriptId'] for t in transcripts):
-                    primary_genes.add(gene)
-                    break
+            if variant['mainTranscriptId']:
+                for gene, transcripts in variant['transcripts'].items():
+                    if any(t['transcriptId'] == variant['mainTranscriptId'] for t in transcripts):
+                        primary_genes.add(gene)
+                        break
         if len(primary_genes) == 1:
             is_valid_gene = True
             primary_gene = primary_genes.pop()
             if self._allowed_consequences:
                 is_valid_gene = all(any(
-                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                    variant['transcripts'][primary_gene]
+                    consequence in self._allowed_consequences for consequence in
+                    variant['gene_consequences'].get(primary_gene, [])
                 ) for variant in gene_variants)
             if is_valid_gene:
                 if primary_gene != gene_id:
@@ -665,7 +675,7 @@ class EsSearch(object):
     def _filter_invalid_family_compound_hets(self, gene_id, family_compound_het_pairs, family_unaffected_individual_guids):
         for family_guid, variants in family_compound_het_pairs.items():
             unaffected_genotypes = [
-                [variant['genotypes'].get(individual_guid, {}) for variant in variants]
+                [variant['genotypes'].get(individual_guid, {'isRef': True}) for variant in variants]
                 for individual_guid in family_unaffected_individual_guids.get(family_guid, [])
             ]
 
@@ -689,8 +699,8 @@ class EsSearch(object):
             # remove compound hets pair that only satisfied secondary consequence
             if self._allowed_consequences and self._allowed_consequences_secondary:
                 compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if any([
-                    any(transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                        variant['transcripts'][gene_id]) for variant in compound_het_pair])]
+                    any(consequence in self._allowed_consequences for consequence in
+                        variant['gene_consequences'].get(gene_id, [])) for variant in compound_het_pair])]
             family_compound_het_pairs[family_guid] = compound_het_pairs
 
     def _deduplicate_results(self, sorted_new_results):
