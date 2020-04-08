@@ -46,14 +46,19 @@ def add_variants_dataset_handler(request, project_guid):
     request_json = json.loads(request.body)
 
     try:
-        if 'elasticsearchIndex' not in request_json:
-            raise ValueError('"elasticsearchIndex" is required')
+        required_fields = ['elasticsearchIndex', 'datasetType']
+        if any(field not in request_json for field in required_fields):
+            raise ValueError('request must contain fields: {}'.format(', '.join(required_fields)))
         elasticsearch_index = request_json['elasticsearchIndex'].strip()
+        dataset_type = request_json['datasetType']
+        if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
+            raise ValueError('Invalid dataset type "{}"'.format(dataset_type))
 
-        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
-        validate_index_metadata(index_metadata, project, elasticsearch_index)
+        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index, dataset_type=dataset_type)
+        if not sample_ids:
+            raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
+        validate_index_metadata(index_metadata, project, elasticsearch_index, dataset_type=dataset_type)
         sample_type = index_metadata['sampleType']
-        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
@@ -103,7 +108,7 @@ def add_variants_dataset_handler(request, project_guid):
                     ))))
 
         inactivate_sample_guids = _update_variant_samples(
-            matched_sample_id_to_sample_record, elasticsearch_index, loaded_date)
+            matched_sample_id_to_sample_record, elasticsearch_index, loaded_date, dataset_type)
 
     except Exception as e:
         traceback.print_exc()
@@ -208,7 +213,8 @@ def update_individual_igv_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, loaded_date=None):
+def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, loaded_date=None,
+                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     if not loaded_date:
         loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
@@ -227,6 +233,7 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
     inactivate_samples = Sample.objects.filter(
         individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
         is_active=True,
+        dataset_type=dataset_type,
     ).exclude(id__in=updated_samples)
     inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
     inactivate_samples.update(is_active=False)

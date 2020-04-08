@@ -9,7 +9,8 @@ import Modal from 'shared/components/modal/Modal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
-import { BooleanCheckbox } from 'shared/components/form/Inputs'
+import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
 
@@ -32,7 +33,7 @@ const SUBMIT_FUNCTIONS = {
   [ADD_IGV_FORM]: addIGVDataset,
 }
 
-const BaseUpdateDatasetForm = React.memo(({ formType, formFields, onSubmit }) => (
+const BaseUpdateDatasetForm = React.memo(({ formType, formFields, initialValues, onSubmit }) => (
   <ReduxFormWrapper
     form={`upload${formType}`}
     modalName={MODAL_NAME}
@@ -42,12 +43,14 @@ const BaseUpdateDatasetForm = React.memo(({ formType, formFields, onSubmit }) =>
     size="small"
     fields={formFields}
     liveValidate={formType === ADD_IGV_FORM}
+    initialValues={initialValues}
   />
 ))
 
 BaseUpdateDatasetForm.propTypes = {
   formFields: PropTypes.array.isRequired,
   formType: PropTypes.string.isRequired,
+  initialValues: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
@@ -65,6 +68,17 @@ const UPLOAD_CALLSET_FIELDS = [
     label: 'Elasticsearch Index*',
     labelHelp: 'The elasticsearch index where the callset has already been loaded.',
     validate: value => (value ? undefined : 'Specify the Elasticsearch Index where this callset has been loaded'),
+  },
+  {
+    name: 'datasetType',
+    label: 'Caller Type*',
+    labelHelp: 'The caller used to generate the raw data for this index',
+    component: Select,
+    options: [
+      { value: DATASET_TYPE_VARIANT_CALLS, name: 'Haplotypecaller' },
+      { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
+    ],
+    validate: value => (value ? undefined : 'Specify the caller type'),
   },
   {
     name: 'mappingFilePath',
@@ -117,25 +131,28 @@ const UPLOAD_IGV_FIELDS = [
   },
 ]
 
+const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_VARIANT_CALLS }
 
 const PANES = [
   {
     title: 'Upload New Callset',
     formType: ADD_VARIANT_FORM,
     formFields: UPLOAD_CALLSET_FIELDS,
+    initialValues: DEFAULT_UPLOAD_CALLSET_VALUE,
   },
   {
     title: 'Add BAM/CRAM Paths',
     formType: ADD_IGV_FORM,
     formFields: UPLOAD_IGV_FIELDS,
   },
-].map(({ title, formType, formFields }) => ({
+].map(({ title, formType, formFields, initialValues }) => ({
   menuItem: title,
   render: () =>
     <Tab.Pane key={formType}>
       <UpdateDatasetForm
         formType={formType}
         formFields={formFields}
+        initialValues={initialValues}
       />
     </Tab.Pane>,
 }))

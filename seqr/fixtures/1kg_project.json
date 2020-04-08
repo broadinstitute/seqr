@@ -1022,6 +1022,40 @@
     }
 },
 {
+    "model": "seqr.sample",
+    "pk": 145,
+    "fields": {
+        "guid": "S000145_hg00731",
+        "created_date": "2018-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2018-03-13T09:07:49.937Z",
+        "elasticsearch_index": "test_index_sv",
+        "sample_id": "HG00731",
+        "sample_type": "WES",
+        "is_active": true,
+        "individual": 4,
+        "dataset_type": "SV",
+        "loaded_date": "2018-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
+    "pk": 146,
+    "fields": {
+        "guid": "S000146_hg00732",
+        "created_date": "2018-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2018-03-13T09:07:49.963Z",
+        "elasticsearch_index": "test_index_sv",
+        "sample_id": "HG00732",
+        "sample_type": "WES",
+        "is_active": true,
+        "individual": 5,
+        "dataset_type": "SV",
+        "loaded_date": "2018-02-05T06:42:55.397Z"
+    }
+},
+{
     "model": "seqr.igvsample",
     "pk": 145,
     "fields": {
@@ -1093,8 +1127,9 @@
         "xpos_end": 21003343356,
         "ref": "GAGA",
         "alt": "G",
+        "variant_id": "21-3343353-GAGA-G",
         "saved_variant_json": {
-            "variantId": "abc123",
+            "variantId": "21-3343353-GAGA-G",
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "",
             "familyGuids": ["F000001_1", "F000002_2"],
@@ -1133,6 +1168,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
+        "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {"clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null}, "liftedOverGenomeVersion": "38", "familyGuids": ["F000001_1"], "liftedOverPos": "", "genotypeFilters": "pass", "mainTranscriptId": null, "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 6.505916317651364e-05}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0006726888333653661}, "topmed": {"ac": null, "an": null, "af": null}}, "genomeVersion": "37", "pos": 248367227, "predictions": {"eigen": null, "revel": null, "sift": null, "cadd": "27.2", "metasvm": "", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null, "dann": null, "primate_ai": null, "gerp_rs": null}, "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "", "originalAltAlleles": ["T"], "transcripts": {}, "chrom": "1", "genotypes": {"I000003_na19679": {"sampleId": "NA19679", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000002_na19678": {"sampleId": "NA19678", "ab": 0.0, "ad": "77,0", "gq": 99.0, "dp": "77", "pl": "0,232,3036", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}}},
         "family": 2
     }
@@ -1149,6 +1185,7 @@
         "xpos_end": 1003121324,
         "ref": "G",
         "alt": "A",
+        "variant_id": "1-46859832-G-A",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
@@ -1191,6 +1228,7 @@
         "xpos_end": 1003124874,
         "ref": "G",
         "alt": "C",
+        "variant_id": "1-1562437-G-C",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
@@ -1275,6 +1313,7 @@
         "xpos_end": 1248367228,
         "ref": "TC",
         "alt": "T",
+        "variant_id": "12-48367227-TC-T",
         "saved_variant_json": {"clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null}, "liftedOverGenomeVersion": "38", "familyGuids": ["F000001_1"], "liftedOverPos": "", "genotypeFilters": "pass", "mainTranscriptId": null, "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 6.505916317651364e-05}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0006726888333653661}, "topmed": {"ac": null, "an": null, "af": null}}, "genomeVersion": "37", "pos": 248367227, "predictions": {"eigen": null, "revel": null, "sift": null, "cadd": "27.2", "metasvm": "", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null, "dann": null, "primate_ai": null, "gerp_rs": null}, "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "", "originalAltAlleles": ["T"], "transcripts": {}, "chrom": "1", "genotypes": {"I000003_na19679": {"sampleId": "NA19679", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000002_na19678": {"sampleId": "NA19678", "ab": 0.0, "ad": "77,0", "gq": 99.0, "dp": "77", "pl": "0,232,3036", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}}},
         "family": 11
     }
