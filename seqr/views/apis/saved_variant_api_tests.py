@@ -186,7 +186,7 @@ class SavedVariantAPITest(TransactionTestCase):
             'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
             'familyGuid': 'F000001_1',
             'tags': [{'name': 'Review'}],
-            'notes': [],
+            'note': '',
             'functionalData': [],
             'variant': variant_json,
         }
@@ -215,6 +215,60 @@ class SavedVariantAPITest(TransactionTestCase):
 
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
+
+    def test_create_saved_sv_variant(self):
+        create_saved_variant_url = reverse(create_saved_variant_handler)
+        _check_login(self, create_saved_variant_url)
+
+        variant_json = {
+            'chrom': '2',
+            'genotypes': {},
+            'genomeVersion': '37',
+            'mainTranscriptId': None,
+            'populations': {'sv_callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+            'pos': 61413835,
+            'end': 61414175,
+            'predictions': {'strvctvre': 21.9},
+            'transcripts': {},
+            'projectGuid': 'R0001_1kg',
+            'familyGuids': ['F000001_1', 'F000002_2'],
+            'svType': 'DUP',
+            'variantId': 'batch_123_DUP',
+        }
+
+        request_body = {
+            'familyGuid': 'F000001_1',
+            'tags': [],
+            'note': 'A promising SV',
+            'functionalData': [],
+            'variant': variant_json,
+        }
+
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
+        variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
+
+        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        variant_json.update({'xpos': 2061413835})
+        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
+        self.assertEqual(saved_variant.xpos_end, 2061414175)
+
+        variant_json.update({
+            'variantGuid': variant_guid,
+            'familyGuids': ['F000001_1'],
+            'alt': None,
+            'ref': None,
+            'selectedMainTranscriptId': None,
+            'tagGuids': [],
+            'functionalDataGuids': [],
+        })
+        response_json = response.json()
+        response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
+        notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
+        self.assertDictEqual(variant_json, response_variant_json)
+        self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
 
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
@@ -346,7 +400,7 @@ class SavedVariantAPITest(TransactionTestCase):
         _check_login(self, create_saved_variant_url)
 
         request_body = {
-            'variant': [COMPOUND_HET_5_JSON, {'variantId': 'abc123', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
+            'variant': [COMPOUND_HET_5_JSON, {'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
             'note': 'one_saved_one_not_saved_compount_hets_note',
             'submitToClinvar': True,
             'familyGuid': 'F000001_1',
@@ -623,7 +677,7 @@ class SavedVariantAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
     def test_update_saved_variant_json(self, mock_retrieve_variants):
         mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
-            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'familyGuids': [var[3].guid]} for var in variant_tuples]
+            [{'variantId': var[0], 'familyGuids': [var[1].guid]} for var in variant_tuples]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         _check_login(self, url)

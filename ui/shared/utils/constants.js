@@ -55,7 +55,8 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 // SAMPLES
 
-// export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_SV_CALLS = 'SV'
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
@@ -402,6 +403,7 @@ export const VEP_GROUP_FRAMESHIFT = 'frameshift'
 export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
+export const VEP_GROUP_SV = 'structural'
 
 
 const ORDERED_VEP_CONSEQUENCES = [
@@ -438,6 +440,18 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'frameshift_variant',
     group: VEP_GROUP_FRAMESHIFT,
     so: 'SO:0001589',
+  },
+  {
+    description: 'A large deletion',
+    text: 'Deletion',
+    value: 'DEL',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A large duplication',
+    text: 'Duplication',
+    value: 'DUP',
+    group: VEP_GROUP_SV,
   },
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
@@ -675,8 +689,9 @@ const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 
 
 const clinsigSeverity = (variant, user) => {
-  const clinvarSignificance = variant.clinvar.clinicalSignificance && variant.clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.isStaff && variant.hgmd.class
+  const { clinvar = {}, hgmd = {} } = variant
+  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
+  const hgmdSignificance = user.isStaff && hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {

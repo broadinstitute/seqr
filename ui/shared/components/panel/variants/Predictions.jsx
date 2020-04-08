@@ -59,6 +59,7 @@ const PREDICTOR_FIELDS = [
   { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8 },
   { field: 'eigen', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'dann', warningThreshold: 0.93, dangerThreshold: 0.96 },
+  { field: 'strvctvre', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'polyphen', indicatorMap: POLYPHEN_MAP },
   { field: 'sift' },
   { field: 'mut_taster', indicatorMap: MUTTASTER_MAP },

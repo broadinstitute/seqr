@@ -137,8 +137,8 @@ const IndividualRow = React.memo((
     sampleGuid => samplesByGuid[sampleGuid],
   )
   loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
-  // only show first and latest samples
-  loadedSamples.splice(1, loadedSamples.length - 2)
+  // only show active or first/ last inactive samples
+  loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
   const leftContent =
     <div>

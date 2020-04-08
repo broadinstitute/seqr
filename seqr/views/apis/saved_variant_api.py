@@ -42,7 +42,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     if request.user.is_staff:
         discovery_tags_query = Q()
         for variant in variant_query:
-            discovery_tags_query |= Q(Q(xpos_start=variant.xpos_start, ref=variant.ref, alt=variant.alt) & ~Q(family_id=variant.family_id))
+            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
@@ -96,9 +96,9 @@ def _get_parsed_variant_args(variant_json, family):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
-    ref = 'X' if variant_json.get('svName') else variant_json['ref']
-    alt = 'X' if variant_json.get('svName') else variant_json['alt']
-    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
+    ref = variant_json.get('ref')
+    alt = variant_json.get('alt')
+    var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
     return {
         'xpos': xpos,
         'xpos_start':  xpos,
@@ -106,6 +106,7 @@ def _get_parsed_variant_args(variant_json, family):
         'ref':  ref,
         'alt':  alt,
         'family':  family,
+        'variant_id': variant_json['variantId']
     }
 
 
