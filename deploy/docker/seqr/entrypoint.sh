@@ -2,6 +2,8 @@
 
 set -x
 
+REFERENCE_DATA_DB_INIT_URL=https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz
+
 env
 
 echo SHELL: $SHELL
@@ -40,7 +42,7 @@ if ! psql --host postgres -U postgres -l | grep seqrdb; then
 
   psql --host postgres -U postgres -c 'CREATE DATABASE seqrdb';
   psql --host postgres -U postgres -c 'CREATE DATABASE reference_data_db';
-  psql --host postgres -U postgres reference_data_db <  <(curl -s https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz | gunzip -c -);
+  psql --host postgres -U postgres reference_data_db <  <(curl -s $REFERENCE_DATA_DB_INIT_URL | gunzip -c -);
 
 fi
 
