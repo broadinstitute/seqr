@@ -182,7 +182,7 @@ class EsSearch(object):
             self.filter_by_annotations(annotations, pathogenicity_filter)
 
         if inheritance_filter or inheritance_mode:
-            for index, family_samples_by_id in self.samples_by_family_index.items():
+            for family_samples_by_id in self.samples_by_family_index.values():
                     affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
                     self._family_individual_affected_status.update(affected_status)
 

@@ -1143,11 +1143,7 @@ class EsUtilsTest(TestCase):
         self.assertIsInstance(self.executed_search, list)
         self.assertEqual(len(self.executed_search), len(searches)*2)
         for i, expected_search in enumerate(searches):
-            try:
-                self.assertDictEqual(self.executed_search[i*2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
-            except Exception as e:
-                import pdb;
-                pdb.set_trace()
+            self.assertDictEqual(self.executed_search[i*2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
             self.assertSameSearch(self.executed_search[(i*2)+1], expected_search)
         self.executed_search = None
         self.searched_indices = []
@@ -1181,10 +1177,6 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        if executed_search != expected_search:
-            exp = expected_search_params['filters']
-            act = executed_search['query']['bool']['filter']
-            import pdb;pdb.set_trace()
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -2303,17 +2295,17 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(guid='F000002_2'))
         cache_key = 'search_results__{}__xpos'.format(results_model.guid)
 
-        def _execute_inheritance_search(mode=None, filter=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+        def _execute_inheritance_search(mode=None, inheritance_filter=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
             _set_cache(cache_key, None)
             search_model.search = {
-                'inheritance': {'mode': mode, 'filter': filter},
+                'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'datasetType': dataset_type,
             }
             search_model.save()
             get_es_variants(results_model, num_results=2)
 
         # custom genotype
-        _execute_inheritance_search(filter={'genotype': {'I000004_hg00731': 'ref_ref', 'I000005_hg00732': 'ref_alt'}})
+        _execute_inheritance_search(inheritance_filter={'genotype': {'I000004_hg00731': 'ref_ref', 'I000005_hg00732': 'ref_alt'}})
         self.assertExecutedSearch(sort=['xpos'], filters=[
             {'bool': {'_name': 'F000002_2', 'must': [{
                 'bool': {
@@ -2358,7 +2350,7 @@ class EsUtilsTest(TestCase):
                 }
             }]}}])
 
-        _execute_inheritance_search(mode='de_novo', filter={'affected': custom_affected})
+        _execute_inheritance_search(mode='de_novo', inheritance_filter={'affected': custom_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
             {'bool': {'_name': 'F000002_2', 'must': [{
                 'bool': {
@@ -2378,7 +2370,7 @@ class EsUtilsTest(TestCase):
                 }
             }]}}])
 
-        _execute_inheritance_search(mode='de_novo', filter={'affected': custom_multi_affected})
+        _execute_inheritance_search(mode='de_novo', inheritance_filter={'affected': custom_multi_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
             {'bool': {'_name': 'F000002_2', 'must': [{
                 'bool': {
@@ -2456,7 +2448,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             sort=['xpos'], index=SV_INDEX_NAME, filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_recessive_filter]}}])
 
-        _execute_inheritance_search(mode='homozygous_recessive', filter={'affected': custom_affected})
+        _execute_inheritance_search(mode='homozygous_recessive', inheritance_filter={'affected': custom_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
             {'bool': {'_name': 'F000002_2', 'must': [custom_affected_recessive_filter]}}])
 
@@ -2498,7 +2490,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             sort=['xpos'], index=SV_INDEX_NAME, gene_aggs=True, size=1,
             filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_com_het_filter]}}])
-        _execute_inheritance_search(mode='compound_het', filter={'affected': custom_affected})
+        _execute_inheritance_search(mode='compound_het', inheritance_filter={'affected': custom_affected})
         self.assertExecutedSearch(
             sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [custom_affected_comp_het_filter]}}],
             gene_aggs=True, size=1)
@@ -2555,7 +2547,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             sort=['xpos'], index=SV_INDEX_NAME, filters=[{'bool': {'_name': 'F000002_2', 'must': [sv_x_linked_filter]}}])
 
-        _execute_inheritance_search(mode='x_linked_recessive', filter={'affected': custom_affected})
+        _execute_inheritance_search(mode='x_linked_recessive', inheritance_filter={'affected': custom_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[
             {'bool': {'_name': 'F000002_2', 'must': [custom_affected_x_linked_filter]}}])
 
@@ -2577,7 +2569,7 @@ class EsUtilsTest(TestCase):
                 '_name': 'F000002_2', 'must': [{'bool': {'should': [sv_recessive_filter, sv_x_linked_filter]}}]}}]),
         ])
 
-        _execute_inheritance_search(mode='recessive', filter={'affected': custom_affected})
+        _execute_inheritance_search(mode='recessive', inheritance_filter={'affected': custom_affected})
         self.assertExecutedSearches([
             dict(sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [custom_affected_comp_het_filter]}}],
                  gene_aggs=True, start_index=0, size=1),
@@ -2598,7 +2590,7 @@ class EsUtilsTest(TestCase):
             }
         }]}}])
 
-        _execute_inheritance_search(mode='any_affected', filter={'affected': custom_multi_affected})
+        _execute_inheritance_search(mode='any_affected', inheritance_filter={'affected': custom_multi_affected})
         self.assertExecutedSearch(sort=['xpos'], filters=[{'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {
                 'should': [
@@ -2611,7 +2603,7 @@ class EsUtilsTest(TestCase):
 
         # Affected specified with no other inheritance
         with self.assertRaises(Exception) as cm:
-            _execute_inheritance_search(filter={'affected': custom_affected})
+            _execute_inheritance_search(inheritance_filter={'affected': custom_affected})
         self.assertEqual(
             cm.exception.message, 'Inheritance must be specified if custom affected status is set',
         )
