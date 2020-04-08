@@ -9,8 +9,16 @@ echo Current Directory: $(pwd)
 
 set -x
 
-# init PhenoTips db
-PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenotips_db.sql
+# init phenotips db unless it already exists
+if ! psql --host postgres -U postgres -l | grep xwiki; then
+
+  psql --host postgres -U postgres -c 'CREATE DATABASE xwiki';
+  psql --host postgres -U postgres -c "CREATE ROLE xwiki WITH CREATEDB LOGIN PASSWORD 'xwiki'";
+  psql --host postgres -U postgres -c 'GRANT ALL PRIVILEGES ON DATABASE xwiki TO xwiki';
+
+  PGPASSWORD=xwiki psql --host postgres -U xwiki xwiki -f /init_phenotips_db.sql
+fi
+
 
 # turn on debugging
 #if [ "$PT_DEBUG" = "true" ]; then
