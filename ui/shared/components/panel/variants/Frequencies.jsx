@@ -52,7 +52,7 @@ const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams,
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
-  const filterValue = population.filter_af && population.filter_af > 0 && population.filter_af.toPrecision(precision)
+  const filterValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : null
 
   return (
     <div>

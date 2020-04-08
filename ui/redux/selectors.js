@@ -410,23 +410,23 @@ export const getSavedVariantExportConfig = createSelector(
   },
 )
 
-const getProjectForFamilyGuid = createSelector(
+export const getTagTypesByFamily = createSelector(
   getProjectsByGuid,
   getFamiliesByGuid,
-  (state, ownProps) => ownProps.familyGuid,
-  (projectsByGuid, familiesByGuid, familyGuid) => projectsByGuid[(familiesByGuid[familyGuid] || {}).projectGuid],
+  (projectsByGuid, familiesByGuid) => Object.values(familiesByGuid).reduce((acc, family) => ({
+    ...acc,
+    [family.familyGuid]: projectsByGuid[family.projectGuid].variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+  }), {}),
 )
 
-export const getProjectTagTypes = createSelector(
-  getProjectForFamilyGuid,
-  project => project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+export const getFunctionalTagTypesTypesByFamily = createSelector(
+  getProjectsByGuid,
+  getFamiliesByGuid,
+  (projectsByGuid, familiesByGuid) => Object.values(familiesByGuid).reduce((acc, family) => ({
+    ...acc,
+    [family.familyGuid]: projectsByGuid[family.projectGuid].variantFunctionalTagTypes,
+  }), {}),
 )
-
-export const getProjectFunctionalTagTypes = createSelector(
-  getProjectForFamilyGuid,
-  project => project.variantFunctionalTagTypes,
-)
-
 
 export const getParsedLocusList = createSelector(
   getLocusListsByGuid,

@@ -18,7 +18,7 @@ const INLINE_STYLE = {
 }
 
 const BaseGeneLabelContent = styled(
-  ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
+  ({ color, label, maxWidth, containerStyle, dispatch, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
    overflow: hidden;
