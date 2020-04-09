@@ -31,21 +31,15 @@ class ProjectCategoriesAPITest(TestCase):
         updated_guid_set = set(response_json['projectCategoriesByGuid'].keys())
 
         project = Project.objects.get(guid=PROJECT_GUID)
-        project_category_guids_in_db = set()
-        # Exam all the project_category guids from the db against the updated guids.
-        for project_category in project.projectcategory_set.all():
-            if project_category.guid == PROJECT_CAT_GUID2:
-                # The old guid must not be updated
-                self.assertNotIn(project_category.guid, updated_guid_set)
-            else:
-                # The new project category must have the same name as the given one
-                self.assertEqual(project_category.name, NEW_PROJECT_CAT_NAME)
-                self.assertIn(project_category.guid, updated_guid_set)
-            project_category_guids_in_db.add(project_category.guid)
-        for updated_guid in updated_guid_set:
-            if updated_guid not in project_category_guids_in_db:
-                # The updated project category which doesn't exist in the db must have a None value
-                self.assertIsNone(response_json['projectCategoriesByGuid'][updated_guid])
+
+        project_categories = [ project_category for project_category in project.projectcategory_set.all()]
+        self.assertEqual(project_categories[0].guid, PROJECT_CAT_GUID2)
+        self.assertNotIn(project_categories[0].guid, updated_guid_set)
+        self.assertEqual(project_categories[1].name, NEW_PROJECT_CAT_NAME)
+        self.assertIn(project_categories[1].guid, updated_guid_set)
+        new_guid = project_categories[1].guid
+
+        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID3])
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'categories': []
@@ -57,9 +51,7 @@ class ProjectCategoriesAPITest(TestCase):
         self.assertListEqual(response_json['projectsByGuid'].keys(), [PROJECT_GUID])
 
         project = Project.objects.get(guid=PROJECT_GUID)
-        project_category_guids_in_db = set()
-        for project_category in project.projectcategory_set.all():
-            project_category_guids_in_db.add(project_category.guid)
-        self.assertSetEqual(project_category_guids_in_db, set([]))
-        for project_category_guid in response_json['projectCategoriesByGuid'].keys():
-            self.assertIsNone(response_json['projectCategoriesByGuid'][project_category_guid])
+        project_category_guids_in_db = [project_category.guid for project_category in project.projectcategory_set.all()]
+        self.assertListEqual(project_category_guids_in_db, [])
+        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID2])
+        self.assertIsNone(response_json['projectCategoriesByGuid'][new_guid])
