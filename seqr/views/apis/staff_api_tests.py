@@ -215,6 +215,35 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'dateGenerated': datetime.now().strftime('%Y-%m-%d')
 }
 
+EXPECTED_DISCOVERY_SHEET_ROW = \
+    {u'project_guid': u'R0001_1kg', u'pubmed_ids': u'', u'posted_publicly': u'',
+     u'solved': u'TIER 1 GENE', u'head_or_neck': u'N', u'analysis_complete_status': u'complete',
+     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'NA',
+     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'NA',
+     u'genome_wide_linkage': u'NA 2', u'metabolism_homeostasis': u'N', u'growth': u'N',
+     u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
+     u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
+     u'expected_inheritance_model': u'multiple',
+     u'extras_variant_tag_list': [u'abc123  RP11-206L10.5  tier 1 - novel gene and phenotype'],
+     u'protein_interaction': u'N', u'n_kindreds': u'1', u'num_individuals_sequenced': 3,
+     u'musculature': u'N', u'sequencing_approach': u'WES', u'neoplasm': u'N',
+     u'collaborator': u'1kg project n\xe5me with uni\xe7\xf8de',
+     u'actual_inheritance_model': u'de novo', u'novel_mendelian_gene': u'Y',
+     u'endocrine_system': u'N', u'patient_cells': u'N', u'komp_early_release': u'N',
+     u'connective_tissue': u'N', u'prenatal_development_or_birth': u'N', u'rescue': u'N',
+     u'family_guid': u'F000001_1', u'immune_system': u'N',
+     u'analysis_summary': u'<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
+     u'gene_count': u'NA', u'gene_id': u'ENSG00000135953', u'abdomen': u'N', u'limbs': u'N',
+     u'blood': u'N', u'phenotype_class': u'New', u'submitted_to_mme': u'Y',
+     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'1',
+     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'NA',
+     u'p_value': u'NA', u'respiratory': u'N', u'nervous_system': u'Y', u'ear_defects': u'N',
+     u'thoracic_cavity': u'N', u'non_patient_cell_model': u'N',
+     u't0_copy': u'2017-02-05T06:42:55.397Z', u'extras_pedigree_url': u'/media/ped_1.png',
+     u'family_id': u'1', u'genitourinary_system': u'N', u'coded_phenotype': u'',
+     u'animal_model': u'N', u'non_human_cell_culture_model': u'N', u'expression': u'N',
+     u'gene_name': u'RP11-206L10.5', u'breast': u'N'}
+
 
 class StaffAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
@@ -309,6 +338,7 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
         self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
+        self.assertDictEqual(response_json['rows'][0], EXPECTED_DISCOVERY_SHEET_ROW)
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
