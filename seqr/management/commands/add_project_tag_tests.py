@@ -27,10 +27,10 @@ class AddProjectTagTest(TestCase):
             '--description={}'.format(TAG_ARGUMENTS["description"]),
             '--color={}'.format(TAG_ARGUMENTS["color"]), stdout = out)
 
-        self.assertIn('', out.getvalue())
+        self.assertEqual('', out.getvalue())
 
         project = Project.objects.get(Q(name = TAG_ARGUMENTS["project"]))
-        variantTagType = VariantTagType.objects.get(name__iexact=TAG_ARGUMENTS["name"], project=project)
+        variantTagType = VariantTagType.objects.get(name=TAG_ARGUMENTS["name"], project=project)
         tag_info = {
             "project": variantTagType.project.name,
             "name": variantTagType.name,
@@ -43,40 +43,29 @@ class AddProjectTagTest(TestCase):
 
     def test_missing_required_args(self):
         out = StringIO()
-        error = ''
-        try:
-            call_command('add_project_tag',
-                stdout = out)
-        except CommandError as err:
-            error = err.message
-        self.assertEqual(error, 'Error: argument --project is required')
+        with self.assertRaises(CommandError) as err:
+            call_command('add_project_tag', stdout = out)
+        self.assertEqual(err.exception.message, 'Error: argument --project is required')
 
-        try:
+        with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 stdout = out)
-        except CommandError as err:
-            error = err.message
-        self.assertEqual(error, 'Error: argument --name is required')
+        self.assertEqual(err.exception.message, 'Error: argument --name is required')
 
-        try:
+        with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 '--name={}'.format(TAG_ARGUMENTS["name"]),
                 stdout = out)
-        except CommandError as err:
-            error = err.message
-        self.assertEqual(error, 'Error: argument --order is required')
+        self.assertEqual(err.exception.message, 'Error: argument --order is required')
 
     def test_bad_argument_value(self):
         out = StringIO()
-        error = ''
-        try:
+        with self.assertRaises(CommandError) as err:
             call_command('add_project_tag', '--project={}'.format(TAG_ARGUMENTS["project"]),
                 '--name=Tier 1 - Novel gene and phenotype', '--order={}'.format(TAG_ARGUMENTS["order"]),
                 '--category={}'.format(TAG_ARGUMENTS["category"]),
                 '--description={}'.format(TAG_ARGUMENTS["description"]),
                 '--color={}'.format(TAG_ARGUMENTS["color"]), stdout = out)
-        except CommandError as err:
-            error = err.message
-        self.assertEqual(error, 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Project')
+        self.assertEqual(err.exception.message, 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Project')
