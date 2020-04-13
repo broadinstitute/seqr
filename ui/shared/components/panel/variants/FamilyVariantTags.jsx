@@ -9,8 +9,8 @@ import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
   getFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  getProjectTagTypes,
-  getProjectFunctionalTagTypes,
+  getTagTypesByFamily,
+  getFunctionalTagTypesTypesByFamily,
   getVariantId,
 } from 'redux/selectors'
 import {
@@ -354,8 +354,8 @@ const mapStateToProps = (state, ownProps) => {
   return {
     variantId,
     family: getFamiliesByGuid(state)[ownProps.familyGuid],
-    projectTagTypes: getProjectTagTypes(state, ownProps),
-    projectFunctionalTagTypes: getProjectFunctionalTagTypes(state, ownProps),
+    projectTagTypes: getTagTypesByFamily(state)[ownProps.familyGuid],
+    projectFunctionalTagTypes: getFunctionalTagTypesTypesByFamily(state)[ownProps.familyGuid],
     variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
   }
 }

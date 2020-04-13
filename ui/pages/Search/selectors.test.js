@@ -1,6 +1,6 @@
-import { getIntitialSearch, getSearchedProjectsLocusListOptions, getSearchGeneBreakdownValues } from './selectors'
+import { getIntitialSearch, getSearchedProjectsLocusListOptions, getDatasetTypes } from './selectors'
 
-import { STATE, SEARCH_HASH, SEARCH, PROJECT_GUID, FAMILY_GUID, ANALYSIS_GROUP_GUID, LOCUS_LIST, GENE_ID } from './fixtures'
+import { STATE, SEARCH_HASH, SEARCH, PROJECT_GUID, FAMILY_GUID, ANALYSIS_GROUP_GUID, LOCUS_LIST } from './fixtures'
 
 const NO_SEARCH_STATE = { ...STATE, currentSearchHash: null }
 const EXPECTED_INITAL_SEARCH = { projectFamilies: [{ projectGuid: PROJECT_GUID, familyGuids: [FAMILY_GUID] }] }
@@ -37,4 +37,10 @@ test('getSearchGeneBreakdownValues', () => {
   expect(getSearchedProjectsLocusListOptions.resultFunc(
     [PROJECT_GUID], STATE.projectsByGuid, STATE.locusListsByGuid,
   )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid }])
+})
+
+test('getDatasetTypes', () => {
+  expect(getDatasetTypes.resultFunc(
+    [PROJECT_GUID], { [PROJECT_GUID]: STATE.samplesByGuid },
+  )).toEqual(['VARIANTS', 'SV'])
 })

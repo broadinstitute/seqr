@@ -74,7 +74,8 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_saved_variant(variant, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
         self.assertListEqual(json['familyGuids'], ["F000001_1"])
-        self.assertEqual(json['variantId'], 'abc123')
+        self.assertEqual(json['variantId'], '21-3343353-GAGA-G')
+        self.assertEqual(json['mainTranscriptId'], 'ENST00000258436')
 
     def test_json_for_saved_variants_with_tags(self):
         variant_guid_1 = 'SV0000001_2103343353_r0390_100'
@@ -99,7 +100,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(set(var_1['tagGuids']), v1_tag_guids)
         self.assertSetEqual(set(var_1['functionalDataGuids']), v1_functional_guids)
         var_2 = json['savedVariantsByGuid'][variant_guid_2]
-        self.assertEqual(var_2['variantId'], '1-248367227-TC-T')
+        self.assertEqual(var_2['variantId'], '12-48367227-TC-T')
         self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
         self.assertListEqual(var_2['noteGuids'], v2_note_guids)
 

@@ -40,6 +40,8 @@ from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
+HET = 'Heterozygous'
+HOM_ALT = 'Homozygous'
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def elasticsearch_status(request):
@@ -79,8 +81,9 @@ def elasticsearch_status(request):
     for index in indices:
         index_name = index['index']
         index_mappings = mappings[index_name]['mappings']
-        index_mapping = index_mappings.get('variant') or index_mappings['structural_variant']
-        index.update(index_mapping.get('_meta', {}))
+        doc_type = 'variant' if 'variant' in index_mappings else 'structural_variant'
+        index.update(index_mappings[doc_type].get('_meta', {}))
+        index['docType'] = doc_type
 
         projects_for_index = []
         for index_prefix in seqr_index_projects.keys():
@@ -88,8 +91,8 @@ def elasticsearch_status(request):
                 projects_for_index += seqr_index_projects.pop(index_prefix).keys()
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
-    errors = ['{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    errors = [u'{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join([u'{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
     ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
     return create_json_response({
@@ -364,9 +367,9 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'Gene_Class': 'Known',
                 'inheritance_description': inheritance_mode,
             }
-            if variant.get('svName'):
+            if variant.get('svType'):
                 parsed_variant.update({
-                    'sv_name': variant['svName'],
+                    'sv_name': _get_sv_name(variant),
                     'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
                 })
             else:
@@ -460,9 +463,10 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
             }
             for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
                 genotype = genotypes.get(individual.guid, {})
-                if genotype.get('numAlt', -1) > 0:
+                zygosity = _get_genotype_zygosity(genotype)
+                if zygosity:
                     variant_discovery_row = {
-                        'Zygosity': 'Heterozygous' if genotype['numAlt'] == 1 else 'Homozygous',
+                        'Zygosity': zygosity,
                     }
                     variant_discovery_row.update(parsed_variant)
                     discovery_row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_discovery_row.items()})
@@ -479,6 +483,10 @@ def _get_variant_main_transcript(variant):
         main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
         if main_transcript:
             return main_transcript
+
+
+def _get_sv_name(variant_json):
+    return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
 
 
 def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
@@ -1010,14 +1018,25 @@ def _get_variant_genotypes(genotypes, affected_individual_guids, unaffected_indi
                            affected_indivs_with_hom_alt_variants, affected_indivs_with_het_variants,
                            unaffected_indivs_with_hom_alt_variants, unaffected_indivs_with_het_variants):
     for sample_guid, genotype in genotypes.items():
-        if genotype["numAlt"] == 2 and sample_guid in affected_individual_guids:
+        zygosity = _get_genotype_zygosity(genotype)
+        if zygosity == HOM_ALT and sample_guid in affected_individual_guids:
             affected_indivs_with_hom_alt_variants.add(sample_guid)
-        elif genotype["numAlt"] == 1 and sample_guid in affected_individual_guids:
+        elif zygosity == HET and sample_guid in affected_individual_guids:
             affected_indivs_with_het_variants.add(sample_guid)
-        elif genotype["numAlt"] == 2 and sample_guid in unaffected_individual_guids:
+        elif zygosity == HOM_ALT and sample_guid in unaffected_individual_guids:
             unaffected_indivs_with_hom_alt_variants.add(sample_guid)
-        elif genotype["numAlt"] == 1 and sample_guid in unaffected_individual_guids:
+        elif zygosity == HET and sample_guid in unaffected_individual_guids:
             unaffected_indivs_with_het_variants.add(sample_guid)
+
+
+def _get_genotype_zygosity(genotype):
+    num_alt = genotype.get('numAlt')
+    cn = genotype.get('cn')
+    if num_alt == 2 or cn == 0 or cn > 3:
+        return HOM_ALT
+    if num_alt == 1 or cn == 1 or cn == 3:
+        return HET
+    return None
 
 
 def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
@@ -1051,7 +1070,9 @@ def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
     # Non-compound het variants are reported in the main transcript gene
     for variant in saved_variants:
         if "AR-comphet" not in variant.saved_variant_json['inheritance']:
-            gene_id = variant.saved_variant_json.get('mainTranscriptGeneId') or variant.saved_variant_json.get('svName')
+            gene_id = variant.saved_variant_json.get('mainTranscriptGeneId')
+            if not gene_id and variant.saved_variant_json.get('svType'):
+                gene_id = _get_sv_name(variant.saved_variant_json)
             gene_ids_to_saved_variants[gene_id].add(variant)
             gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
             gene_ids_to_inheritance[gene_id].update(variant.saved_variant_json['inheritance'])

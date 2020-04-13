@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import configureStore from 'redux-mock-store'
 import FamilyVariantTags from './FamilyVariantTags'
 
-import { STATE1, VARIANT } from '../fixtures'
+import { STATE1, VARIANT, SV_VARIANT } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -12,4 +12,5 @@ test('shallow-render without crashing', () => {
   const store = configureStore()(STATE1)
 
   shallow(<FamilyVariantTags store={store} variant={VARIANT} familyGuid={VARIANT.familyGuids[0]} />)
+  shallow(<FamilyVariantTags store={store} variant={SV_VARIANT} familyGuid={SV_VARIANT.familyGuids[0]} />)
 })

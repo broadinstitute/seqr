@@ -27,7 +27,6 @@ export const VARIANT = {
       ab: 1,
       ad: "0,74",
       alleles: ["T", "T"],
-      cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
       dp: "74",
       filter: "pass",
       gq: 99,
@@ -38,7 +37,6 @@ export const VARIANT = {
       ab: 0,
       ad: "77,0",
       alleles: ["TC", "TC"],
-      cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
       dp: "77",
       filter: "pass",
       gq: 99,
@@ -49,7 +47,6 @@ export const VARIANT = {
       ab: 0,
       ad: "71,0",
       alleles: ["TC", "TC"],
-      cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
       dp: "71",
       filter: "pass",
       gq: 99,
@@ -94,6 +91,63 @@ export const VARIANT = {
   },
   variantId: "SV0000002_1248367227_r0390_100",
   variantGuid: "SV0000002_1248367227_r0390_100",
+  xpos: 1248367227,
+}
+
+export const SV_VARIANT = {
+  alt: null,
+  chrom: "1",
+  familyGuids: ["F011652_1"],
+  functionalDataGuids: ['VFD0000002_1248367227_r0390_100', 'VFD0000001_1248367227_r0390_100'],
+  genomeVersion: "37",
+  geneIds: ['ENSG00000228198', 'ENSG00000164458'],
+  genotypes: {
+    NA19675: {
+      cn: 0,
+      qs: 57,
+      numAlt: -1,
+    },
+    NA19678: {
+      cn: 2,
+      numAlt: -1,
+    },
+    NA19679: {
+      cn: 2,
+      numAlt: -1,
+    },
+  },
+  liftedOverChrom: "",
+  liftedOverGenomeVersion: "38",
+  liftedOverPos: "",
+  noteGuids: [],
+  projectGuid: 'R0237_1000_genomes_demo',
+  pos: 248367227,
+  end: 248369100,
+  populations: {
+    sv_callset: { af: 0.03, ac: 7, an: 1032 },
+    g1k: {},
+    exac: {},
+    gnomad_genomes: {},
+    gnomad_exomes: {},
+    topmed: {},
+  },
+  predictions: { strvctvre: '0.272' },
+  ref: "TC",
+  tagGuids: ['VT1708635_1248367227_r0390_100', 'VT1726942_1248367227_r0390_100'],
+  transcripts: {
+    ENSG00000164458: [
+      {
+        transcriptId: "ENST00000456744",
+      }
+    ],
+    ENSG00000228198: [
+      {
+        transcriptId: "ENST00000456743",
+      }
+    ],
+  },
+  variantId: "batch_123_DEL",
+  variantGuid: "SV0000002_SV48367227_r0390_100",
   xpos: 1248367227,
 }
 
