@@ -410,21 +410,19 @@ export const getSavedVariantExportConfig = createSelector(
   },
 )
 
-export const getTagTypesByFamily = createSelector(
+export const getTagTypesByProject = createSelector(
   getProjectsByGuid,
-  getFamiliesByGuid,
-  (projectsByGuid, familiesByGuid) => Object.values(familiesByGuid).reduce((acc, family) => ({
+  projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [family.familyGuid]: projectsByGuid[family.projectGuid].variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+    [project.projectGuid]: project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
   }), {}),
 )
 
-export const getFunctionalTagTypesTypesByFamily = createSelector(
+export const getFunctionalTagTypesTypesByProject = createSelector(
   getProjectsByGuid,
-  getFamiliesByGuid,
-  (projectsByGuid, familiesByGuid) => Object.values(familiesByGuid).reduce((acc, family) => ({
+  projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [family.familyGuid]: projectsByGuid[family.projectGuid].variantFunctionalTagTypes,
+    [project.projectGuid]: project.variantFunctionalTagTypes,
   }), {}),
 )
 
