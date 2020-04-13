@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getFamiliesLocusListIntervalsByChrom } from 'redux/selectors'
+import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -172,11 +172,16 @@ const mapStateToProps = state => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) => {
-  if (!locusListIntervals || locusListIntervals.length < 1) {
+const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, familiesByGuid, variant }) => {
+  if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
   }
-  const { pos, end, genomeVersion, liftedOverPos } = variant
+  const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
+  const locusListIntervals = familyGuids.reduce((acc, familyGuid) =>
+    [...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]], [])
+  if (locusListIntervals.length < 1) {
+    return null
+  }
   const locusListGuids = locusListIntervals.filter((interval) => {
     const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
     if (!variantPos) {
@@ -192,16 +197,18 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) 
     return false
   }).map(({ locusListGuid }) => locusListGuid)
 
-  return <LocusListLabels locusListGuids={locusListGuids} />
+  return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />
 })
 
 BaseVariantLocusListLabels.propTypes = {
-  locusListIntervals: PropTypes.array,
+  locusListIntervalsByProject: PropTypes.object,
+  familiesByGuid: PropTypes.object,
   variant: PropTypes.object,
 }
 
 const mapLocusListStateToProps = (state, ownProps) => ({
-  locusListIntervals: getFamiliesLocusListIntervalsByChrom(state, ownProps)[ownProps.variant.chrom],
+  locusListIntervalsByProject: getLocusListIntervalsByChromProject(state, ownProps)[ownProps.variant.chrom],
+  familiesByGuid: getFamiliesByGuid(state),
 })
 
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)

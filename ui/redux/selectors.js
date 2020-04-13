@@ -497,26 +497,22 @@ export const getSearchGeneBreakdownValues = createSelector(
     ),
 )
 
-const getFamiliesLocusListGuids = createSelector(
-  (state, props) => props.familyGuids,
-  getFamiliesByGuid,
+export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
-  (familyGuids, familiesByGuid, projectsByGuid) =>
-    new Set(familyGuids.reduce(
-      (acc, familyGuid) => [...acc, ...projectsByGuid[familiesByGuid[familyGuid].projectGuid].locusListGuids], [])),
-)
-
-export const getFamiliesLocusListIntervalsByChrom = createSelector(
-  getFamiliesLocusListGuids,
   getLocusListsByGuid,
-  (locusListGuids, locusListsByGuid) =>
-    [...locusListGuids].map(
-      locusListGuid => locusListsByGuid[locusListGuid],
-    ).reduce((acc, { intervals = [] }) => [...acc, ...intervals], []).reduce((acc, interval) => {
-      if (!acc[interval.chrom]) {
-        acc[interval.chrom] = []
-      }
-      acc[interval.chrom].push(interval)
+  (projectsByGuid, locusListsByGuid) =>
+    Object.entries(projectsByGuid).reduce((acc, [projectGuid, { locusListGuids = [] }]) => {
+      const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
+        (acc2, { intervals = [] }) => [...acc2, ...intervals], [])
+      projectIntervals.forEach((interval) => {
+        if (!acc[interval.chrom]) {
+          acc[interval.chrom] = {}
+        }
+        if (!acc[interval.chrom][projectGuid]) {
+          acc[interval.chrom][projectGuid] = []
+        }
+        acc[interval.chrom][projectGuid].push(interval)
+      })
       return acc
     }, {}),
 )
