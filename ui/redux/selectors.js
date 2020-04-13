@@ -13,10 +13,8 @@ import {
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
-  DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
-  isActiveVariantSample,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -25,6 +23,7 @@ export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
+export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
@@ -56,7 +55,7 @@ export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAnnotationSecondary = (state) => {
   try {
-    return state.form.variantSearch.values.search.inheritance.annotationSecondary
+    return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
   }
   catch (err) {
     return false
@@ -135,22 +134,20 @@ export const getHasActiveVariantSampleByFamily = createSelector(
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
       [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
-        sampleGuid => isActiveVariantSample(samplesByGuid[sampleGuid]),
+        sampleGuid => samplesByGuid[sampleGuid].isActive,
       )),
     }), {})
   },
 )
 
-export const getActiveAlignmentSamplesByFamily = createSelector(
+export const getIGVSamplesByFamily = createSelector(
   getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (individualsByFamily, samplesByGuid) => {
+  getIgvSamplesByGuid,
+  (individualsByFamily, igvSamplesByGuid) => {
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.sampleGuids || [])], []).map(
-        sampleGuid => samplesByGuid[sampleGuid]).filter(
-        sample => sample.isActive && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
-      ),
+      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSampleGuids || [])], []).map(
+        sampleGuid => igvSamplesByGuid[sampleGuid]),
     }), {})
   },
 )
@@ -413,23 +410,21 @@ export const getSavedVariantExportConfig = createSelector(
   },
 )
 
-const getProjectForFamilyGuid = createSelector(
+export const getTagTypesByProject = createSelector(
   getProjectsByGuid,
-  getFamiliesByGuid,
-  (state, ownProps) => ownProps.familyGuid,
-  (projectsByGuid, familiesByGuid, familyGuid) => projectsByGuid[(familiesByGuid[familyGuid] || {}).projectGuid],
+  projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
+    ...acc,
+    [project.projectGuid]: project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+  }), {}),
 )
 
-export const getProjectTagTypes = createSelector(
-  getProjectForFamilyGuid,
-  project => project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+export const getFunctionalTagTypesTypesByProject = createSelector(
+  getProjectsByGuid,
+  projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
+    ...acc,
+    [project.projectGuid]: project.variantFunctionalTagTypes,
+  }), {}),
 )
-
-export const getProjectFunctionalTagTypes = createSelector(
-  getProjectForFamilyGuid,
-  project => project.variantFunctionalTagTypes,
-)
-
 
 export const getParsedLocusList = createSelector(
   getLocusListsByGuid,
@@ -500,26 +495,22 @@ export const getSearchGeneBreakdownValues = createSelector(
     ),
 )
 
-const getFamiliesLocusListGuids = createSelector(
-  (state, props) => props.familyGuids,
-  getFamiliesByGuid,
+export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
-  (familyGuids, familiesByGuid, projectsByGuid) =>
-    new Set(familyGuids.reduce(
-      (acc, familyGuid) => [...acc, ...projectsByGuid[familiesByGuid[familyGuid].projectGuid].locusListGuids], [])),
-)
-
-export const getFamiliesLocusListIntervalsByChrom = createSelector(
-  getFamiliesLocusListGuids,
   getLocusListsByGuid,
-  (locusListGuids, locusListsByGuid) =>
-    [...locusListGuids].map(
-      locusListGuid => locusListsByGuid[locusListGuid],
-    ).reduce((acc, { intervals = [] }) => [...acc, ...intervals], []).reduce((acc, interval) => {
-      if (!acc[interval.chrom]) {
-        acc[interval.chrom] = []
-      }
-      acc[interval.chrom].push(interval)
+  (projectsByGuid, locusListsByGuid) =>
+    Object.entries(projectsByGuid).reduce((acc, [projectGuid, { locusListGuids = [] }]) => {
+      const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
+        (acc2, { intervals = [] }) => [...acc2, ...intervals], [])
+      projectIntervals.forEach((interval) => {
+        if (!acc[interval.chrom]) {
+          acc[interval.chrom] = {}
+        }
+        if (!acc[interval.chrom][projectGuid]) {
+          acc[interval.chrom][projectGuid] = []
+        }
+        acc[interval.chrom][projectGuid].push(interval)
+      })
       return acc
     }, {}),
 )

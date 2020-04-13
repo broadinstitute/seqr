@@ -82,7 +82,11 @@ INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'datasetFilePath', 'loadedDate', 'datasetType',
+    'loadedDate', 'datasetType',
+}
+
+IGV_SAMPLE_FIELDS = {
+    'projectGuid', 'individualGuid', 'sampleGuid', 'filePath',
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}

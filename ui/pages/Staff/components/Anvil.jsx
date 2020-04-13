@@ -1,4 +1,5 @@
 import React from 'react'
+import { Input } from 'semantic-ui-react'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -16,7 +17,12 @@ class Anvil extends React.PureComponent {
     this.setState({ project: { title, guid: key } })
   }
 
+  onDataChange = (e, { value }) => {
+    this.setState({ loadedBefore: value })
+  }
+
   render() {
+    const { project, loadedBefore } = this.state
     return (
       <div>
         <InlineHeader size="medium" content="Project:" />
@@ -27,10 +33,14 @@ class Anvil extends React.PureComponent {
           onResultSelect={this.onResultSelect}
         />
         <HorizontalSpacer width={20} />
-        {this.state.project &&
-          <a href={`/api/staff/anvil/${this.state.project.guid}`}>
-            Download AnVIL metadata for {this.state.project.title}
-          </a>
+        <InlineHeader size="medium" content="Loaded Before:" />
+        <Input type="date" onChange={this.onDataChange} />
+        {project &&
+          <div>
+            <a href={`/api/staff/anvil/${project.guid}?loadedBefore=${loadedBefore || ''}`}>
+              Download AnVIL metadata for {project.title}
+            </a>
+          </div>
         }
       </div>
     )

@@ -7,11 +7,10 @@ import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { isActiveVariantSample } from 'shared/utils/constants'
 
 const ProjectFilterContent = React.memo(({ project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props }) => {
   let filterInput
-  if (Object.values(projectSamples || {}).some(sample => isActiveVariantSample(sample))) {
+  if (Object.values(projectSamples || {}).some(sample => sample.isActive)) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
   } else {
     filterInput = <Message

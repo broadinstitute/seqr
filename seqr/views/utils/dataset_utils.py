@@ -10,20 +10,26 @@ from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 
 logger = logging.getLogger(__name__)
 
+SAMPLE_FIELDS_MAP = {
+    Sample.DATASET_TYPE_VARIANT_CALLS: 'samples_num_alt_1',
+    Sample.DATASET_TYPE_SV_CALLS: 'samples',
+}
 
-def get_elasticsearch_index_samples(elasticsearch_index):
+
+def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     es_client = get_es_client()
 
     index_metadata = get_index_metadata(elasticsearch_index, es_client).get(elasticsearch_index)
 
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
-    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=10000))
+    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=SAMPLE_FIELDS_MAP[dataset_type], size=10000))
     response = s.execute()
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
 
-def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None):
+def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None,
+                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
     if any(field not in (index_metadata or {}) for field in metadata_fields):
         raise ValueError("Index metadata must contain fields: {}".format(', '.join(metadata_fields)))
@@ -38,8 +44,14 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
     dataset_path = index_metadata['sourceFilePath']
-    if not dataset_path.endswith('.vds') and not dataset_path.endswith('.vcf.gz') and not dataset_path.endswith('.vcf.bgz'):
-        raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
+    dataset_suffixes = ('.vds', '.vcf.gz', '.vcf.bgz', '.bed')
+    if not dataset_path.endswith(dataset_suffixes):
+        raise Exception("Variant call dataset path must end with .vcf.gz or .vds or .bed")
+
+    if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
+        raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
+            elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
+        ))
 
 
 def validate_alignment_dataset_path(dataset_path):
@@ -70,10 +82,11 @@ def match_sample_ids_to_sample_records(
         project,
         sample_ids,
         sample_type,
-        dataset_type,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         elasticsearch_index=None,
         create_sample_records=True,
         sample_id_to_individual_id_mapping=None,
+        loaded_date=None,
     ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -141,6 +154,7 @@ def match_sample_ids_to_sample_records(
                     elasticsearch_index=elasticsearch_index,
                     individual=individual,
                     created_date=timezone.now(),
+                    loaded_date=loaded_date or timezone.now(),
                 ) for sample_id, individual in sample_id_to_individual_record.items()]
             sample_id_to_sample_record.update({
                 sample.sample_id: sample for sample in Sample.objects.bulk_create(new_samples)

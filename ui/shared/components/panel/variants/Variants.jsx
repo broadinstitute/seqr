@@ -11,10 +11,9 @@ import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
-import VariantGene from './VariantGene'
+import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { VerticalSpacer } from '../../Spacers'
-
 
 const StyledVariantRow = styled(({ isCompoundHet, ...props }) => <Grid.Row {...props} />)`  
   .column {
@@ -63,9 +62,6 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
-  const variantGenes = Object.keys(variant.transcripts || {}).filter(geneId => geneId !== mainGeneId).map(geneId =>
-    <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-  )
   const variantIndividuals = variant.familyGuids.map(familyGuid =>
     <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
   )
@@ -95,8 +91,8 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
       <Grid.Column>
         {variant.svName && <Header size="medium" content={variant.svName} />}
         {!isCompoundHet && mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
-        {!isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
-        {variantGenes}
+        {!isCompoundHet && mainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
+        <VariantGenes mainGeneId={mainGeneId} variant={variant} />
         {isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <VerticalSpacer height={20} />}
         {isCompoundHet && variantIndividuals}
       </Grid.Column>

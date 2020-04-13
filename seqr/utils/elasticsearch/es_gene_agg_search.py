@@ -1,7 +1,7 @@
 from collections import defaultdict
 import logging
 
-from seqr.utils.elasticsearch.constants import MAX_COMPOUND_HET_GENES
+from seqr.utils.elasticsearch.constants import MAX_COMPOUND_HET_GENES, HAS_ALT_FIELD_KEYS
 from seqr.utils.elasticsearch.es_search import EsSearch
 
 logger = logging.getLogger(__name__)
@@ -21,8 +21,8 @@ class EsGeneAggSearch(EsSearch):
                 'genes', 'terms', field='mainTranscript_gene_id', size=MAX_COMPOUND_HET_GENES+1
             )
             if self._no_sample_filters:
-                agg.bucket('samples_num_alt_1', 'terms', field='samples_num_alt_1', size=10000)
-                agg.bucket('samples_num_alt_2', 'terms', field='samples_num_alt_2', size=10000)
+                for key in HAS_ALT_FIELD_KEYS:
+                    agg.bucket(key, 'terms', field=key, size=10000)
             else:
                 agg.metric(
                     'vars_by_gene', 'top_hits', size=100, _source='none'
@@ -77,12 +77,10 @@ class EsGeneAggSearch(EsSearch):
                         for sample_id in samples_by_id.keys():
                             families_by_sample[sample_id] = family_guid
 
-                for sample_agg in gene_agg['samples_num_alt_1']['buckets']:
-                    family_guid = families_by_sample[sample_agg['key']]
-                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
-                for sample_agg in gene_agg['samples_num_alt_2']['buckets']:
-                    family_guid = families_by_sample[sample_agg['key']]
-                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+                for key in HAS_ALT_FIELD_KEYS:
+                    for sample_agg in gene_agg[key]['buckets']:
+                        family_guid = families_by_sample[sample_agg['key']]
+                        gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
 
         return gene_counts
 

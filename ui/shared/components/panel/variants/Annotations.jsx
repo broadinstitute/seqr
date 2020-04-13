@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getFamiliesLocusListIntervalsByChrom } from 'redux/selectors'
+import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -24,8 +24,8 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
-export const getLocus = (chrom, pos, rangeSize) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + rangeSize}`
+export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
+  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
 
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
@@ -33,12 +33,14 @@ const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
   genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
 
-  const highlight = `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
-  const position = getLocus(chrom, pos, 10)
+  const highlight = variant.ref && `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
+  const highlightQ = highlight ? `highlight=${highlight}&` : ''
+  const endOffset = variant.end && variant.end - variant.pos
+  const position = getLocus(chrom, pos, 10, endOffset || 0)
 
   return (
-    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`} target="_blank">
-      {chrom}:{pos}{includeEnd && variant.pos_end && `-${variant.pos_end}`}
+    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank">
+      {chrom}:{pos}{includeEnd && endOffset && `-${pos + endOffset}`}
     </a>
   )
 }
@@ -85,18 +87,24 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
+const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
-  if (mainGene) {
-    const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
+  const mainGene = genesById[mainTranscript.geneId]
+  let geneNames
+  const variations = []
 
-    const variations = [
-      `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
-      `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
-      `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
-      `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
-      `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
-    ]
+  if (mainGene) {
+    geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
+
+    if (variant.ref) {
+      variations.unshift(
+        `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
+        `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
+        `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
+        `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
+        `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
+      )
+    }
 
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
@@ -119,62 +127,94 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, mainGene }) => {
         ...geneNames.map(geneName => `${geneName}:${hgvsc}`), //TTN:78674T>C
       )
     }
+  } else {
+    geneNames = Object.keys(variant.transcripts || {}).reduce((acc, geneId) => {
+      const gene = genesById[geneId]
+      if (gene) {
+        return [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc]
+      }
+      return acc
+    }, [])
+  }
+
+  if (geneNames && geneNames.length) {
+    let pubmedSearch = `(${geneNames.join(' OR ')})`
+    if (variations.length) {
+      pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+      links.push(
+        <span key="dividerGoogle"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+        <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
+          google
+        </a>,
+      )
+    }
 
     links.push(
-      <span key="divider1"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-      <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
-        google
-      </a>,
-      <span key="divider2"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=(${geneNames.join(' OR ')}) AND ( ${variations.join(' OR ')})`} target="_blank">
+      <span key="dividerPubmed"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`} target="_blank">
         pubmed
       </a>,
     )
   }
+
   return links
 })
 
 BaseSearchLinks.propTypes = {
   variant: PropTypes.object,
   mainTranscript: PropTypes.object,
-  mainGene: PropTypes.object,
+  genesById: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  mainGene: getGenesById(state)[ownProps.mainTranscript.geneId],
+const mapStateToProps = state => ({
+  genesById: getGenesById(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const BaseVariantLocusListLabels = React.memo(({ locusListIntervals, variant }) => {
-  if (!locusListIntervals || locusListIntervals.length < 1) {
+const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, familiesByGuid, variant }) => {
+  if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
   }
-  const { pos, genomeVersion, liftedOverPos } = variant
+  const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
+  const locusListIntervals = familyGuids.reduce((acc, familyGuid) =>
+    [...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]], [])
+  if (locusListIntervals.length < 1) {
+    return null
+  }
   const locusListGuids = locusListIntervals.filter((interval) => {
     const variantPos = genomeVersion === interval.genomeVersion ? pos : liftedOverPos
     if (!variantPos) {
       return false
     }
-    return (variantPos >= interval.start) && (variantPos <= interval.end)
+    if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
+      return true
+    }
+    if (end) {
+      const variantPosEnd = variantPos + (end - pos)
+      return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
+    }
+    return false
   }).map(({ locusListGuid }) => locusListGuid)
 
-  return <LocusListLabels locusListGuids={locusListGuids} />
+  return locusListGuids.length > 0 && <LocusListLabels locusListGuids={locusListGuids} />
 })
 
 BaseVariantLocusListLabels.propTypes = {
-  locusListIntervals: PropTypes.array,
+  locusListIntervalsByProject: PropTypes.object,
+  familiesByGuid: PropTypes.object,
   variant: PropTypes.object,
 }
 
 const mapLocusListStateToProps = (state, ownProps) => ({
-  locusListIntervals: getFamiliesLocusListIntervalsByChrom(state, ownProps)[ownProps.variant.chrom],
+  locusListIntervalsByProject: getLocusListIntervalsByChromProject(state, ownProps)[ownProps.variant.chrom],
+  familiesByGuid: getFamiliesByGuid(state),
 })
 
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid } = variant
+  const { rsid, svType, numExon, pos, end } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -187,7 +227,7 @@ const Annotations = React.memo(({ variant }) => {
       : null,
   ] : null
 
-  const transcriptPopupProps = {
+  const transcriptPopupProps = mainTranscript.transcriptId && {
     content: <TranscriptLink variant={variant} transcript={mainTranscript} />,
     size: 'mini',
     hoverable: true,
@@ -195,17 +235,23 @@ const Annotations = React.memo(({ variant }) => {
 
   return (
     <div>
-      { mainTranscript.majorConsequence &&
+      { (mainTranscript.majorConsequence || svType) &&
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<ButtonLink>{mainTranscript.majorConsequence.replace(/_/g, ' ')}</ButtonLink>}
+          trigger={
+            <ButtonLink size={svType && 'big'}>
+              {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
+            </ButtonLink>
+          }
           popup={transcriptPopupProps}
         >
           <Transcripts variant={variant} />
         </Modal>
       }
+      {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
+      {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />
@@ -225,11 +271,11 @@ const Annotations = React.memo(({ variant }) => {
           <b>HGVS.P</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsp} />
         </div>
       }
-      { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
+      { (svType || Object.keys(mainTranscript).length > 0) && <VerticalSpacer height={10} />}
       <LargeText>
         <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
-        {variant.svType ||
+        {variant.ref &&
           <span>
             <Sequence sequence={variant.ref} />
             <Icon name="angle right" />
@@ -247,7 +293,7 @@ const Annotations = React.memo(({ variant }) => {
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>
-            hg19: <UcscBrowserLink variant={variant} useLiftover />
+            hg19: <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
           </div>
           : <div>hg19: liftover failed</div>
         )

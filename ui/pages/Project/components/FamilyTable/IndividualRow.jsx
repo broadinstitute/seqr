@@ -18,7 +18,6 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
-import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -136,10 +135,10 @@ const IndividualRow = React.memo((
 
   let loadedSamples = sampleGuids.map(
     sampleGuid => samplesByGuid[sampleGuid],
-  ).filter(s => s.datasetType === DATASET_TYPE_VARIANT_CALLS)
+  )
   loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
-  // only show first and latest samples
-  loadedSamples.splice(1, loadedSamples.length - 2)
+  // only show active or first/ last inactive samples
+  loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
   const leftContent =
     <div>

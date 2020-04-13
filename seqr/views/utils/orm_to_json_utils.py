@@ -14,7 +14,6 @@ from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
 from seqr.models import CAN_EDIT, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
-from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -250,6 +249,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
+            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
     if project_guid or not skip_nested:
         nested_fields = [
@@ -268,6 +268,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
+        prefetch_related_objects(individuals, 'igvsample_set')
 
     return _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
 
@@ -301,7 +302,7 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     else:
         kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, **kwargs)
+    return _get_json_for_models(samples, guid_key='sampleGuid', **kwargs)
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -363,9 +364,6 @@ def get_json_for_saved_variants(saved_variants, add_details=False):
     def _process_result(variant_json, saved_variant):
         if add_details:
             variant_json.update(saved_variant.saved_variant_json)
-        if 'variantId' not in variant_json:
-            chrom, pos = get_chrom_pos(saved_variant.xpos)
-            variant_json['variantId'] = '{}-{}-{}-{}'.format(chrom, pos, saved_variant.ref, saved_variant.alt)
         variant_json['familyGuids'] = [saved_variant.family.guid]
         return variant_json
 
@@ -455,9 +453,6 @@ def get_json_for_saved_variants_with_tags(
             else:
                 missing_ids.add(variant_id)
 
-    variants_by_guid = {
-        variant_guid: variant for variant_guid, variant in variants_by_guid.items()
-        if variant['noteGuids'] or variant['tagGuids']}
     if include_missing_variants and missing_ids:
         variants_by_guid.update({
             variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)

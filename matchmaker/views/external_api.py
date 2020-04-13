@@ -160,6 +160,7 @@ matchbox on {insertion_date}, with seqr link
             if email.strip() != MME_DEFAULT_CONTACT_EMAIL]
         all_emails.update(emails)
         match_results.append((result_text, emails))
+    match_results = sorted(match_results, key=lambda (result_text, _): result_text)
 
     base_message = u"""Dear collaborators,
 
@@ -188,7 +189,7 @@ matchbox on {insertion_date}, with seqr link
 
     post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
         base_message=base_message, match_results='\n'.join([text for text, _ in match_results]),
-        email_addresses_alert_sent_to=', '.join(all_emails), footer=MME_EMAIL_FOOTER
+        email_addresses_alert_sent_to=', '.join(sorted(all_emails)), footer=MME_EMAIL_FOOTER
     ))
 
     for result_text, emails in match_results:

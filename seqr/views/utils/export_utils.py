@@ -9,6 +9,11 @@ from django.http.response import HttpResponse
 
 from seqr.views.utils.json_utils import _to_title_case
 
+DELIMITERS = {
+    'csv': ',',
+    'tsv': '\t',
+}
+
 
 def export_table(filename_prefix, header, rows, file_format, titlecase_header=True):
     """Generates an HTTP response for a table with the given header and rows, exported into the given file_format.
@@ -83,15 +88,24 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             raise ValueError("Invalid file_format: %s" % file_format)
 
 
-def export_multiple_files(files, zip_filename, file_format='csv'):
+def export_multiple_files(files, zip_filename, file_format='csv', add_header_prefix=False, blank_value=''):
+    if file_format not in DELIMITERS:
+        raise ValueError('Invalid file_format: {}'.format(file_format))
     with NamedTemporaryFile() as temp_file:
         with zipfile.ZipFile(temp_file, 'w') as zip_file:
             for filename, header, rows in files:
-                if file_format == 'csv':
-                    content = ','.join(header) + '\n'
-                    content += '\n'.join([','.join([row.get(key, '') for key in header]) for row in rows])
-                else:
-                    raise ValueError('Invalid file_format: {}'.format(file_format))
+                header_display = header
+                if add_header_prefix:
+                    header_display = map(
+                        lambda (i, k): '{}-{}'.format(str(i).zfill(2), k), enumerate(header)
+                    )
+                    header_display[0] = header[0]
+                content = DELIMITERS[file_format].join(header_display) + '\n'
+                content += '\n'.join([
+                    DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
+                ])
+                if not isinstance(content, unicode):
+                    content = unicode(content, errors='ignore')
                 zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')

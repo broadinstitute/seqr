@@ -6,7 +6,7 @@ from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant, Sample, Individual
+from seqr.models import Project, SavedVariant, Individual
 from seqr.views.apis.dataset_api import _update_variant_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples
@@ -45,7 +45,6 @@ class Command(BaseCommand):
             project=project,
             sample_ids=sample_ids,
             sample_type=sample_type,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             elasticsearch_index=elasticsearch_index,
             sample_id_to_individual_id_mapping={},
         )
@@ -59,7 +58,6 @@ class Command(BaseCommand):
         missing_individuals = Individual.objects.filter(
             family__in=included_families,
             sample__is_active=True,
-            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
         missing_family_individuals = defaultdict(list)
         for individual in missing_individuals:
@@ -72,19 +70,8 @@ class Command(BaseCommand):
                                for family, missing_indivs in missing_family_individuals.items()])
                 ))
 
-        # Get and clean up expected saved variants
+        # Get expected saved variants
         saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
-        deleted_no_tags = set()
-        for guid, variant in saved_variant_models_by_guid.items():
-            if not (variant.varianttag_set.count() or variant.variantnote_set.count()):
-                deleted_no_tags.add(guid)
-
-        if deleted_no_tags:
-            if raw_input('Do you want to delete the following {} saved variants with no tags (y/n)?: {} '.format(
-                    len(deleted_no_tags), ', '.join(deleted_no_tags))) == 'y':
-                for guid in deleted_no_tags:
-                    saved_variant_models_by_guid.pop(guid).delete()
-                logger.info('Deleted {} variants'.format(len(deleted_no_tags)))
 
         expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
         missing_families = expected_families - included_families

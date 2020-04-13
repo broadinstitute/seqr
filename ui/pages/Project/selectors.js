@@ -11,7 +11,6 @@ import {
   familyVariantSamples,
   getVariantMainTranscript,
   getVariantMainGeneId,
-  isActiveVariantSample,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -244,7 +243,7 @@ export const getIndividualsExportData = createSelector(
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
       [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
-        isActiveVariantSample(samplesByGuid[sampleGuid]),
+        samplesByGuid[sampleGuid].isActive,
       ),
     }))], [],
   ),

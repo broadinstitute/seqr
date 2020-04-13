@@ -11,8 +11,8 @@ from elasticsearch.exceptions import ConnectionTimeout
 import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
+    IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
@@ -134,7 +134,7 @@ def query_single_variant_handler(request, variant_id):
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
 
-    variant = get_single_es_variant(families, variant_id)
+    variant = get_single_es_variant(families, variant_id, dataset_type=None)
 
     response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))
@@ -369,6 +369,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
     sample_models = Sample.objects.filter(individual__in=individual_models)
     samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
 
+    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
+    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True)
+
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
 
@@ -392,6 +395,10 @@ def _get_projects_details(projects, user, project_category_guid=None):
             individual_guid = individual_id_to_guid[sample.pop('individualId')]
             sample['individualGuid'] = individual_guid
             sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for sample in igv_samples:
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
         for group in analysis_groups:
             group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
@@ -404,14 +411,19 @@ def _get_projects_details(projects, user, project_category_guid=None):
     sample_guids_by_individual = defaultdict(list)
     for sample in samples:
         sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
+    igv_sample_guids_by_individual = defaultdict(list)
+    for sample in igv_samples:
+        igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
     for individual in individuals:
         individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
+        individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
 
     response = {
         'projectsByGuid': {p['projectGuid']: p for p in projects_json},
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
         'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
@@ -540,8 +552,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
     variants_by_id = {}
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
-        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
-        discovery_variant_q |= Q(Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt']) & ~Q(family__guid__in=variant['familyGuids']))
+        variant_q |= Q(variant_id=variant['variantId'], family__guid__in=variant['familyGuids'])
+        discovery_variant_q |= Q(Q(variant_id=variant['variantId']) & ~Q(family__guid__in=variant['familyGuids']))
         if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:

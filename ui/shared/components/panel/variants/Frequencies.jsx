@@ -45,22 +45,14 @@ FreqLink.propTypes = {
   queryParams: PropTypes.object,
 }
 
-const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams, showAC, precision = 2 }) => {
+const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams, acDisplay, precision = 2 }) => {
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
-  const filterValue = population.filter_af && population.filter_af > 0 && population.filter_af.toPrecision(precision)
-
-  const popCountDetails = [{ popField: `${field}_hom`, title: 'Hom' }]
-  if (chrom.endsWith('X')) {
-    popCountDetails.push({ popField: `${field}_hemi`, title: 'Hemi' })
-  }
-  if (showAC) {
-    popCountDetails.push({ popField: 'AC', denominatorField: 'AN' })
-  }
+  const filterValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : null
 
   return (
     <div>
@@ -83,8 +75,10 @@ const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams,
         {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined &&
           <span><HorizontalSpacer width={5} />Hemi={population.hemi}</span>
         }
-        {showAC && population.ac !== null && population.ac !== undefined &&
-          <span><HorizontalSpacer width={5} />AC={population.ac} out of {population.an}</span>
+        {acDisplay && population.ac !== null && population.ac !== undefined &&
+          <span>
+            <HorizontalSpacer width={5} />{acDisplay}={population.ac} out of {population.an}
+          </span>
         }
       </FreqValue>
     </div>
@@ -98,11 +92,12 @@ FreqSummary.propTypes = {
   fieldTitle: PropTypes.string,
   urls: PropTypes.object,
   queryParams: PropTypes.object,
-  showAC: PropTypes.bool,
+  acDisplay: PropTypes.string,
 }
 
 const POPULATIONS = [
-  { field: 'callset', fieldTitle: 'This Callset', showAC: true },
+  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'SC' },
+  { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
     field: 'exac',
@@ -156,7 +151,9 @@ const Frequencies = React.memo(({ variant }) => {
         {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
         <Popup.Content>
           {hasAcPops.map(pop =>
-            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>,
+            <div key={pop.field}>
+              {pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}
+            </div>,
           )}
         </Popup.Content>
       </Popup>

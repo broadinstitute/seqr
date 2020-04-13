@@ -17,7 +17,7 @@ class GeneConstraintReferenceDataHandler(ReferenceDataHandler):
             'gene_symbol': record['gene'],
             'mis_z': float(record['mis_z']) if record['mis_z'] != 'NaN' else -100,
             'pLI': float(record['pLI']) if record['pLI'] != 'NA' else 0,
-            'louef': float(record['oe_lof']) if record['oe_lof'] != 'NA' else 100,
+            'louef': float(record['oe_lof_upper']) if record['oe_lof'] != 'NA' else 100,
         }
 
     @staticmethod

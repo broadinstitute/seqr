@@ -4,7 +4,7 @@ import { Form } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { StepSlider, IntegerInput, Select } from 'shared/components/form/Inputs'
-import { FREQUENCIES, THIS_CALLSET_FREQUENCY } from './constants'
+import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from './constants'
 
 const AF_STEPS = [
   0,
@@ -56,13 +56,13 @@ FrequencyIntegerInput.propTypes = {
   onChange: PropTypes.func,
 }
 
-const AfFilter = ({ value, onChange, inline, label }) => {
+export const AfFilter = ({ value, onChange, inline, label, width }) => {
   const afProps = {
     value: (value || {}).af,
     onChange: val => onChange({ ...value, af: val, ac: null }),
   }
   return inline ?
-    <Select options={AF_OPTIONS} width={5} label={label || 'AF'} {...afProps} /> :
+    <Select options={AF_OPTIONS} width={width || 5} label={label || 'AF'} {...afProps} /> :
     <Form.Field control={StepSlider} steps={AF_STEPS} stepLabels={AF_STEP_LABELS} {...afProps} />
 }
 
@@ -71,6 +71,7 @@ AfFilter.propTypes = {
   onChange: PropTypes.func,
   inline: PropTypes.bool,
   label: PropTypes.string,
+  width: PropTypes.number,
 }
 
 export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
@@ -117,15 +118,15 @@ const formatHeaderValue = values =>
   }), Object.values(values)[0])
 
 export const HeaderFrequencyFilter = ({ value, onChange, ...props }) => {
-  const { callset, ...freqValues } = value || {}
+  const { callset, sv_callset: svCallset, ...freqValues } = value || {}
   const headerValue = freqValues ? formatHeaderValue(freqValues) : {}
 
   const onCallsetAfChange = val =>
-    onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val })
+    onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val })
 
   const onFreqChange = val =>
     onChange(FREQUENCIES.reduce((acc, { name }) => (
-      { ...acc, [name]: name === THIS_CALLSET_FREQUENCY ? callset : val }
+      { ...acc, [name]: (name === THIS_CALLSET_FREQUENCY || name === SV_CALLSET_FREQUENCY) ? callset : val }
     ), {}))
 
   return (

@@ -5,9 +5,9 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import \
-    update_individual_alignment_sample, \
+    update_individual_igv_sample, \
     add_variants_dataset_handler, \
-    receive_alignment_table_handler
+    receive_igv_table_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL
 from django.conf.urls import url, include
 from django.contrib import admin
@@ -147,7 +147,7 @@ no_login_react_app_pages = [
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
-    'individual/(?P<individual_guid>[\w.|-]+)/update_alignment_sample': update_individual_alignment_sample,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
@@ -177,7 +177,7 @@ api_endpoints = {
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
-    'project/(?P<project_guid>[^/]+)/upload_alignment_dataset': receive_alignment_table_handler,
+    'project/(?P<project_guid>[^/]+)/upload_igv_dataset': receive_igv_table_handler,
     'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
