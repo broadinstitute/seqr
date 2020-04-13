@@ -15,7 +15,6 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { VerticalSpacer } from '../../Spacers'
 
-
 const StyledVariantRow = styled(({ isCompoundHet, ...props }) => <Grid.Row {...props} />)`  
   .column {
    ${(props => props.isCompoundHet) ? // eslint-disable-line  no-constant-condition
