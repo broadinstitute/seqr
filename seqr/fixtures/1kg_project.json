@@ -351,7 +351,7 @@
         "last_modified_date": "2017-03-12T19:27:08.773Z",
         "project": 1,
         "family_id": "13",
-        "display_name": "13",
+        "display_name": "13-no individuals and samples",
         "description": "",
         "pedigree_image": "ped.png",
         "analysis_notes": "",
@@ -360,7 +360,7 @@
         "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
         "success_story_types": ["A"],
         "internal_analysis_status": null,
-        "internal_case_review_notes": "family without an individual and samples",
+        "internal_case_review_notes": "family without individuals and samples",
         "internal_case_review_summary": "internal_case_review_summary"
     }
 },

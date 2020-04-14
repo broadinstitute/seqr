@@ -246,7 +246,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
 
 
 class StaffAPITest(TestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
+    fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     @mock.patch('elasticsearch_dsl.index.Index.get_mapping')
@@ -320,7 +320,10 @@ class StaffAPITest(TestCase):
         _check_login(self, non_project_url)
 
         response = self.client.get(non_project_url)
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
+        response_json = response.json()
+        self.assertEqual(response_json['error'], 'Invalid project {}'.format(NON_PROJECT_GUID))
 
         empty_project_url = reverse(discovery_sheet, args=[PROJECT_EMPTY_GUID])
 
