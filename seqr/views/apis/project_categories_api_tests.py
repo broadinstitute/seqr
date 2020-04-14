@@ -41,6 +41,9 @@ class ProjectCategoriesAPITest(TestCase):
 
         self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID3])
 
+        self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 2)
+        self.assertListEqual([PROJECT_CAT_GUID2, new_guid], response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids'])
+
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'categories': []
         }))
@@ -49,6 +52,8 @@ class ProjectCategoriesAPITest(TestCase):
 
         self.assertListEqual(response_json.keys(), ['projectsByGuid', 'projectCategoriesByGuid'])
         self.assertListEqual(response_json['projectsByGuid'].keys(), [PROJECT_GUID])
+
+        self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 0)
 
         project = Project.objects.get(guid=PROJECT_GUID)
         project_category_guids_in_db = [project_category.guid for project_category in project.projectcategory_set.all()]
