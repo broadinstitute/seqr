@@ -7,7 +7,7 @@ EXPECTED_EXCEPTION_MSG = 'Error at /readviz/NA19675.cram (Individual: NA19675_1)
 EXPECTED_NORMAL_MSG = 'Error at /readviz/NA19675.cram (Individual: NA19675_1): Error accessing "/readviz/NA19675.cram" \n---- DONE ----\nChecked 1 samples\n1 failed samples: NA19675_1\n'
 
 
-class AddProjectTagTest(TestCase):
+class CheckBamCramPathsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.dataset_utils.validate_alignment_dataset_path')
