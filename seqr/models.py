@@ -291,8 +291,8 @@ class FamilyAnalysedBy(ModelWithGUID):
 class YearField(models.PositiveSmallIntegerField):
     YEAR_CHOICES = [(y, y) for y in range(1900, 2030)] + [(0, 'Unknown')]
 
-    def __init__(self, **options):
-        super(YearField, self).__init__(choices=YearField.YEAR_CHOICES, null=True, **options)
+    def __init__(self, *args, **kwargs):
+        super(YearField, self).__init__(*args, choices=YearField.YEAR_CHOICES, null=True)
 
 
 class Individual(ModelWithGUID):
@@ -362,6 +362,8 @@ class Individual(ModelWithGUID):
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
+    INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -392,11 +394,26 @@ class Individual(ModelWithGUID):
     death_year = YearField()
     onset_age = models.CharField(max_length=1, choices=ONSET_AGE_CHOICES, null=True)
 
-    maternal_ethnicity = models.CharField(max_length=50, null=True)
-    paternal_ethnicity = models.CharField(max_length=50, null=True)
+    maternal_ethnicity = ArrayField(models.CharField(max_length=30), null=True)
+    paternal_ethnicity = ArrayField(models.CharField(max_length=30), null=True)
     cosanguinity = models.NullBooleanField()
     affected_relatives = models.NullBooleanField()
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
+
+    # features are objects with an id field for HPO id and optional notes and qualifiers fields
+    features = JSONField(null=True)
+    absent_features = JSONField(null=True)
+    # nonstandard_features are objects with an id field for a free text label and optional
+    # notes, qualifiers, and categories fields
+    nonstandard_features = JSONField(null=True)
+    absent_nonstandard_features = JSONField(null=True)
+
+    # Disorders are a list of MIM IDs
+    disorders = ArrayField(models.CharField(max_length=10), null=True)
+
+    # genes are objects with required key gene (may be blank) and optional key comments
+    candidate_genes = JSONField(null=True)
+    rejected_genes = JSONField(null=True)
 
     ar_fertility_meds = models.NullBooleanField()
     ar_iui = models.NullBooleanField()
@@ -405,14 +422,6 @@ class Individual(ModelWithGUID):
     ar_surrogacy = models.NullBooleanField()
     ar_donoregg = models.NullBooleanField()
     ar_donorsperm = models.NullBooleanField()
-
-    features = JSONField(null=True)
-    absent_features = JSONField(null=True)
-    nonstandard_features = JSONField(null=True)
-
-    candidate_genes = JSONField(null=True)
-    rejected_genes = JSONField(null=True)
-    disorders = ArrayField(models.CharField(max_length=10), null=True)
 
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
