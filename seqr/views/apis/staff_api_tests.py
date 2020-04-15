@@ -9,7 +9,7 @@ from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_st
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
-NON_PROJECT_GUID ='NON_A_GUID'
+NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 
 PROJECT_CATEGRORY_NAME = 'test category name'
@@ -159,6 +159,8 @@ ES_INDEX_MAPPING = {
     },
 }
 
+EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'13', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
+
 TEST_INDEX_EXPECTED_DICT = {
     "index": "test_index",
     "sampleType": "WES",
@@ -200,6 +202,20 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "projects": []
 }
 
+TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
+    "index": "test_index_no_project",
+    "sampleType": "WGS",
+    "genomeVersion": "37",
+    "sourceFilePath": "test_index_no_project_path",
+    "docsCount": "672312",
+    "storeSize": "233.4mb",
+    "creationDateString": "2019-10-03T19:53:53.846Z",
+    "datasetType": "VARIANTS",
+    "gencodeVersion": "19",
+    "docType": "variant",
+    "projects": []
+}
+
 EXPECTED_ERRORS = [
     u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
@@ -224,7 +240,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
      u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
      u'expected_inheritance_model': u'multiple',
-     u'extras_variant_tag_list': [u'abc123  RP11-206L10.5  tier 1 - novel gene and phenotype'],
+     u'extras_variant_tag_list': [u'21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
      u'protein_interaction': u'N', u'n_kindreds': u'1', u'num_individuals_sequenced': 3,
      u'musculature': u'N', u'sequencing_approach': u'WES', u'neoplasm': u'N',
      u'collaborator': u'1kg project n\xe5me with uni\xe7\xf8de',
