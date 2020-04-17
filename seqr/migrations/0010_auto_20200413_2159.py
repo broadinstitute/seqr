@@ -13,13 +13,28 @@ import seqr.models
 from seqr.views.utils.json_utils import _to_snake_case
 
 # Valid MIM numbers that are not in the seqr DB because they do not map to a valid gene
-MIM_NUMBER_WHITELIST = [208500, 268000, 229850, 304050]
+MIM_NUMBER_WHITELIST = [
+    208500, 268000, 229850, 304050, 108800, 103220, 207950, 269860, 614688, 119530, 252350, 236750, 602346, 223370,
+    604185, 604431, 119550, 600193, 212067,
+]
 
-# HPO terms that have been renumbered by the HPO
+# A couple invalid HPO terms seem to have passed through for Sherr and Peirce
+NONSTANDARD_HPO_TERMS = {'HP:007737', 'HP:000729', 'HP:00729', 'HP:00HP:00729', "'HP:000729"}
+
+# HPO terms that have been remapped to new IDs
 HPO_ID_REMAP = {
-    'HP:0001006': 'HP:0008070', 'HP:0002880': 'HP:0002098', 'HP:0000057': 'HP:0008665', 'HP:0002281': 'HP:0002282',
-    'HP:0002459': 'HP:0012332',
+    'HP:00030532': 'HP:0030532', 'HP:0008220': 'HP:0008163', 'HP:0001006': 'HP:0008070', 'HP:0002880': 'HP:0002098',
+    'HP:0000057': 'HP:0008665', 'HP:0002281': 'HP:0002282', 'HP:0002459': 'HP:0012332', 'HP:0007087': 'HP:0001336',
+    'HP:0000487': 'HP:0000486', 'HP:0004760': 'HP:0001671', 'HP:0001002': 'HP:0003758', 'HP:0002271': 'HP:0012332',
+    'HP:0002564': 'HP:0030680', 'HP:0005901': 'HP:0002754', 'HP:0006525': 'HP:0002101', 'HP:0001380': 'HP:0001388',
+    'HP:0007930': 'HP:0000286', 'HP:3000001': 'HP:0001627', 'HP:0001724': 'HP:0004942', 'HP:0002109': 'HP:0025426',
+    'HP:0005111': 'HP:0004970', 'HP:0007702': 'HP:0000580', 'HP:0001587': 'HP:0008209', 'HP:0002229': 'HP:0002232',
+    'HP:0005549': 'HP:0001875', 'HP:0000833': 'HP:0001952', 'HP:0005130': 'HP:0001723', 'HP:0006158': 'HP:0001187',
+    'HP:0008012': 'HP:0000545', 'HP:0007868': 'HP:0000608', 'HP:0001379': 'HP:0002758'
 }
+
+# HPO terms that are obsolete but have no updated ID
+OBSOLETE_HPO_IDS = ['HP:0200144', 'HP:0011607']
 
 
 def update_phenotips_fields(apps, schema_editor):
@@ -30,19 +45,19 @@ def update_phenotips_fields(apps, schema_editor):
     individuals = Individual.objects.using(db_alias).filter(
         phenotips_data__isnull=False).exclude(phenotips_data='').select_related('family')
     if individuals:
-        hpo_map = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.all()}
+        hpo_map = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.exclude(name__startswith='obsolete')}
+        hpo_map.update({hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=OBSOLETE_HPO_IDS)})
         hpo_name_map = {hpo.name.upper(): hpo for hpo in hpo_map.values()}
         all_mim_ids = set(Omim.objects.values_list('phenotype_mim_number', flat=True))
         all_mim_ids.update(MIM_NUMBER_WHITELIST)
         miscarriages = []
-        invalid_hpo_map = defaultdict(list)
         print('Updating  {} individuals'.format(len(individuals)))
         for indiv in tqdm(individuals, unit=' individuals'):
             phenotips_json = json.loads(indiv.phenotips_data)
 
             if phenotips_json.get('date_of_birth'):
                 indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
-            if phenotips_json['life_status'] == 'deceased':
+            if phenotips_json.get('life_status') == 'deceased':
                 indiv.death_year = datetime.strptime(phenotips_json['date_of_death'], '%Y-%m-%d').year \
                     if phenotips_json.get('date_of_death') else 0
 
@@ -71,8 +86,7 @@ def update_phenotips_fields(apps, schema_editor):
             nonstandard_features = []
             absent_nonstandard_features = []
             for feature in phenotips_json.get('features') or []:
-                if feature['id'].endswith('HP:000729') or feature['id'].endswith('HP:00729'):
-                    # Sherr initial import seems to have passed through malformed IDs
+                if feature['id'] in NONSTANDARD_HPO_TERMS:
                     feature['label'] = feature['id']
                     phenotips_json['nonstandard_features'].append(feature)
                     continue
@@ -81,9 +95,6 @@ def update_phenotips_fields(apps, schema_editor):
                 hpo_data = hpo_map.get(feature['id'])
                 if not hpo_data:
                     raise Exception('Invalid HPO term for {}: {}'.format(indiv.individual_id, feature['id']))
-                if ('category' in feature and feature['category'] != hpo_data.category_id) or \
-                        ('label' in feature and feature['label'] != hpo_data.name):
-                    invalid_hpo_map[feature['id']].append(indiv.individual_id)
                 feature_list = present_features if feature['observed'] == 'yes' else absent_features
                 feature_list.append(_get_parsed_feature(feature))
             for feature in phenotips_json.get('nonstandard_features') or []:
@@ -169,9 +180,6 @@ def update_phenotips_fields(apps, schema_editor):
 
             indiv.save()
 
-        if invalid_hpo_map:
-            print('The following HPO terms had unexpected categories or labels for the given individuals:\n{}'.format(
-                '\n'.join('{}: {}'.format(hpo_id, ', '.join(indivs)) for hpo_id, indivs in invalid_hpo_map.items())))
         if miscarriages:
             print('The following {} individuals were flagged for miscarriages: {}'.format(
                 len(miscarriages), ', '.join(miscarriages)))
@@ -252,7 +260,26 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individual',
             name='birth_year',
-            field=seqr.models.YearField(choices=[(1900, 1900), (1901, 1901), (1902, 1902), (1903, 1903), (1904, 1904), (1905, 1905), (1906, 1906), (1907, 1907), (1908, 1908), (1909, 1909), (1910, 1910), (1911, 1911), (1912, 1912), (1913, 1913), (1914, 1914), (1915, 1915), (1916, 1916), (1917, 1917), (1918, 1918), (1919, 1919), (1920, 1920), (1921, 1921), (1922, 1922), (1923, 1923), (1924, 1924), (1925, 1925), (1926, 1926), (1927, 1927), (1928, 1928), (1929, 1929), (1930, 1930), (1931, 1931), (1932, 1932), (1933, 1933), (1934, 1934), (1935, 1935), (1936, 1936), (1937, 1937), (1938, 1938), (1939, 1939), (1940, 1940), (1941, 1941), (1942, 1942), (1943, 1943), (1944, 1944), (1945, 1945), (1946, 1946), (1947, 1947), (1948, 1948), (1949, 1949), (1950, 1950), (1951, 1951), (1952, 1952), (1953, 1953), (1954, 1954), (1955, 1955), (1956, 1956), (1957, 1957), (1958, 1958), (1959, 1959), (1960, 1960), (1961, 1961), (1962, 1962), (1963, 1963), (1964, 1964), (1965, 1965), (1966, 1966), (1967, 1967), (1968, 1968), (1969, 1969), (1970, 1970), (1971, 1971), (1972, 1972), (1973, 1973), (1974, 1974), (1975, 1975), (1976, 1976), (1977, 1977), (1978, 1978), (1979, 1979), (1980, 1980), (1981, 1981), (1982, 1982), (1983, 1983), (1984, 1984), (1985, 1985), (1986, 1986), (1987, 1987), (1988, 1988), (1989, 1989), (1990, 1990), (1991, 1991), (1992, 1992), (1993, 1993), (1994, 1994), (1995, 1995), (1996, 1996), (1997, 1997), (1998, 1998), (1999, 1999), (2000, 2000), (2001, 2001), (2002, 2002), (2003, 2003), (2004, 2004), (2005, 2005), (2006, 2006), (2007, 2007), (2008, 2008), (2009, 2009), (2010, 2010), (2011, 2011), (2012, 2012), (2013, 2013), (2014, 2014), (2015, 2015), (2016, 2016), (2017, 2017), (2018, 2018), (2019, 2019), (2020, 2020), (2021, 2021), (2022, 2022), (2023, 2023), (2024, 2024), (2025, 2025), (2026, 2026), (2027, 2027), (2028, 2028), (2029, 2029), (0, b'Unknown')], null=True),
+            field=seqr.models.YearField(choices=[
+                (1900, 1900), (1901, 1901), (1902, 1902), (1903, 1903), (1904, 1904), (1905, 1905), (1906, 1906),
+                (1907, 1907), (1908, 1908), (1909, 1909), (1910, 1910), (1911, 1911), (1912, 1912), (1913, 1913),
+                (1914, 1914), (1915, 1915), (1916, 1916), (1917, 1917), (1918, 1918), (1919, 1919), (1920, 1920),
+                (1921, 1921), (1922, 1922), (1923, 1923), (1924, 1924), (1925, 1925), (1926, 1926), (1927, 1927),
+                (1928, 1928), (1929, 1929), (1930, 1930), (1931, 1931), (1932, 1932), (1933, 1933), (1934, 1934),
+                (1935, 1935), (1936, 1936), (1937, 1937), (1938, 1938), (1939, 1939), (1940, 1940), (1941, 1941),
+                (1942, 1942), (1943, 1943), (1944, 1944), (1945, 1945), (1946, 1946), (1947, 1947), (1948, 1948),
+                (1949, 1949), (1950, 1950), (1951, 1951), (1952, 1952), (1953, 1953), (1954, 1954), (1955, 1955),
+                (1956, 1956), (1957, 1957), (1958, 1958), (1959, 1959), (1960, 1960), (1961, 1961), (1962, 1962),
+                (1963, 1963), (1964, 1964), (1965, 1965), (1966, 1966), (1967, 1967), (1968, 1968), (1969, 1969),
+                (1970, 1970), (1971, 1971), (1972, 1972), (1973, 1973), (1974, 1974), (1975, 1975), (1976, 1976),
+                (1977, 1977), (1978, 1978), (1979, 1979), (1980, 1980), (1981, 1981), (1982, 1982), (1983, 1983),
+                (1984, 1984), (1985, 1985), (1986, 1986), (1987, 1987), (1988, 1988), (1989, 1989), (1990, 1990),
+                (1991, 1991), (1992, 1992), (1993, 1993), (1994, 1994), (1995, 1995), (1996, 1996), (1997, 1997),
+                (1998, 1998), (1999, 1999), (2000, 2000), (2001, 2001), (2002, 2002), (2003, 2003), (2004, 2004),
+                (2005, 2005), (2006, 2006), (2007, 2007), (2008, 2008), (2009, 2009), (2010, 2010), (2011, 2011),
+                (2012, 2012), (2013, 2013), (2014, 2014), (2015, 2015), (2016, 2016), (2017, 2017), (2018, 2018),
+                (2019, 2019), (2020, 2020), (2021, 2021), (2022, 2022), (2023, 2023), (2024, 2024), (2025, 2025),
+                (2026, 2026), (2027, 2027), (2028, 2028), (2029, 2029), (0, b'Unknown')], null=True),
         ),
         migrations.AddField(
             model_name='individual',
@@ -267,17 +294,44 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individual',
             name='death_year',
-            field=seqr.models.YearField(choices=[(1900, 1900), (1901, 1901), (1902, 1902), (1903, 1903), (1904, 1904), (1905, 1905), (1906, 1906), (1907, 1907), (1908, 1908), (1909, 1909), (1910, 1910), (1911, 1911), (1912, 1912), (1913, 1913), (1914, 1914), (1915, 1915), (1916, 1916), (1917, 1917), (1918, 1918), (1919, 1919), (1920, 1920), (1921, 1921), (1922, 1922), (1923, 1923), (1924, 1924), (1925, 1925), (1926, 1926), (1927, 1927), (1928, 1928), (1929, 1929), (1930, 1930), (1931, 1931), (1932, 1932), (1933, 1933), (1934, 1934), (1935, 1935), (1936, 1936), (1937, 1937), (1938, 1938), (1939, 1939), (1940, 1940), (1941, 1941), (1942, 1942), (1943, 1943), (1944, 1944), (1945, 1945), (1946, 1946), (1947, 1947), (1948, 1948), (1949, 1949), (1950, 1950), (1951, 1951), (1952, 1952), (1953, 1953), (1954, 1954), (1955, 1955), (1956, 1956), (1957, 1957), (1958, 1958), (1959, 1959), (1960, 1960), (1961, 1961), (1962, 1962), (1963, 1963), (1964, 1964), (1965, 1965), (1966, 1966), (1967, 1967), (1968, 1968), (1969, 1969), (1970, 1970), (1971, 1971), (1972, 1972), (1973, 1973), (1974, 1974), (1975, 1975), (1976, 1976), (1977, 1977), (1978, 1978), (1979, 1979), (1980, 1980), (1981, 1981), (1982, 1982), (1983, 1983), (1984, 1984), (1985, 1985), (1986, 1986), (1987, 1987), (1988, 1988), (1989, 1989), (1990, 1990), (1991, 1991), (1992, 1992), (1993, 1993), (1994, 1994), (1995, 1995), (1996, 1996), (1997, 1997), (1998, 1998), (1999, 1999), (2000, 2000), (2001, 2001), (2002, 2002), (2003, 2003), (2004, 2004), (2005, 2005), (2006, 2006), (2007, 2007), (2008, 2008), (2009, 2009), (2010, 2010), (2011, 2011), (2012, 2012), (2013, 2013), (2014, 2014), (2015, 2015), (2016, 2016), (2017, 2017), (2018, 2018), (2019, 2019), (2020, 2020), (2021, 2021), (2022, 2022), (2023, 2023), (2024, 2024), (2025, 2025), (2026, 2026), (2027, 2027), (2028, 2028), (2029, 2029), (0, b'Unknown')], null=True),
+            field=seqr.models.YearField(choices=[
+                (1900, 1900), (1901, 1901), (1902, 1902), (1903, 1903), (1904, 1904), (1905, 1905), (1906, 1906),
+                (1907, 1907), (1908, 1908), (1909, 1909), (1910, 1910), (1911, 1911), (1912, 1912), (1913, 1913),
+                (1914, 1914), (1915, 1915), (1916, 1916), (1917, 1917), (1918, 1918), (1919, 1919), (1920, 1920),
+                (1921, 1921), (1922, 1922), (1923, 1923), (1924, 1924), (1925, 1925), (1926, 1926), (1927, 1927),
+                (1928, 1928), (1929, 1929), (1930, 1930), (1931, 1931), (1932, 1932), (1933, 1933), (1934, 1934),
+                (1935, 1935), (1936, 1936), (1937, 1937), (1938, 1938), (1939, 1939), (1940, 1940), (1941, 1941),
+                (1942, 1942), (1943, 1943), (1944, 1944), (1945, 1945), (1946, 1946), (1947, 1947), (1948, 1948),
+                (1949, 1949), (1950, 1950), (1951, 1951), (1952, 1952), (1953, 1953), (1954, 1954), (1955, 1955),
+                (1956, 1956), (1957, 1957), (1958, 1958), (1959, 1959), (1960, 1960), (1961, 1961), (1962, 1962),
+                (1963, 1963), (1964, 1964), (1965, 1965), (1966, 1966), (1967, 1967), (1968, 1968), (1969, 1969),
+                (1970, 1970), (1971, 1971), (1972, 1972), (1973, 1973), (1974, 1974), (1975, 1975), (1976, 1976),
+                (1977, 1977), (1978, 1978), (1979, 1979), (1980, 1980), (1981, 1981), (1982, 1982), (1983, 1983),
+                (1984, 1984), (1985, 1985), (1986, 1986), (1987, 1987), (1988, 1988), (1989, 1989), (1990, 1990),
+                (1991, 1991), (1992, 1992), (1993, 1993), (1994, 1994), (1995, 1995), (1996, 1996), (1997, 1997),
+                (1998, 1998), (1999, 1999), (2000, 2000), (2001, 2001), (2002, 2002), (2003, 2003), (2004, 2004),
+                (2005, 2005), (2006, 2006), (2007, 2007), (2008, 2008), (2009, 2009), (2010, 2010), (2011, 2011),
+                (2012, 2012), (2013, 2013), (2014, 2014), (2015, 2015), (2016, 2016), (2017, 2017), (2018, 2018),
+                (2019, 2019), (2020, 2020), (2021, 2021), (2022, 2022), (2023, 2023), (2024, 2024), (2025, 2025),
+                (2026, 2026), (2027, 2027), (2028, 2028), (2029, 2029), (0, b'Unknown')], null=True),
         ),
         migrations.AddField(
             model_name='individual',
             name='disorders',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=10), null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(
+                base_field=models.CharField(max_length=10), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
             name='expected_inheritance',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(choices=[(b'S', b'Sporadic'), (b'D', b'Autosomal dominant inheritance'), (b'L', b'Sex-limited autosomal dominant'), (b'A', b'Male-limited autosomal dominant'), (b'C', b'Autosomal dominant contiguous gene syndrome'), (b'R', b'Autosomal recessive inheritance'), (b'G', b'Gonosomal inheritance'), (b'X', b'X-linked inheritance'), (b'Z', b'X-linked recessive inheritance'), (b'Y', b'Y-linked inheritance'), (b'W', b'X-linked dominant inheritance'), (b'F', b'Multifactorial inheritance'), (b'M', b'Mitochondrial inheritance')], max_length=1), null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(choices=[
+                (b'S', b'Sporadic'), (b'D', b'Autosomal dominant inheritance'),
+                (b'L', b'Sex-limited autosomal dominant'), (b'A', b'Male-limited autosomal dominant'),
+                (b'C', b'Autosomal dominant contiguous gene syndrome'), (b'R', b'Autosomal recessive inheritance'),
+                (b'G', b'Gonosomal inheritance'), (b'X', b'X-linked inheritance'),
+                (b'Z', b'X-linked recessive inheritance'), (b'Y', b'Y-linked inheritance'),
+                (b'W', b'X-linked dominant inheritance'), (b'F', b'Multifactorial inheritance'),
+                (b'M', b'Mitochondrial inheritance')], max_length=1), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
@@ -287,7 +341,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individual',
             name='maternal_ethnicity',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=30), null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(
+                base_field=models.CharField(max_length=30), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
@@ -297,12 +352,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individual',
             name='onset_age',
-            field=models.CharField(choices=[(b'G', b'Congenital onset'), (b'E', b'Embryonal onset'), (b'F', b'Fetal onset'), (b'N', b'Neonatal onset'), (b'I', b'Infantile onset'), (b'C', b'Childhood onset'), (b'J', b'Juvenile onset'), (b'A', b'Adult onset'), (b'Y', b'Young adult onset'), (b'M', b'Middle age onset'), (b'L', b'Late onset')], max_length=1, null=True),
+            field=models.CharField(choices=[
+                (b'G', b'Congenital onset'), (b'E', b'Embryonal onset'), (b'F', b'Fetal onset'),
+                (b'N', b'Neonatal onset'), (b'I', b'Infantile onset'), (b'C', b'Childhood onset'),
+                (b'J', b'Juvenile onset'), (b'A', b'Adult onset'), (b'Y', b'Young adult onset'),
+                (b'M', b'Middle age onset'), (b'L', b'Late onset')], max_length=1, null=True),
         ),
         migrations.AddField(
             model_name='individual',
             name='paternal_ethnicity',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=30), null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(
+                base_field=models.CharField(max_length=30), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
