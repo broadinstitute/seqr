@@ -357,7 +357,6 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
         self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
-        self.maxDiff = None
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
     def test_success_story(self):
