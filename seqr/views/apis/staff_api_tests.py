@@ -159,7 +159,7 @@ ES_INDEX_MAPPING = {
     },
 }
 
-EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'13', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
+EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'no_individuals', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
 
 TEST_INDEX_EXPECTED_DICT = {
     "index": "test_index",
@@ -219,7 +219,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 EXPECTED_ERRORS = [
     u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
-EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'13', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
+EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'no_individuals', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
 
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
@@ -355,7 +355,7 @@ class StaffAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
-        self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
+        self.assertListEqual(response_json['errors'], [u'No data loaded for family: no_individuals. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
