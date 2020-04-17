@@ -358,7 +358,7 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json['errors'], [u'No data loaded for family: 13. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
         self.maxDiff = None
-        self.assertDictEqual(response_json['rows'][0], EXPECTED_DISCOVERY_SHEET_ROW)
+        self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
