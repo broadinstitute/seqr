@@ -120,7 +120,7 @@ from seqr.views.apis.auth_api import login_required_error, login_view, logout_vi
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
-    project_page_data, export_project_individuals_handler
+    project_page_data
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
@@ -160,7 +160,6 @@ api_endpoints = {
     'dashboard/export_projects_table': export_projects_table_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
-    'project/(?P<project_guid>[^/]+)/export_project_individuals': export_project_individuals_handler,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
