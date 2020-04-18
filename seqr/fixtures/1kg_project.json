@@ -334,9 +334,34 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
+        "success_story": "Published with Gleeson and Reza (PMID 31668703)",
+        "success_story_types": ["C", "D"],
         "internal_analysis_status": null,
         "internal_case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
         "internal_case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
+    }
+},
+{
+    "model": "seqr.family",
+    "pk": 13,
+    "fields": {
+        "guid": "F000013_13",
+        "created_date": "2017-03-12T19:27:08.760Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-12T19:27:08.773Z",
+        "project": 1,
+        "family_id": "no_individuals",
+        "display_name": "family without individuals and samples",
+        "description": "",
+        "pedigree_image": "ped.png",
+        "analysis_notes": "",
+        "analysis_summary": "",
+        "analysis_status": "Q",
+        "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
+        "success_story_types": ["A"],
+        "internal_analysis_status": null,
+        "internal_case_review_notes": "family without individuals and samples",
+        "internal_case_review_summary": "internal_case_review_summary"
     }
 },
 {
