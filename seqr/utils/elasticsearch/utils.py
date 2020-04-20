@@ -19,8 +19,7 @@ class InvalidIndexException(Exception):
 
 
 def get_es_client(timeout=60):
-    return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout)
-
+    return elasticsearch.Elasticsearch(hosts=[{"host": settings.ELASTICSEARCH_SERVICE_HOSTNAME, "port": settings.ELASTICSEARCH_PORT}],  timeout=timeout)
 
 def get_index_metadata(index_name, client):
     cache_key = 'index_metadata__{}'.format(index_name)
