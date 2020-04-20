@@ -1,5 +1,6 @@
 #-*- coding: utf-8 -*-
 import mock
+import __builtin__
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -111,7 +112,7 @@ ES_VARIANTS = [
         'alt': 'T',
         'chrom': '1',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
-        'familyGuids': ['F000003_3'],
+        'familyGuids': ['F000002_2'],
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
@@ -137,7 +138,7 @@ ES_VARIANTS = [
             'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         },
-        'pos': 248367227,
+        'pos': 248203925,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': 25.9, 'metasvm': None, 'primate_ai': None,
                         'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None},
@@ -147,18 +148,18 @@ ES_VARIANTS = [
             'ENSG00000135953': [TRANSCRIPT_3],
             'ENSG00000228198': [TRANSCRIPT_2],
         },
-        'variantId': '1-248367227-TC-T',
-        'xpos': 1248367227,
+        'variantId': '1-248203925-TC-T',
+        'xpos': 1248203925,
         'end': None,
         'svType': None,
         'numExon': None,
-        '_sort': [1248367227],
+        '_sort': [1248203925],
     },
     {
         'alt': 'G',
         'chrom': '2',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
-        'familyGuids': ['F000002_2', 'F000003_3'],
+        'familyGuids': ['F000001_1', 'F000003_3'],
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
@@ -195,7 +196,7 @@ ES_VARIANTS = [
             'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         },
-        'pos': 103343353,
+        'pos': 3339582,
         'predictions': {
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
             'dann': None, 'sift': None, 'cadd': 17.26, 'metasvm': None, 'primate_ai': None, 'gerp_rs': None,
@@ -207,12 +208,122 @@ ES_VARIANTS = [
             'ENSG00000135953': [TRANSCRIPT_1],
             'ENSG00000228198': [TRANSCRIPT_2],
         },
-        'variantId': '2-103343353-GAGA-G',
-        'xpos': 2103343353,
+        'variantId': '2-003339582-GAGA-G',
+        'xpos': 2003339582,
         'end': None,
         'svType': None,
         'numExon': None,
-        '_sort': [2103343353],
+        '_sort': [2003339582],
+    },
+]
+
+SINGLE_ES_VARIANTS = [
+    {
+        'alt': 'C',
+        'chrom': '1',
+        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'familyGuids': ['F000002_2', 'F000003_3'],
+        'genotypes': {
+            'I000007_na20870': {
+                'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            }
+        },
+        'genomeVersion': '37',
+        'genotypeFilters': '',
+        'hgmd': {'accession': None, 'class': None},
+        'liftedOverChrom': None,
+        'liftedOverGenomeVersion': None,
+        'liftedOverPos': None,
+        'mainTranscriptId': TRANSCRIPT_3['transcriptId'],
+        'originalAltAlleles': ['T'],
+        'populations': {
+            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0,
+                               'filter_af': 0.000437},
+            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661},
+            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0,
+                              'filter_af': 0.0009151523074911753},
+            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None},
+            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        },
+        'pos': 248203925,
+        'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
+                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': 25.9, 'metasvm': None, 'primate_ai': None,
+                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None},
+        'ref': 'TC',
+        'rsid': None,
+        'transcripts': {
+            'ENSG00000135953': [TRANSCRIPT_3],
+            'ENSG00000228198': [TRANSCRIPT_2],
+        },
+        'variantId': '1-248203925-TC-T',
+        'xpos': 1248203925,
+        'end': None,
+        'svType': None,
+        'numExon': None,
+        '_sort': [1248203925],
+    },
+    {
+        'alt': 'G',
+        'chrom': '2',
+        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'familyGuids': ['F000001_1', 'F000002_2', 'F000003_3'],
+        'genotypes': {
+            'I000004_hg00731': {
+                'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            },
+            'I000005_hg00732': {
+                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            },
+            'I000006_hg00733': {
+                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            },
+            'I000007_na20870': {
+                'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            }
+        },
+        'genotypeFilters': '',
+        'genomeVersion': '37',
+        'hgmd': {'accession': None, 'class': None},
+        'liftedOverGenomeVersion': None,
+        'liftedOverChrom': None,
+        'liftedOverPos': None,
+        'mainTranscriptId': TRANSCRIPT_1['transcriptId'],
+        'originalAltAlleles': ['G'],
+        'populations': {
+            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614},
+            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0,
+                              'filter_af': 0.00016269686320447742},
+            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
+            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+        },
+        'pos': 3339582,
+        'predictions': {
+            'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
+            'dann': None, 'sift': None, 'cadd': 17.26, 'metasvm': None, 'primate_ai': None, 'gerp_rs': None,
+            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+        },
+        'ref': 'GAGA',
+        'rsid': None,
+        'transcripts': {
+            'ENSG00000135953': [TRANSCRIPT_1],
+            'ENSG00000228198': [TRANSCRIPT_2],
+        },
+        'variantId': '2-003339582-GAGA-G',
+        'xpos': 2003339582,
+        'end': None,
+        'svType': None,
+        'numExon': None,
+        '_sort': [2003339582],
     },
 ]
 
@@ -220,18 +331,27 @@ ES_VARIANTS = [
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch.object(__builtin__, 'raw_input')
     @mock.patch('logging.getLogger')
     @mock.patch('seqr.views.utils.dataset_utils.get_elasticsearch_index_samples')
     @mock.patch('seqr.utils.elasticsearch.utils.get_es_variants_for_variant_tuples')
-    def test_command(self, mock_get_es_variants, mock_get_es_samples, mock_getLogger):
-        logger = mock_getLogger.return_value
+    @mock.patch('seqr.utils.elasticsearch.utils.get_single_es_variant')
+    def test_command(self, mock_single_es_variants, mock_get_es_variants, mock_get_es_samples, mock_getLogger, mock_input):
+        mock_logger = mock_getLogger.return_value
         mock_get_es_samples.return_value = SAMPLE_IDS, INDEX_METADATA
         mock_get_es_variants.return_value = ES_VARIANTS
+        mock_single_es_variants.side_effect = SINGLE_ES_VARIANTS
+        mock_input.return_value = 'y'
         call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
                      '--es-index={}'.format(ELASTICSEARCH_INDEX))
-        
+
         calls = [
             mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index')
+            mock.call('Validating es index test_index'),
+            mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
+            mock.call('Successfully lifted over 2 variants'),
+            mock.call('Successfully updated 2 variants'),
+            mock.call('---Done---'),
+            mock.call('Succesfully lifted over 2 variants. Skipped 2 failed variants. Family data not updated for 0 variants')
         ]
-        logger.info.assert_has_calls(calls)
+        mock_logger.info.assert_has_calls(calls)
