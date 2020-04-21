@@ -363,6 +363,7 @@ class Individual(ModelWithGUID):
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
+    INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
