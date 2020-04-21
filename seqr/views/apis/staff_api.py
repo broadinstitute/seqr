@@ -732,7 +732,8 @@ def discovery_sheet(request, project_guid):
         Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
     ).distinct().first()
     if not project:
-        raise Exception('Invalid project {}'.format(project_guid))
+        message = 'Invalid project {}'.format(project_guid)
+        return create_json_response({'error': message}, status = 400, reason = message)
 
     rows = []
     errors = []
