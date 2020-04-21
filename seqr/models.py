@@ -395,8 +395,8 @@ class Individual(ModelWithGUID):
     death_year = YearField()
     onset_age = models.CharField(max_length=1, choices=ONSET_AGE_CHOICES, null=True)
 
-    maternal_ethnicity = ArrayField(models.CharField(max_length=30), null=True)
-    paternal_ethnicity = ArrayField(models.CharField(max_length=30), null=True)
+    maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
+    paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
     cosanguinity = models.NullBooleanField()
     affected_relatives = models.NullBooleanField()
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)

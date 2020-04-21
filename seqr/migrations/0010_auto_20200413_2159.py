@@ -175,7 +175,7 @@ def update_phenotips_fields(apps, schema_editor):
                 'assistedReproduction_surrogacy', 'assistedReproduction_donoregg', 'assistedReproduction_donorsperm',
             ]:
                 if prenatal.get(field) is not None:
-                    indiv_field = 'ar_'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
+                    indiv_field = 'ar_{}'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
                     setattr(indiv, indiv_field, prenatal[field])
 
             indiv.save()
@@ -342,7 +342,7 @@ class Migration(migrations.Migration):
             model_name='individual',
             name='maternal_ethnicity',
             field=django.contrib.postgres.fields.ArrayField(
-                base_field=models.CharField(max_length=30), null=True, size=None),
+                base_field=models.CharField(max_length=40), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
@@ -362,7 +362,7 @@ class Migration(migrations.Migration):
             model_name='individual',
             name='paternal_ethnicity',
             field=django.contrib.postgres.fields.ArrayField(
-                base_field=models.CharField(max_length=30), null=True, size=None),
+                base_field=models.CharField(max_length=40), null=True, size=None),
         ),
         migrations.AddField(
             model_name='individual',
