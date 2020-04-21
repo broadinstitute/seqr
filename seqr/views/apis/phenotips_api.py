@@ -34,6 +34,7 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
     phenotips_patient_url, phenotips_patient_exists
@@ -248,10 +249,7 @@ def update_individual_hpo_terms(request, individual_guid):
     _update_individual_phenotips_data(individual, patient_json)
 
     return create_json_response({
-        individual.guid: {
-            'phenotipsData': patient_json,
-            'phenotipsEid': patient_json.get('external_id'),
-        }
+        individual.guid: _get_json_for_individual(individual, request.user)
     })
 
 

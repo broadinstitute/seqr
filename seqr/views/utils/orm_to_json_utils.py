@@ -224,22 +224,12 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     def _get_case_review_status_modified_by(modified_by):
         return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
 
-    def _load_phenotips_data(phenotips_data):
-        phenotips_json = None
-        if phenotips_data:
-            try:
-                phenotips_json = json.loads(phenotips_data)
-            except Exception as e:
-                logger.error("Couldn't parse phenotips: {}".format(e))
-        return phenotips_json
-
     def _process_result(result, individual):
         mother = result.pop('mother', None)
         father = result.pop('father', None)
 
         result.update({
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
-            'phenotipsData': _load_phenotips_data(result['phenotipsData']),
             'maternalGuid': mother.guid if mother else None,
             'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,

@@ -70,9 +70,12 @@ INTERNAL_FAMILY_FIELDS = {
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
 INDIVIDUAL_FIELDS = {
-    'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData', 'individualId',
-    'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'phenotipsData', 'createdDate',
-    'lastModifiedDate', 'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population',
+    'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'individualId',
+    'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
+    'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
+    'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'cosanguinity', 'affectedRelatives', 'expectedInheritance',
+    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures', 'disorders', 'candidateGenes',
+    'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy', 'arDonoregg', 'arDonorsperm',
 }
 
 INTERNAL_INDIVIDUAL_FIELDS = {
