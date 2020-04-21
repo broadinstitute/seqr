@@ -855,7 +855,7 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
     for i in individuals:
         expected_inheritance_models += i.expected_inheritance or []
         mim_disorders += i.disorders or []
-        row['features'].update(i.features or [])
+        row['features'].update([feature['id'] for feature in i.features or []])
 
     if len(expected_inheritance_models) == 1:
         row["expected_inheritance_model"] = Individual.INHERITANCE_LOOKUP[expected_inheritance_models[0]]
@@ -1159,7 +1159,7 @@ def _update_gene_symbols(rows):
 def _update_hpo_categories(rows, errors):
     all_features = set()
     for row in rows:
-        all_features.update([feature['id'] for feature in row['features']])
+        all_features.update(row['features'])
 
     hpo_term_to_category = {
         hpo.hpo_id: hpo.category_id for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)
@@ -1168,7 +1168,7 @@ def _update_hpo_categories(rows, errors):
     for row in rows:
         category_not_set_on_some_features = False
         for feature in row.pop('features'):
-            category = hpo_term_to_category.get(feature['id'])
+            category = hpo_term_to_category.get(feature)
             if not category:
                 category_not_set_on_some_features = True
                 continue
