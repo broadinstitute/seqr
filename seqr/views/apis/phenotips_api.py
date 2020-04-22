@@ -249,7 +249,7 @@ def update_individual_hpo_terms(request, individual_guid):
     _update_individual_phenotips_data(individual, patient_json)
 
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
+        individual.guid: _get_json_for_individual(individual, user=request.user, add_hpo_details=True)
     })
 
 

@@ -1236,7 +1236,7 @@ def saved_variants_page(request, tag):
         })
 
     families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
-    individuals_json = _get_json_for_individuals(individuals, user=request.user)
+    individuals_json = _get_json_for_individuals(individuals, add_hpo_details=True, user=request.user)
     for locus_list in get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_lists_by_guid.keys()), request.user):
         locus_lists_by_guid[locus_list['locusListGuid']].update(locus_list)
 

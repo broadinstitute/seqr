@@ -118,6 +118,14 @@ class ProjectAPITest(TestCase):
             set(response_json['mmeSubmissionsByGuid'].values()[0].keys()),
             {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate'}
         )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000001_na19675']['features'][0].keys()),
+            {'id', 'category', 'label'}
+        )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000001_na19675']['absentFeatures'][0].keys()),
+            {'id', 'category', 'label'}
+        )
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])

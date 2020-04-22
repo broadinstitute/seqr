@@ -364,7 +364,8 @@ def _get_projects_details(projects, user, project_category_guid=None):
     families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
 
     individual_models = Individual.objects.filter(family__in=family_models)
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, skip_nested=True)
+    individuals = _get_json_for_individuals(
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True)
 
     sample_models = Sample.objects.filter(individual__in=individual_models)
     samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)

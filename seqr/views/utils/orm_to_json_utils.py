@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
-from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
+from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import CAN_EDIT, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
@@ -208,7 +208,8 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None, skip_nested=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
+                              family_fields=None, skip_nested=False, add_hpo_details=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -260,7 +261,24 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')
 
-    return _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
+    parsed_individuals = _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
+    if add_hpo_details:
+        all_hpo_ids = set()
+        for i in parsed_individuals:
+            all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
+            all_hpo_ids.update([feature['id'] for feature in i.get('absentFeatures') or []])
+        hpo_terms_by_id = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_ids)}
+        for i in parsed_individuals:
+            for feature in i.get('features') or []:
+                hpo = hpo_terms_by_id.get(feature['id'])
+                if hpo:
+                    feature.update({'category': hpo.category_id, 'label': hpo.name})
+            for feature in i.get('absentFeatures') or []:
+                hpo = hpo_terms_by_id.get(feature['id'])
+                if hpo:
+                    feature.update({'category': hpo.category_id, 'label': hpo.name})
+
+    return parsed_individuals
 
 
 def _get_json_for_individual(individual, user=None, **kwargs):

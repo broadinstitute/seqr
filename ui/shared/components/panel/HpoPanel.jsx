@@ -39,13 +39,7 @@ const CATEGORY_NAMES = {
   'HP:0025354': 'Cellular Phenotype',
 }
 
-export const hasPhenotipsDetails = phenotipsData =>
-  phenotipsData && (
-    (phenotipsData.features || []).length > 0 ||
-    (phenotipsData.rejectedGenes || []).length > 0 ||
-    (phenotipsData.genes || []).length > 0)
-
-export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
+const getHpoTermsForCategory = (features, nonstandardFeatures) => {
   const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
     if (!acc[category]) { // TODO actually get categories
