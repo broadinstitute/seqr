@@ -98,6 +98,8 @@ class BaseFieldView extends React.PureComponent {
               confirmDialog={this.props.addConfirm}
               size="tiny"
             />
+      } else if (this.props.editButton) {
+        editButton = this.props.editButton(modalId, this.props.initialValues)
       }
       else {
         editButton =
@@ -171,6 +173,7 @@ BaseFieldView.propTypes = {
   modalId: PropTypes.string,
   modalSize: PropTypes.string,
   defaultId: PropTypes.string,
+  editButton: PropTypes.func,
 }
 
 BaseFieldView.defaultProps = {

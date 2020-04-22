@@ -1,6 +1,5 @@
 /* eslint-disable no-multi-spaces */
 
-import { hasPhenotipsDetails } from 'shared/components/panel/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
   FAMILY_STATUS_SOLVED,
@@ -160,18 +159,14 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Data Status:',
     name: 'Phenotypes Entered',
     createFilter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).some(
-        phenotipsData => hasPhenotipsDetails(phenotipsData),
-      ),
+      family.individualGuids.some(individualGuid => (individualsByGuid[individualGuid].features || []).length > 0),
   },
   {
     value: SHOW_NO_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'No Phenotypes Entered',
     createFilter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).every(
-        phenotipsData => !hasPhenotipsDetails(phenotipsData),
-      ),
+      family.individualGuids.every(individualGuid => (individualsByGuid[individualGuid].features || []).length < 1),
   },
   { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
   {
