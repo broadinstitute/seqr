@@ -26,19 +26,17 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_NAME,
                      '--family-id={}'.format(FAMILY_ID))
 
-        projects_to_process = [PROJECT_NAME]
-        projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in = projects_to_process))
-        calls = [mock.call(project, family_id=FAMILY_ID) for project in projects]
-        mock_update_json.assert_has_calls(calls, any_order = True)
+        project = Project.objects.get(name__exact = PROJECT_NAME)
+        mock_update_json.assert_called_with(project, family_id=FAMILY_ID)
 
-        loggerInfoCalls = [
+        logger_info_calls = [
             mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call(u'Updated 2 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Done'),
             mock.call('Summary: '),
             mock.call(u'  1kg project n\xe5me with uni\xe7\xf8de: Updated 2 variants')
         ]
-        mock_logger.info.assert_has_calls(loggerInfoCalls)
+        mock_logger.info.assert_has_calls(logger_info_calls)
         mock_update_json.reset_mock()
         mock_logger.reset_mock()
 
@@ -49,7 +47,7 @@ class ReloadSavedVariantJsonTest(TestCase):
         calls = [mock.call(project, family_id=None) for project in projects]
         mock_update_json.assert_has_calls(calls, any_order = True)
 
-        loggerInfoCalls = [
+        logger_info_calls = [
             mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call(u'Updated 2 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call(u'Project: Empty Project'),
@@ -62,7 +60,7 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call(u'  Empty Project: Updated 2 variants'),
             mock.call(u'  Test Project: Updated 2 variants')
         ]
-        mock_logger.info.assert_has_calls(loggerInfoCalls)
+        mock_logger.info.assert_has_calls(logger_info_calls)
         mock_update_json.reset_mock()
         mock_logger.reset_mock()
 
@@ -72,21 +70,16 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_GUID,
                      '--family-id={}'.format(FAMILY_ID))
 
-        projects_to_process = [PROJECT_GUID]
-        projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in = projects_to_process))
-        calls = [mock.call(project, family_id=FAMILY_ID) for project in projects]
-        mock_update_json.assert_has_calls(calls, any_order = True)
+        project = Project.objects.get(guid__exact = PROJECT_GUID)
+        mock_update_json.assert_called_with(project, family_id=FAMILY_ID)
 
-        loggerInfoCalls = [
+        logger_info_calls = [
             mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Done'),
             mock.call('Summary: '),
             mock.call(u'1 failed projects'),
             mock.call(u'  1kg project n\xe5me with uni\xe7\xf8de: Database error.')
         ]
-        mock_logger.info.assert_has_calls(loggerInfoCalls)
+        mock_logger.info.assert_has_calls(logger_info_calls)
 
-        loggerErrorCalls = [
-            mock.call(u'Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
-        ]
-        mock_logger.error.assert_has_calls(loggerErrorCalls)
+        mock_logger.error.assert_called_with(u'Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
