@@ -648,8 +648,8 @@ class StaffAPITest(TestCase):
         _check_login(self, url)
 
         # Create a SavedVariant row needed by this test
-        saved_variant = SavedVariant.objects.get(guid = "SV0000001_2103343353_r0390_100")
-        variant_tag_type = VariantTagType.objects.get(name = "Known gene for phenotype")
+        saved_variant = SavedVariant.objects.get(guid__exact = "SV0000001_2103343353_r0390_100")
+        variant_tag_type = VariantTagType.objects.get(name__exact = "Known gene for phenotype")
         variant_tag = VariantTag.objects.create(variant_tag_type = variant_tag_type)
         variant_tag.saved_variants.add(saved_variant)
         variant_tag.save()
