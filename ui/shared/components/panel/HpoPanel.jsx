@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Label } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 const IndentedContainer = styled.div`
   padding-left: 20px;
@@ -84,9 +85,14 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
             <div key={category.categoryName}>
               <b>{category.categoryName}</b>: {
                 (category.terms || []).map(
-                  // TODO display qualifiers
-                  hpoTerm => (hpoTerm.notes ? `${hpoTerm.label} (${hpoTerm.notes})` : (hpoTerm.label || hpoTerm.id)),
-                ).join(', ')
+                  (hpoTerm, i) => {
+                    const qualifiers = (hpoTerm.qualifiers || []).map(({ type, label }) =>
+                      <span> - <b>{snakecaseToTitlecase(type)}:</b> {label}</span>,
+                    )
+                    const notes = hpoTerm.notes ? <small> ({hpoTerm.notes})</small> : null
+                    return <span>{hpoTerm.label || hpoTerm.id}{qualifiers}{notes}{i < category.terms.length - 1 ? ', ' : ''}</span>
+                  },
+                )
               }
             </div>,
           )
