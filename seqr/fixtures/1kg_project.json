@@ -1165,6 +1165,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 4,
+    "fields": {
+        "guid": "VTT_Known_gene_for_phenotype",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Known gene for phenotype",
+        "category": "Collaboration",
+        "description": "Variant tag type for known gene for phenotype",
+        "color": "#777777",
+        "order": 16.0
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {

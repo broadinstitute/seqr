@@ -3,6 +3,7 @@ import mock
 from datetime import datetime
 import responses
 from django.http import HttpResponse
+from seqr.models import VariantTag, VariantTagType, SavedVariant
 
 from settings import AIRTABLE_URL
 
@@ -639,12 +640,19 @@ class StaffAPITest(TestCase):
 
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
-"""
+
     @mock.patch('seqr.views.apis.staff_api.export_multiple_files')
     @responses.activate
     def test_anvil_export(self, mock_export_multiple_files):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         _check_login(self, url)
+
+        # Create a SavedVariant row needed by this test
+        saved_variant = SavedVariant.objects.get(guid = "SV0000001_2103343353_r0390_100")
+        variant_tag_type = VariantTagType.objects.get(name = "Known gene for phenotype")
+        variant_tag = VariantTag.objects.create(variant_tag_type = variant_tag_type)
+        variant_tag.saved_variants.add(saved_variant)
+        variant_tag.save()
 
         # We will test the inputs of the export_multiple_files method.
         # Outputs of the method are not important for this test.
@@ -657,5 +665,6 @@ class StaffAPITest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        mock_export_multiple_files.assert_called_with(EXPECTED_EXPORT_FILES, u'1kg project n\u00e5me with uni\u00e7\u00f8de_AnVIL_Metadata', add_header_prefix=True, file_format='tsv', blank_value='-')
-"""
+        mock_export_multiple_files.assert_called_with(EXPECTED_EXPORT_FILES,
+            u'1kg project n\u00e5me with uni\u00e7\u00f8de_AnVIL_Metadata',
+            add_header_prefix = True, file_format = 'tsv', blank_value = '-')
