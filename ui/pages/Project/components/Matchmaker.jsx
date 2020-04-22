@@ -117,16 +117,8 @@ const mapGenotypeDispatchToProps = {
 const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypeDispatchToProps)(BaseEditGenotypesTable)
 
 const PHENOTYPE_FIELDS = [
-  { name: 'id', content: 'HPO ID', width: 3 },
-  { name: 'label', content: 'Description', width: 9 },
-  {
-    name: 'observed',
-    content: 'Observed?',
-    width: 3,
-    textAlign: 'center',
-    format: val =>
-      <Icon name={val.observed === 'yes' ? 'check' : 'remove'} color={val.observed === 'yes' ? 'green' : 'red'} />,
-  },
+  { name: 'id', content: 'HPO ID', width: 4 },
+  { name: 'label', content: 'Description', width: 11 },
 ]
 
 const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
@@ -134,9 +126,11 @@ const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
     idField="id"
     defaultSortColumn="label"
     columns={PHENOTYPE_FIELDS}
-    data={(individual.phenotipsData || {}).features}
+    data={individual.features}
     value={value}
-    onChange={newValue => onChange(individual.phenotipsData.features.filter(feature => newValue[feature.id]))}
+    onChange={newValue => onChange(
+      individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
+    )}
   />,
 )
 

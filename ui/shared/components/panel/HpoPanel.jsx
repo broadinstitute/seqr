@@ -42,7 +42,7 @@ const CATEGORY_NAMES = {
 const getHpoTermsForCategory = (features, nonstandardFeatures) => {
   const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
-    if (!acc[category]) { // TODO actually get categories
+    if (!acc[category]) {
       acc[category] = [] //init array of features
     }
     acc[category].push(hpoTerm)
