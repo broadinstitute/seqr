@@ -147,6 +147,7 @@ export const STATE = {
       lastModifiedDate: '2017-03-14T17:37:33.676Z',
       maternalId: '',
       paternalId: '',
+    },
   },
   samplesByGuid: {
     S2310658_wal_mc16200_mc16203: {

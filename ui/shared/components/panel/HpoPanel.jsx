@@ -40,7 +40,7 @@ const CATEGORY_NAMES = {
   'HP:0025354': 'Cellular Phenotype',
 }
 
-const getHpoTermsForCategory = (features, nonstandardFeatures) => {
+export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
   const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
     if (!acc[category]) {
@@ -52,7 +52,7 @@ const getHpoTermsForCategory = (features, nonstandardFeatures) => {
 
   if (nonstandardFeatures) {
     nonstandardFeatures.reduce((acc, term) => {
-      const category = (term.categories || {}).map(categoryTerm =>
+      const category = (term.categories || ['']).map(categoryTerm =>
         CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
       ).sort().join(', ')
       if (!acc[category]) {
