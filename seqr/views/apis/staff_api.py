@@ -267,9 +267,10 @@ def sample_metadata_export(request, project_guid):
     hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
     for row in rows:
         for hpo_key in ['hpo_present', 'hpo_absent']:
-            row[hpo_key] = '|'.join(map(
-                lambda feature_id: '{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')),
-                row[hpo_key].split('|')))
+            if row[hpo_key]:
+                row[hpo_key] = '|'.join(map(
+                    lambda feature_id: '{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')),
+                    row[hpo_key].split('|')))
 
     return create_json_response({'rows': rows})
 
@@ -415,7 +416,7 @@ def _parse_anvil_metadata(project, individual_samples):
                 'ancestry': ANCESTRY_MAP.get(individual.population, ''),
                 'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
                 'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
-                'onset_category': Individual.INHERITANCE_LOOKUP[onset] if onset else 'Unknown',
+                'onset_category': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
