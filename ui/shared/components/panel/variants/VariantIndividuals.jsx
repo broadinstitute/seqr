@@ -8,7 +8,7 @@ import { getSortedIndividualsByFamily } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import PhenotipsDataPanel, { hasPhenotipsDetails } from '../PhenotipsDataPanel'
+import HpoPanel from '../HpoPanel'
 
 
 const IndividualsContainer = styled.div`
@@ -198,13 +198,7 @@ const VariantIndividuals = React.memo(({ variant, individuals, familyGuid, isCom
           label={<small>{individual.displayName}</small>}
           popupHeader={individual.displayName}
           popupContent={
-            hasPhenotipsDetails(individual.phenotipsData) ?
-              <PhenotipsDataPanel
-                individual={individual}
-                showDetails
-                showEditPhenotipsLink={false}
-                showViewPhenotipsLink={false}
-              /> : null
+            individual.features ? <HpoPanel individual={individual} /> : null
           }
         />
         <br />

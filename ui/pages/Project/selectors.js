@@ -170,7 +170,7 @@ export const getVisibleFamilies = createSelector(
       `${family.displayName};${family.familyId};${(family.assignedAnalyst || {}).fullName};${
         (family.assignedAnalyst || {}).email};${family.analysedBy.map(({ createdBy }) =>
         `${createdBy.fullName}${createdBy.email}`)};${family.individualGuids.map(individualGuid =>
-        ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
+        (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';'),
       ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
     const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
 

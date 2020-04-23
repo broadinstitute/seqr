@@ -6,15 +6,17 @@ import { Link } from 'react-router-dom'
 import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
+import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import PhenotipsDataPanel from 'shared/components/panel/PhenotipsDataPanel'
+import HpoPanel from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { AFFECTED } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
@@ -55,6 +57,48 @@ const POPULATION_MAP = {
   OTH: 'Other',
   SAS: 'South Asian',
 }
+
+const ONSET_AGE_MAP = {
+  G: 'Congenital onset',
+  E: 'Embryonal onset',
+  F: 'Fetal onset',
+  N: 'Neonatal onset',
+  I: 'Infantile onset',
+  C: 'Childhood onset',
+  J: 'Juvenile onset',
+  A: 'Adult onset',
+  Y: 'Young adult onset',
+  M: 'Middle age onset',
+  L: 'Late onset',
+}
+
+const INHERITANCE_MODE_MAP = {
+  S: 'Sporadic',
+  D: 'Autosomal dominant inheritance',
+  L: 'Sex-limited autosomal dominant',
+  A: 'Male-limited autosomal dominant',
+  C: 'Autosomal dominant contiguous gene syndrome',
+  R: 'Autosomal recessive inheritance',
+  G: 'Gonosomal inheritance',
+  X: 'X-linked inheritance',
+  Z: 'X-linked recessive inheritance',
+  Y: 'Y-linked inheritance',
+  W: 'X-linked dominant inheritance',
+  F: 'Multifactorial inheritance',
+  M: 'Mitochondrial inheritance',
+}
+
+const AR_FIELDS = {
+  arFertilityMeds: 'Fertility medications',
+  arIui: 'Intrauterine insemination',
+  arIvf: 'In vitro fertilization',
+  arIcsi: 'Intra-cytoplasmic sperm injection',
+  arSurrogacy: 'Gestational surrogacy',
+  arDonoregg: 'Donor egg',
+  arDonorsperm: 'Donor sperm',
+}
+
+const BLOCK_DISPLAY_STYLE = { display: 'block' }
 
 const ratioLabel = (flag) => {
   const words = snakecaseToTitlecase(flag).split(' ')
@@ -128,10 +172,252 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
+const formatGenes = genes => genes.map(gene =>
+  <div key={gene.gene}>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</div>,
+)
+
+const AgeDetails = ({ birthYear, deathYear }) => {
+  if (!!deathYear || deathYear === 0) {
+    return (
+      <div>
+        Deceased {deathYear > 0 ? `at age ${new Date().getFullYear() - deathYear}` : '(date unknown)'}
+        {birthYear > 0 && <div>Born in {birthYear}</div>}
+      </div>
+    )
+  }
+  return birthYear > 0 ? new Date().getFullYear() - birthYear : 'Unknown'
+}
+
+AgeDetails.propTypes = {
+  birthYear: PropTypes.string,
+  deathYear: PropTypes.string,
+}
+
+const nullableBoolDisplay = (value) => {
+  if (value === true) {
+    return <Label horizontal basic size="small" content="Yes" color="green" />
+  } else if (value === false) {
+    return <Label horizontal basic size="small" content="No" color="red" />
+  }
+  return 'Unknown'
+}
+
+const INDIVIDUAL_FIELDS = [
+  {
+    field: 'age',
+    fieldName: 'Age',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: AgeDetails,
+    individualFields: individual => ({
+      fieldValue: individual,
+    }),
+  },
+  {
+    field: 'onsetAge',
+    fieldName: 'Age of Onset',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: age => ONSET_AGE_MAP[age],
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    component: TextFieldView,
+    isEditable: true,
+    fieldName: 'Individual Notes',
+    field: 'notes',
+    individualFields: ({ displayName }) => ({
+      modalTitle: `Notes for Individual ${displayName}`,
+    }),
+  },
+  {
+    field: 'consanguinity',
+    fieldName: 'Consanguinity',
+    isEditable: true,
+    showEmptyValues: true,
+    compact: true,
+    style: BLOCK_DISPLAY_STYLE,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: nullableBoolDisplay,
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    field: 'affectedRelatives',
+    fieldName: 'Other Affected Relatives',
+    isEditable: true,
+    showEmptyValues: true,
+    compact: true,
+    style: BLOCK_DISPLAY_STYLE,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: nullableBoolDisplay,
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    field: 'expectedInheritance',
+    fieldName: 'Expected Mode of Inheritance',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_MAP[inheritance]).join(', '),
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    field: 'ar',
+    fieldName: 'Assisted Reproduction',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
+      field => individual[field] || individual[field] === false).map(field =>
+        <div>{AR_FIELDS[field]}: <b>{individual[field] ? 'Yes' : 'No'}</b></div>,
+    ),
+    individualFields: individual => ({
+      isVisible: individual.affected === AFFECTED,
+      fieldValue: individual,
+    }),
+  },
+  {
+    field: 'maternalEthnicity',
+    fieldName: 'Maternal Ancestry',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: ancestries => ancestries.join(' / '),
+  },
+  {
+    field: 'paternalEthnicity',
+    fieldName: 'Paternal Ancestry',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: ancestries => ancestries.join(' / '),
+  },
+  {
+    fieldName: 'Imputed Population',
+    field: 'population',
+    fieldDisplay: population => POPULATION_MAP[population] || population,
+  },
+  {
+    fieldName: 'Sample QC Flags',
+    field: 'filterFlags',
+    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
+      />,
+    ),
+  },
+  {
+    fieldName: 'Population/Platform Specific Sample QC Flags',
+    field: 'popPlatformFilters',
+    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag =>
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
+      />,
+    ),
+  },
+  {
+    field: 'features',
+    fieldName: 'Features',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: individual => <HpoPanel individual={individual} />,
+    individualFields: individual => ({
+      fieldValue: individual,
+    }),
+  },
+  {
+    field: 'disorders',
+    fieldName: 'Pre-discovery OMIM disorders',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: disorders =>
+      disorders.map(mim => <div><a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a></div>),
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    field: 'rejectedGenes',
+    fieldName: 'Previously Tested Genes',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: formatGenes,
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+  {
+    field: 'candidateGenes',
+    fieldName: 'Candidate Genes',
+    isEditable: true,
+    editButton: (modalId, initialValues) =>
+      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    fieldDisplay: formatGenes,
+    individualFields: ({ affected }) => ({
+      isVisible: affected === AFFECTED,
+    }),
+  },
+]
+
+const CASE_REVIEW_FIELDS = [
+  {
+    component: TextFieldView,
+    fieldName: 'Case Review Discussion',
+    field: 'caseReviewDiscussion',
+    isEditable: true,
+    individualFields: ({ caseReviewStatus, caseReviewDiscussion }) => ({
+      isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED || caseReviewDiscussion,
+    }),
+  },
+  ...INDIVIDUAL_FIELDS,
+]
+
+const NON_CASE_REVIEW_FIELDS = [
+  {
+    component: OptionFieldView,
+    fieldName: 'Case Review Status',
+    field: 'caseReviewStatus',
+    tagOptions: CASE_REVIEW_STATUS_OPTIONS,
+    tagAnnotation: value => <ColoredIcon name="stop" color={value.color} />,
+  },
+  {
+    component: TextFieldView,
+    fieldName: 'Discussion',
+    field: 'caseReviewDiscussion',
+    individualFields: ({ caseReviewStatus }) => ({
+      isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+    }),
+  },
+  ...INDIVIDUAL_FIELDS,
+]
+
 const IndividualRow = React.memo((
   { project, family, individual, editCaseReview, mmeSubmission, samplesByGuid, dispatchUpdateIndividual },
 ) => {
-  const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
+  const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids } = individual
 
   let loadedSamples = sampleGuids.map(
     sampleGuid => samplesByGuid[sampleGuid],
@@ -165,122 +451,22 @@ const IndividualRow = React.memo((
     <CaseReviewStatus individual={individual} /> :
     <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-  const fields = [
-    {
-      content: (
-        <OptionFieldView
-          key="caseReviewStatus"
-          isVisible={!editCaseReview}
-          fieldName="Case Review Status"
-          field="caseReviewStatus"
-          idField="individualGuid"
-          initialValues={individual}
-          tagOptions={CASE_REVIEW_STATUS_OPTIONS}
-          tagAnnotation={value => <ColoredIcon name="stop" color={value.color} />}
-        />
-      ),
-    },
-    {
-      content: (
-        <TextFieldView
-          key="discussion"
-          isVisible={
-            caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
-            || (editCaseReview && caseReviewDiscussion) || false
-          }
-          fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
-          field="caseReviewDiscussion"
-          idField="individualGuid"
-          initialValues={individual}
-        />
-      ),
-    },
-    {
-      content: (
-        <TextFieldView
-          key="notes"
-          isEditable={project.canEdit}
-          fieldName="Individual Notes"
-          field="notes"
-          idField="individualGuid"
-          initialValues={individual}
-          modalTitle={`Notes for Individual ${displayName}`}
-          onSubmit={dispatchUpdateIndividual}
-        />
-      ),
-    },
-    {
-      content: (
-        <BaseFieldView
-          key="population"
-          isEditable={false}
-          fieldName="Imputed Population"
-          field="population"
-          idField="individualGuid"
-          initialValues={individual}
-          fieldDisplay={population => POPULATION_MAP[population] || population}
-
-        />
-      ),
-    },
-    {
-      content: (
-        <BaseFieldView
-          key="filterFlags"
-          isEditable={false}
-          fieldName="Sample QC Flags"
-          field="filterFlags"
-          idField="individualGuid"
-          initialValues={individual}
-          fieldDisplay={filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
-            <Label
-              key={flag}
-              basic
-              horizontal
-              color="orange"
-              content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
-            />,
-          )}
-        />
-      ),
-    },
-    {
-      content: (
-        <BaseFieldView
-          key="popPlatformFilters"
-          isEditable={false}
-          fieldName="Population/Platform Specific Sample QC Flags"
-          field="popPlatformFilters"
-          idField="individualGuid"
-          initialValues={individual}
-          fieldDisplay={filterFlags => Object.keys(filterFlags).map(flag =>
-            <Label
-              key={flag}
-              basic
-              horizontal
-              color="orange"
-              content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
-            />,
-          )}
-        />
-      ),
-    },
-    {
-      content: (
-        <PhenotipsDataPanel
-          key="phenotips"
-          individual={individual}
-          showDetails
-          showEditPhenotipsLink={project.canEdit}
-        />
-      ),
-    },
-  ]
+  const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
 
   return (
     <FamilyLayout
       fields={fields}
-      fieldDisplay={field => field.content}
+      fieldDisplay={({ component, isEditable, onSubmit, individualFields = () => {}, ...field }) =>
+        React.createElement(component || BaseFieldView, {
+          key: field.field,
+          isEditable: isEditable && project.canEdit,
+          onSubmit: isEditable && dispatchUpdateIndividual,
+          initialValues: individual,
+          idField: 'individualGuid',
+          ...individualFields(individual),
+          ...field,
+        })
+      }
       leftContent={leftContent}
       rightContent={rightContent}
     />

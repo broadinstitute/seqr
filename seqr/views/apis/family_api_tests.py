@@ -19,7 +19,7 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-class ProjectAPITest(TestCase):
+class FamilyAPITest(TestCase):
     fixtures = ['users', '1kg_project']
 
     #  TODO test other family api methods
@@ -33,7 +33,7 @@ class ProjectAPITest(TestCase):
             'families': [
                 {'familyGuid': FAMILY_GUID, 'description': 'Test description 1'},
                 {PREVIOUS_FAMILY_ID_FIELD: '2', FAMILY_ID_FIELD: '22', 'description': 'Test description 2'},
-                {FAMILY_ID_FIELD: '13', 'description': 'Test description 13'}
+                {FAMILY_ID_FIELD: 'new_family', 'description': 'Test descriptions for a new family'}
             ]
         }
         response = self.client.post(url, content_type='application/json',
@@ -45,7 +45,9 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test description 1')
         self.assertEqual(response_json['familiesByGuid']['F000002_2'][FAMILY_ID_FIELD], '22')
         self.assertEqual(response_json['familiesByGuid']['F000002_2']['description'], 'Test description 2')
-        self.assertEqual(response_json['familiesByGuid']['F000013_13']['description'], 'Test description 13')
+        new_guids = set(response_json['familiesByGuid'].keys()) - set([FAMILY_GUID, 'F000002_2'])
+        new_guid = new_guids.pop()
+        self.assertEqual(response_json['familiesByGuid'][new_guid]['description'], 'Test descriptions for a new family')
 
     def test_delete_families_handler(self):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])

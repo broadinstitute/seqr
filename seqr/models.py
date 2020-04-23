@@ -288,6 +288,13 @@ class FamilyAnalysedBy(ModelWithGUID):
         json_fields = ['last_modified_date', 'created_by']
 
 
+class YearField(models.PositiveSmallIntegerField):
+    YEAR_CHOICES = [(y, y) for y in range(1900, 2030)] + [(0, 'Unknown')]
+
+    def __init__(self, *args, **kwargs):
+        super(YearField, self).__init__(*args, choices=YearField.YEAR_CHOICES, null=True)
+
+
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
     SEX_FEMALE = 'F'
@@ -321,10 +328,44 @@ class Individual(ModelWithGUID):
         ('V', 'Inactive'),
     )
 
+    ONSET_AGE_CHOICES = [
+        ('G', 'Congenital onset'),
+        ('E', 'Embryonal onset'),
+        ('F', 'Fetal onset'),
+        ('N', 'Neonatal onset'),
+        ('I', 'Infantile onset'),
+        ('C', 'Childhood onset'),
+        ('J', 'Juvenile onset'),
+        ('A', 'Adult onset'),
+        ('Y', 'Young adult onset'),
+        ('M', 'Middle age onset'),
+        ('L', 'Late onset'),
+    ]
+
+    INHERITANCE_CHOICES = [
+        ('S', 'Sporadic'),
+        ('D', 'Autosomal dominant inheritance'),
+        ('L', 'Sex-limited autosomal dominant'),
+        ('A', 'Male-limited autosomal dominant'),
+        ('C', 'Autosomal dominant contiguous gene syndrome'),
+        ('R', 'Autosomal recessive inheritance'),
+        ('G', 'Gonosomal inheritance'),
+        ('X', 'X-linked inheritance'),
+        ('Z', 'X-linked recessive inheritance'),
+        ('Y', 'Y-linked inheritance'),
+        ('W', 'X-linked dominant inheritance'),
+        ('F', 'Multifactorial inheritance'),
+        ('M', 'Mitochondrial inheritance'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    ONSET_AGE_LOOKUP = dict(ONSET_AGE_CHOICES)
+    ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
+    INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
+    INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -351,6 +392,39 @@ class Individual(ModelWithGUID):
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
+    birth_year = YearField()
+    death_year = YearField()
+    onset_age = models.CharField(max_length=1, choices=ONSET_AGE_CHOICES, null=True)
+
+    maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
+    paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
+    consanguinity = models.NullBooleanField()
+    affected_relatives = models.NullBooleanField()
+    expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
+
+    # features are objects with an id field for HPO id and optional notes and qualifiers fields
+    features = JSONField(null=True)
+    absent_features = JSONField(null=True)
+    # nonstandard_features are objects with an id field for a free text label and optional
+    # notes, qualifiers, and categories fields
+    nonstandard_features = JSONField(null=True)
+    absent_nonstandard_features = JSONField(null=True)
+
+    # Disorders are a list of MIM IDs
+    disorders = ArrayField(models.CharField(max_length=10), null=True)
+
+    # genes are objects with required key gene (may be blank) and optional key comments
+    candidate_genes = JSONField(null=True)
+    rejected_genes = JSONField(null=True)
+
+    ar_fertility_meds = models.NullBooleanField()
+    ar_iui = models.NullBooleanField()
+    ar_ivf = models.NullBooleanField()
+    ar_icsi = models.NullBooleanField()
+    ar_surrogacy = models.NullBooleanField()
+    ar_donoregg = models.NullBooleanField()
+    ar_donorsperm = models.NullBooleanField()
+
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
@@ -366,7 +440,11 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'phenotips_data', 'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population'
+            'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population',
+            'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
+            'affected_relatives', 'expected_inheritance', 'features', 'absent_features', 'nonstandard_features',
+            'absent_nonstandard_features', 'disorders', 'candidate_genes', 'rejected_genes', 'ar_fertility_meds',
+            'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm',
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',

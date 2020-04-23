@@ -34,7 +34,7 @@ from seqr.views.utils.proxy_request_utils import proxy_request
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
     LocusList
-from reference_data.models import Omim
+from reference_data.models import Omim, HumanPhenotypeOntology
 
 from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
 
@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
+
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def elasticsearch_status(request):
@@ -225,7 +226,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        project, individual_samples, lambda feature: feature['id'])
+        project, individual_samples)
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -247,9 +248,10 @@ def sample_metadata_export(request, project_guid):
 
     individual_samples = _get_loaded_before_date_project_individual_samples(project, request.GET.get('loadedBefore'))
 
+    saved_variants_by_family = _get_saved_discovery_variants_by_family(project, parse_json=True)
+
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
-        project, individual_samples, lambda feature: '{} ({})'.format(feature['id'], feature.get('label', ''))
-    )
+        project, individual_samples, saved_variants_by_family=saved_variants_by_family)
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for rows in [sample_rows, family_rows, discovery_rows]:
@@ -257,15 +259,26 @@ def sample_metadata_export(request, project_guid):
             rows_by_subject_id[row['subject_id']].update(row)
 
     rows = rows_by_subject_id.values()
+    all_features = set()
     for row in rows:
         row['MME'] = 'Y' if row['family_guid'] in mme_family_guids else 'N'
         if row['ancestry_detail']:
             row['ancestry'] = row['ancestry_detail']
+        all_features.update(row['hpo_present'].split('|'))
+        all_features.update(row['hpo_absent'].split('|'))
+
+    hpo_name_map = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)}
+    for row in rows:
+        for hpo_key in ['hpo_present', 'hpo_absent']:
+            if row[hpo_key]:
+                row[hpo_key] = '|'.join(map(
+                    lambda feature_id: '{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')),
+                    row[hpo_key].split('|')))
 
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, format_feature):
+def _parse_anvil_metadata(project, individual_samples, saved_variants_by_family=None):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -283,7 +296,8 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
-    saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
+    if not saved_variants_by_family:
+        saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -343,7 +357,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
         family_subject_row = {
             'family_guid': family.guid,
             'pmid_id': family.pubmed_ids[0].replace('PMID:', '').strip() if family.pubmed_ids else '',
-            'phenotype_description': (family.coded_phenotype or '').replace(',', ';'),
+            'phenotype_description': (family.coded_phenotype or '').replace(',', ';').replace('\t', ' '),
             'num_saved_variants': len(saved_variants),
         }
         family_subject_row.update(project_details)
@@ -367,6 +381,12 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'Gene_Class': 'Known',
                 'inheritance_description': inheritance_mode,
             }
+
+            if 'discovery_tag_names' in variant:
+                is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
+                parsed_variant['novel_mendelian_gene'] = is_novel
+                _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
+
             if variant.get('svType'):
                 parsed_variant.update({
                     'sv_name': _get_sv_name(variant),
@@ -380,23 +400,17 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                     'Pos': str(variant['pos']),
                     'Ref': variant['ref'],
                     'Alt': variant['alt'],
-                    'hgvsc': (variant['main_transcript']['hgvsc'] or '').split(':')[-1],
-                    'hgvsp': (variant['main_transcript']['hgvsp'] or '').split(':')[-1],
+                    'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
+                    'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
                     'Transcript': variant['main_transcript']['transcriptId'],
                 })
             parsed_variants.append((variant['genotypes'], parsed_variant))
 
         for sample in family_samples:
             individual = sample.individual
-            phenotips_data = json.loads(individual.phenotips_data) if individual.phenotips_data else {}
-            features_present = []
-            features_absent = []
-            for feature in phenotips_data.get('features', []):
-                if feature.get('observed') == 'yes':
-                    features_present.append(format_feature(feature))
-                elif feature.get('observed') == 'no':
-                    features_absent.append(format_feature(feature))
-            onset = phenotips_data.get('global_age_of_onset')
+            features_present = [feature['id'] for feature in individual.features or []]
+            features_absent = [feature['id'] for feature in individual.absent_features or []]
+            onset = individual.onset_age
 
             airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
             sequencing = airtable_metadata.get('SequencingProduct') or set()
@@ -412,7 +426,7 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'ancestry': ANCESTRY_MAP.get(individual.population, ''),
                 'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
                 'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
-                'onset_category': onset[0]['label'] if onset else 'Unknown',
+                'onset_category': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
@@ -447,10 +461,9 @@ def _parse_anvil_metadata(project, individual_samples, format_feature):
                 'paternal_id': individual_id_map.get(individual.father_id, ''),
                 'maternal_id': individual_id_map.get(individual.mother_id, ''),
             }
-            consanguinity = phenotips_data.get('family_history', {}).get('consanguinity')
-            if consanguinity is True:
+            if individual.consanguinity is True:
                 family_row['consanguinity'] = 'Present'
-            elif consanguinity is False:
+            elif individual.consanguinity is False:
                 family_row['consanguinity'] = 'None suspected'
             if len(affected_individual_guids) > 1:
                 family_row['family_history'] = 'Yes'
@@ -730,7 +743,8 @@ def discovery_sheet(request, project_guid):
         Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
     ).distinct().first()
     if not project:
-        raise Exception('Invalid project {}'.format(project_guid))
+        message = 'Invalid project {}'.format(project_guid)
+        return create_json_response({'error': message}, status = 400, reason = message)
 
     rows = []
     errors = []
@@ -770,6 +784,7 @@ def discovery_sheet(request, project_guid):
         rows += _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mme, errors, now=now)
 
     _update_gene_symbols(rows)
+    _update_hpo_categories(rows, errors)
     _update_initial_omim_numbers(rows)
 
     return create_json_response({
@@ -812,7 +827,7 @@ def _get_loaded_samples_by_family(project):
     return loaded_samples_by_family
 
 
-def _get_saved_discovery_variants_by_family(project):
+def _get_saved_discovery_variants_by_family(project, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
@@ -823,9 +838,17 @@ def _get_saved_discovery_variants_by_family(project):
         varianttag__variant_tag_type__in=tag_types,
     )
 
+    if parse_json:
+        variant_by_guid = {variant['variantGuid']: variant for variant in
+                           get_json_for_saved_variants(project_saved_variants, add_details=True)}
+
     saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:
-        saved_variants_by_family[saved_variant.family.guid].append(saved_variant)
+        parsed_variant = saved_variant
+        if parse_json:
+            parsed_variant = variant_by_guid[saved_variant.guid]
+            parsed_variant['discovery_tag_names'] = {vt.variant_tag_type.name for vt in saved_variant.discovery_tags}
+        saved_variants_by_family[saved_variant.family.guid].append(parsed_variant)
 
     return saved_variants_by_family
 
@@ -843,9 +866,27 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
     if submitted_to_mme:
         row["submitted_to_mme"] = "Y"
 
-    category_not_set_on_some_features = _set_phenotips_data(row, family)
-    if category_not_set_on_some_features:
-        errors.append("HPO category field not set for some HPO terms in %s" % family)
+    individuals = family.individual_set.all()
+
+    expected_inheritance_models = []
+    mim_disorders = []
+    row['features'] = set()
+    for i in individuals:
+        expected_inheritance_models += i.expected_inheritance or []
+        mim_disorders += i.disorders or []
+        row['features'].update([feature['id'] for feature in i.features or []])
+
+    if len(expected_inheritance_models) == 1:
+        row["expected_inheritance_model"] = Individual.INHERITANCE_LOOKUP[expected_inheritance_models[0]]
+
+    if mim_disorders:
+        row.update({
+            "omim_number_initial": mim_disorders[0],
+            "phenotype_class": "KNOWN",
+        })
+
+    if family.post_discovery_omim_number:
+        row["omim_number_post_discovery"] = family.post_discovery_omim_number
 
     if not saved_variants:
         return [row]
@@ -909,52 +950,6 @@ def _get_basic_row(initial_row, family, samples, now):
     if t0_months_since_t0 < 12:
         row['analysis_complete_status'] = "first_pass_in_progress"
     return row
-
-
-def _set_phenotips_data(row, family):
-    phenotips_individual_data_records = [
-        json.loads(i.phenotips_data) for i in family.individual_set.all() if i.phenotips_data]
-
-    phenotips_individual_expected_inheritance_model = [
-        inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in
-        phenotips_data.get("global_mode_of_inheritance", [])
-    ]
-    if len(phenotips_individual_expected_inheritance_model) == 1:
-        row["expected_inheritance_model"] = phenotips_individual_expected_inheritance_model.pop()
-
-    phenotips_individual_mim_disorders = [
-        phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
-    omim_number_initial = next((disorder["id"] for disorders in phenotips_individual_mim_disorders
-                                for disorder in disorders if "id" in disorder), '').replace("MIM:", "")
-    if omim_number_initial:
-        row.update({
-            "omim_number_initial": omim_number_initial,
-            "phenotype_class": "KNOWN",
-        })
-
-    if family.post_discovery_omim_number:
-        row["omim_number_post_discovery"] = family.post_discovery_omim_number
-
-    phenotips_individual_features = [
-        phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
-    category_not_set_on_some_features = False
-    for features_list in phenotips_individual_features:
-        for feature in features_list:
-            if "category" not in feature:
-                category_not_set_on_some_features = True
-                continue
-
-            if feature["observed"].lower() == "yes":
-                hpo_category_id = feature["category"]
-                hpo_category_name = HPO_CATEGORY_NAMES[hpo_category_id]
-                key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-
-                row[key] = "Y"
-            elif feature["observed"].lower() == "no":
-                continue
-            else:
-                raise ValueError("Unexpected value for 'observed' in %s" % (feature,))
-    return category_not_set_on_some_features
 
 
 def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_individual_guids):
@@ -1127,7 +1122,7 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
     return row
 
 
-def _set_discovery_details(row, variant_tag_names, variants):
+def _set_discovery_phenotype_class(row, variant_tag_names):
     if any(tag in variant_tag_names for tag in [
         'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
     ]):
@@ -1140,6 +1135,12 @@ def _set_discovery_details(row, variant_tag_names, variants):
         'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
     ]):
         row["phenotype_class"] = "UE"
+    elif 'Known gene for phenotype' in variant_tag_names:
+        row["phenotype_class"] = "KNOWN"
+
+
+def _set_discovery_details(row, variant_tag_names, variants):
+    _set_discovery_phenotype_class(row, variant_tag_names)
 
     # Set defaults
     for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
@@ -1178,6 +1179,31 @@ def _update_gene_symbols(rows):
         row["extras_variant_tag_list"] = ["{variant_id}  {gene_symbol}  {tag}".format(
             variant_id=variant_id, gene_symbol=genes_by_id.get(gene_id, {}).get('geneSymbol', ''), tag=tag,
         ) for variant_id, gene_id, tag in row.get("extras_variant_tag_list", [])]
+
+
+def _update_hpo_categories(rows, errors):
+    all_features = set()
+    for row in rows:
+        all_features.update(row['features'])
+
+    hpo_term_to_category = {
+        hpo.hpo_id: hpo.category_id for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_features)
+    }
+
+    for row in rows:
+        category_not_set_on_some_features = False
+        for feature in row.pop('features'):
+            category = hpo_term_to_category.get(feature)
+            if not category:
+                category_not_set_on_some_features = True
+                continue
+
+            hpo_category_name = HPO_CATEGORY_NAMES[category]
+            key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
+            row[key] = "Y"
+
+        if category_not_set_on_some_features:
+            errors.append('HPO category field not set for some HPO terms in {}'.format(row['family_id']))
 
 
 def _update_initial_omim_numbers(rows):
@@ -1235,7 +1261,7 @@ def saved_variants_page(request, tag):
         })
 
     families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
-    individuals_json = _get_json_for_individuals(individuals, user=request.user)
+    individuals_json = _get_json_for_individuals(individuals, add_hpo_details=True, user=request.user)
     for locus_list in get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_lists_by_guid.keys()), request.user):
         locus_lists_by_guid[locus_list['locusListGuid']].update(locus_list)
 

@@ -36,7 +36,7 @@ const ShowPhenotipsModalButton = React.memo(({ individual, isViewOnly, modalId, 
 ShowPhenotipsModalButton.propTypes = {
   individual: PropTypes.object.isRequired,
   isViewOnly: PropTypes.bool.isRequired,
-  modalId: PropTypes.string,
+  modalId: PropTypes.string.isRequired,
   handleEditClose: PropTypes.func,
 
 }
