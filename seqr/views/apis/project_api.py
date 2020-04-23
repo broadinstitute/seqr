@@ -22,7 +22,6 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
     delete_phenotips_patient
-from seqr.views.utils.individual_utils import export_individuals
 from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
 
 
@@ -163,33 +162,6 @@ def project_page_data(request, project_guid):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_individuals_handler(request, project_guid):
-    """Export project Individuals table.
-
-    Args:
-        project_guid (string): GUID of the project for which to export individual data
-    """
-
-    file_format = request.GET.get('file_format', 'tsv')
-    include_phenotypes = bool(request.GET.get('include_phenotypes'))
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    # get all individuals in this project
-    individuals = Individual.objects.filter(family__project=project).order_by('family__family_id', 'affected')
-
-    filename_prefix = "%s_individuals" % _slugify(project.name)
-
-    return export_individuals(
-        filename_prefix,
-        individuals,
-        file_format,
-        include_hpo_terms_present=include_phenotypes,
-        include_hpo_terms_absent=include_phenotypes,
-    )
-
-
 def _get_project_child_entities(project, user):
     families_by_guid = _retrieve_families(project.guid, user)
     individuals_by_guid, individual_models = _retrieve_individuals(project.guid, user)
@@ -249,7 +221,8 @@ def _retrieve_individuals(project_guid, user):
 
     individual_models = Individual.objects.filter(family__project__guid=project_guid)
 
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
+    individuals = _get_json_for_individuals(
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True)
 
     individuals_by_guid = {}
     for i in individuals:

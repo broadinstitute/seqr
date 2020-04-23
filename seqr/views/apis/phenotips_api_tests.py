@@ -37,7 +37,7 @@ class PhenotipsAPITest(TestCase):
         header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
         rows = [
             '1,NA19678,,',
-            '1,NA19679,HP:0001631 (Defect in the atrial septum),',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),',
             '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
         ]
         f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
@@ -60,7 +60,7 @@ class PhenotipsAPITest(TestCase):
         ], 'warnings': []})
 
         # send valid request
-        rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)')
+        rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
         f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
@@ -72,7 +72,7 @@ class PhenotipsAPITest(TestCase):
             'uploadedFileId': mock.ANY,
             'errors': [],
             'warnings': [
-                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0001631 (NA19679); HP:0011675 (NA19675_1)",
+                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ],

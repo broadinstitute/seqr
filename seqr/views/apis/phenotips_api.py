@@ -18,6 +18,7 @@ https://phenotips.org/DevGuide/RESTfulAPI
 https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 """
 
+from datetime import datetime
 import json
 import logging
 import re
@@ -32,7 +33,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.utils.file_utils import save_uploaded_file
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
     phenotips_patient_url, phenotips_patient_exists
@@ -111,8 +113,7 @@ def receive_hpo_table_handler(request, project_guid):
                 else:
                     invalid_hpo_term_individuals[feature['id']].append(individual_id)
 
-            if individual.phenotips_data and \
-                    _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
+            if _has_same_features(individual, features):
                 unchanged_individuals.append(individual_id)
             else:
                 updates_by_individual_guid[individual.guid] = features
@@ -217,8 +218,11 @@ def _parse_hpo_terms(hpo_term_string, observed):
     return [_hpo_term_item(hpo_term.strip().split('(')[0], observed) for hpo_term in hpo_term_string.replace(',', ';').split(';')]
 
 
-def _feature_set(features):
-    return set([(feature['id'], feature['observed']) for feature in features])
+def _has_same_features(individual, features):
+    present_features = {feature['id'] for feature in features if feature['observed'] == 'yes'}
+    absent_features = {feature['id'] for feature in features if feature['observed'] == 'no'}
+    return {feature['id'] for feature in individual.features or []} == present_features and \
+           {feature['id'] for feature in individual.absent_features or []} == absent_features
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -242,19 +246,10 @@ def update_individual_hpo_terms(request, individual_guid):
     auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     make_phenotips_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
 
-    phenotips_patient_id = patient_json['id']
-    phenotips_eid = patient_json.get('external_id')
-
-    individual.phenotips_data = json.dumps(patient_json)
-    individual.phenotips_patient_id = phenotips_patient_id
-    individual.phenotips_eid = phenotips_eid
-    individual.save()
+    _update_individual_phenotips_data(individual, patient_json)
 
     return create_json_response({
-        individual.guid: {
-            'phenotipsData': patient_json,
-            'phenotipsEid': phenotips_eid
-        }
+        individual.guid: _get_json_for_individual(individual, user=request.user, add_hpo_details=True)
     })
 
 
@@ -475,18 +470,90 @@ def _update_individual_phenotips_data(individual, patient_json):
         patient_json (json): json dict representing the patient record in PhenoTips
     """
 
-    # for each HPO term, get the top level HPO category (eg. Musculoskeletal)
-    for feature in patient_json.get('features', []):
-        hpo_id = feature['id']
-        try:
-            feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
-        except ObjectDoesNotExist:
-            logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
-
     individual.phenotips_data = json.dumps(patient_json)
     individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
     individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
+    _update_individual_phenotips_fields(individual, patient_json)
     individual.save()
+
+
+def _update_individual_phenotips_fields(indiv, phenotips_json):
+    if phenotips_json.get('date_of_birth'):
+        indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
+    if phenotips_json.get('life_status') == 'deceased':
+        indiv.death_year = datetime.strptime(phenotips_json['date_of_death'], '%Y-%m-%d').year \
+            if phenotips_json.get('date_of_death') else 0
+
+    if phenotips_json.get('global_age_of_onset'):
+        onset_label = phenotips_json['global_age_of_onset'][0]['label']
+        indiv.onset_age = Individual.ONSET_AGE_REVERSE_LOOKUP[onset_label]
+    if phenotips_json.get('global_mode_of_inheritance'):
+        indiv.expected_inheritance = [
+            Individual.INHERITANCE_REVERSE_LOOKUP[i['label']] for i in phenotips_json['global_mode_of_inheritance']]
+
+    if phenotips_json['ethnicity']['maternal_ethnicity']:
+        indiv.maternal_ethnicity = phenotips_json['ethnicity']['maternal_ethnicity']
+    if phenotips_json['ethnicity']['paternal_ethnicity']:
+        indiv.paternal_ethnicity = phenotips_json['ethnicity']['paternal_ethnicity']
+
+    family_history = phenotips_json.get('family_history') or {}
+    if family_history.get('consanguinity') is not None:
+        indiv.consanguinity = family_history['consanguinity']
+    if family_history.get('affectedRelatives') is not None:
+        indiv.affected_relatives = family_history['affectedRelatives']
+
+    present_features = []
+    absent_features = []
+    nonstandard_features = []
+    absent_nonstandard_features = []
+    for feature in phenotips_json.get('features') or []:
+        feature_list = present_features if feature['observed'] == 'yes' else absent_features
+        feature_list.append(_get_parsed_feature(feature))
+    for feature in phenotips_json.get('nonstandard_features') or []:
+        feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
+        feature_list.append(
+            _get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
+    if present_features:
+        indiv.features = present_features
+    if absent_features:
+        indiv.absent_features = absent_features
+    if nonstandard_features:
+        indiv.nonstandard_features = nonstandard_features
+    if absent_nonstandard_features:
+        indiv.absent_nonstandard_features = absent_nonstandard_features
+
+    if phenotips_json.get('disorders'):
+        mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])
+        indiv.disorders = mim_ids
+
+    if phenotips_json.get('genes'):
+        indiv.candidate_genes = phenotips_json['genes']
+    if phenotips_json.get('rejectedGenes'):
+        indiv.rejected_genes = phenotips_json['rejectedGenes']
+
+    prenatal = phenotips_json['prenatal_perinatal_history']
+    for field in [
+        'assistedReproduction_fertilityMeds', 'assistedReproduction_iui', 'ivf', 'icsi',
+        'assistedReproduction_surrogacy', 'assistedReproduction_donoregg', 'assistedReproduction_donorsperm',
+    ]:
+        if prenatal.get(field) is not None:
+            indiv_field = 'ar_{}'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
+            setattr(indiv, indiv_field, prenatal[field])
+
+
+def _get_parsed_feature(feature, feature_id=None, additional_fields=None):
+    optional_fields = ['notes', 'qualifiers']
+    if additional_fields:
+        optional_fields += additional_fields
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
+
+    for field in optional_fields:
+        if field in feature:
+            feature_json[field] = feature[field]
+
+    return feature_json
 
 
 def _get_phenotips_username_and_password(user, project, permissions_level):

@@ -1207,5 +1207,83 @@
         "definition": "",
         "comment": ""
     }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 6,
+    "fields": {
+        "hpo_id": "HP:0011675",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0001626",
+        "is_category": "f",
+        "name": "Arrhythmia",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 7,
+    "fields": {
+        "hpo_id": "HP:0001674",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0001626",
+        "is_category": "f",
+        "name": "Complete atrioventricular canal defect",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 8,
+    "fields": {
+        "hpo_id": "HP:0001631",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0001626",
+        "is_category": "f",
+        "name": "Defect in the atrial septum",
+        "definition": "",
+        "comment": ""
+    }
+},
+    {
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 9,
+    "fields": {
+        "hpo_id": "HP:0001508",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0001507",
+        "is_category": "f",
+        "name": "Failure to thrive",
+        "definition": "",
+        "comment": ""
+    }
+},
+    {
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 10,
+    "fields": {
+        "hpo_id": "HP:0002011",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0000707",
+        "is_category": "f",
+        "name": "Morphological abnormality of the central nervous system",
+        "definition": "",
+        "comment": ""
+    }
+},
+    {
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 11,
+    "fields": {
+        "hpo_id": "HP:0001636",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0001626",
+        "is_category": "f",
+        "name": "Tetralogy of Fallot",
+        "definition": "",
+        "comment": ""
+    }
 }
 ]

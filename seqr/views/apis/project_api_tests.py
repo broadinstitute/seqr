@@ -6,7 +6,7 @@ from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
-    project_page_data, export_project_individuals_handler
+    project_page_data
 from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub, PROJECT_FIELDS, \
     INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS
 
@@ -118,6 +118,14 @@ class ProjectAPITest(TestCase):
             set(response_json['mmeSubmissionsByGuid'].values()[0].keys()),
             {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate'}
         )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000001_na19675']['features'][0].keys()),
+            {'id', 'category', 'label'}
+        )
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000001_na19675']['absentFeatures'][0].keys()),
+            {'id', 'category', 'label'}
+        )
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -140,13 +148,3 @@ class ProjectAPITest(TestCase):
         self.assertDictEqual(response_json['genesById'], {})
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {})
         self.assertDictEqual(response_json['locusListsByGuid'], {})
-
-    def test_export_tables(self):
-        url = reverse(export_project_individuals_handler, args=['R0001_1kg'])
-        _check_login(self, url)
-
-        response = self.client.get(url + "?file_format=tsv")
-        self.assertEqual(response.status_code, 200)
-
-        response = self.client.get(url + "?file_format=xls")
-        self.assertEqual(response.status_code, 200)
