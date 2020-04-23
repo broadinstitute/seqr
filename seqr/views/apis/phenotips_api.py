@@ -512,7 +512,7 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
     for feature in phenotips_json.get('nonstandard_features') or []:
         feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
         feature_list.append(
-            _get_parsed_feature(feature, id=feature['label'], additional_fields=['categories']))
+            _get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
     if present_features:
         indiv.features = present_features
     if absent_features:
@@ -541,13 +541,13 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
             setattr(indiv, indiv_field, prenatal[field])
 
 
-def _get_parsed_feature(feature, id=None, additional_fields=None):
+def _get_parsed_feature(feature, feature_id=None, additional_fields=None):
     optional_fields = ['notes', 'qualifiers']
     if additional_fields:
         optional_fields += additional_fields
-    if not id:
-        id = feature['id']
-    feature_json = {'id': id}
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
 
     for field in optional_fields:
         if field in feature:
