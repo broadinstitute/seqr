@@ -197,7 +197,7 @@ const nullableBoolDisplay = (value) => {
   if (value === true) {
     return <Label horizontal basic size="small" content="Yes" color="green" />
   } else if (value === false) {
-    return <Label horizontal basic size="small" content="Yes" color="green" />
+    return <Label horizontal basic size="small" content="No" color="red" />
   }
   return 'Unknown'
 }
