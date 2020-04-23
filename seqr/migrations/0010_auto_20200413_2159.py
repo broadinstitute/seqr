@@ -42,7 +42,7 @@ def update_phenotips_fields(apps, schema_editor):
     individuals = Individual.objects.using(db_alias).filter(
         phenotips_data__isnull=False).exclude(phenotips_data='').select_related('family')
     if individuals:
-        from seqr.views.apis.phenotips_api import _update_individual_phenotips_fields, _get_parsed_feature
+        from seqr.views.apis.phenotips_api import _update_individual_phenotips_fields
         hpo_map = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.exclude(name__startswith='obsolete')}
         hpo_map.update({hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=OBSOLETE_HPO_IDS)})
         hpo_name_map = {hpo.name.upper(): hpo for hpo in hpo_map.values()}
@@ -69,7 +69,8 @@ def update_phenotips_fields(apps, schema_editor):
                         mapped = True
                         if not phenotips_json.get('features'):
                             phenotips_json['features'] = []
-                        phenotips_json['features'].append(_get_parsed_feature(feature, id=hpo_data.hpo_id))
+                        feature['id'] = hpo_data.hpo_id
+                        phenotips_json['features'].append(feature)
                 if not mapped:
                     nonstandard_features.append(feature)
             phenotips_json['nonstandard_features'] = nonstandard_features
