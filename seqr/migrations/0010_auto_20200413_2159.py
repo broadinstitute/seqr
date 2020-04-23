@@ -224,7 +224,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='individual',
-            name='cosanguinity',
+            name='consanguinity',
             field=models.NullBooleanField(),
         ),
         migrations.AddField(

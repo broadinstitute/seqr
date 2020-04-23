@@ -498,7 +498,7 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
 
     family_history = phenotips_json.get('family_history') or {}
     if family_history.get('consanguinity') is not None:
-        indiv.cosanguinity = family_history['consanguinity']
+        indiv.consanguinity = family_history['consanguinity']
     if family_history.get('affectedRelatives') is not None:
         indiv.affected_relatives = family_history['affectedRelatives']
 

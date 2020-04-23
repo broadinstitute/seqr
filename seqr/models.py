@@ -397,7 +397,7 @@ class Individual(ModelWithGUID):
 
     maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
     paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
-    cosanguinity = models.NullBooleanField()
+    consanguinity = models.NullBooleanField()
     affected_relatives = models.NullBooleanField()
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
 
@@ -440,7 +440,7 @@ class Individual(ModelWithGUID):
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
             'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population',
-            'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'cosanguinity',
+            'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
             'affected_relatives', 'expected_inheritance', 'features', 'absent_features', 'nonstandard_features',
             'absent_nonstandard_features', 'disorders', 'candidate_genes', 'rejected_genes', 'ar_fertility_meds',
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm',

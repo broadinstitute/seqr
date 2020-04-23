@@ -391,7 +391,7 @@
         "onset_age": "A",
         "maternal_ethnicity": ["Azerbaijanis"],
         "paternal_ethnicity": ["African Americans"],
-        "cosanguinity": true,
+        "consanguinity": true,
         "affected_relatives": false,
         "expected_inheritance": null,
         "features": [{"id": "HP:0001631"}, {"id": "HP:0002011"}, {"id": "HP:0001636"}],

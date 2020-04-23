@@ -235,7 +235,7 @@ const INDIVIDUAL_FIELDS = [
     }),
   },
   {
-    field: 'cosanguinity',
+    field: 'consanguinity',
     fieldName: 'Consanguinity',
     isEditable: true,
     showEmptyValues: true,

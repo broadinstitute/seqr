@@ -73,7 +73,7 @@ INDIVIDUAL_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'individualId',
     'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
     'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
-    'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'cosanguinity', 'affectedRelatives', 'expectedInheritance',
+    'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',
     'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures', 'disorders', 'candidateGenes',
     'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy', 'arDonoregg', 'arDonorsperm',
 }
