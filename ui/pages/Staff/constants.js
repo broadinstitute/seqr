@@ -55,6 +55,8 @@ export const CORE_ANVIL_COLUMNS = [
 export const VARIANT_ANVIL_COLUMNS = [
   'Gene',
   'Gene_Class',
+  'novel_mendelian_gene',
+  'phenotype_class',
   'inheritance_description',
   'Zygosity',
   'Chrom',

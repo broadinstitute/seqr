@@ -248,7 +248,10 @@ def sample_metadata_export(request, project_guid):
 
     individual_samples = _get_loaded_before_date_project_individual_samples(project, request.GET.get('loadedBefore'))
 
-    subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(project, individual_samples)
+    saved_variants_by_family = _get_saved_discovery_variants_by_family(project, parse_json=True)
+
+    subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
+        project, individual_samples, saved_variants_by_family=saved_variants_by_family)
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for rows in [sample_rows, family_rows, discovery_rows]:
@@ -275,7 +278,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples):
+def _parse_anvil_metadata(project, individual_samples, saved_variants_by_family=None):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -293,7 +296,8 @@ def _parse_anvil_metadata(project, individual_samples):
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
-    saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
+    if not saved_variants_by_family:
+        saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -377,6 +381,12 @@ def _parse_anvil_metadata(project, individual_samples):
                 'Gene_Class': 'Known',
                 'inheritance_description': inheritance_mode,
             }
+
+            if 'discovery_tag_names' in variant:
+                is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
+                parsed_variant['novel_mendelian_gene'] = is_novel
+                _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
+
             if variant.get('svType'):
                 parsed_variant.update({
                     'sv_name': _get_sv_name(variant),
@@ -390,8 +400,8 @@ def _parse_anvil_metadata(project, individual_samples):
                     'Pos': str(variant['pos']),
                     'Ref': variant['ref'],
                     'Alt': variant['alt'],
-                    'hgvsc': (variant['main_transcript']['hgvsc'] or '').split(':')[-1],
-                    'hgvsp': (variant['main_transcript']['hgvsp'] or '').split(':')[-1],
+                    'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
+                    'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
                     'Transcript': variant['main_transcript']['transcriptId'],
                 })
             parsed_variants.append((variant['genotypes'], parsed_variant))
@@ -817,7 +827,7 @@ def _get_loaded_samples_by_family(project):
     return loaded_samples_by_family
 
 
-def _get_saved_discovery_variants_by_family(project):
+def _get_saved_discovery_variants_by_family(project, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
@@ -828,9 +838,17 @@ def _get_saved_discovery_variants_by_family(project):
         varianttag__variant_tag_type__in=tag_types,
     )
 
+    if parse_json:
+        variant_by_guid = {variant['variantGuid']: variant for variant in
+                           get_json_for_saved_variants(project_saved_variants, add_details=True)}
+
     saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:
-        saved_variants_by_family[saved_variant.family.guid].append(saved_variant)
+        parsed_variant = saved_variant
+        if parse_json:
+            parsed_variant = variant_by_guid[saved_variant.guid]
+            parsed_variant['discovery_tag_names'] = {vt.variant_tag_type.name for vt in saved_variant.discovery_tags}
+        saved_variants_by_family[saved_variant.family.guid].append(parsed_variant)
 
     return saved_variants_by_family
 
@@ -1104,7 +1122,7 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
     return row
 
 
-def _set_discovery_details(row, variant_tag_names, variants):
+def _set_discovery_phenotype_class(row, variant_tag_names):
     if any(tag in variant_tag_names for tag in [
         'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
     ]):
@@ -1117,6 +1135,12 @@ def _set_discovery_details(row, variant_tag_names, variants):
         'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
     ]):
         row["phenotype_class"] = "UE"
+    elif 'Known gene for phenotype' in variant_tag_names:
+        row["phenotype_class"] = "KNOWN"
+
+
+def _set_discovery_details(row, variant_tag_names, variants):
+    _set_discovery_phenotype_class(row, variant_tag_names)
 
     # Set defaults
     for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
