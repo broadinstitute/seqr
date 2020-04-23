@@ -353,7 +353,7 @@ def _parse_anvil_metadata(project, individual_samples):
         family_subject_row = {
             'family_guid': family.guid,
             'pmid_id': family.pubmed_ids[0].replace('PMID:', '').strip() if family.pubmed_ids else '',
-            'phenotype_description': (family.coded_phenotype or '').replace(',', ';'),
+            'phenotype_description': (family.coded_phenotype or '').replace(',', ';').replace('\t', ' '),
             'num_saved_variants': len(saved_variants),
         }
         family_subject_row.update(project_details)
