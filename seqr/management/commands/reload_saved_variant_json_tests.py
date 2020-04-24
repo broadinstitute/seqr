@@ -3,14 +3,13 @@ import mock
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.db.models.query_utils import Q
 from seqr.models import Project
 
 PROJECT_NAME = u'1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
-PROJECT_GUID2 = 'R0003_test'
 SAVED_VARIANT_GUIDS = ['SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100']
 FAMILY_ID = '1'
+
 
 class ReloadSavedVariantJsonTest(TestCase):
     fixtures = ['users', '1kg_project']
