@@ -324,200 +324,56 @@ AIRTABLE_COLLABORATOR_RECORDS = {
     ]
 }
 
-EXPECTED_EXPORT_FILES = [
-    [u'1kg project n\xe5me with uni\xe7\xf8de_PI_Subject',
-     ['entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id',
-      'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets', 'sex',
-      'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group', 'disease_id',
-      'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
-      'hpo_absent', 'phenotype_description', 'solve_state'], [
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 1, 'dbgap_submission': 'No',
-          'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Tier 1',
-          'phenotype_group': '', 'sex': 'Male', 'phenotype_description': '', 'ancestry': '',
-          'ancestry_detail': '', 'entity:subject_id': u'NA19675_1',
-          'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'multiple_datasets': 'No',
-          'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
-          'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 1, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Tier 1', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA19678', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA19678', 'family_guid': u'F000001_1',
-          'affected_status': 'Unaffected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 1, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Tier 1', 'phenotype_group': '', 'sex': 'Female',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA19679', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA19679', 'family_guid': u'F000001_1',
-          'affected_status': 'Unaffected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': u'HP:0006101|HP:0004322', 'solve_state': 'Unsolved', 'phenotype_group': '',
-          'sex': 'Female', 'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'HG00731',
-          'hpo_present': u'HP:0004325|HP:0001290|HP:0002011|HP:0100258|HP:0002650',
-          'multiple_datasets': 'No', 'onset_category': 'Unknown', 'subject_id': u'HG00731',
-          'family_guid': u'F000002_2', 'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'HG00732', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'HG00732', 'family_guid': u'F000002_2',
-          'affected_status': 'Unaffected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Female',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'HG00733', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'HG00733', 'family_guid': u'F000002_2',
-          'affected_status': 'Unaffected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20870', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20870', 'family_guid': u'F000003_3',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20872', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20872', 'family_guid': u'F000004_4',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20874', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20874', 'family_guid': u'F000005_5',
-          'affected_status': 'Unaffected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20875', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20875', 'family_guid': u'F000006_6',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20876', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20876', 'family_guid': u'F000007_7',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20877', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20877', 'family_guid': u'F000008_8',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20878', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20878', 'family_guid': u'F000009_9',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'},
-         {'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'No',
-          'hpo_absent': '', 'solve_state': 'Unsolved', 'phenotype_group': '', 'sex': 'Male',
-          'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-          'entity:subject_id': u'NA20881', 'hpo_present': '', 'multiple_datasets': 'No',
-          'onset_category': 'Unknown', 'subject_id': u'NA20881', 'family_guid': u'F000010_10',
-          'affected_status': 'Affected', 'pmid_id': '',
-          'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}]],
-    [u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample',
-     ['entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source',
-      'sample_provider', 'data_type', 'date_data_generation'], [
-         {'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
-          'sample_provider': '', 'sample_id': u'NA19675', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA19678', 'data_type': u'WES', 'subject_id': u'NA19678',
-          'sample_provider': '', 'sample_id': u'NA19678', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA19679', 'data_type': u'WES', 'subject_id': u'NA19679',
-          'sample_provider': '', 'sample_id': u'NA19679', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'HG00731', 'data_type': u'WES', 'subject_id': u'HG00731',
-          'sample_provider': '', 'sample_id': u'HG00731', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'HG00732', 'data_type': u'WES', 'subject_id': u'HG00732',
-          'sample_provider': '', 'sample_id': u'HG00732', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'HG00733', 'data_type': u'WES', 'subject_id': u'HG00733',
-          'sample_provider': '', 'sample_id': u'HG00733', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20870', 'data_type': u'WES', 'subject_id': u'NA20870',
-          'sample_provider': '', 'sample_id': u'NA20870', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20872', 'data_type': u'WES', 'subject_id': u'NA20872',
-          'sample_provider': '', 'sample_id': u'NA20872', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20874', 'data_type': u'WES', 'subject_id': u'NA20874',
-          'sample_provider': '', 'sample_id': u'NA20874', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20875', 'data_type': u'WES', 'subject_id': u'NA20875',
-          'sample_provider': '', 'sample_id': u'NA20875', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20876', 'data_type': u'WES', 'subject_id': u'NA20876',
-          'sample_provider': '', 'sample_id': u'NA20876', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20877', 'data_type': u'WES', 'subject_id': u'NA20877',
-          'sample_provider': '', 'sample_id': u'NA20877', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20878', 'data_type': u'WES', 'subject_id': u'NA20878',
-          'sample_provider': '', 'sample_id': u'NA20878', 'date_data_generation': '2017-02-05'},
-         {'entity:sample_id': u'NA20881', 'data_type': u'WES', 'subject_id': u'NA20881',
-          'sample_provider': '', 'sample_id': u'NA20881', 'date_data_generation': '2017-02-05'}]],
-    [u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family',
-     ['entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
-      'family_relationship', 'consanguinity', 'consanguinity_detail', 'pedigree_image',
-      'pedigree_detail', 'family_history', 'family_onset'], [
-         {'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
-          'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'},
-         {'family_id': u'1', 'subject_id': u'NA19678', 'entity:family_id': u'NA19678',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'1', 'subject_id': u'NA19679', 'entity:family_id': u'NA19679',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'2', 'subject_id': u'HG00731', 'entity:family_id': u'HG00731',
-          'paternal_id': u'HG00732', 'maternal_id': u'HG00733'},
-         {'family_id': u'2', 'subject_id': u'HG00732', 'entity:family_id': u'HG00732',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'2', 'subject_id': u'HG00733', 'entity:family_id': u'HG00733',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'3', 'subject_id': u'NA20870', 'entity:family_id': u'NA20870',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'4', 'subject_id': u'NA20872', 'entity:family_id': u'NA20872',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'5', 'subject_id': u'NA20874', 'entity:family_id': u'NA20874',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'6', 'subject_id': u'NA20875', 'entity:family_id': u'NA20875',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'7', 'subject_id': u'NA20876', 'entity:family_id': u'NA20876',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'8', 'subject_id': u'NA20877', 'entity:family_id': u'NA20877',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'9', 'subject_id': u'NA20878', 'entity:family_id': u'NA20878',
-          'paternal_id': '', 'maternal_id': ''},
-         {'family_id': u'10', 'subject_id': u'NA20881', 'entity:family_id': u'NA20881',
-          'paternal_id': '', 'maternal_id': ''}]],
-    [u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery',
-     ['entity:discovery_id', 'subject_id', 'sample_id', 'Gene-1', 'Gene_Class-1',
-      'inheritance_description-1', 'Zygosity-1', 'Chrom-1', 'Pos-1', 'Ref-1', 'Alt-1', 'hgvsc-1',
-      'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1'], [
-         {'Zygosity-1': 'Heterozygous', 'Pos-1': '3343353', 'Ref-1': u'GAGA', 'Alt-1': u'G',
-          'Gene-1': u'RP11-206L10.5', 'subject_id': u'NA19675_1', 'hgvsp-1': u'p.Leu126del',
-          'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
-          'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'NA19675',
-          'entity:discovery_id': u'NA19675_1', 'Chrom-1': u'2',
-          'inheritance_description-1': 'de novo'},
-         {'entity:discovery_id': u'NA19678', 'subject_id': u'NA19678', 'sample_id': u'NA19678'},
-         {'entity:discovery_id': u'NA19679', 'subject_id': u'NA19679', 'sample_id': u'NA19679'},
-         {'entity:discovery_id': u'HG00731', 'subject_id': u'HG00731', 'sample_id': u'HG00731'},
-         {'entity:discovery_id': u'HG00732', 'subject_id': u'HG00732', 'sample_id': u'HG00732'},
-         {'entity:discovery_id': u'HG00733', 'subject_id': u'HG00733', 'sample_id': u'HG00733'},
-         {'entity:discovery_id': u'NA20870', 'subject_id': u'NA20870', 'sample_id': u'NA20870'},
-         {'entity:discovery_id': u'NA20872', 'subject_id': u'NA20872', 'sample_id': u'NA20872'},
-         {'entity:discovery_id': u'NA20874', 'subject_id': u'NA20874', 'sample_id': u'NA20874'},
-         {'entity:discovery_id': u'NA20875', 'subject_id': u'NA20875', 'sample_id': u'NA20875'},
-         {'entity:discovery_id': u'NA20876', 'subject_id': u'NA20876', 'sample_id': u'NA20876'},
-         {'entity:discovery_id': u'NA20877', 'subject_id': u'NA20877', 'sample_id': u'NA20877'},
-         {'entity:discovery_id': u'NA20878', 'subject_id': u'NA20878', 'sample_id': u'NA20878'},
-         {'entity:discovery_id': u'NA20881', 'subject_id': u'NA20881', 'sample_id': u'NA20881'}]
-     ]
+EXPECTED_PI_SUBJECT_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Subject',
+    ['entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id',
+     'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets', 'sex',
+     'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group', 'disease_id',
+     'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
+     'hpo_absent', 'phenotype_description', 'solve_state'],
+    [
+        {'project_guid': u'R0001_1kg', 'num_saved_variants': 1, 'dbgap_submission': 'No',
+         'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Tier 1',
+         'phenotype_group': '', 'sex': 'Male', 'phenotype_description': '', 'ancestry': '',
+         'ancestry_detail': '', 'entity:subject_id': u'NA19675_1',
+         'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'multiple_datasets': 'No',
+         'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
+         'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
+         'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}
+    ]
+]
+EXPECTED_PI_SAMPLE_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample',
+    ['entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source',
+     'sample_provider', 'data_type', 'date_data_generation'],
+    [
+        {'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
+         'sample_provider': '', 'sample_id': u'NA19675', 'date_data_generation': '2017-02-05'}
+    ]
+]
+EXPECTED_PI_FAMILY_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family',
+    ['entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
+     'family_relationship', 'consanguinity', 'consanguinity_detail', 'pedigree_image',
+     'pedigree_detail', 'family_history', 'family_onset'],
+    [
+        {'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
+         'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'}
+    ]
+]
+EXPECTED_PI_DISCOVERY_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery',
+    ['entity:discovery_id', 'subject_id', 'sample_id', 'Gene-1', 'Gene_Class-1',
+     'inheritance_description-1', 'Zygosity-1', 'Chrom-1', 'Pos-1', 'Ref-1', 'Alt-1', 'hgvsc-1',
+     'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1'],
+    [
+        {'Zygosity-1': 'Heterozygous', 'Pos-1': '3343353', 'Ref-1': u'GAGA', 'Alt-1': u'G',
+         'Gene-1': u'RP11-206L10.5', 'subject_id': u'NA19675_1', 'hgvsp-1': u'p.Leu126del',
+         'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
+         'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'NA19675',
+         'entity:discovery_id': u'NA19675_1', 'Chrom-1': u'2',
+         'inheritance_description-1': 'de novo'}
+    ]
 ]
 
 
@@ -648,14 +504,14 @@ class StaffAPITest(TestCase):
         _check_login(self, url)
 
         # Create a SavedVariant row needed by this test
-        saved_variant = SavedVariant.objects.get(guid__exact = "SV0000001_2103343353_r0390_100")
-        variant_tag_type = VariantTagType.objects.get(name__exact = "Known gene for phenotype")
+        saved_variant = SavedVariant.objects.get(guid = "SV0000001_2103343353_r0390_100")
+        variant_tag_type = VariantTagType.objects.get(name = "Known gene for phenotype")
         variant_tag = VariantTag.objects.create(variant_tag_type = variant_tag_type)
         variant_tag.saved_variants.add(saved_variant)
         variant_tag.save()
 
         # We will test the inputs of the export_multiple_files method.
-        # Outputs of the method are not important for this test.
+        # Outputs of the method are not important for this test but an HttpResponse data is still required by the API.
         mock_export_multiple_files.return_value = HttpResponse("Dummy text", content_type="text/plain")
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
@@ -665,6 +521,17 @@ class StaffAPITest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        mock_export_multiple_files.assert_called_with(EXPECTED_EXPORT_FILES,
+        mock_export_multiple_files.assert_called_with(mock.ANY,
             u'1kg project n\u00e5me with uni\u00e7\u00f8de_AnVIL_Metadata',
             add_header_prefix = True, file_format = 'tsv', blank_value = '-')
+
+        exported_files = mock_export_multiple_files.call_args.args[0]
+
+        self.assertListEqual([EXPECTED_PI_SUBJECT_FILE[0], EXPECTED_PI_SUBJECT_FILE[1]], [exported_files[0][0], exported_files[0][1]])
+        self.assertListEqual([EXPECTED_PI_SAMPLE_FILE[0], EXPECTED_PI_SAMPLE_FILE[1]], [exported_files[1][0], exported_files[1][1]])
+        self.assertListEqual([EXPECTED_PI_FAMILY_FILE[0], EXPECTED_PI_FAMILY_FILE[1]], [exported_files[2][0], exported_files[2][1]])
+        self.assertListEqual([EXPECTED_PI_DISCOVERY_FILE[0], EXPECTED_PI_DISCOVERY_FILE[1]], [exported_files[3][0], exported_files[3][1]])
+        self.assertIn(EXPECTED_PI_SUBJECT_FILE[2][0], exported_files[0][2])
+        self.assertIn(EXPECTED_PI_SAMPLE_FILE[2][0], exported_files[1][2])
+        self.assertIn(EXPECTED_PI_FAMILY_FILE[2][0], exported_files[2][2])
+        self.assertIn(EXPECTED_PI_DISCOVERY_FILE[2][0], exported_files[3][2])
