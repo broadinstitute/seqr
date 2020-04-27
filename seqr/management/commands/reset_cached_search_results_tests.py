@@ -4,20 +4,22 @@ import mock
 from django.core.management import call_command
 from django.test import TestCase
 
-PROJECT_NAME = '1kg project'
+from seqr.models import Project
+
+PROJECT_NAME = u'1kg project n\u00e5me with uni\u00e7\u00f8de'
 
 
 class ResetCachedSearchResultsTest(TestCase):
+    fixtures = ['users', '1kg_project']
+
     @mock.patch('seqr.management.commands.reset_cached_search_results.reset_cached_search_results')
-    @mock.patch('seqr.management.commands.reset_cached_search_results.Project')
     @mock.patch('seqr.management.commands.reset_cached_search_results.logger')
-    def test_command(self, mock_logger, mock_project, mock_reset_cached_search_results):
+    def test_command(self, mock_logger, mock_reset_cached_search_results):
         # Test command with a --project argument
-        mock_project.objects.get.side_effect = [PROJECT_NAME]
-        call_command('reset_cached_search_results', '--project={}'.format(PROJECT_NAME))
-        mock_project.objects.get.assert_called_with(name=PROJECT_NAME)
-        mock_reset_cached_search_results.assert_called_with(project = PROJECT_NAME)
-        mock_logger.info.assert_called_with('Reset cached search results for {}'.format(PROJECT_NAME))
+        call_command('reset_cached_search_results', u'--project={}'.format(PROJECT_NAME))
+        project = Project.objects.get(name=PROJECT_NAME)
+        mock_reset_cached_search_results.assert_called_with(project = project)
+        mock_logger.info.assert_called_with(u'Reset cached search results for {}'.format(PROJECT_NAME))
 
         # Test command without any arguments
         call_command('reset_cached_search_results')
