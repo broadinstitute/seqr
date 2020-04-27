@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, _slugify, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
@@ -20,9 +20,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
-    delete_phenotips_patient
-from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
@@ -52,9 +50,6 @@ def create_project_handler(request):
 
     description = request_json.get('description', '')
     genome_version = request_json.get('genomeVersion')
-
-    #if not created:
-    #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
     project = _create_project(name, description=description, genome_version=genome_version, user=request.user)
 
@@ -355,13 +350,6 @@ def _create_project(name, description=None, genome_version=None, user=None):
 
     project, _ = Project.objects.get_or_create(**project_args)
 
-    if PHENOTIPS_SERVER:
-        try:
-            _enable_phenotips_for_project(project)
-        except Exception as e:
-            logger.error("Unable to create patient in PhenoTips. Make sure PhenoTips is running: %s", e)
-            raise
-
     return project
 
 
@@ -374,27 +362,8 @@ def _delete_project(project):
     IgvSample.objects.filter(individual__family__project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
 
-    individuals = Individual.objects.filter(family__project=project)
-    for individual in individuals:
-        delete_phenotips_patient(project, individual)
-    individuals.delete()
+    Individual.objects.filter(family__project=project).delete()
 
     Family.objects.filter(project=project).delete()
 
     project.delete()
-
-
-def _enable_phenotips_for_project(project):
-    """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
-    have edit permissions for patients in the project).
-    """
-    project.phenotips_user_id = _slugify(project.name)
-
-    # view-only user
-    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    create_phenotips_user(username, password)
-
-    # user with edit permissions
-    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    create_phenotips_user(username, password)
-    project.save()

@@ -1,5 +1,4 @@
 import json
-import mock
 from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
@@ -7,8 +6,8 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data
-from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub, PROJECT_FIELDS, \
-    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS
+from seqr.views.utils.test_utils import _check_login, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
+    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -19,7 +18,6 @@ class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
-    @mock.patch('seqr.views.utils.phenotips_utils.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
         _check_login(self, create_project_url)

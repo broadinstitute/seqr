@@ -18,43 +18,23 @@ https://phenotips.org/DevGuide/RESTfulAPI
 https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 """
 
-from datetime import datetime
 import json
 import logging
 import re
-import requests
 from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
-from django.core.exceptions import ObjectDoesNotExist
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
+from seqr.models import CAN_EDIT, Individual
 from seqr.views.utils.file_utils import save_uploaded_file
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
-from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
-    phenotips_patient_url, phenotips_patient_exists
-from seqr.views.utils.proxy_request_utils import proxy_request
-from settings import API_LOGIN_REQUIRED_URL, PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD, PHENOTIPS_SERVER
+from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
-
-PHENOTIPS_QUICK_SAVE_URL_REGEX = "/bin/preview/data/(P[0-9]{1,20})"
-
-DO_NOT_PROXY_URL_KEYWORDS = [
-    '/delete',
-    '/logout',
-    '/login',
-    '/admin',
-    '/CreatePatientRecord',
-    '/bin/PatientAccessRightsManagement',
-    '/ForgotUsername',
-    '/ForgotPassword',
-]
 
 FAMILY_ID_COLUMN = 'family_id'
 INDIVIDUAL_ID_COLUMN = 'external_id'
@@ -236,345 +216,17 @@ def update_individual_hpo_terms(request, individual_guid):
 
     features = json.loads(request.body)
 
-    _create_patient_if_missing(project, individual)
+    present_features = []
+    absent_features = []
+    for feature in features:
+        feature_list = present_features if feature['observed'] == 'yes' else absent_features
+        feature_list.append({'id': feature['id']})
 
-    patient_json = _get_patient_data(project, individual)
-    patient_json["features"] = features
-    patient_json_string = json.dumps(patient_json)
+    individual.features = present_features
+    individual.absent_features = absent_features
 
-    url = phenotips_patient_url(individual)
-    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    make_phenotips_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
-
-    _update_individual_phenotips_data(individual, patient_json)
+    individual.save()
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, user=request.user, add_hpo_details=True)
     })
-
-
-def _create_patient_if_missing(project, individual):
-    """Create a new PhenoTips patient record with the given patient id.
-
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-    Returns:
-        True if patient created
-    Raises:
-        PhenotipsException: if unable to create patient record
-    """
-    if phenotips_patient_exists(individual):
-        return False
-
-    url = '/rest/patients'
-    headers = {"Content-Type": "application/json"}
-    data = json.dumps({'external_id': individual.guid})
-    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-
-    response_items = make_phenotips_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_json_resonse=False)
-    patient_id = response_items['Location'].split('/')[-1]
-    logger.info("Created PhenoTips record with patient id {patient_id} and external id {external_id}".format(patient_id=patient_id, external_id=individual.guid))
-
-    username_read_only, _ = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    _add_user_to_patient(username_read_only, patient_id, allow_edit=False)
-    logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
-
-    individual.phenotips_patient_id = patient_id
-    individual.phenotips_eid = individual.guid
-    individual.save()
-
-    return True
-
-
-def _set_phenotips_patient_id_if_missing(project, individual):
-    if individual.phenotips_patient_id:
-        return
-    patient_json = _get_patient_data(project, individual)
-    individual.phenotips_patient_id = patient_json['id']
-    individual.save()
-
-
-def _get_patient_data(project, individual):
-    """Retrieves patient data from PhenoTips and returns a json obj.
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-    Returns:
-        dict: json dictionary containing all PhenoTips information for this patient
-    Raises:
-        PhenotipsException: if unable to retrieve data from PhenoTips
-    """
-    url = phenotips_patient_url(individual)
-
-    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    return make_phenotips_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
-
-
-def _add_user_to_patient(username, patient_id, allow_edit=True):
-    """Grant a PhenoTips user access to the given patient.
-
-    Args:
-        username (string): PhenoTips username to grant access to.
-        patient_id (string): PhenoTips internal patient id.
-    """
-    return _update_user_on_patient(patient_id, {
-        'collaborator': 'XWiki.' + str(username),
-        'accessLevel': 'edit' if allow_edit else 'view',
-    })
-
-
-def _update_user_on_patient(patient_id, data):
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data.update({
-        'patient': patient_id,
-        'xaction': 'update',
-        'submit': 'Update'
-    })
-
-    url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
-    make_phenotips_api_call(
-        'POST',
-        url,
-        http_headers=headers,
-        data=data,
-        auth_tuple=(PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD),
-        expected_status_code=204,
-        parse_json_resonse=False,
-    )
-
-
-@login_required
-@csrf_exempt
-def _phenotips_view_handler(request, project_guid, individual_guid, url_template, permission_level=CAN_VIEW):
-    """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
-
-    Args:
-        request: Django HTTP request object
-        project_guid (string): project GUID for the seqr project containing this individual
-        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
-    """
-
-    project = Project.objects.get(guid=project_guid)
-    check_permissions(project, request.user, CAN_VIEW)
-
-    individual = Individual.objects.get(guid=individual_guid)
-    _create_patient_if_missing(project, individual)
-    _set_phenotips_patient_id_if_missing(project, individual)
-
-    # query string forwarding needed for PedigreeEditor button
-    query_string = request.META["QUERY_STRING"]
-    url = url_template.format(patient_id=individual.phenotips_patient_id, query_string=query_string)
-
-    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=permission_level)
-
-    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=PHENOTIPS_SERVER)
-
-
-@login_required
-@csrf_exempt
-def phenotips_pdf_handler(request, project_guid, individual_guid):
-    """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
-
-    Args:
-        request: Django HTTP request object
-        project_guid (string): project GUID for the seqr project containing this individual
-        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
-    """
-    url_template = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode"
-
-    return _phenotips_view_handler(request, project_guid, individual_guid, url_template)
-
-
-@login_required
-@csrf_exempt
-def phenotips_edit_handler(request, project_guid, individual_guid):
-    """Request the PhenoTips Edit page for the given patient_id, and forwards PhenoTips' response to the client.
-
-    Args:
-        request: Django HTTP request object
-        project_guid (string): project GUID for the seqr project containing this individual
-        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
-    """
-
-    url_template = "/bin/edit/data/{patient_id}?{query_string}"
-
-    return _phenotips_view_handler(request, project_guid, individual_guid, url_template, permission_level=CAN_EDIT)
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def proxy_to_phenotips(request):
-    """This django view accepts GET and POST requests and forwards them to PhenoTips"""
-
-    url = request.get_full_path()
-    if any([k for k in DO_NOT_PROXY_URL_KEYWORDS if k.lower() in url.lower()]):
-        logger.warn("Blocked proxy url: " + str(url))
-        return HttpResponse(status=204)
-    logger.info("Proxying url: " + str(url))
-
-    # Some PhenoTips endpoints that use HTTP redirects lose the phenotips JSESSION auth cookie
-    # along the way, and don't proxy correctly. Using a Session object as below to store the cookies
-    # provides a work-around.
-    phenotips_session = requests.Session()
-    for key, value in request.COOKIES.items():
-        phenotips_session.cookies.set(key, value)
-
-    http_response = proxy_request(request, url, data=request.body, session=phenotips_session,
-                                  host=PHENOTIPS_SERVER, filter_request_headers=True)
-
-    # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
-    match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
-    if match:
-        _handle_phenotips_save_request(request, patient_id=match.group(1))
-
-    return http_response
-
-
-def _handle_phenotips_save_request(request, patient_id):
-    """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
-
-    url = '/rest/patients/%s' % patient_id
-
-    cookie_header = request.META.get('HTTP_COOKIE')
-    http_headers = {'Cookie': cookie_header} if cookie_header else {}
-    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=PHENOTIPS_SERVER)
-    if response.status_code != 200:
-        logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
-            url, response.status_code, response.reason_phrase))
-        return
-
-    patient_json = json.loads(response.content)
-
-    try:
-        if patient_json.get('external_id'):
-            # prefer to use the external id for legacy reasons: some projects shared phenotips
-            # records by sharing the phenotips internal id, so in rare cases, the
-            # Individual.objects.get(phenotips_patient_id=...) may match multiple Individual records
-            individual = Individual.objects.get(phenotips_eid=patient_json['external_id'])
-        else:
-            individual = Individual.objects.get(phenotips_patient_id=patient_json['id'])
-
-    except ObjectDoesNotExist as e:
-        logger.error("ERROR: PhenoTips patient id %s not found in seqr Individuals." % patient_json['id'])
-        return
-
-    _update_individual_phenotips_data(individual, patient_json)
-
-
-def _update_individual_phenotips_data(individual, patient_json):
-    """Process and store the given patient_json in the given Individual model.
-
-    Args:
-        individual (Individual): Django Individual model
-        patient_json (json): json dict representing the patient record in PhenoTips
-    """
-
-    individual.phenotips_data = json.dumps(patient_json)
-    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
-    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
-    _update_individual_phenotips_fields(individual, patient_json)
-    individual.save()
-
-
-def _update_individual_phenotips_fields(indiv, phenotips_json):
-    if phenotips_json.get('date_of_birth'):
-        indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
-    if phenotips_json.get('life_status') == 'deceased':
-        indiv.death_year = datetime.strptime(phenotips_json['date_of_death'], '%Y-%m-%d').year \
-            if phenotips_json.get('date_of_death') else 0
-
-    if phenotips_json.get('global_age_of_onset'):
-        onset_label = phenotips_json['global_age_of_onset'][0]['label']
-        indiv.onset_age = Individual.ONSET_AGE_REVERSE_LOOKUP[onset_label]
-    if phenotips_json.get('global_mode_of_inheritance'):
-        indiv.expected_inheritance = [
-            Individual.INHERITANCE_REVERSE_LOOKUP[i['label']] for i in phenotips_json['global_mode_of_inheritance']]
-
-    if phenotips_json['ethnicity']['maternal_ethnicity']:
-        indiv.maternal_ethnicity = phenotips_json['ethnicity']['maternal_ethnicity']
-    if phenotips_json['ethnicity']['paternal_ethnicity']:
-        indiv.paternal_ethnicity = phenotips_json['ethnicity']['paternal_ethnicity']
-
-    family_history = phenotips_json.get('family_history') or {}
-    if family_history.get('consanguinity') is not None:
-        indiv.consanguinity = family_history['consanguinity']
-    if family_history.get('affectedRelatives') is not None:
-        indiv.affected_relatives = family_history['affectedRelatives']
-
-    present_features = []
-    absent_features = []
-    nonstandard_features = []
-    absent_nonstandard_features = []
-    for feature in phenotips_json.get('features') or []:
-        feature_list = present_features if feature['observed'] == 'yes' else absent_features
-        feature_list.append(_get_parsed_feature(feature))
-    for feature in phenotips_json.get('nonstandard_features') or []:
-        feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
-        feature_list.append(
-            _get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
-    if present_features:
-        indiv.features = present_features
-    if absent_features:
-        indiv.absent_features = absent_features
-    if nonstandard_features:
-        indiv.nonstandard_features = nonstandard_features
-    if absent_nonstandard_features:
-        indiv.absent_nonstandard_features = absent_nonstandard_features
-
-    if phenotips_json.get('disorders'):
-        mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])
-        indiv.disorders = mim_ids
-
-    if phenotips_json.get('genes'):
-        indiv.candidate_genes = phenotips_json['genes']
-    if phenotips_json.get('rejectedGenes'):
-        indiv.rejected_genes = phenotips_json['rejectedGenes']
-
-    prenatal = phenotips_json['prenatal_perinatal_history']
-    for field in [
-        'assistedReproduction_fertilityMeds', 'assistedReproduction_iui', 'ivf', 'icsi',
-        'assistedReproduction_surrogacy', 'assistedReproduction_donoregg', 'assistedReproduction_donorsperm',
-    ]:
-        if prenatal.get(field) is not None:
-            indiv_field = 'ar_{}'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
-            setattr(indiv, indiv_field, prenatal[field])
-
-
-def _get_parsed_feature(feature, feature_id=None, additional_fields=None):
-    optional_fields = ['notes', 'qualifiers']
-    if additional_fields:
-        optional_fields += additional_fields
-    if not feature_id:
-        feature_id = feature['id']
-    feature_json = {'id': feature_id}
-
-    for field in optional_fields:
-        if field in feature:
-            feature_json[field] = feature[field]
-
-    return feature_json
-
-
-def _get_phenotips_username_and_password(user, project, permissions_level):
-    """Checks if user has permission to access the given project, and raises an exception if not.
-
-    Args:
-        user (User): the django user object
-        project(Model): Project model
-        permissions_level (string): 'edit' or 'view'
-    Raises:
-        PermissionDenied: if user doesn't have permission to access this project.
-    Returns:
-        2-tuple: PhenoTips username, password that can be used to access patients in this project.
-    """
-    if permissions_level == CAN_EDIT:
-        uname, pwd = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    elif permissions_level == CAN_VIEW:
-        uname, pwd = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    else:
-        raise ValueError("Unexpected auth_permissions value: %s" % permissions_level)
-
-    auth_tuple = (uname, pwd)
-
-    return auth_tuple

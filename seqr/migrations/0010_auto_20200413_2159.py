@@ -3,11 +3,12 @@
 from __future__ import unicode_literals
 import json
 from tqdm import tqdm
-
+from datetime import datetime
 import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import seqr.models
+from seqr.views.utils.json_utils import _to_snake_case
 
 # Valid MIM numbers that are not in the seqr DB because they do not map to a valid gene
 MIM_NUMBER_WHITELIST = [
@@ -42,7 +43,6 @@ def update_phenotips_fields(apps, schema_editor):
     individuals = Individual.objects.using(db_alias).filter(
         phenotips_data__isnull=False).exclude(phenotips_data='').select_related('family')
     if individuals:
-        from seqr.views.apis.phenotips_api import _update_individual_phenotips_fields
         hpo_map = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.exclude(name__startswith='obsolete')}
         hpo_map.update({hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=OBSOLETE_HPO_IDS)})
         hpo_name_map = {hpo.name.upper(): hpo for hpo in hpo_map.values()}
@@ -135,6 +135,87 @@ def update_phenotips_fields(apps, schema_editor):
         if miscarriages:
             print('The following {} individuals were flagged for miscarriages: {}'.format(
                 len(miscarriages), ', '.join(miscarriages)))
+
+
+def _update_individual_phenotips_fields(indiv, phenotips_json):
+    if phenotips_json.get('date_of_birth'):
+        indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
+    if phenotips_json.get('life_status') == 'deceased':
+        indiv.death_year = datetime.strptime(phenotips_json['date_of_death'], '%Y-%m-%d').year \
+            if phenotips_json.get('date_of_death') else 0
+
+    if phenotips_json.get('global_age_of_onset'):
+        onset_label = phenotips_json['global_age_of_onset'][0]['label']
+        indiv.onset_age = seqr.models.Individual.ONSET_AGE_REVERSE_LOOKUP[onset_label]
+    if phenotips_json.get('global_mode_of_inheritance'):
+        indiv.expected_inheritance = [
+            seqr.models.Individual.INHERITANCE_REVERSE_LOOKUP[i['label']]
+            for i in phenotips_json['global_mode_of_inheritance']]
+
+    if phenotips_json['ethnicity']['maternal_ethnicity']:
+        indiv.maternal_ethnicity = phenotips_json['ethnicity']['maternal_ethnicity']
+    if phenotips_json['ethnicity']['paternal_ethnicity']:
+        indiv.paternal_ethnicity = phenotips_json['ethnicity']['paternal_ethnicity']
+
+    family_history = phenotips_json.get('family_history') or {}
+    if family_history.get('consanguinity') is not None:
+        indiv.consanguinity = family_history['consanguinity']
+    if family_history.get('affectedRelatives') is not None:
+        indiv.affected_relatives = family_history['affectedRelatives']
+
+    present_features = []
+    absent_features = []
+    nonstandard_features = []
+    absent_nonstandard_features = []
+    for feature in phenotips_json.get('features') or []:
+        feature_list = present_features if feature['observed'] == 'yes' else absent_features
+        feature_list.append(_get_parsed_feature(feature))
+    for feature in phenotips_json.get('nonstandard_features') or []:
+        feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
+        feature_list.append(
+            _get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
+    if present_features:
+        indiv.features = present_features
+    if absent_features:
+        indiv.absent_features = absent_features
+    if nonstandard_features:
+        indiv.nonstandard_features = nonstandard_features
+    if absent_nonstandard_features:
+        indiv.absent_nonstandard_features = absent_nonstandard_features
+
+    if phenotips_json.get('disorders'):
+        mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])
+        indiv.disorders = mim_ids
+
+    if phenotips_json.get('genes'):
+        indiv.candidate_genes = phenotips_json['genes']
+    if phenotips_json.get('rejectedGenes'):
+        indiv.rejected_genes = phenotips_json['rejectedGenes']
+
+    prenatal = phenotips_json['prenatal_perinatal_history']
+    for field in [
+        'assistedReproduction_fertilityMeds', 'assistedReproduction_iui', 'ivf', 'icsi',
+        'assistedReproduction_surrogacy', 'assistedReproduction_donoregg', 'assistedReproduction_donorsperm',
+    ]:
+        if prenatal.get(field) is not None:
+            indiv_field = 'ar_{}'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
+            setattr(indiv, indiv_field, prenatal[field])
+
+
+def _get_parsed_feature(feature, feature_id=None, additional_fields=None):
+    optional_fields = ['notes', 'qualifiers']
+    if additional_fields:
+        optional_fields += additional_fields
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
+
+    for field in optional_fields:
+        if field in feature:
+            feature_json[field] = feature[field]
+
+    return feature_json
+
 
 
 class Migration(migrations.Migration):
