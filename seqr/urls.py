@@ -28,9 +28,7 @@ from seqr.views.apis.individual_api import \
     edit_individuals_handler, \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
-    save_individuals_table_handler
-
-from seqr.views.apis.phenotips_api import \
+    save_individuals_table_handler, \
     receive_hpo_table_handler, \
     update_individual_hpo_terms
 
