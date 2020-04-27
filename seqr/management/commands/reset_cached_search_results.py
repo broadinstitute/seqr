@@ -17,6 +17,6 @@ class Command(BaseCommand):
         project_name = options['project']
         project = Project.objects.get(name=project_name) if project_name else None
         reset_cached_search_results(project=project)
-        logger.info('Reset cached search results for {}'.format(project_name or 'all projects'))
+        logger.info(u'Reset cached search results for {}'.format(project_name or 'all projects'))
 
 
