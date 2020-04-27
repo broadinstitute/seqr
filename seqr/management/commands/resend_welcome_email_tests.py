@@ -19,8 +19,8 @@ class ResendWelcomeEmailTest(TestCase):
     def test_command(self, mock_send_welcome_email):
         call_command('resend_welcome_email', '--email-address={}'.format(TEST_USER_EMAIL),
                      '--referrer={}'.format(REFERRER_EMAIL))
-        user = User.objects.get(email__iexact=TEST_USER_EMAIL)
-        referrer = User.objects.get(email__iexact=REFERRER_EMAIL)
+        user = User.objects.get(email=TEST_USER_EMAIL)
+        referrer = User.objects.get(email=REFERRER_EMAIL)
         mock_send_welcome_email.assert_called_with(user, referrer)
 
     def test_command_exceptions(self):
