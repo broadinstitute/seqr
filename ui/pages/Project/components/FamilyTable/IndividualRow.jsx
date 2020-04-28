@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom'
 import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -58,19 +57,19 @@ const POPULATION_MAP = {
   SAS: 'South Asian',
 }
 
-const ONSET_AGE_MAP = {
-  G: 'Congenital onset',
-  E: 'Embryonal onset',
-  F: 'Fetal onset',
-  N: 'Neonatal onset',
-  I: 'Infantile onset',
-  C: 'Childhood onset',
-  J: 'Juvenile onset',
-  A: 'Adult onset',
-  Y: 'Young adult onset',
-  M: 'Middle age onset',
-  L: 'Late onset',
-}
+const ONSET_AGE_OPTIONS = [
+  { value: 'G', text: 'Congenital onset' },
+  { value: 'E', text: 'Embryonal onset' },
+  { value: 'F', text: 'Fetal onset' },
+  { value: 'N', text: 'Neonatal onset' },
+  { value: 'I', text: 'Infantile onset' },
+  { value: 'C', text: 'Childhood onset' },
+  { value: 'J', text: 'Juvenile onset' },
+  { value: 'A', text: 'Adult onset' },
+  { value: 'Y', text: 'Young adult onset' },
+  { value: 'M', text: 'Middle age onset' },
+  { value: 'L', text: 'Late onset' },
+]
 
 const INHERITANCE_MODE_MAP = {
   S: 'Sporadic',
@@ -202,6 +201,8 @@ const nullableBoolDisplay = (value) => {
   return 'Unknown'
 }
 
+const ShowPhenotipsModalButton = () => 'PHENOTIPS'
+
 const INDIVIDUAL_FIELDS = [
   {
     field: 'age',
@@ -215,12 +216,14 @@ const INDIVIDUAL_FIELDS = [
     }),
   },
   {
+    component: OptionFieldView,
     field: 'onsetAge',
     fieldName: 'Age of Onset',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: age => ONSET_AGE_MAP[age],
+    tagOptions: ONSET_AGE_OPTIONS,
+    formFieldProps: {
+      search: true,
+    },
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -230,9 +233,6 @@ const INDIVIDUAL_FIELDS = [
     isEditable: true,
     fieldName: 'Individual Notes',
     field: 'notes',
-    individualFields: ({ displayName }) => ({
-      modalTitle: `Notes for Individual ${displayName}`,
-    }),
   },
   {
     field: 'consanguinity',
@@ -461,6 +461,7 @@ const IndividualRow = React.memo((
           key: field.field,
           isEditable: isEditable && project.canEdit,
           onSubmit: isEditable && dispatchUpdateIndividual,
+          modalTitle: isEditable && `${field.fieldName} for Individual ${displayName}`,
           initialValues: individual,
           idField: 'individualGuid',
           ...individualFields(individual),
