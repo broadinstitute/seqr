@@ -30,7 +30,7 @@ from seqr.views.apis.individual_api import \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_hpo_table_handler, \
-    update_individual_hpo_terms
+    save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -141,7 +141,6 @@ no_login_react_app_pages = [
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
-    'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
@@ -176,6 +175,7 @@ api_endpoints = {
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
+    'project/(?P<project_guid>[^/]+)/save_hpo_terms_table/(?P<upload_file_id>[^/]+)': save_hpo_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,

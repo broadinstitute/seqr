@@ -10,6 +10,7 @@ class Command(BaseCommand):
         parser.add_argument('family_ids', nargs='+')
 
     def handle(self, *args, **options):
+        # TODO test me!
         from_project = Project.objects.get(guid=options['from_project'])
         to_project = Project.objects.get(guid=options['to_project'])
         family_ids = options['family_ids']
