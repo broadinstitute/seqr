@@ -314,7 +314,7 @@ export const RadioGroup = React.memo((props) => {
 const getButtonRadioOptionProps = (option, value, onChange) => ({
   active: value === option.value,
   basic: value !== option.value,
-  color: value === option.value ? 'grey' : 'black',
+  color: value === option.value ? (option.color || 'grey') : 'black',
   content: option.text,
   onClick: (e) => {
     e.preventDefault()

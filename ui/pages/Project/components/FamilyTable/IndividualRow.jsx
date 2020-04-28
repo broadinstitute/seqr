@@ -9,6 +9,7 @@ import orderBy from 'lodash/orderBy'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import NullableBoolFieldView from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
@@ -96,8 +97,6 @@ const AR_FIELDS = {
   arDonoregg: 'Donor egg',
   arDonorsperm: 'Donor sperm',
 }
-
-const BLOCK_DISPLAY_STYLE = { display: 'block' }
 
 const ratioLabel = (flag) => {
   const words = snakecaseToTitlecase(flag).split(' ')
@@ -192,15 +191,6 @@ AgeDetails.propTypes = {
   deathYear: PropTypes.string,
 }
 
-const nullableBoolDisplay = (value) => {
-  if (value === true) {
-    return <Label horizontal basic size="small" content="Yes" color="green" />
-  } else if (value === false) {
-    return <Label horizontal basic size="small" content="No" color="red" />
-  }
-  return 'Unknown'
-}
-
 const ShowPhenotipsModalButton = () => 'PHENOTIPS'
 
 const INDIVIDUAL_FIELDS = [
@@ -235,29 +225,19 @@ const INDIVIDUAL_FIELDS = [
     field: 'notes',
   },
   {
+    component: NullableBoolFieldView,
     field: 'consanguinity',
     fieldName: 'Consanguinity',
     isEditable: true,
-    showEmptyValues: true,
-    compact: true,
-    style: BLOCK_DISPLAY_STYLE,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: nullableBoolDisplay,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
   },
   {
+    component: NullableBoolFieldView,
     field: 'affectedRelatives',
     fieldName: 'Other Affected Relatives',
     isEditable: true,
-    showEmptyValues: true,
-    compact: true,
-    style: BLOCK_DISPLAY_STYLE,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: nullableBoolDisplay,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
