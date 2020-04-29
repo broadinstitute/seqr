@@ -1,8 +1,8 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, VariantTagType
-from seqr.model_utils import create_seqr_model
+
 
 class Command(BaseCommand):
 
