@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
+import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -176,10 +177,16 @@ const formatGenes = genes => genes.map(gene =>
 
 const AgeDetails = ({ birthYear, deathYear }) => {
   if (!!deathYear || deathYear === 0) {
+    let deathSummary
+    if (deathYear > 0) {
+      deathSummary = birthYear > 0 ? `at age ${deathYear - birthYear}` : `in ${deathYear}`
+    } else {
+      deathSummary = '(date unknown)'
+    }
     return (
       <div>
-        Deceased {deathYear > 0 ? `at age ${new Date().getFullYear() - deathYear}` : '(date unknown)'}
-        {birthYear > 0 && <div>Born in {birthYear}</div>}
+        Deceased {deathSummary}
+        {birthYear > 0 && <span> - Born in {birthYear}</span>}
       </div>
     )
   }
@@ -191,6 +198,15 @@ AgeDetails.propTypes = {
   deathYear: PropTypes.string,
 }
 
+const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
+const YEAR_SELECTOR_PROPS = {
+  component: Select,
+  options: YEAR_OPTIONS,
+  search: true,
+  inline: true,
+  width: 8,
+}
+
 const ShowPhenotipsModalButton = () => 'PHENOTIPS'
 
 const INDIVIDUAL_FIELDS = [
@@ -198,8 +214,17 @@ const INDIVIDUAL_FIELDS = [
     field: 'age',
     fieldName: 'Age',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    formFields: [
+      { name: 'birthYear', label: 'Birth Year', ...YEAR_SELECTOR_PROPS },
+      {
+        name: 'deathYear',
+        label: 'Death Year',
+        format: val => (val === 0 ? 0 : (val || -1)),
+        normalize: val => (val < 0 ? null : val),
+        ...YEAR_SELECTOR_PROPS,
+        options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
+      },
+    ],
     fieldDisplay: AgeDetails,
     individualFields: individual => ({
       fieldValue: individual,
