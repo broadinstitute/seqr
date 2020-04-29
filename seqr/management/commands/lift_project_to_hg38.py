@@ -39,7 +39,6 @@ class Command(BaseCommand):
         sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
         validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
         sample_type = index_metadata['sampleType']
-        dataset_path = index_metadata['sourceFilePath']
 
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
