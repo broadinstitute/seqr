@@ -7,11 +7,11 @@ from django.core.management import call_command
 from django.test import TestCase
 
 
+@mock.patch('seqr.management.commands.run_postgres_database_backup.os')
+@mock.patch('seqr.management.commands.run_postgres_database_backup.datetime')
 class RunProtgresDatabaseBackupTest(TestCase):
 
     # Test the command without an argument
-    @mock.patch('seqr.management.commands.run_postgres_database_backup.os')
-    @mock.patch('seqr.management.commands.run_postgres_database_backup.datetime')
     def test_command_no_argument(self, mock_datetime, mock_os):
         out = BytesIO()
 
@@ -42,8 +42,6 @@ class RunProtgresDatabaseBackupTest(TestCase):
             '/usr/local/bin/gsutil mv /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz')
 
     # Test the command with different arguments
-    @mock.patch('seqr.management.commands.run_postgres_database_backup.os')
-    @mock.patch('seqr.management.commands.run_postgres_database_backup.datetime')
     def test_command_with_arguments(self, mock_datetime, mock_os):
         out = BytesIO()
 
