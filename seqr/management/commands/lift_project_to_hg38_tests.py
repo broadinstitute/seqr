@@ -34,8 +34,7 @@ LIFT_MAP = {
 
 def mock_convert_coordinate(chrom, pos):
     pos = int(chrom.replace('chr', ''))*int(1e9) + pos
-    if pos in LIFT_MAP.keys():
-        return(LIFT_MAP[pos])
+    return(LIFT_MAP[pos])
 
 
 @mock.patch('seqr.management.commands.lift_project_to_hg38.logger')
