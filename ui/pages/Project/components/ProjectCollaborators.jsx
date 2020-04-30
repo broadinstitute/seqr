@@ -108,14 +108,6 @@ const CollaboratorContainer = styled.div`
 const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
   orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
-      <Popup
-        position="top center"
-        trigger={<Icon link size="small" name={c.hasEditPermissions ? 'star' : ''} />}
-        content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
-        size="small"
-      />
-      {c.displayName && `${c.displayName} - `}
-      <a href={`mailto:${c.email}`}>{c.email}</a>
       {project.canEdit &&
         <span>
           <HorizontalSpacer width={10} />
@@ -132,6 +124,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
             initialValues={c}
             onSubmit={onSubmit}
             size="tiny"
+            hideNoRequestStatus
             confirmDialog={
               <div className="content">
                 Are you sure you want to delete <b>{c.displayName || c.email}</b>. They will still have their user account
@@ -142,6 +135,14 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
         </span>
 
       }
+      <Popup
+        position="top center"
+        trigger={<Icon link size="small" name={c.hasEditPermissions ? 'star' : ''} />}
+        content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
+        size="small"
+      />
+      {c.displayName && `${c.displayName} - `}
+      <a href={`mailto:${c.email}`}>{c.email}</a>
     </CollaboratorContainer>,
   )
 ))
