@@ -226,7 +226,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        project, individual_samples)
+        project, individual_samples, _get_saved_known_gene_variants_by_family)
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -248,10 +248,8 @@ def sample_metadata_export(request, project_guid):
 
     individual_samples = _get_loaded_before_date_project_individual_samples(project, request.GET.get('loadedBefore'))
 
-    saved_variants_by_family = _get_saved_discovery_variants_by_family(project, parse_json=True)
-
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
-        project, individual_samples, saved_variants_by_family=saved_variants_by_family)
+        project, individual_samples, _get_parsed_saved_discovery_variants_by_family)
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for rows in [sample_rows, family_rows, discovery_rows]:
@@ -278,7 +276,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, saved_variants_by_family=None):
+def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_family):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -296,8 +294,7 @@ def _parse_anvil_metadata(project, individual_samples, saved_variants_by_family=
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
-    if not saved_variants_by_family:
-        saved_variants_by_family = _get_saved_known_gene_variants_by_family(samples_by_family.keys())
+    saved_variants_by_family = get_saved_variants_by_family(samples_by_family.keys())
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -750,7 +747,7 @@ def discovery_sheet(request, project_guid):
     errors = []
 
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
-    saved_variants_by_family = _get_saved_discovery_variants_by_family(project)
+    saved_variants_by_family = _get_project_saved_discovery_variants_by_family(project)
     mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
@@ -827,15 +824,23 @@ def _get_loaded_samples_by_family(project):
     return loaded_samples_by_family
 
 
-def _get_saved_discovery_variants_by_family(project, parse_json=False):
+def _get_parsed_saved_discovery_variants_by_family(families):
+    return _get_saved_discovery_variants_by_family({'family__in': families}, parse_json=True)
+
+
+def _get_project_saved_discovery_variants_by_family(project):
+    return _get_saved_discovery_variants_by_family({'family__project': project}, parse_json=False)
+
+
+def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
         Prefetch('varianttag_set', to_attr='discovery_tags',
                  queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
                  )).prefetch_related('variantfunctionaldata_set').filter(
-        family__project=project,
         varianttag__variant_tag_type__in=tag_types,
+        **variant_filter
     )
 
     if parse_json:
