@@ -7,11 +7,11 @@ from django.core.management import call_command
 from django.test import TestCase
 
 
+@mock.patch('seqr.management.commands.run_settings_backup.os')
+@mock.patch('seqr.management.commands.run_settings_backup.datetime')
 class RunSettingsBackupTest(TestCase):
 
     # Test the command without an argument
-    @mock.patch('seqr.management.commands.run_settings_backup.os')
-    @mock.patch('seqr.management.commands.run_settings_backup.datetime')
     def test_command_no_argument(self, mock_datetime, mock_os):
         out = BytesIO()
 
@@ -34,8 +34,6 @@ class RunSettingsBackupTest(TestCase):
             '/usr/local/bin/gsutil mv seqr_unknown_settings_2020-04-27__20-16-01.tar.gz gs://setting_back_bucket/settings/')
 
     # Test the command with different arguments
-    @mock.patch('seqr.management.commands.run_settings_backup.os')
-    @mock.patch('seqr.management.commands.run_settings_backup.datetime')
     def test_command_with_arguments(self, mock_datetime, mock_os):
         out = BytesIO()
 
