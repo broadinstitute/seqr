@@ -2,10 +2,6 @@ import os
 from django.core.management.base import BaseCommand
 import datetime
 
-def run(cmd):
-    print(cmd)
-    os.system(cmd)
-
 
 class Command(BaseCommand):
     help = 'Run database backups.'
@@ -16,15 +12,20 @@ class Command(BaseCommand):
         parser.add_argument('--deployment-type', default=os.environ.get('DEPLOYMENT_TYPE', 'unknown'))
 
     def handle(self, *args, **options):
+
+        def run(cmd):
+            self.stdout.write(cmd)
+            os.system(cmd)
+
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
 
-        print("=====================================")
-        print("======== %s ======= " % timestamp)
-        print("=====================================")
+        self.stdout.write("=====================================")
+        self.stdout.write("======== %s ======= " % timestamp)
+        self.stdout.write("=====================================")
 
         backup_dir = "/postgres_backups"
         if not os.path.isdir(backup_dir):
-            print("Creating directory: " + backup_dir)
+            self.stdout.write("Creating directory: " + backup_dir)
             os.mkdir(backup_dir)
 
         for db_name in ['seqrdb', 'xwiki']:
