@@ -124,7 +124,7 @@ VARIANTS = [
         'ref': 'GAGA',
         'chrom': '21',
         'pos': 3343400,
-        'xpos': 2103343400,
+        'xpos': 21003343400,
         'genomeVersion': '38',
         'liftedOverChrom': '21',
         'liftedOverPos': 3343353,
@@ -229,3 +229,17 @@ VARIANTS = [
         'genotypes': {}
     }
 ]
+
+SINGLE_VARIANT = {
+    'alt': 'A',
+    'ref': 'G',
+    'chrom': '1',
+    'pos': 46394160,
+    'xpos': 1046394160,
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'variantId': '1-46394160-G-A',
+    'transcripts': {'ENSG00000233653': {}},
+    'familyGuids': ['F000002_2'],
+    'genotypes': {}
+}
