@@ -40,7 +40,6 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
         individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=[
             'phenotips_data', 'filter_flags', 'pop_platform_filters', 'population',
-            'maternal_ethnicity', 'paternal_ethnicity',
             'expected_inheritance', 'features', 'absent_features', 'nonstandard_features',
             'absent_nonstandard_features', 'disorders', 'candidate_genes', 'rejected_genes', 'ar_fertility_meds',
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm',

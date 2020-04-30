@@ -31,7 +31,7 @@ AddElementButton.propTypes = {
   addElement: PropTypes.func,
 }
 
-const ListFieldView = React.memo(({ addElementLabel, initialValues, ...props }) => {
+const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldProps = {}, ...props }) => {
   const fields = [{
     name: props.field,
     isArrayField: true,
@@ -39,6 +39,7 @@ const ListFieldView = React.memo(({ addElementLabel, initialValues, ...props }) 
     addArrayElementProps: { addElementLabel },
     validate: validators.required,
     component: RemovableInput,
+    ...formFieldProps,
   }]
   const initialValue = initialValues[props.field]
   const defaultedInitialValues = {
@@ -57,6 +58,7 @@ ListFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   initialValues: PropTypes.object,
   addElementLabel: PropTypes.string,
+  formFieldProps: PropTypes.object,
 }
 
 export default ListFieldView

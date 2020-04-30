@@ -6,10 +6,11 @@ import { Link } from 'react-router-dom'
 import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { Select } from 'shared/components/form/Inputs'
+import { Select, SearchInput } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import NullableBoolFieldView from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel from 'shared/components/panel/HpoPanel'
@@ -98,6 +99,31 @@ const AR_FIELDS = {
   arDonoregg: 'Donor egg',
   arDonorsperm: 'Donor sperm',
 }
+
+const ETHNICITY_OPTIONS = [
+  'Aboriginal Australian',
+  'African',
+  'Arab',
+  'Ashkenazi Jewish',
+  'Asian',
+  'Australian',
+  'Caucasian',
+  'East Asian',
+  'Eastern European',
+  'European',
+  'Finnish',
+  'Gypsy',
+  'Hispanic',
+  'Indian',
+  'Latino/a',
+  'Native American',
+  'North American',
+  'Northern European',
+  'Sephardic Jewish',
+  'South Asian',
+  'Western European',
+//].map(value => ({ value, key: value, text: value }))
+].map(title => ({ title }))
 
 const ratioLabel = (flag) => {
   const words = snakecaseToTitlecase(flag).split(' ')
@@ -207,6 +233,19 @@ const YEAR_SELECTOR_PROPS = {
   width: 8,
 }
 
+const ETHNICITY_FIELD = {
+  component: ListFieldView,
+  isEditable: true,
+  formFieldProps: {
+    control: SearchInput,
+    options: ETHNICITY_OPTIONS,
+    showNoResults: false,
+    fluid: true,
+    maxLength: 40,
+  },
+  fieldDisplay: ancestries => ancestries.join(' / '),
+}
+
 const ShowPhenotipsModalButton = () => 'PHENOTIPS'
 
 const INDIVIDUAL_FIELDS = [
@@ -296,18 +335,12 @@ const INDIVIDUAL_FIELDS = [
   {
     field: 'maternalEthnicity',
     fieldName: 'Maternal Ancestry',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: ancestries => ancestries.join(' / '),
+    ...ETHNICITY_FIELD,
   },
   {
     field: 'paternalEthnicity',
     fieldName: 'Paternal Ancestry',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: ancestries => ancestries.join(' / '),
+    ...ETHNICITY_FIELD,
   },
   {
     fieldName: 'Imputed Population',

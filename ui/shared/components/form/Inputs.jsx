@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -197,6 +197,38 @@ export class AddableSelect extends React.PureComponent {
     }
   }
 }
+
+
+export class SearchInput extends React.PureComponent {
+  static propTypes = {
+    onChange: PropTypes.func,
+    options: PropTypes.array,
+  }
+
+  state = {
+    results: this.props.options,
+  }
+
+  handleResultSelect = (e, { result }) => this.props.onChange(e, result.title)
+
+  handleSearchChange = (e, data) => {
+    this.setState({
+      results: this.props.options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+    })
+    this.props.onChange(e, data)
+  }
+
+  render() {
+    const { options, onChange, ...props } = this.props
+    return <Search
+      {...props}
+      results={this.state.results}
+      onResultSelect={this.handleResultSelect}
+      onSearchChange={this.handleSearchChange}
+    />
+  }
+}
+
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
