@@ -3,11 +3,6 @@ import datetime
 from django.core.management.base import BaseCommand
 
 
-def run(cmd):
-    print(cmd)
-    os.system(cmd)
-
-
 class Command(BaseCommand):
     help = 'Run settings backups.'
 
@@ -16,6 +11,10 @@ class Command(BaseCommand):
         parser.add_argument('--deployment-type', default=os.environ.get('DEPLOYMENT_TYPE', 'unknown'))
 
     def handle(self, *args, **options):
+        def run(cmd):
+            self.stdout.write(cmd)
+            os.system(cmd)
+
         os.chdir('/')
 
         filename = 'seqr_{deployment_type}_settings_{timestamp}.tar.gz'.format(

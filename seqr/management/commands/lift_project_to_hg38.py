@@ -32,14 +32,13 @@ class Command(BaseCommand):
         elasticsearch_index = options['es_index']
 
         project = Project.objects.get(Q(name=project_arg) | Q(guid=project_arg))
-        logger.info('Updating project genome version for {}'.format(project.name))
+        logger.info(u'Updating project genome version for {}'.format(project.name))
 
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
         sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
         validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
         sample_type = index_metadata['sampleType']
-        dataset_path = index_metadata['sourceFilePath']
 
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
@@ -82,7 +81,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
-        _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path)
+        _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index)
         saved_variants = get_json_for_saved_variants(saved_variant_models_by_guid.values(), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
