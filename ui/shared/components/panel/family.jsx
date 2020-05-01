@@ -149,9 +149,7 @@ const familyFieldRenderProps = {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
-    fieldDisplay: values => values.map(value =>
-      <div key={value}><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
-    ),
+    itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },

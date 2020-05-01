@@ -3,7 +3,8 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Label, Popup } from 'semantic-ui-react'
+import { Field } from 'redux-form'
+import { Label, Popup, Form, Input } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { Select, SearchInput } from 'shared/components/form/Inputs'
@@ -199,9 +200,8 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
-const formatGenes = genes => genes.map(gene =>
-  <div key={gene.gene}>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</div>,
-)
+const formatGene = gene =>
+  <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
 
 const AgeDetails = ({ birthYear, deathYear }) => {
   if (!!deathYear || deathYear === 0) {
@@ -226,14 +226,38 @@ AgeDetails.propTypes = {
   deathYear: PropTypes.string,
 }
 
-const OmimSelector = ({ value, icon, ...props }) => (
-  value ? <div>{icon} {value}</div> :
-  <AwesomeBarFormInput {...props} placeholder="Search for OMIM disorder" categories="omim" />
-)
+const OMIM_CATEGORIES = ['omim']
+const GENE_CATEGORIES = ['genes']
 
-OmimSelector.propTypes = {
+const AwesomebarItemSelector = ({ icon, input, ...props }) => {
+  const { value, ...fieldProps } = input || props
+  return value ? <Input fluid icon={icon} value={value} readOnly /> : <AwesomeBarFormInput {...fieldProps} {...props} />
+}
+
+AwesomebarItemSelector.propTypes = {
+  input: PropTypes.object,
   icon: PropTypes.node,
-  value: PropTypes.string,
+  value: PropTypes.oneOf(PropTypes.string, PropTypes.number),
+}
+
+const GeneEntry = ({ name, icon }) =>
+  <Form.Group inline>
+    <Form.Field width={1}>{icon}</Form.Field>
+    <Form.Field width={7}>
+      <Field
+        name={`${name}.gene`}
+        placeholder="Search for gene"
+        component={AwesomebarItemSelector}
+        categories={GENE_CATEGORIES}
+        parseResultItem={result => result.title}
+      />
+    </Form.Field>
+    <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
+  </Form.Group>
+
+GeneEntry.propTypes = {
+  icon: PropTypes.node,
+  name: PropTypes.string,
 }
 
 const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
@@ -255,7 +279,18 @@ const ETHNICITY_FIELD = {
     fluid: true,
     maxLength: 40,
   },
-  fieldDisplay: ancestries => ancestries.join(' / '),
+  itemJoin: ' / ',
+}
+
+const GENES_FIELD = {
+  component: ListFieldView,
+  isEditable: true,
+  itemDisplay: formatGene,
+  itemKey: ({ gene }) => gene,
+  formFieldProps: { itemComponent: GeneEntry },
+  individualFields: ({ affected }) => ({
+    isVisible: affected === AFFECTED,
+  }),
 }
 
 const ShowPhenotipsModalButton = () => 'PHENOTIPS'
@@ -404,9 +439,12 @@ const INDIVIDUAL_FIELDS = [
     field: 'disorders',
     fieldName: 'Pre-discovery OMIM disorders',
     isEditable: true,
-    formFieldProps: { control: OmimSelector },
-    fieldDisplay: disorders =>
-      disorders.map(mim => <div><a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a></div>),
+    formFieldProps: {
+      itemComponent: AwesomebarItemSelector,
+      placeholder: 'Search for OMIM disorder',
+      categories: OMIM_CATEGORIES,
+    },
+    itemDisplay: mim => <a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a>,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -414,24 +452,12 @@ const INDIVIDUAL_FIELDS = [
   {
     field: 'rejectedGenes',
     fieldName: 'Previously Tested Genes',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: formatGenes,
-    individualFields: ({ affected }) => ({
-      isVisible: affected === AFFECTED,
-    }),
+    ...GENES_FIELD,
   },
   {
     field: 'candidateGenes',
     fieldName: 'Candidate Genes',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: formatGenes,
-    individualFields: ({ affected }) => ({
-      isVisible: affected === AFFECTED,
-    }),
+    ...GENES_FIELD,
   },
 ]
 

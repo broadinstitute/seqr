@@ -41,7 +41,6 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
         immutable_keys=[
             'phenotips_data', 'filter_flags', 'pop_platform_filters', 'population',
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features',
-            'candidate_genes', 'rejected_genes',
         ],
     )
 
