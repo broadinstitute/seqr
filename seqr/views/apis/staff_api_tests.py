@@ -3,7 +3,6 @@ import mock
 from datetime import datetime
 import responses
 from django.http import HttpResponse
-from seqr.models import VariantTag, VariantTagType, SavedVariant
 
 from settings import AIRTABLE_URL
 
@@ -224,8 +223,6 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 EXPECTED_ERRORS = [
     u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
-EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'no_individuals', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
-
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
     u'numberOfUniqueGenes': 4,
@@ -270,7 +267,7 @@ AIRTABLE_SAMPLE_RECORDS = {
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        "SeqrCollaboratorSampleID": "19F-DR-1",
+        "SeqrCollaboratorSampleID": "NA19675",
         "CollaboratorSampleID": "VCGS_FAM203_621_D1",
         "Collaborator": ["recW24C2CJW5lT64K"],
         "dbgap_study_id": "dbgap_stady_id_1",
@@ -289,7 +286,7 @@ AIRTABLE_SAMPLE_RECORDS = {
     {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
-        "SeqrCollaboratorSampleID": "19F-DR-2",
+        "SeqrCollaboratorSampleID": "HG00731",
         "CollaboratorSampleID": "VCGS_FAM203_621_D2",
         "Collaborator": ["reca4hcBnbA2cnZf9"],
         "dbgap_study_id": "dbgap_stady_id_2",
@@ -330,51 +327,51 @@ EXPECTED_PI_SUBJECT_FILE = [
      'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets', 'sex',
      'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group', 'disease_id',
      'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
-     'hpo_absent', 'phenotype_description', 'solve_state'],
-    [
-        {'project_guid': u'R0001_1kg', 'num_saved_variants': 1, 'dbgap_submission': 'No',
-         'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Tier 1',
-         'phenotype_group': '', 'sex': 'Male', 'phenotype_description': '', 'ancestry': '',
-         'ancestry_detail': '', 'entity:subject_id': u'NA19675_1',
-         'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'multiple_datasets': 'No',
-         'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
-         'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
-         'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}
-    ]
+     'hpo_absent', 'phenotype_description', 'solve_state']
 ]
+EXPECTED_PI_SUBJECT_ROW = {
+    'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'Yes',
+    'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Unsolved', 'phenotype_group': '',
+    'sex': 'Male', 'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
+    'entity:subject_id': u'NA19675_1', 'dbgap_subject_id': u'dbgap_subject_id_1',
+    'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'dbgap_study_id': u'dbgap_stady_id_1',
+    'multiple_datasets': 'No', 'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
+    'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
+    'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}
+
 EXPECTED_PI_SAMPLE_FILE = [
     u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample',
     ['entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source',
-     'sample_provider', 'data_type', 'date_data_generation'],
-    [
-        {'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
-         'sample_provider': '', 'sample_id': u'NA19675', 'date_data_generation': '2017-02-05'}
-    ]
+     'sample_provider', 'data_type', 'date_data_generation']
 ]
+EXPECTED_PI_SAMPLE_ROW = {
+    'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
+    'sample_provider': u'Hildebrandt', 'dbgap_sample_id': u'SM-A4GQ4', 'sample_id': u'NA19675',
+    'date_data_generation': '2017-02-05'}
+
 EXPECTED_PI_FAMILY_FILE = [
     u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family',
     ['entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
      'family_relationship', 'consanguinity', 'consanguinity_detail', 'pedigree_image',
-     'pedigree_detail', 'family_history', 'family_onset'],
-    [
-        {'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
-         'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'}
-    ]
+     'pedigree_detail', 'family_history', 'family_onset']
 ]
+EXPECTED_PI_FAMILY_ROW = {
+    'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
+    'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'}
+
 EXPECTED_PI_DISCOVERY_FILE = [
     u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery',
     ['entity:discovery_id', 'subject_id', 'sample_id', 'Gene-1', 'Gene_Class-1',
      'inheritance_description-1', 'Zygosity-1', 'Chrom-1', 'Pos-1', 'Ref-1', 'Alt-1', 'hgvsc-1',
-     'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1'],
-    [
-        {'Zygosity-1': 'Heterozygous', 'Pos-1': '3343353', 'Ref-1': u'GAGA', 'Alt-1': u'G',
-         'Gene-1': u'RP11-206L10.5', 'subject_id': u'NA19675_1', 'hgvsp-1': u'p.Leu126del',
-         'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
-         'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'NA19675',
-         'entity:discovery_id': u'NA19675_1', 'Chrom-1': u'2',
-         'inheritance_description-1': 'de novo'}
-    ]
+     'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1']
 ]
+EXPECTED_PI_DISCOVERY_ROW = {
+    'Zygosity-1': 'Heterozygous', 'Pos-1': '248367227', 'Ref-1': u'TC', 'Alt-1': u'T',
+    'Gene-1': u'RP11-206L10.5', 'subject_id': u'HG00731', 'hgvsp-1': u'p.Leu126del',
+    'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
+    'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'HG00731',
+    'entity:discovery_id': u'HG00731', 'Chrom-1': u'1',
+    'inheritance_description-1': 'de novo'}
 
 
 class StaffAPITest(TestCase):
@@ -503,13 +500,6 @@ class StaffAPITest(TestCase):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         _check_login(self, url)
 
-        # Create a SavedVariant row needed by this test
-        saved_variant = SavedVariant.objects.get(guid = "SV0000001_2103343353_r0390_100")
-        variant_tag_type = VariantTagType.objects.get(name = "Known gene for phenotype")
-        variant_tag = VariantTag.objects.create(variant_tag_type = variant_tag_type)
-        variant_tag.saved_variants.add(saved_variant)
-        variant_tag.save()
-
         # We will test the inputs of the export_multiple_files method.
         # Outputs of the method are not important for this test but an HttpResponse data is still required by the API.
         mock_export_multiple_files.return_value = HttpResponse("Dummy text", content_type="text/plain")
@@ -527,11 +517,11 @@ class StaffAPITest(TestCase):
 
         exported_files = mock_export_multiple_files.call_args.args[0]
 
-        self.assertListEqual([EXPECTED_PI_SUBJECT_FILE[0], EXPECTED_PI_SUBJECT_FILE[1]], [exported_files[0][0], exported_files[0][1]])
-        self.assertListEqual([EXPECTED_PI_SAMPLE_FILE[0], EXPECTED_PI_SAMPLE_FILE[1]], [exported_files[1][0], exported_files[1][1]])
-        self.assertListEqual([EXPECTED_PI_FAMILY_FILE[0], EXPECTED_PI_FAMILY_FILE[1]], [exported_files[2][0], exported_files[2][1]])
-        self.assertListEqual([EXPECTED_PI_DISCOVERY_FILE[0], EXPECTED_PI_DISCOVERY_FILE[1]], [exported_files[3][0], exported_files[3][1]])
-        self.assertIn(EXPECTED_PI_SUBJECT_FILE[2][0], exported_files[0][2])
-        self.assertIn(EXPECTED_PI_SAMPLE_FILE[2][0], exported_files[1][2])
-        self.assertIn(EXPECTED_PI_FAMILY_FILE[2][0], exported_files[2][2])
-        self.assertIn(EXPECTED_PI_DISCOVERY_FILE[2][0], exported_files[3][2])
+        self.assertListEqual(EXPECTED_PI_SUBJECT_FILE, exported_files[0][:2])
+        self.assertListEqual(EXPECTED_PI_SAMPLE_FILE, exported_files[1][:2])
+        self.assertListEqual(EXPECTED_PI_FAMILY_FILE, exported_files[2][:2])
+        self.assertListEqual(EXPECTED_PI_DISCOVERY_FILE, exported_files[3][:2])
+        self.assertIn(EXPECTED_PI_SUBJECT_ROW, exported_files[0][2])
+        self.assertIn(EXPECTED_PI_SAMPLE_ROW, exported_files[1][2])
+        self.assertIn(EXPECTED_PI_FAMILY_ROW, exported_files[2][2])
+        self.assertIn(EXPECTED_PI_DISCOVERY_ROW, exported_files[3][2])
