@@ -9,9 +9,10 @@ import orderBy from 'lodash/orderBy'
 import { Select, SearchInput } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import TagFieldView from 'shared/components/panel/view-fields/TagFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
-import NullableBoolFieldView from 'shared/components/panel/view-fields/NullableBoolFieldView'
+import NullableBoolFieldView, { getNullableBoolField } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
@@ -74,21 +75,22 @@ const ONSET_AGE_OPTIONS = [
   { value: 'L', text: 'Late onset' },
 ]
 
-const INHERITANCE_MODE_MAP = {
-  S: 'Sporadic',
-  D: 'Autosomal dominant inheritance',
-  L: 'Sex-limited autosomal dominant',
-  A: 'Male-limited autosomal dominant',
-  C: 'Autosomal dominant contiguous gene syndrome',
-  R: 'Autosomal recessive inheritance',
-  G: 'Gonosomal inheritance',
-  X: 'X-linked inheritance',
-  Z: 'X-linked recessive inheritance',
-  Y: 'Y-linked inheritance',
-  W: 'X-linked dominant inheritance',
-  F: 'Multifactorial inheritance',
-  M: 'Mitochondrial inheritance',
-}
+const INHERITANCE_MODE_OPTIONS = [
+  { value: 'S', text: 'Sporadic' },
+  { value: 'D', text: 'Autosomal dominant inheritance' },
+  { value: 'L', text: 'Sex-limited autosomal dominant' },
+  { value: 'A', text: 'Male-limited autosomal dominant' },
+  { value: 'C', text: 'Autosomal dominant contiguous gene syndrome' },
+  { value: 'R', text: 'Autosomal recessive inheritance' },
+  { value: 'G', text: 'Gonosomal inheritance' },
+  { value: 'X', text: 'X-linked inheritance' },
+  { value: 'Z', text: 'X-linked recessive inheritance' },
+  { value: 'Y', text: 'Y-linked inheritance' },
+  { value: 'W', text: 'X-linked dominant inheritance' },
+  { value: 'F', text: 'Multifactorial inheritance' },
+  { value: 'M', text: 'Mitochondrial inheritance' },
+]
+const INHERITANCE_MODE_MAP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
 
 const AR_FIELDS = {
   arFertilityMeds: 'Fertility medications',
@@ -307,11 +309,12 @@ const INDIVIDUAL_FIELDS = [
     }),
   },
   {
+    component: TagFieldView,
     field: 'expectedInheritance',
     fieldName: 'Expected Mode of Inheritance',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    tagOptions: INHERITANCE_MODE_OPTIONS,
+    simplifiedValue: true,
     fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_MAP[inheritance]).join(', '),
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
@@ -321,12 +324,14 @@ const INDIVIDUAL_FIELDS = [
     field: 'ar',
     fieldName: 'Assisted Reproduction',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false).map(field =>
-        <div>{AR_FIELDS[field]}: <b>{individual[field] ? 'Yes' : 'No'}</b></div>,
+        <div>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
     ),
+    formFields: Object.entries(AR_FIELDS).map(([field, label]) => ({
+      margin: '0 100px 10px 0',
+      ...getNullableBoolField({ field, label }),
+    })),
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,

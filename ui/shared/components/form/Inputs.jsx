@@ -348,6 +348,7 @@ const getButtonRadioOptionProps = (option, value, onChange) => ({
   basic: value !== option.value,
   color: value === option.value ? (option.color || 'grey') : 'black',
   content: option.text,
+  label: option.label,
   onClick: (e) => {
     e.preventDefault()
     onChange(option.value)
