@@ -8,6 +8,7 @@ import orderBy from 'lodash/orderBy'
 
 import { Select, SearchInput } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TagFieldView from 'shared/components/panel/view-fields/TagFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -124,7 +125,6 @@ const ETHNICITY_OPTIONS = [
   'Sephardic Jewish',
   'South Asian',
   'Western European',
-//].map(value => ({ value, key: value, text: value }))
 ].map(title => ({ title }))
 
 const ratioLabel = (flag) => {
@@ -224,6 +224,16 @@ const AgeDetails = ({ birthYear, deathYear }) => {
 AgeDetails.propTypes = {
   birthYear: PropTypes.string,
   deathYear: PropTypes.string,
+}
+
+const OmimSelector = ({ value, icon, ...props }) => (
+  value ? <div>{icon} {value}</div> :
+  <AwesomeBarFormInput {...props} placeholder="Search for OMIM disorder" categories="omim" />
+)
+
+OmimSelector.propTypes = {
+  icon: PropTypes.node,
+  value: PropTypes.string,
 }
 
 const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
@@ -390,11 +400,11 @@ const INDIVIDUAL_FIELDS = [
     }),
   },
   {
+    component: ListFieldView,
     field: 'disorders',
     fieldName: 'Pre-discovery OMIM disorders',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    formFieldProps: { control: OmimSelector },
     fieldDisplay: disorders =>
       disorders.map(mim => <div><a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a></div>),
     individualFields: ({ affected }) => ({
