@@ -2,10 +2,6 @@ import os
 from django.core.management.base import BaseCommand
 import datetime
 
-def run(cmd):
-    print(cmd)
-    os.system(cmd)
-
 
 class Command(BaseCommand):
     help = 'Run database backups.'
@@ -14,11 +10,16 @@ class Command(BaseCommand):
         parser.add_argument('--postgres-host', default=os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'unknown'))
 
     def handle(self, *args, **options):
+
+        def run(cmd):
+            self.stdout.write(cmd)
+            os.system(cmd)
+
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
 
-        print("=====================================")
-        print("======== %s ======= " % timestamp)
-        print("=====================================")
+        self.stdout.write("=====================================")
+        self.stdout.write("======== %s ======= " % timestamp)
+        self.stdout.write("=====================================")
 
         backup_filename = 'gene_reference_data_backup.gz'
 
