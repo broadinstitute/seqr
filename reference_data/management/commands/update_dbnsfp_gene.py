@@ -3,8 +3,6 @@ import logging
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import dbNSFPGene
 
-logger = logging.getLogger(__name__)
-
 # based on dbNSFP_gene schema README: https://drive.google.com/file/d/0B60wROKy6OqcNGJ2STJlMTJONk0/view
 FIELD_MAP = {
     'Ensembl_gene': "gene_id",
