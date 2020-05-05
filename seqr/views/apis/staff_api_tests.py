@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import mock
+from django.utils.dateparse import parse_datetime
+import pytz
 from datetime import datetime
 import responses
 from django.http import HttpResponse
@@ -230,7 +232,7 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
     u'numberOfUniqueFeatures': 5,
-    u'dateGenerated': datetime.now().strftime('%Y-%m-%d')
+    u'dateGenerated': '2020-04-27'
 }
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
@@ -409,10 +411,12 @@ class StaffAPITest(TestCase):
         mock_es_client.cat.aliases.assert_called_with(format="json", h="alias,index")
         mock_get_mapping.assert_called_with(doc_type='variant,structural_variant')
 
-    def test_mme_details(self):
+    @mock.patch('matchmaker.matchmaker_utils.datetime')
+    def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
         _check_login(self, url)
 
+        mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 01)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -444,10 +448,12 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectGuids'])
         self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
 
-    def test_discovery_sheet(self):
+    @mock.patch('seqr.views.apis.staff_api.timezone')
+    def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         _check_login(self, non_project_url)
 
+        mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
