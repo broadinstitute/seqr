@@ -6,7 +6,6 @@ from datetime import datetime
 import responses
 from django.http import HttpResponse
 from settings import AIRTABLE_URL
-from django.core.files.uploadedfile import SimpleUploadedFile
 import json
 
 from django.test import TestCase
