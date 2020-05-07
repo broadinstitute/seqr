@@ -130,7 +130,8 @@ export const updateFamily = (values) => {
 
 export const updateIndividual = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update`,
+    const individualField = values.individualField ? `_${values.individualField}` : ''
+    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update${individualField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
       },

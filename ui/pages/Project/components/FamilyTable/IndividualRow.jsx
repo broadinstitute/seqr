@@ -4,10 +4,10 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Field } from 'redux-form'
-import { Label, Popup, Form, Input } from 'semantic-ui-react'
+import { Label, Popup, Form, Input, Header, Accordion, Icon } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { Select, SearchInput } from 'shared/components/form/Inputs'
+import { Select, SearchInput, RadioGroup } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -16,10 +16,10 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import NullableBoolFieldView, { getNullableBoolField } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import HpoPanel from 'shared/components/panel/HpoPanel'
+import HpoPanel, { getHpoTermsForCategory } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
-import { ColoredIcon } from 'shared/components/StyledComponents'
+import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { AFFECTED } from 'shared/utils/constants'
 
@@ -260,6 +260,194 @@ GeneEntry.propTypes = {
   name: PropTypes.string,
 }
 
+const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) =>
+  Object.values(getHpoTermsForCategory(
+    (features || []).map((term, index) => ({ ...term, index })),
+    nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
+  )).reduce((acc, { categoryName, terms }) => {
+    terms[0].categoryName = categoryName
+    return [...acc, ...terms]
+  }, [])
+
+
+const HPO_QUALIFIERS = [
+  {
+    type: 'age_of_onset',
+    options: [
+      'Congenital onset',
+      'Embryonal onset',
+      'Fetal onset',
+      'Neonatal onset',
+      'Infantile onset',
+      'Childhood onset',
+      'Juvenile onset',
+      'Adult onset',
+      'Young adult onset',
+      'Middle age onset',
+      'Late onset',
+    ],
+  },
+  {
+    type: 'pace_of_progression',
+    options: ['Nonprogressive', 'Slow progression', 'Progressive', 'Rapidly progressive', 'Variable progression rate'],
+  },
+  {
+    type: 'severity',
+    options: ['Borderline', 'Mild', 'Moderate', 'Severe', 'Profound'],
+  },
+  {
+    type: 'temporal_pattern',
+    options: ['Insidious onset', 'Chronic', 'Subacute', 'Acute'],
+  },
+  {
+    type: 'spatial_pattern',
+    options: ['Generalized', 'Localized', 'Distal', 'Proximal'],
+  },
+  {
+    type: 'laterality',
+    options: ['Bilateral', 'Unilateral', 'Left', 'Right'],
+  },
+]
+
+const HpoQualifiers = ({ input }) =>
+  <Accordion
+    exclusive={false}
+    panels={HPO_QUALIFIERS.map(({ type, options }) => ({
+      key: type,
+      title: { content: <b>{snakecaseToTitlecase(type)}</b> },
+      content: {
+        content: (
+          <RadioGroup
+            onChange={val => input.onChange(({ ...input.value, [type]: val }))}
+            value={input.value[type]}
+            options={options.map(value => ({ value, text: value }))}
+            margin="0 1em"
+          />
+        ),
+      },
+    }))}
+  />
+
+HpoQualifiers.propTypes = {
+  input: PropTypes.object,
+}
+
+const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) =>
+  <div>
+    {value.categoryName ? <Header content={value.categoryName} size="small" /> : null}
+    <Form.Group inline>
+      <Form.Field width={1}>{icon}</Form.Field>
+      <Form.Field width={13}>
+        {value.label ? `${value.label} (${value.id})` : value.id}
+      </Form.Field>
+      <Form.Field width={2}>
+        <ButtonLink
+          floated="right"
+          size="small"
+          onClick={toggleShowDetails}
+          content={showDetails ? 'Hide Details' : 'Edit Details'}
+        />
+      </Form.Field>
+    </Form.Group>
+    {showDetails && [
+      <Field
+        key="qualifiers"
+        name={`${name}.qualifiers`}
+        component={HpoQualifiers}
+        format={val => (val || []).reduce((acc, { type, label }) => ({ ...acc, [type]: label }), {})}
+        normalize={val => Object.entries(val || {}).map(([type, label]) => ({ type, label }))}
+      />,
+      <Form.Group key="notes">
+        <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />
+      </Form.Group>,
+    ]}
+  </div>,
+)
+
+HpoTermDetails.propTypes = {
+  icon: PropTypes.node,
+  value: PropTypes.object,
+  name: PropTypes.string,
+  showDetails: PropTypes.bool,
+  toggleShowDetails: PropTypes.func,
+}
+
+const HPO_CATEGORIES = ['hpo_terms']
+
+const HpoTermSelector = ({ onChange }) =>
+  <div>
+    <AwesomeBarFormInput
+      parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
+      categories={HPO_CATEGORIES}
+      placeholder="Search for HPO terms"
+      onChange={onChange}
+    />
+  </div>
+
+HpoTermSelector.propTypes = {
+  onChange: PropTypes.func,
+}
+
+class HpoTermsEditor extends React.PureComponent {
+
+  static propTypes = {
+    value: PropTypes.array,
+    name: PropTypes.string,
+    onChange: PropTypes.func,
+    header: PropTypes.object,
+    allowAdditions: PropTypes.bool,
+  }
+
+  state = { showDetails: {}, showAddItem: false }
+
+  toggleShowDetails = id => (e) => {
+    e.preventDefault()
+    const { showDetails } = this.state
+    this.setState({
+      showDetails: { ...showDetails, [id]: !showDetails[id] },
+    })
+  }
+
+  toggleShowAddItems = (e) => {
+    e.preventDefault()
+    this.setState({
+      showAddItem: !this.state.showAddItem,
+    })
+  }
+
+  addItem = (data) => {
+    this.props.onChange([...this.props.value, data])
+    this.setState({ showAddItem: false })
+  }
+
+  removeItem = (e, data) => {
+    e.preventDefault()
+    this.props.onChange(this.props.value.filter(({ id }) => id !== data.id))
+  }
+
+  render() {
+    const { value, name, allowAdditions, header } = this.props
+    const { showDetails, showAddItem } = this.state
+    return (
+      <div>
+        {header && <Header dividing {...header} />}
+        {value.map(({ index, ...item }) =>
+          <HpoTermDetails
+            key={item.id}
+            value={item}
+            name={`${name}[${index}]`}
+            icon={<Icon name="remove" link id={item.id} onClick={this.removeItem} />}
+            showDetails={!!showDetails[item.id]}
+            toggleShowDetails={this.toggleShowDetails(item.id)}
+          />,
+        )}
+        {allowAdditions && (showAddItem ? <HpoTermSelector onChange={this.addItem} /> :
+        <ButtonLink icon="plus" content="Add Feature" onClick={this.toggleShowAddItems} />)}
+      </div>
+    )
+  }
+}
+
 const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
 const YEAR_SELECTOR_PROPS = {
   component: Select,
@@ -292,8 +480,6 @@ const GENES_FIELD = {
     isVisible: affected === AFFECTED,
   }),
 }
-
-const ShowPhenotipsModalButton = () => 'PHENOTIPS'
 
 const INDIVIDUAL_FIELDS = [
   {
@@ -427,10 +613,37 @@ const INDIVIDUAL_FIELDS = [
     field: 'features',
     fieldName: 'Features',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
     fieldDisplay: individual => <HpoPanel individual={individual} />,
+    formFields: [
+      {
+        name: 'nonstandardFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory([], val),
+        allowAdditions: false,
+        header: { content: 'Present', color: 'green' },
+      },
+      {
+        name: 'features',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory(val),
+        allowAdditions: true,
+      },
+      {
+        name: 'absentNonstandardFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory([], val),
+        allowAdditions: false,
+        header: { content: 'Not Present', color: 'red' },
+      },
+      {
+        name: 'absentFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory(val),
+        allowAdditions: true,
+      },
+    ],
     individualFields: individual => ({
+      initialValues: { ...individual, individualField: 'hpo_terms' },
       fieldValue: individual,
     }),
   },

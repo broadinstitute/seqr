@@ -306,12 +306,6 @@ const BaseRadioGroup = React.memo((props) => {
           key={option.value}
           inline
           inputType="Radio"
-          onChange={({ checked, ...val }) => {
-            console.log(val)
-            if (checked) {
-              onChange(option.value)
-            }
-          }}
         />,
       )}
     </InlineFormGroup>

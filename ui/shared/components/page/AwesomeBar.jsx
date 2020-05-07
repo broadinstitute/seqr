@@ -24,7 +24,7 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
   
   .results {
     min-width: ${props => props.inputwidth || '100%'};
-    width: fit-content !important;
+    width: ${props => (props.inputwidth ? 'fit-content' : '100%')} !important;
   }
 `
 
