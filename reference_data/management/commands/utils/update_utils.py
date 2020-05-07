@@ -36,7 +36,7 @@ class ReferenceDataHandler(object):
 
     @staticmethod
     def get_file_header(f):
-        return f.readline().rstrip('\n\r').split('\t')
+        return next(f).rstrip('\n\r').split('\t')
 
     def get_gene_for_record(self, record):
         gene_id = record.pop('gene_id', None)
@@ -90,8 +90,7 @@ def update_records(reference_data_handler, file_path=None):
 
         for line in tqdm(f, unit=" records"):
             record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
-            records = reference_data_handler.parse_record(record)
-            for record in records:
+            for record in reference_data_handler.parse_record(record):
                 if record is None:
                     continue
 
