@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 import mock
+from django.utils.dateparse import parse_datetime
+import pytz
 from datetime import datetime
+import responses
+from django.http import HttpResponse
+
+from settings import AIRTABLE_URL
 
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story
+from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story, anvil_export
 from seqr.views.utils.test_utils import _check_login
 
 PROJECT_GUID = 'R0001_1kg'
@@ -219,8 +225,6 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 EXPECTED_ERRORS = [
     u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
-EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'no_individuals', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
-
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
     u'numberOfUniqueGenes': 4,
@@ -228,7 +232,7 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
     u'numberOfUniqueFeatures': 5,
-    u'dateGenerated': datetime.now().strftime('%Y-%m-%d')
+    u'dateGenerated': '2020-04-27'
 }
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
@@ -259,6 +263,117 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      u'family_id': u'1', u'genitourinary_system': u'N', u'coded_phenotype': u'',
      u'animal_model': u'N', u'non_human_cell_culture_model': u'N', u'expression': u'N',
      u'gene_name': u'RP11-206L10.5', u'breast': u'N'}
+
+AIRTABLE_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        "SeqrCollaboratorSampleID": "NA19675",
+        "CollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "Collaborator": ["recW24C2CJW5lT64K"],
+        "dbgap_study_id": "dbgap_stady_id_1",
+        "dbgap_subject_id": "dbgap_subject_id_1",
+        "dbgap_sample_id": "SM-A4GQ4",
+        "SequencingProduct": [
+          "Mendelian Rare Disease Exome"
+        ],
+        "dbgap_submission": [
+          "WES",
+          "Array"
+        ]
+      },
+      "createdTime": "2019-09-09T19:21:12.000Z"
+    },
+    {
+      "id": "rec2Nkg10N1KssPc3",
+      "fields": {
+        "SeqrCollaboratorSampleID": "HG00731",
+        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        "Collaborator": ["reca4hcBnbA2cnZf9"],
+        "dbgap_study_id": "dbgap_stady_id_2",
+        "dbgap_subject_id": "dbgap_subject_id_2",
+        "dbgap_sample_id": "SM-JDBTT",
+        "SequencingProduct": [
+          "Standard Germline Exome v6 Plus GSA Array"
+        ],
+        "dbgap_submission": [
+          "WES",
+          "Array"
+        ]
+      },
+      "createdTime": "2019-07-16T18:23:21.000Z"
+    }
+]}
+
+AIRTABLE_COLLABORATOR_RECORDS = {
+    "records": [
+        {
+            "id": "recW24C2CJW5lT64K",
+            "fields": {
+                "CollaboratorID": "Hildebrandt",
+            }
+        },
+        {
+            "id": "reca4hcBnbA2cnZf9",
+            "fields": {
+                "CollaboratorID": "Seidman",
+            }
+        }
+    ]
+}
+
+EXPECTED_PI_SUBJECT_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Subject',
+    ['entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id',
+     'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets', 'sex',
+     'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group', 'disease_id',
+     'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
+     'hpo_absent', 'phenotype_description', 'solve_state']
+]
+EXPECTED_PI_SUBJECT_ROW = {
+    'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'Yes',
+    'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Unsolved', 'phenotype_group': '',
+    'sex': 'Male', 'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
+    'entity:subject_id': u'NA19675_1', 'dbgap_subject_id': u'dbgap_subject_id_1',
+    'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'dbgap_study_id': u'dbgap_stady_id_1',
+    'multiple_datasets': 'No', 'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
+    'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
+    'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}
+
+EXPECTED_PI_SAMPLE_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample',
+    ['entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source',
+     'sample_provider', 'data_type', 'date_data_generation']
+]
+EXPECTED_PI_SAMPLE_ROW = {
+    'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
+    'sample_provider': u'Hildebrandt', 'dbgap_sample_id': u'SM-A4GQ4', 'sample_id': u'NA19675',
+    'date_data_generation': '2017-02-05'}
+
+EXPECTED_PI_FAMILY_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family',
+    ['entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
+     'family_relationship', 'consanguinity', 'consanguinity_detail', 'pedigree_image',
+     'pedigree_detail', 'family_history', 'family_onset']
+]
+EXPECTED_PI_FAMILY_ROW = {
+    'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
+    'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'}
+
+EXPECTED_PI_DISCOVERY_FILE = [
+    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery',
+    ['entity:discovery_id', 'subject_id', 'sample_id', 'Gene-1', 'Gene_Class-1',
+     'inheritance_description-1', 'Zygosity-1', 'Chrom-1', 'Pos-1', 'Ref-1', 'Alt-1', 'hgvsc-1',
+     'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1']
+]
+EXPECTED_PI_DISCOVERY_ROW = {
+    'Zygosity-1': 'Heterozygous', 'Pos-1': '248367227', 'Ref-1': u'TC', 'Alt-1': u'T',
+    'Gene-1': u'RP11-206L10.5', 'subject_id': u'HG00731', 'hgvsp-1': u'p.Leu126del',
+    'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
+    'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'HG00731',
+    'entity:discovery_id': u'HG00731', 'Chrom-1': u'1',
+    'inheritance_description-1': 'de novo'}
 
 
 class StaffAPITest(TestCase):
@@ -296,10 +411,12 @@ class StaffAPITest(TestCase):
         mock_es_client.cat.aliases.assert_called_with(format="json", h="alias,index")
         mock_get_mapping.assert_called_with(doc_type='variant,structural_variant')
 
-    def test_mme_details(self):
+    @mock.patch('matchmaker.matchmaker_utils.datetime')
+    def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
         _check_login(self, url)
 
+        mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 01)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -331,10 +448,12 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectGuids'])
         self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
 
-    def test_discovery_sheet(self):
+    @mock.patch('seqr.views.apis.staff_api.timezone')
+    def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         _check_login(self, non_project_url)
 
+        mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
@@ -380,3 +499,35 @@ class StaffAPITest(TestCase):
 
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
+
+    @mock.patch('seqr.views.apis.staff_api.export_multiple_files')
+    @responses.activate
+    def test_anvil_export(self, mock_export_multiple_files):
+        url = reverse(anvil_export, args=[PROJECT_GUID])
+        _check_login(self, url)
+
+        # We will test the inputs of the export_multiple_files method.
+        # Outputs of the method are not important for this test but an HttpResponse data is still required by the API.
+        mock_export_multiple_files.return_value = HttpResponse("Dummy text", content_type="text/plain")
+
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
+                      json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
+                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        mock_export_multiple_files.assert_called_with(mock.ANY,
+            u'1kg project n\u00e5me with uni\u00e7\u00f8de_AnVIL_Metadata',
+            add_header_prefix = True, file_format = 'tsv', blank_value = '-')
+
+        exported_files = mock_export_multiple_files.call_args.args[0]
+
+        self.assertListEqual(EXPECTED_PI_SUBJECT_FILE, exported_files[0][:2])
+        self.assertListEqual(EXPECTED_PI_SAMPLE_FILE, exported_files[1][:2])
+        self.assertListEqual(EXPECTED_PI_FAMILY_FILE, exported_files[2][:2])
+        self.assertListEqual(EXPECTED_PI_DISCOVERY_FILE, exported_files[3][:2])
+        self.assertIn(EXPECTED_PI_SUBJECT_ROW, exported_files[0][2])
+        self.assertIn(EXPECTED_PI_SAMPLE_ROW, exported_files[1][2])
+        self.assertIn(EXPECTED_PI_FAMILY_ROW, exported_files[2][2])
+        self.assertIn(EXPECTED_PI_DISCOVERY_ROW, exported_files[3][2])

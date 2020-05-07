@@ -1165,6 +1165,22 @@
     }
 },
 {
+    "model": "seqr.varianttagtype",
+    "pk": 4,
+    "fields": {
+        "guid": "VTT_Known_gene_for_phenotype",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Known gene for phenotype",
+        "category": "Collaboration",
+        "description": "Variant tag type for known gene for phenotype",
+        "color": "#777777",
+        "order": 16.0
+    }
+},
+{
     "model": "seqr.savedvariant",
     "pk": 1,
     "fields": {
@@ -1231,7 +1247,7 @@
             ],
             "liftedOverPos": "",
             "genotypeFilters": "pass",
-            "mainTranscriptId": null,
+            "mainTranscriptId": "ENST00000258436",
             "populations": {
                 "callset": {
                     "ac": null,
@@ -1297,11 +1313,31 @@
             "originalAltAlleles": [
                 "T"
             ],
-            "transcripts": {},
+            "transcripts": {
+                "ENSG00000135953": [
+                    {
+                        "transcriptId": "ENST00000258436",
+                        "lofFilter": "",
+                        "biotype": "protein_coding",
+                        "geneSymbol": "MFSD9",
+                        "majorConsequence": "inframe_deletion",
+                        "canonical": "YES",
+                        "hgvsp": "ENSP00000258436.5:p.Leu126del",
+                        "lof": "",
+                        "lofFlags": "",
+                        "codons": "ctTCTc/ctc",
+                        "hgvsc": "ENST00000258436.5:c.375_377delTCT",
+                        "transcriptRank": 0,
+                        "geneId": "ENSG00000135953",
+                        "aminoAcids": "LL/L",
+                        "cdnaPosition": "419-421"
+                    }
+                ]
+            },
             "chrom": "1",
             "genotypes": {
-                "I000003_na19679": {
-                    "sampleId": "NA19679",
+                "I000004_hg00731": {
+                    "sampleId": "HG00731",
                     "ab": 0.0,
                     "ad": "71,0",
                     "gq": 99.0,
@@ -1318,10 +1354,10 @@
                         "freq": null,
                         "LRR_median": null
                     },
-                    "numAlt": 0
+                    "numAlt": 1
                 },
-                "I000002_na19678": {
-                    "sampleId": "NA19678",
+                "I000005_hg00732": {
+                    "sampleId": "HG00732",
                     "ab": 0.0,
                     "ad": "77,0",
                     "gq": 99.0,
@@ -1553,6 +1589,19 @@
         "last_modified_date": "2018-05-29T16:32:51.449Z",
         "saved_variants": [6],
         "variant_tag_type": 1,
+        "search_hash": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726970,
+    "fields": {
+        "guid": "VT1726970_2103343353_r0004_tes",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variants": [2],
+        "variant_tag_type": 4,
         "search_hash": null
     }
 },
