@@ -1,7 +1,9 @@
 # Utilities used for unit and integration tests.
 from django.contrib.auth.models import User
 from django.http.response import HttpResponse
-
+import os
+import tempfile
+import  gzip
 
 def _check_login(test_case, url):
     """For integration tests of django views that can only be accessed by a logged-in user,
@@ -246,3 +248,16 @@ SINGLE_VARIANT = {
     'familyGuids': ['F000002_2'],
     'genotypes': {}
 }
+
+def save_temp_file(file_name, data):
+    """Compute local file path, and make sure the directory exists"""
+    temp_directory = os.path.join(tempfile.gettempdir(), 'temp_tests')
+    if not os.path.isdir(temp_directory):
+        os.makedirs(temp_directory)
+
+    open_file = gzip.open if file_name.endswith('.gz') else open
+    file_path = os.path.join(temp_directory, file_name)
+    with open_file(file_path, 'w') as f:
+        f.write(data)
+
+    return file_path
