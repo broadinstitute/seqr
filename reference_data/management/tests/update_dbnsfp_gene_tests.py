@@ -1,6 +1,8 @@
 import mock
 
-from seqr.views.utils.test_utils import save_temp_file
+import os
+import tempfile
+import shutil
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -18,10 +20,20 @@ class UpdateDbNsfpGeneTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
+    def setUp(self):
+        # Create a temporary directory
+        self.test_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Close the file, the directory will be removed after the test
+        shutil.rmtree(self.test_dir)
+
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.download_utils.download_file')
     def test_update_dbnsfp_gene_command(self, mock_download, mock_logger):
-        temp_file_path = save_temp_file('dbNSFP_gene', "".join(dbNSFP_GENE_DATA))
+        temp_file_path = os.path.join(self.test_dir, 'dbNSFP_gene')
+        with open(temp_file_path, 'w') as f:
+            f.write(u''.join(dbNSFP_GENE_DATA))
         mock_download.return_value = temp_file_path
 
         # test without a file_path parameter
