@@ -44,6 +44,21 @@ def delete_individuals(project, individual_guids):
     return families_with_deleted_individuals
 
 
+def get_parsed_feature(feature, feature_id=None, additional_fields=None):
+    optional_fields = ['notes', 'qualifiers']
+    if additional_fields:
+        optional_fields += additional_fields
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
+
+    for field in optional_fields:
+        if field in feature:
+            feature_json[field] = feature[field]
+
+    return feature_json
+
+
 def _user_to_string(user):
     """Takes a Django User object and returns a string representation"""
     if not user:

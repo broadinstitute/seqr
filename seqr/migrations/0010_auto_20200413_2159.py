@@ -8,6 +8,7 @@ import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import seqr.models
+from seqr.views.utils.individual_utils import get_parsed_feature
 from seqr.views.utils.json_utils import _to_snake_case
 
 # Valid MIM numbers that are not in the seqr DB because they do not map to a valid gene
@@ -169,11 +170,11 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
     absent_nonstandard_features = []
     for feature in phenotips_json.get('features') or []:
         feature_list = present_features if feature['observed'] == 'yes' else absent_features
-        feature_list.append(_get_parsed_feature(feature))
+        feature_list.append(get_parsed_feature(feature))
     for feature in phenotips_json.get('nonstandard_features') or []:
         feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
         feature_list.append(
-            _get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
+            get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
     if present_features:
         indiv.features = present_features
     if absent_features:
@@ -200,22 +201,6 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
         if prenatal.get(field) is not None:
             indiv_field = 'ar_{}'.format(_to_snake_case(field.replace('assistedReproduction_', '')))
             setattr(indiv, indiv_field, prenatal[field])
-
-
-def _get_parsed_feature(feature, feature_id=None, additional_fields=None):
-    optional_fields = ['notes', 'qualifiers']
-    if additional_fields:
-        optional_fields += additional_fields
-    if not feature_id:
-        feature_id = feature['id']
-    feature_json = {'id': feature_id}
-
-    for field in optional_fields:
-        if field in feature:
-            feature_json[field] = feature[field]
-
-    return feature_json
-
 
 
 class Migration(migrations.Migration):

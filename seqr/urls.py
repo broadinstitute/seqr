@@ -24,14 +24,15 @@ from seqr.views.apis.family_api import \
     update_family_pedigree_image
 
 from seqr.views.apis.individual_api import \
+    get_hpo_terms, \
+    update_individual_hpo_terms, \
     update_individual_handler, \
     edit_individuals_handler, \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_hpo_table_handler, \
-    save_hpo_table_handler, \
-    get_hpo_terms
+    save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -142,6 +143,7 @@ no_login_react_app_pages = [
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
