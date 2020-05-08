@@ -30,7 +30,8 @@ from seqr.views.apis.individual_api import \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_hpo_table_handler, \
-    save_hpo_table_handler
+    save_hpo_table_handler, \
+    get_hpo_terms
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -205,6 +206,8 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/create': create_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
+
+    'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
 
     'locus_lists': locus_lists,
     'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,

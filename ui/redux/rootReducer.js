@@ -34,6 +34,9 @@ const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
+const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
+const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
+
 
 // action creators
 
@@ -208,6 +211,22 @@ export const loadLocusListItems = (locusListId) => {
   }
 }
 
+export const loadHpoTerms = (hpoId) => {
+  return (dispatch, getState) => {
+    if (!getState().hpoTermsByParent[hpoId]) {
+      dispatch({ type: REQUEST_HPO_TERMS })
+      new HttpRequestHelper(`/api/hpo_terms/${hpoId}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_HPO_TERMS, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_HPO_TERMS, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
@@ -361,6 +380,8 @@ const rootReducer = combineReducers(Object.assign({
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
+  hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
+  hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),

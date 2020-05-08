@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Field } from 'redux-form'
-import { Label, Popup, Form, Input, Header, Accordion, Icon } from 'semantic-ui-react'
+import { Label, Popup, Form, Input, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { Select, SearchInput, RadioGroup } from 'shared/components/form/Inputs'
@@ -16,15 +16,18 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import NullableBoolFieldView, { getNullableBoolField } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import HpoPanel, { getHpoTermsForCategory } from 'shared/components/panel/HpoPanel'
+import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
+import DataLoader from 'shared/components/DataLoader'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { AFFECTED } from 'shared/utils/constants'
 
-import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
+import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
+import {
+  getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
+} from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -42,6 +45,16 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 220px;
+`
+
+const ScrollingTab = styled(Tab).attrs({ menu: { attached: true } })`
+  .menu.attached {
+    overflow-x: scroll;
+  }
+  
+  .menu.text {
+    margin: .1em -.5em;
+  }
 `
 
 const FLAG_TITLE = {
@@ -372,20 +385,73 @@ HpoTermDetails.propTypes = {
   toggleShowDetails: PropTypes.func,
 }
 
+const CATEGORY_MENU = { text: true }
+
+const getTermPanes = (term, addItem) => ([{
+  menuItem: {
+    key: term.id,
+    content: term.label,
+    icon: { name: 'plus', color: 'green', size: 'large', onClick: () => addItem(term) },
+  },
+  render: () => <HpoCategory category={term.id} addItem={addItem} />,
+}])
+
+const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) =>
+  <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
+    {Object.values(hpoTerms || {}).length > 0 &&
+      <Tab.Pane attached={false}>
+        {Object.values(hpoTerms).map(term =>
+          <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />,
+        )}
+      </Tab.Pane>
+    }
+  </DataLoader>
+
+BaseHpoCategory.propTypes = {
+  category: PropTypes.string,
+  hpoTerms: PropTypes.object,
+  addItem: PropTypes.func,
+}
+
+const mapCategoryStateToProps = (state, ownProps) => {
+  const hpoTerms = getHpoTermsByParent(state)[ownProps.category]
+  return {
+    hpoTerms,
+    loading: !hpoTerms && getHpoTermsIsLoading(state),
+  }
+}
+
+const mapCategoryDispatchToProps = {
+  load: loadHpoTerms,
+}
+
+const HpoCategory = connect(mapCategoryStateToProps, mapCategoryDispatchToProps)(BaseHpoCategory)
+
 const HPO_CATEGORIES = ['hpo_terms']
 
-const HpoTermSelector = ({ onChange }) =>
+const getCategoryPanes = addItem =>
+  Object.entries(CATEGORY_NAMES).map(
+    ([key, menuItem]) => ({
+      key,
+      menuItem,
+      render: () => <HpoCategory category={key} addItem={addItem} />,
+    }),
+  ).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
+
+const HpoTermSelector = ({ addItem }) =>
   <div>
     <AwesomeBarFormInput
       parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
       categories={HPO_CATEGORIES}
       placeholder="Search for HPO terms"
-      onChange={onChange}
+      onChange={addItem}
     />
+    <VerticalSpacer height={10} />
+    <ScrollingTab panes={getCategoryPanes(addItem)} defaultActiveIndex={null} />
   </div>
 
 HpoTermSelector.propTypes = {
-  onChange: PropTypes.func,
+  addItem: PropTypes.func,
 }
 
 class HpoTermsEditor extends React.PureComponent {
@@ -430,7 +496,7 @@ class HpoTermsEditor extends React.PureComponent {
     const { showDetails, showAddItem } = this.state
     return (
       <div>
-        {header && <Header dividing {...header} />}
+        {header && <div><Header dividing {...header} /><VerticalSpacer height={5} /></div>}
         {value.map(({ index, ...item }) =>
           <HpoTermDetails
             key={item.id}
@@ -441,8 +507,9 @@ class HpoTermsEditor extends React.PureComponent {
             toggleShowDetails={this.toggleShowDetails(item.id)}
           />,
         )}
-        {allowAdditions && (showAddItem ? <HpoTermSelector onChange={this.addItem} /> :
+        {allowAdditions && (showAddItem ? <HpoTermSelector addItem={this.addItem} /> :
         <ButtonLink icon="plus" content="Add Feature" onClick={this.toggleShowAddItems} />)}
+        {allowAdditions && <VerticalSpacer height={20} />}
       </div>
     )
   }

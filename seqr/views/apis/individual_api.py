@@ -640,3 +640,18 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
             individuals_by_guid.values(), user=request.user, add_hpo_details=True,
         )},
     })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def get_hpo_terms(request, hpo_parent_id):
+    """
+    Get all the HPO Terms with the given parent ID
+    """
+
+    return create_json_response({
+        hpo_parent_id: {
+            hpo.hpo_id: {'id': hpo.hpo_id, 'category': hpo.category_id, 'label': hpo.name}
+            for hpo in HumanPhenotypeOntology.objects.filter(parent_id=hpo_parent_id)
+        }
+    })
