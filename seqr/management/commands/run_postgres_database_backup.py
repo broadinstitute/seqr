@@ -4,12 +4,20 @@ import datetime
 
 
 class Command(BaseCommand):
-    help = 'Run database backups.'
+    help = """Generate postgres database backups for the seqr (seqrdb) and phenotips (xwiki) databases. 
+    Requires the postgres pg_dump utility to be installed and on PATH. 
+    gsutil is required if backup files are to be copied to a google bucket.
+    
+    Later, to restore the seqr and phenotips databases from these backups, run 
+
+    ./deploy/docker/postgres/restore_database_backup.sh postgres seqrdb $SEQRDB_BACKUP_FILE_PATH   # restores seqr metadata
+    ./deploy/docker/postgres/restore_database_backup.sh postgres xwiki $XWIKI_BACKUP_FILE_PATH     # restore phenotips data
+    """
 
     def add_arguments(self, parser):
-        parser.add_argument('--bucket', default=os.environ.get('DATABASE_BACKUP_BUCKET', 'unknown'))
-        parser.add_argument('--postgres-host', default=os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'unknown'))
-        parser.add_argument('--deployment-type', default=os.environ.get('DEPLOYMENT_TYPE', 'unknown'))
+        parser.add_argument('--bucket', help="(optional) if specified, backup files will be copied to this google bucket", default=os.environ.get('DATABASE_BACKUP_BUCKET'))
+        parser.add_argument('--postgres-host', default=os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'))
+        parser.add_argument('--deployment-type', help="(optional) a label to add to the backup filename", default=os.environ.get('DEPLOYMENT_TYPE', 'local'))
 
     def handle(self, *args, **options):
 
@@ -32,10 +40,12 @@ class Command(BaseCommand):
             backup_filename = "{db_name}_{deployment_type}_backup_{timestamp}.txt.gz".format(
                 db_name=db_name, deployment_type=options['deployment_type'], timestamp=timestamp)
 
-            run("/usr/bin/pg_dump -U postgres --host {postgres_host} {db_name} | gzip -c - > {backup_dir}/{backup_filename}".format(
+            run("pg_dump -U postgres --host {postgres_host} {db_name} | gzip -c - > {backup_dir}/{backup_filename}".format(
                postgres_host=options['postgres_host'], db_name=db_name, backup_dir=backup_dir,
                 backup_filename=backup_filename
             ))
-            run("/usr/local/bin/gsutil mv {backup_dir}/{backup_filename} gs://{bucket}/postgres/{backup_filename}".format(
-                backup_dir=backup_dir, backup_filename=backup_filename, bucket=options['bucket']
-            ))
+            
+            if options.get('bucket'):
+                run("gsutil -m cp {backup_dir}/{backup_filename} gs://{bucket}/postgres/{backup_filename}".format(
+                    backup_dir=backup_dir, backup_filename=backup_filename, bucket=options['bucket']
+                ))
