@@ -32,10 +32,10 @@ class RunProtgresDatabaseBackupTest(TestCase):
             '======== 2020-04-27__20-16-01 ======= \n' +
             '=====================================\n' +
             'Creating directory: /postgres_backups\n' +
-            '/usr/bin/pg_dump -U postgres --host localhost seqrdb | gzip -c - > /postgres_backups/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
-            '/usr/local/bin/gsutil mv /postgres_backups/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
-            '/usr/bin/pg_dump -U postgres --host localhost xwiki | gzip -c - > /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
-            '/usr/local/bin/gsutil mv /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz\n',
+            'pg_dump -U postgres --host localhost seqrdb | gzip -c - > /postgres_backups/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
+            'gsutil cp /postgres_backups/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/seqrdb_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
+            'pg_dump -U postgres --host localhost xwiki | gzip -c - > /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz\n' +
+            'gsutil cp /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz\n',
             out.getvalue())
 
         mock_os.system.assert_called_with(
@@ -58,9 +58,9 @@ class RunProtgresDatabaseBackupTest(TestCase):
             '======== 2020-04-27__20-16-01 ======= \n' +
             '=====================================\n' +
             'pg_dump -U postgres --host test_host seqrdb | gzip -c - > /postgres_backups/seqrdb_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n' +
-            'gsutil mv /postgres_backups/seqrdb_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/seqrdb_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n' +
+            'gsutil cp /postgres_backups/seqrdb_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/seqrdb_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n' +
             'pg_dump -U postgres --host test_host xwiki | gzip -c - > /postgres_backups/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n' +
-            'gsutil mv /postgres_backups/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n',
+            'gsutil cp /postgres_backups/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz\n',
             out.getvalue())
 
         mock_os.system.assert_called_with(
