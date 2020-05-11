@@ -39,7 +39,7 @@ class RunProtgresDatabaseBackupTest(TestCase):
             out.getvalue())
 
         mock_os.system.assert_called_with(
-            '/usr/local/bin/gsutil -m cp /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz')
+            'gsutil -m cp /postgres_backups/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz gs://db_back_bucket/postgres/xwiki_unknown_backup_2020-04-27__20-16-01.txt.gz')
 
     # Test the command with different arguments
     def test_command_with_arguments(self, mock_datetime, mock_os):
@@ -64,4 +64,4 @@ class RunProtgresDatabaseBackupTest(TestCase):
             out.getvalue())
 
         mock_os.system.assert_called_with(
-            '/usr/local/bin/gsutil mv /postgres_backups/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz')
+            'gsutil -m cp /postgres_backups/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz gs://test_bucket/postgres/xwiki_test_deployment_backup_2020-04-27__20-16-01.txt.gz')
