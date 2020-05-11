@@ -7,9 +7,10 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
+from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
-    receive_hpo_table_handler, save_hpo_table_handler
+    receive_hpo_table_handler, save_hpo_table_handler, update_individual_hpo_terms, get_hpo_terms
 from seqr.views.utils.test_utils import _check_login, INTERNAL_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
@@ -29,7 +30,19 @@ INDIVIDUAL_IDS_UPDATE_DATA = {
 INDIVIDUAL_UPDATE_GUID = "I000007_na20870"
 INDIVIDUAL_UPDATE_NAME = "test name"
 INDIVIDUAL_UPDATE_DATA = {
-    "display_name": INDIVIDUAL_UPDATE_NAME
+    'display_name': INDIVIDUAL_UPDATE_NAME,
+    'features': [{
+        'id': 'HP:0002011',
+        'label': 'nervous system abnormality',
+        'category': 'HP:0000708',
+        'categoryName': 'Nervous',
+        'qualifiers': [{'type': 'onset', 'label': 'congenital'}],
+    }, {
+        'id': 'HP:0011675',
+        'notes': 'A new term',
+    }],
+    'absentFeatures': [],
+    'absentNonstandardFeatures': [{'id': 'Some new feature', 'notes': 'No term for this', 'details': 'extra detail'}]
 }
 
 FAMILY_UPDATE_GUID = "I000007_na20870"
@@ -57,6 +70,38 @@ class IndividualAPITest(TestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], INDIVIDUAL_UPDATE_NAME)
+        self.assertIsNone(Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID).features)
+
+    def test_update_individual_hpo_terms(self):
+        edit_individuals_url = reverse(update_individual_hpo_terms, args=[INDIVIDUAL_UPDATE_GUID])
+        _check_login(self, edit_individuals_url)
+
+        response = self.client.post(edit_individuals_url, content_type='application/json',
+                                    data=json.dumps(INDIVIDUAL_UPDATE_DATA))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
+        self.assertListEqual(response_json[INDIVIDUAL_UPDATE_GUID]['features'], [
+            {
+                'id': 'HP:0002011',
+                'category': 'HP:0000707',
+                'label': 'Morphological abnormality of the central nervous system',
+                'qualifiers': [{'type': 'onset', 'label': 'congenital'}],
+            },
+            {'id': 'HP:0011675', 'category': 'HP:0001626', 'label': 'Arrhythmia', 'notes': 'A new term'},
+        ])
+        self.assertListEqual(response_json[INDIVIDUAL_UPDATE_GUID]['absentNonstandardFeatures'], [
+            {'id': 'Some new feature', 'notes': 'No term for this'}
+        ])
+        self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['absentFeatures'])
+        self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['nonstandardFeatures'])
+
+        self.assertListEqual(Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID).features, [
+            {'id': 'HP:0002011', 'qualifiers': [{'type': 'onset', 'label': 'congenital'}]},
+            {'id': 'HP:0011675', 'notes': 'A new term'},
+        ])
 
     def test_edit_individuals(self):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
@@ -199,3 +244,24 @@ class IndividualAPITest(TestCase):
             response_json['individualsByGuid']['I000001_na19675']['absentFeatures'],
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
+
+    def test_get_hpo_terms(self):
+        url = reverse(get_hpo_terms, args=['HP:0011458'])
+        _check_login(self, url)
+
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'HP:0011458': {
+                'HP:0002017': {'id': 'HP:0002017', 'category': 'HP:0025031', 'label': 'Nausea and vomiting'},
+                'HP:0001252': {'id': 'HP:0001252', 'category': 'HP:0025031', 'label': 'Muscular hypotonia'},
+            }
+        })
+
+        url = reverse(get_hpo_terms, args=['HP:0002017'])
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'HP:0002017': {}
+        })
+

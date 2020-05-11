@@ -2,6 +2,9 @@ from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
@@ -10,17 +13,16 @@ class Command(BaseCommand):
         parser.add_argument('family_ids', nargs='+')
 
     def handle(self, *args, **options):
-        # TODO test me!
         from_project = Project.objects.get(guid=options['from_project'])
         to_project = Project.objects.get(guid=options['to_project'])
         family_ids = options['family_ids']
         families = Family.objects.filter(project=from_project, family_id__in=family_ids)
-        print('Found {} out of {} families. No match for: {}.'.format(len(families), len(set(family_ids)), set(family_ids) - set([f.family_id for f in families])))
+        logger.info('Found {} out of {} families. No match for: {}.'.format(len(families), len(set(family_ids)), ', '.join(set(family_ids) - set([f.family_id for f in families]))))
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)
             if variant_tags:
-                print('Updating "{}" tags'.format(variant_tag_type.name))
+                logger.info('Updating "{}" tags'.format(variant_tag_type.name))
                 to_tag_type, created = VariantTagType.objects.get_or_create(
                     project=to_project, name=variant_tag_type.name
                 )
@@ -32,7 +34,7 @@ class Command(BaseCommand):
                     to_tag_type.save()
                 variant_tags.update(variant_tag_type=to_tag_type)
 
-        print("Updating families")
+        logger.info("Updating families")
         families.update(project=to_project)
 
-        print("Done.")
+        logger.info("Done.")

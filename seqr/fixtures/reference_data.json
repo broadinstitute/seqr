@@ -1174,7 +1174,7 @@
     "pk": 3,
     "fields": {
         "hpo_id": "HP:0001252",
-        "parent_id": "",
+        "parent_id": "HP:0011458",
         "category_id": "HP:0025031",
         "is_category": "f",
         "name": "Muscular hypotonia",
