@@ -250,7 +250,7 @@ const AwesomebarItemSelector = ({ icon, input, ...props }) => {
 AwesomebarItemSelector.propTypes = {
   input: PropTypes.object,
   icon: PropTypes.node,
-  value: PropTypes.oneOf(PropTypes.string, PropTypes.number),
+  value: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
 }
 
 const GeneEntry = ({ name, icon }) =>
@@ -624,7 +624,7 @@ const INDIVIDUAL_FIELDS = [
     isEditable: true,
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false).map(field =>
-        <div>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
+        <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
     ),
     formFields: Object.entries(AR_FIELDS).map(([field, label]) => ({
       margin: '0 100px 10px 0',

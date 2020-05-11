@@ -11,7 +11,7 @@ const ContentGrid = styled(Grid)`
 
 const SEARCH_CATEGORIES = ['genes']
 
-const GeneInfoSearch = React.memo(() =>
+const GeneInfoSearch = () =>
   <ContentGrid>
     <Grid.Row>
       <Grid.Column width={5} />
@@ -25,7 +25,6 @@ const GeneInfoSearch = React.memo(() =>
       </Grid.Column>
       <Grid.Column width={5} />
     </Grid.Row>
-  </ContentGrid>,
-)
+  </ContentGrid>
 
 export default GeneInfoSearch

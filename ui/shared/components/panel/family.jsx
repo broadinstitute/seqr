@@ -137,7 +137,7 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div>{successStoryTypeDisplay(tag)}</div>,
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
     ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
@@ -284,7 +284,7 @@ const Family = React.memo((
       }
     />
     leftContent = [
-      compact ? familyHeader : <div>{familyHeader}</div>,
+      compact ? familyHeader : <div key="header">{familyHeader}</div>,
       <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
     ]
   }
