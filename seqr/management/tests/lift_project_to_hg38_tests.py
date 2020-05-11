@@ -190,7 +190,12 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_variants.assert_called_with(mock.ANY, [(1001627057, u'G', u'C'), (21003343400, u'GAGA', u'G'), (1248203925, u'TC', u'T'), (1046394160, u'G', u'A')])
+        families = {f for f in Family.objects.filter(pk__in=[1,2])}
+        self.assertSetEqual(mock_get_es_variants.call_args.args[0], families)
+        self.assertSetEqual(
+            set(mock_get_es_variants.call_args.args[1]),
+            {(1001627057, u'G', u'C'), (21003343400, u'GAGA', u'G'), (1248203925, u'TC', u'T'), (1046394160, u'G', u'A')}
+        )
 
         # Test discontinue on missing family data while updating the saved variants
         variants = deepcopy(VARIANTS)
