@@ -42,14 +42,17 @@ INTERNAL_FAMILY_FIELDS = {
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
-INDIVIDUAL_FIELDS = {
+INDIVIDUAL_FIELDS_NO_FEATURES = {
     'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'individualId',
     'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
     'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
     'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',
-    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures', 'disorders', 'candidateGenes',
-    'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy', 'arDonoregg', 'arDonorsperm',
+    'disorders', 'candidateGenes', 'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy',
+    'arDonoregg', 'arDonorsperm',
 }
+
+INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
+INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
 
 INTERNAL_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',

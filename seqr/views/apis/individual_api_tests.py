@@ -70,6 +70,7 @@ class IndividualAPITest(TestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], INDIVIDUAL_UPDATE_NAME)
+        self.assertFalse('features' in response_json[INDIVIDUAL_UPDATE_GUID])
         self.assertIsNone(Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID).features)
 
     def test_update_individual_hpo_terms(self):
