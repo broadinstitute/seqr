@@ -24,18 +24,15 @@ from seqr.views.apis.family_api import \
     update_family_pedigree_image
 
 from seqr.views.apis.individual_api import \
+    get_hpo_terms, \
+    update_individual_hpo_terms, \
     update_individual_handler, \
     edit_individuals_handler, \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
-    save_individuals_table_handler
-
-from seqr.views.apis.phenotips_api import \
-    proxy_to_phenotips, \
-    phenotips_pdf_handler, \
-    phenotips_edit_handler, \
+    save_individuals_table_handler, \
     receive_hpo_table_handler, \
-    update_individual_hpo_terms
+    save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -180,9 +177,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
-    'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
-    'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_edit': phenotips_edit_handler,
     'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
+    'project/(?P<project_guid>[^/]+)/save_hpo_terms_table/(?P<upload_file_id>[^/]+)': save_hpo_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
@@ -212,6 +208,8 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/create': create_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
+
+    'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
 
     'locus_lists': locus_lists,
     'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,
@@ -264,15 +262,6 @@ api_endpoints = {
 }
 
 urlpatterns = []
-
-phenotips_urls = '^(?:%s)' % ('|'.join([
-    'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',
-    'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
-]))
-
-urlpatterns += [
-    url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),
-]
 
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]

@@ -43,15 +43,14 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = React.memo(({ match }) =>
+const FamilyPage = ({ match }) =>
   <FamilyDetail
     familyGuid={match.params.familyGuid}
     showVariantDetails
     showDetails
     showIndividuals
     fields={FAMILY_DETAIL_FIELDS}
-  />,
-)
+  />
 
 FamilyPage.propTypes = {
   match: PropTypes.object,

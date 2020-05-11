@@ -12,7 +12,7 @@ const IndentedContainer = styled.div`
 
 const UNKNOWN_CATEGORY = 'Other'
 
-const CATEGORY_NAMES = {
+export const CATEGORY_NAMES = {
   'HP:0000119': 'Genitourinary',
   'HP:0000152': 'Head or Neck',
   'HP:0000478': 'Eye',
@@ -36,8 +36,8 @@ const CATEGORY_NAMES = {
   'HP:0025031': 'Digestive',
   'HP:0040064': 'Limbs',
   'HP:0045027': 'Thoracic Cavity',
-  'HP:0500014': 'Test Result',
   'HP:0025354': 'Cellular Phenotype',
+  'HP:0025142': 'Constitution',
 }
 
 export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
@@ -87,10 +87,10 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
                 (category.terms || []).map(
                   (hpoTerm, i) => {
                     const qualifiers = (hpoTerm.qualifiers || []).map(({ type, label }) =>
-                      <span> - <b>{snakecaseToTitlecase(type)}:</b> {label}</span>,
+                      <span key={type}> - <b>{snakecaseToTitlecase(type)}:</b> {label}</span>,
                     )
                     const notes = hpoTerm.notes ? <small> ({hpoTerm.notes})</small> : null
-                    return <span>{hpoTerm.label || hpoTerm.id}{qualifiers}{notes}{i < category.terms.length - 1 ? ', ' : ''}</span>
+                    return <span key={hpoTerm.id}>{hpoTerm.label || hpoTerm.id}{qualifiers}{notes}{i < category.terms.length - 1 ? ', ' : ''}</span>
                   },
                 )
               }

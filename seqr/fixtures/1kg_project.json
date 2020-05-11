@@ -1172,7 +1172,7 @@
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
-        "project": null,
+        "project": 1,
         "name": "Known gene for phenotype",
         "category": "Collaboration",
         "description": "Variant tag type for known gene for phenotype",

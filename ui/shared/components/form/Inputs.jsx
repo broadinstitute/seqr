@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -198,6 +198,38 @@ export class AddableSelect extends React.PureComponent {
   }
 }
 
+
+export class SearchInput extends React.PureComponent {
+  static propTypes = {
+    onChange: PropTypes.func,
+    options: PropTypes.array,
+  }
+
+  state = {
+    results: this.props.options,
+  }
+
+  handleResultSelect = (e, { result }) => this.props.onChange(e, result.title)
+
+  handleSearchChange = (e, data) => {
+    this.setState({
+      results: this.props.options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+    })
+    this.props.onChange(e, data)
+  }
+
+  render() {
+    const { options, onChange, ...props } = this.props
+    return <Search
+      {...props}
+      results={this.state.results}
+      onResultSelect={this.handleResultSelect}
+      onSearchChange={this.handleSearchChange}
+    />
+  }
+}
+
+
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
   margin: ${props => props.margin || '0em 0em 1em'} !important;
@@ -274,12 +306,6 @@ const BaseRadioGroup = React.memo((props) => {
           key={option.value}
           inline
           inputType="Radio"
-          onChange={({ checked, ...val }) => {
-            console.log(val)
-            if (checked) {
-              onChange(option.value)
-            }
-          }}
         />,
       )}
     </InlineFormGroup>
@@ -314,8 +340,9 @@ export const RadioGroup = React.memo((props) => {
 const getButtonRadioOptionProps = (option, value, onChange) => ({
   active: value === option.value,
   basic: value !== option.value,
-  color: value === option.value ? 'grey' : 'black',
+  color: value === option.value ? (option.color || 'grey') : 'black',
   content: option.text,
+  label: option.label,
   onClick: (e) => {
     e.preventDefault()
     onChange(option.value)

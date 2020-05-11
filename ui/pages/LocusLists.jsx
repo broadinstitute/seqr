@@ -31,7 +31,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const LocusListPageHeader = connect(mapStateToProps)(PageHeader)
 
-const LocusLists = React.memo(({ match }) =>
+const LocusLists = ({ match }) =>
   <LocusListsLoader>
     <Container>
       <Switch>
@@ -39,8 +39,7 @@ const LocusLists = React.memo(({ match }) =>
         <Route path={`${match.url}`} component={LocusListTables} />
       </Switch>
     </Container>
-  </LocusListsLoader>,
-)
+  </LocusListsLoader>
 
 LocusLists.propTypes = {
   match: PropTypes.object,

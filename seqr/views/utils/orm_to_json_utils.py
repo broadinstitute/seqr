@@ -250,9 +250,13 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         if family_fields:
             for field in family_fields:
                 nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs = {'nested_fields': nested_fields}
+        kwargs = {'nested_fields': nested_fields, 'additional_model_fields': []}
     else:
         kwargs = {'additional_model_fields': ['family_id']}
+
+    if add_hpo_details:
+        kwargs['additional_model_fields'] += [
+            'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features']
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')

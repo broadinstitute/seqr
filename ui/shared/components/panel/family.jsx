@@ -137,7 +137,7 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div>{successStoryTypeDisplay(tag)}</div>,
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
     ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
@@ -149,9 +149,7 @@ const familyFieldRenderProps = {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
-    fieldDisplay: values => values.map(value =>
-      <div key={value}><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
-    ),
+    itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
@@ -286,7 +284,7 @@ const Family = React.memo((
       }
     />
     leftContent = [
-      compact ? familyHeader : <div>{familyHeader}</div>,
+      compact ? familyHeader : <div key="header">{familyHeader}</div>,
       <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
     ]
   }

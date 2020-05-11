@@ -24,7 +24,7 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
   
   .results {
     min-width: ${props => props.inputwidth || '100%'};
-    width: fit-content !important;
+    width: ${props => (props.inputwidth ? 'fit-content' : '100%')} !important;
   }
 `
 
@@ -113,12 +113,13 @@ class AwesomeBar extends React.PureComponent
 
 export { AwesomeBar as AwesomeBarComponent }
 
-export const AwesomeBarFormInput = React.memo(({ onChange, ...props }) =>
-  <AwesomeBar onResultSelect={result => onChange(result.key)} asFormInput {...props} />,
+export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = result => result.key, ...props }) =>
+  <AwesomeBar onResultSelect={result => onChange(parseResultItem(result))} asFormInput {...props} />,
 )
 
 AwesomeBarFormInput.propTypes = {
   onChange: PropTypes.func,
+  parseResultItem: PropTypes.func,
 }
 
 

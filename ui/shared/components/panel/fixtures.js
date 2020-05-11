@@ -352,9 +352,6 @@ export const STATE1 = {
       familyId: '1',
     },
   },
-  phenotipsModal: {
-    isVisible: true,
-  },
   genesById: { 'ENSG00000228198': GENE },
   genesLoading: {},
   savedVariantsByGuid: { SV0000002_1248367227_r0390_100: VARIANT },

@@ -205,6 +205,37 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: '2016-12-05T10:29:00.000Z',
       sampleGuids: [],
       sex: 'M',
+      birthYear: 2010,
+      deathYear: 0,
+      onsetAge: 'A',
+      expectedInheritance: ['S', 'Z'],
+      arIui: true,
+      affectedRelatives: false,
+      arSurrogacy: false,
+      arDonorsperm: null,
+      absentFeatures: [
+        {
+          category: 'HP:0001626',
+          id: 'HP:0001631',
+          label: 'Defect in the atrial septum',
+        },
+      ],
+      features: [
+        {
+          category: 'HP:0003011',
+          id: 'HP:0001324',
+          label: 'Muscle weakness',
+        },
+      ],
+      nonstandardFeatures: [{ id: 'A made up feature' }],
+      rejectedGenes: [
+        {
+          comments: '15 genes, lab A, 2013, NGS, negative ',
+          gene: 'LGMD panel',
+        },
+      ],
+      disorders: [10243],
+      maternalEthnicity: ['White', 'Asian'],
     },
     I021474_na19679_1: {
       projectGuid: 'R0237_1000_genomes_demo',
