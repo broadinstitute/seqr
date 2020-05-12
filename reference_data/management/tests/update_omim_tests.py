@@ -3,6 +3,7 @@ import mock
 import os
 import tempfile
 import shutil
+import responses
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -30,9 +31,10 @@ class UpdateOmimTest(TestCase):
         # Close the file, the directory will be removed after the test
         shutil.rmtree(self.test_dir)
 
+    @responses.activate
     @mock.patch('reference_data.management.commands.update_omim.os')
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.download_file')
+    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
     def test_update_omim_command(self, mock_download, mock_logger, mock_os):
         # Test required argument
         mock_os.environ.get.return_value = ''
