@@ -246,7 +246,8 @@ def sample_metadata_export(request, project_guid):
 
     mme_family_guids = {family.guid for family in _get_has_mme_submission_families(project)}
 
-    individual_samples = _get_loaded_before_date_project_individual_samples(project, request.GET.get('loadedBefore'))
+    individual_samples = _get_loaded_before_date_project_individual_samples(
+        project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
         project, individual_samples, _get_parsed_saved_discovery_variants_by_family)
