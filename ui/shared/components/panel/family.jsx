@@ -260,7 +260,7 @@ const Family = React.memo((
       values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
     return React.createElement(renderDetails.component || TextFieldView, {
       key: field.id,
-      isEditable: isEditable && field.canEdit,
+      isEditable: field.collaboratorEdit || (isEditable && field.canEdit),
       isPrivate: renderDetails.internal,
       fieldName: compact ? null : renderDetails.name,
       field: field.id,

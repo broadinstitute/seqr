@@ -192,8 +192,8 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
 export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true, collaboratorEdit: true },
+  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true, collaboratorEdit: true },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
   { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
