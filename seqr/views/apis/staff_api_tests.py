@@ -426,11 +426,13 @@ EXPECTED_SAMPLE_METADATA_ROW = {
   }
 
 SAMPLE_QC_DATA = [
-    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
-    '03133B_2	WES	[]	Standard Germline Exome v5	nfe	[]\n',
-    'NA19675	WES	[]	Unknown	nfe	["n_deletion","n_insertion","n_snp"]\n',
-    'NA19678	WES	[]	Unknown	amr	["n_deletion","n_insertion","n_snp"]\n',
-    'HG00732	WES	["coverage"]	Standard Exome Sequencing v4	nfe	["r_insertion_deletion"]\n',
+    'AL_PCT_CHIMERAS	HS_PCT_TARGET_BASES_20X	seqr_id	data_type	filter_flags	qc_platform	qc_pop	pop_PC1	pop_PC2	pop_PC3	pop_PC4	pop_PC5	pop_PC6	qc_metrics_filters	sample_qc.call_rate	sample_qc.n_called	sample_qc.n_not_called	sample_qc.n_filtered	sample_qc.n_hom_ref	sample_qc.n_het	sample_qc.n_hom_var	sample_qc.n_non_ref	sample_qc.n_singleton	sample_qc.n_snp	sample_qc.n_insertion	sample_qc.n_deletion	sample_qc.n_transition	sample_qc.n_transversion	sample_qc.n_star	sample_qc.r_ti_tv	sample_qc.r_het_hom_var	sample_qc.r_insertion_deletion	sample_qc.f_inbreeding.f_stat	sample_qc.f_inbreeding.n_called	sample_qc.f_inbreeding.expected_homs	sample_qc.f_inbreeding.observed_homs\n',
+    '5.567E-01	9.2619E+01	MANZ_1169_DNA	WES	[]	WES-010230 Standard Germline Exome	nfe	6.0654E-02	6.0452E-02	-6.2635E-03	-4.3252E-03	-2.1807E-02	-1.948E-02	["n_snp"]	7.1223E-01	14660344	5923237	0	14485322	114532	60490	175022	585	195114	18516	21882	133675	61439	0	2.1757E+00	1.8934E+00	8.4617E-01	5.3509E-01	14660344	1.4414E+07	14545812\n',
+    'NA	NA	NA	WES	[]	Unknown	nfe	4.6581E-02	5.7881E-02	-5.6011E-03	3.5992E-03	-2.9438E-02	-9.6098E-03	["r_insertion_deletion"]	6.2631E-01	12891805	7691776	0	12743977	97831	49997	147828	237	165267	15474	17084	114154	51113	0	2.2334E+00	1.9567E+00	9.0576E-01	5.4467E-01	12891805	1.2677E+07	12793974\n',
+    'NA	NA	NA19675	WES	[]	Unknown	amr	2.2367E-02	-1.9772E-02	6.3769E-02	2.5774E-03	-1.6655E-02	2.0457E-03	["r_ti_tv","n_deletion","n_snp","r_insertion_deletion","n_insertion"]	1.9959E-01	4108373	16475208	0	3998257	67927	42189	110116	18572	127706	13701	10898	82568	45138	0	1.8292E+00	1.6101E+00	1.2572E+00	5.3586E-02	4108373	4.0366E+06	4040446\n',
+    '3.273E-01	8.1446E+01	NA19678	WES	["coverage"]	Standard Exome Sequencing v4	sas	2.4039E-02	-6.9517E-02	-4.1485E-02	1.421E-01	7.5583E-02	-2.0986E-02	["n_insertion"]	4.6084E-01	9485820	11097761	0	9379951	59871	45998	105869	736	136529	6857	8481	95247	41282	0	2.3072E+00	1.3016E+00	8.0851E-01	5.2126E-01	9485820	9.3608E+06	9425949\n',
+    '5.0841E+00	8.7288E+01	HG00732	WES	["chimera"]	Standard Germline Exome v5	nfe	5.2785E-02	5.547E-02	-5.82E-03	2.7961E-02	-4.2259E-02	3.0271E-02	["n_insertion","r_insertion_deletion"]	6.8762E-01	14153622	6429959	0	13964844	123884	64894	188778	1719	202194	29507	21971	138470	63724	0	2.173E+00	1.909E+00	1.343E+00	4.924E-01	14153622	1.391E+07	14029738\n',
+    '1.8996E+01	7.352E+01	HG00733	WES	["contamination","not_real_flag"]	Standard Germline Exome v5	oth	-1.5417E-01	2.8868E-02	-1.3819E-02	4.1915E-02	-4.0001E-02	7.6392E-02	["n_insertion","r_insertion_deletion", "not_real_filter"]	6.1147E-01	12586314	7997267	0	12383958	140784	61572	202356	8751	204812	38051	21065	140282	64530	0	2.1739E+00	2.2865E+00	1.8064E+00	3.6592E-01	12586314	1.2364E+07	12445530\n',
 ]
 
 SAMPLE_QC_DATA_NO_DATA_TYPE = [
@@ -632,8 +634,7 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById', 'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'])
 
     @mock.patch('seqr.views.apis.staff_api.file_iter')
-    @mock.patch('seqr.views.apis.staff_api.logger')
-    def test_upload_qc_pipeline_output(self, mock_logger, mock_file_iter):
+    def test_upload_qc_pipeline_output(self, mock_file_iter):
         url = reverse(upload_qc_pipeline_output,)
         _check_login(self, url)
 
@@ -660,33 +661,29 @@ class StaffAPITest(TestCase):
 
         # Test normal functions
         mock_file_iter.return_value = SAMPLE_QC_DATA
-        mock_logger.reset_mock()
         response = self.client.post(url, content_type='application/json',
                 data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings'])
         self.assertListEqual(response_json['info'], [
-            u'Parsed 4 exome samples',
-            u'Found and updated matching seqr individuals for 3 samples'
+            u'Parsed 6 exome samples',
+            u'Found and updated matching seqr individuals for 4 samples'
         ])
         self.assertListEqual(response_json['warnings'], [
-            u'The following 1 samples were skipped: 03133B_2',
-            u'The following filter flags have no known corresponding value and were not saved: coverage_exome',
-            u'The following population platform filters have no known corresponding value and were not saved: n_deletion, n_insertion, n_snp, r_insertion_deletion'
+            u'The following 2 samples were skipped: MANZ_1169_DNA, NA',
+            u'The following filter flags have no known corresponding value and were not saved: not_real_flag, contamination',
+            u'The following population platform filters have no known corresponding value and were not saved: not_real_filter'
         ])
 
-        calls = [
-             mock.call('Parsed 4 exome samples'),
-             mock.call('Missing 1 samples from qc output'),
-             mock.call(
-                'The following filter flags have no known corresponding value and were not saved: coverage_exome'),
-             mock.call(
-                'The following population platform filters have no known corresponding value and were not saved: n_deletion, n_insertion, n_snp, r_insertion_deletion'),
-             mock.call('Found and updated matching seqr individuals for 3 samples'),
-        ]
-        mock_logger.info.assert_has_calls(calls)
+        indiv = Individual.objects.get(id = 1)
+        self.assertListEqual([indiv.filter_flags, indiv.pop_platform_filters, indiv.population], [None, {u'n_deletion': '10898', u'n_snp': '127706', u'r_insertion_deletion': '1.2572E+00', u'r_ti_tv': '1.8292E+00', u'n_insertion': '13701'}, 'AMR'])
 
-        population = [ indiv.population for indiv in Individual.objects.filter(id__in=[1,5])]
-        population.append(Individual.objects.get(id = 2).population)
-        self.assertListEqual(population, ['NFE', 'NFE', 'AMR'])
+        indiv = Individual.objects.get(id = 2)
+        self.assertListEqual([indiv.filter_flags, indiv.pop_platform_filters, indiv.population], [{'coverage_exome': '8.1446E+01'}, {u'n_insertion': '6857'}, 'SAS'])
+
+        indiv = Individual.objects.get(id = 5)
+        self.assertListEqual([indiv.filter_flags, indiv.pop_platform_filters, indiv.population], [{u'chimera': '5.0841E+00'}, {u'n_insertion': '29507', u'r_insertion_deletion': '1.343E+00'}, 'NFE'])
+
+        indiv = Individual.objects.get(id = 6)
+        self.assertListEqual([indiv.filter_flags, indiv.pop_platform_filters, indiv.population], [None, {u'n_insertion': '38051', u'r_insertion_deletion': '1.8064E+00'}, 'OTH'])
