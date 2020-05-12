@@ -31,7 +31,7 @@ class UpdatePrimateAiTest(TestCase):
 
     @mock.patch('reference_data.management.commands.update_omim.os')
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.download_file')
+    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
     def test_update_primate_ai_command(self, mock_download, mock_logger, mock_os):
         temp_file_path = os.path.join(self.test_dir, 'Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt')
         with open(temp_file_path, 'w') as f:
