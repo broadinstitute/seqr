@@ -13,6 +13,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
 from seqr.views.utils.test_utils import _check_login
+from seqr.models import Individual
 
 PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
@@ -376,44 +377,79 @@ EXPECTED_PI_DISCOVERY_ROW = {
     'inheritance_description-1': 'de novo'}
 
 EXPECTED_SAMPLE_METADATA_ROW = {
-    "MME": "N",
-    "affected_status": "Affected",
-    "ancestry": "",
-    "ancestry_detail": "",
-    "data_type": "WES",
-    "date_data_generation": "2017-02-05",
-    "dbgap_submission": "No",
-    "entity:discovery_id": "NA20878",
-    "entity:family_id": "NA20878",
-    "entity:sample_id": "NA20878",
-    "entity:subject_id": "NA20878",
-    "family_guid": "F000009_9",
-    "family_id": "9",
-    "hpo_absent": "",
-    "hpo_present": "",
-    "maternal_id": "",
-    "multiple_datasets": "No",
-    "num_saved_variants": 0,
-    "onset_category": "Unknown",
-    "paternal_id": "",
-    "phenotype_description": "",
-    "phenotype_group": "",
-    "pmid_id": "",
     "project_guid": "R0001_1kg",
+    "num_saved_variants": 1,
+    "dbgap_submission": "Yes",
+    "solve_state": "Tier 1",
+    "sample_id": "NA19675",
+    "Gene_Class-1": "Known",
+    "sample_provider": "Hildebrandt",
+    "inheritance_description-1": "de novo",
+    "hpo_present": "HP:0001631 (Defect in the atrial septum)|HP:0002011 (Morphological abnormality of the central nervous system)|HP:0001636 (Tetralogy of Fallot)",
+    "novel_mendelian_gene-1": "Y",
+    "hgvsc-1": "c.375_377delTCT",
+    "date_data_generation": "2017-02-05",
+    "dbgap_subject_id": "dbgap_subject_id_1",
+    "Zygosity-1": "Heterozygous",
+    "dbgap_study_id": "dbgap_stady_id_1",
+    "Ref-1": "GAGA",
+    "multiple_datasets": "No",
+    "ancestry_detail": "",
+    "maternal_id": "NA19679",
+    "paternal_id": "NA19678",
+    "hgvsp-1": "p.Leu126del",
+    "entity:family_id": "NA19675_1",
+    "entity:discovery_id": "NA19675_1",
     "project_id": u"1kg project n\xe5me with uni\xe7\xf8de",
-    "sample_id": "NA20878",
-    "sample_provider": "",
+    "Pos-1": "3343353",
+    "data_type": "WES",
+    "family_guid": "F000001_1",
+    "onset_category": "Adult onset",
+    "hpo_absent": "HP:0011675 (Arrhythmia)|HP:0001674 (Complete atrioventricular canal defect)|HP:0001508 (Failure to thrive)",
+    "Transcript-1": "ENST00000258436",
+    "dbgap_sample_id": "SM-A4GQ4",
+    "ancestry": "",
+    "phenotype_group": "",
     "sex": "Male",
-    "solve_state": "Unsolved",
-    "subject_id": "NA20878"
-}
+    "entity:subject_id": "NA19675_1",
+    "entity:sample_id": "NA19675_1",
+    "Chrom-1": "21",
+    "Alt-1": "G",
+    "Gene-1": "RP11-206L10.5",
+    "pmid_id": "",
+    "consanguinity": "Present",
+    "phenotype_description": "",
+    "affected_status": "Affected",
+    "family_id": "1",
+    "MME": "Y",
+    "subject_id": "NA19675_1"
+  }
 
 SAMPLE_QC_DATA = [
-    's	PROJECT	DATA_TYPE	RESEARCH_PROJECT_NUMBER	PRODUCT	INDIVIDUAL_NAME	ANALYSIS_END	PCT_CONTAMINATION	AL_PCT_CHIMERAS	WGS_MEAN_COVERAGE	WGS_MEDIAN_COVERAGE	HS_MEAN_TARGET_COVERAGE	HS_PCT_TARGET_BASES_20X	ALIGNER	MYRANK	seqr_id	filtered_callrate	data_type	filter_flags	qc_platform	known_pop	pca_scores	qc_pop	prob_afr	prob_amr	prob_asj	prob_eas	prob_fin	prob_mde	prob_nfe	prob_sas	pop_PC1	pop_PC2	pop_PC3	pop_PC4	pop_PC5	pop_PC6	fail_n_snp	fail_r_ti_tv	fail_r_insertion_deletion	fail_n_insertion	fail_n_deletion	fail_r_het_hom_var	qc_metrics_filters	sample_qc.call_rate	sample_qc.n_called	sample_qc.n_not_called	sample_qc.n_filtered	sample_qc.n_hom_ref	sample_qc.n_het	sample_qc.n_hom_var	sample_qc.n_non_ref	sample_qc.n_singleton	sample_qc.n_snp	sample_qc.n_insertion	sample_qc.n_deletion	sample_qc.n_transition	sample_qc.n_transversion	sample_qc.n_star	sample_qc.r_ti_tv	sample_qc.r_het_hom_var	sample_qc.r_insertion_deletion	sample_qc.f_inbreeding.f_stat	sample_qc.f_inbreeding.n_called	sample_qc.f_inbreeding.expected_homs	sample_qc.f_inbreeding.observed_homs\n',
-    '0002_001-1A_2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	WES	[]	Unknown	Unknown	[0.05828154658288453,0.055632660318004644,-0.013526954385677643,-0.00672922733297315,-0.02231288278252597,-0.01851126825854067]	nfe	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	1.0000e+00	0.0000e+00	5.8282e-02	5.5633e-02	-1.3527e-02	-6.7292e-03	-2.2313e-02	-1.8511e-02	true	false	false	true	true	false	["n_deletion","n_insertion","n_snp"]	7.4665e-01	15368781	5214800	0	15179462	122960	66359	189319	638	211270	20345	24063	144573	66697	0	2.1676e+00	1.8530e+00	8.4549e-01	5.3433e-01	15368781	1.5105e+07	15245821\n',
-    '0004_001-1A	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	WES	[]	Unknown	Unknown	[0.057975465404746004,0.05783022522596767,-0.007880071185891558,-0.005536870286142893,-0.03154735973764001,-0.010849047729001934]	nfe	1.0000e-02	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	9.9000e-01	0.0000e+00	5.7975e-02	5.7830e-02	-7.8801e-03	-5.5369e-03	-3.1547e-02	-1.0849e-02	true	false	false	true	true	false	["n_deletion","n_insertion","n_snp"]	7.5422e-01	15524580	5059001	0	15331598	124440	68542	192982	627	216123	20773	24628	147636	68487	0	2.1557e+00	1.8155e+00	8.4347e-01	5.3262e-01	15524580	1.5258e+07	15400140\n',
-    '0006_001-1A_2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	WES	[]	Unknown	Unknown	[0.05456973953775274,0.05595057043008969,-0.008577987268070675,0.010774467092638367,-0.032619925661112215,0.010606945679118955]	nfe	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	0.0000e+00	1.0000e+00	0.0000e+00	5.4570e-02	5.5951e-02	-8.5780e-03	1.0774e-02	-3.2620e-02	1.0607e-02	true	false	false	true	true	false	["n_deletion","n_insertion","n_snp"]	7.4155e-01	15263762	5319819	0	15076982	120766	66014	186780	536	209877	19336	23581	143515	66362	0	2.1626e+00	1.8294e+00	8.1998e-01	5.2956e-01	15263762	1.5007e+07	15142996\n',
+    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    '03133B_2	WES	[]	Standard Germline Exome v5	nfe	[]\n',
+    'NA19675	WES	[]	Unknown	nfe	["n_deletion","n_insertion","n_snp"]\n',
+    'NA19678	WES	[]	Unknown	amr	["n_deletion","n_insertion","n_snp"]\n',
+    'HG00732	WES	["coverage"]	Standard Exome Sequencing v4	nfe	["r_insertion_deletion"]\n',
 ]
+
+SAMPLE_QC_DATA_NO_DATA_TYPE = [
+    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    '03133B_2	n/a	[]	Standard Germline Exome v5	nfe	[]\n',
+]
+
+SAMPLE_QC_DATA_MORE_DATA_TYPE = [
+    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    '03133B_2	WES	[]	Standard Germline Exome v5	nfe	[]\n',
+    '03133B_3	WGS	[]	Standard Germline Exome v5	nfe	[]\n',
+]
+
+
+SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE = [
+    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    '03133B_2	UNKNOWN	[]	Standard Germline Exome v5	nfe	[]\n',
+]
+
 
 class StaffAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -596,13 +632,61 @@ class StaffAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById', 'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'])
 
     @mock.patch('seqr.views.apis.staff_api.file_iter')
-    def test_upload_qc_pipeline_output(self, mock_file_iter):
+    @mock.patch('seqr.views.apis.staff_api.logger')
+    def test_upload_qc_pipeline_output(self, mock_logger, mock_file_iter):
         url = reverse(upload_qc_pipeline_output,)
         _check_login(self, url)
 
+        # Test no dataset type error
+        mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE
+        response = self.client.post(url, content_type='application/json',
+                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'No dataset type detected')
+
+        # Test multiple dataset types error
+        mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
+        response = self.client.post(url, content_type='application/json',
+                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Multiple dataset types detected: wes ,wgs')
+
+        # Test unexpected data type error
+        mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
+        response = self.client.post(url, content_type='application/json',
+                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Unexpected dataset type detected: "unknown" (should be "exome" or "genome")')
+
+        # Test normal functions
         mock_file_iter.return_value = SAMPLE_QC_DATA
+        mock_logger.reset_mock()
         response = self.client.post(url, content_type='application/json',
                 data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings'])
+        self.assertListEqual(response_json['info'], [
+            u'Parsed 4 exome samples',
+            u'Found and updated matching seqr individuals for 3 samples'
+        ])
+        self.assertListEqual(response_json['warnings'], [
+            u'The following 1 samples were skipped: 03133B_2',
+            u'The following filter flags have no known corresponding value and were not saved: coverage_exome',
+            u'The following population platform filters have no known corresponding value and were not saved: n_deletion, n_insertion, n_snp, r_insertion_deletion'
+        ])
+
+        calls = [
+             mock.call('Parsed 4 exome samples'),
+             mock.call('Missing 1 samples from qc output'),
+             mock.call(
+                'The following filter flags have no known corresponding value and were not saved: coverage_exome'),
+             mock.call(
+                'The following population platform filters have no known corresponding value and were not saved: n_deletion, n_insertion, n_snp, r_insertion_deletion'),
+             mock.call('Found and updated matching seqr individuals for 3 samples'),
+        ]
+        mock_logger.info.assert_has_calls(calls)
+
+        population = [ indiv.population for indiv in Individual.objects.filter(id__in=[1,5])]
+        population.append(Individual.objects.get(id = 2).population)
+        self.assertListEqual(population, ['NFE', 'NFE', 'AMR'])
