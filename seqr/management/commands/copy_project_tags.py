@@ -26,5 +26,5 @@ class Command(BaseCommand):
             tag.id = None
             tag.project = target_project
             tag.save()
-            print 'Saved tag %s (new id = %d)' % (tag.name, tag.id)
+            self.stdout.write('Saved tag %s (new id = %d)' % (tag.name, tag.id))
 
