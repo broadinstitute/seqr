@@ -442,9 +442,8 @@ class Individual(ModelWithGUID):
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
             'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population',
             'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
-            'affected_relatives', 'expected_inheritance', 'features', 'absent_features', 'nonstandard_features',
-            'absent_nonstandard_features', 'disorders', 'candidate_genes', 'rejected_genes', 'ar_fertility_meds',
-            'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm',
+            'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',
+            'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',

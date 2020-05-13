@@ -8,9 +8,9 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
     get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene, \
     get_json_for_saved_search, get_json_for_saved_variants_with_tags
 from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
-    INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS, \
-    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS, IGV_SAMPLE_FIELDS
-
+    INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
+    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS, IGV_SAMPLE_FIELDS, \
+    TAG_FIELDS, VARIANT_NOTE_FIELDS
 
 class JSONUtilsTest(TestCase):
     fixtures = ['users.json', '1kg_project', 'reference_data', 'variant_searches']
@@ -42,10 +42,13 @@ class JSONUtilsTest(TestCase):
     def test_json_for_individual(self):
         individual = Individual.objects.first()
         json = _get_json_for_individual(individual)
+        self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS_NO_FEATURES)
+
+        json = _get_json_for_individual(individual, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS)
 
         user = User.objects.filter(is_staff=True).first()
-        json = _get_json_for_individual(individual, user)
+        json = _get_json_for_individual(individual, user, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_INDIVIDUAL_FIELDS)
 
     def test_json_for_sample(self):
@@ -81,7 +84,7 @@ class JSONUtilsTest(TestCase):
         variant_guid_1 = 'SV0000001_2103343353_r0390_100'
         variant_guid_2 = 'SV0000002_1248367227_r0390_100'
         v1_tag_guids = {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
-        v2_tag_guids = {'VT1726945_2103343353_r0390_100'}
+        v2_tag_guids = {'VT1726945_2103343353_r0390_100', 'VT1726970_2103343353_r0004_tes'}
         v2_note_guids = ['VN0714935_2103343353_r0390_100']
         v1_functional_guids = {'VFD0000023_1248367227_r0390_10', 'VFD0000024_1248367227_r0390_10'}
 

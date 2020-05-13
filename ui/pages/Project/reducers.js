@@ -130,20 +130,21 @@ export const updateIndividuals = (values) => {
   }
 }
 
-export const updateIndividualsHpoTerms = ({ updatesByIndividualGuid }) => {
+export const updateIndividualsHpoTerms = ({ uploadedFileId }) => {
   return (dispatch, getState) => {
-    const errors = []
-
-    return Promise.all(Object.entries(updatesByIndividualGuid).map(([individualGuid, values]) =>
-      new HttpRequestHelper(`/api/individual/${individualGuid}/update_hpo_terms`,
-        responseJson => dispatch({ type: RECEIVE_DATA, updatesById: { [individualGuid]: responseJson } }),
-        e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.message}`),
-      ).post(values),
-    )).then(() => {
-      if (errors.length) {
-        throw new SubmissionError({ _error: errors })
-      }
-    })
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/save_hpo_terms_table/${uploadedFileId}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+          // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post()
   }
 }
 

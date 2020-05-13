@@ -6,8 +6,6 @@ import logging
 
 from seqr.models import Sample, IgvSample, Individual
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
-from seqr.views.utils.phenotips_utils import delete_phenotips_patient, PhenotipsException
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,24 +33,30 @@ def delete_individuals(project, individual_guids):
     Sample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
     IgvSample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
 
-    families = {}
-    for individual in individuals_to_delete:
-        families[individual.family.family_id] = individual.family
-
-        # delete phenotips records
-        try:
-            delete_phenotips_patient(project, individual)
-        except (PhenotipsException, ValueError) as e:
-            logger.error("Error: couldn't delete patient from phenotips: {} {} ({})".format(
-                individual.phenotips_eid, individual, e))
+    families = {individual.family for individual in individuals_to_delete}
 
     individuals_to_delete.delete()
 
-    update_pedigree_images(families.values())
+    update_pedigree_images(families)
 
-    families_with_deleted_individuals = list(families.values())
+    families_with_deleted_individuals = list(families)
 
     return families_with_deleted_individuals
+
+
+def get_parsed_feature(feature, feature_id=None, additional_fields=None):
+    optional_fields = ['notes', 'qualifiers']
+    if additional_fields:
+        optional_fields += additional_fields
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
+
+    for field in optional_fields:
+        if field in feature:
+            feature_json[field] = feature[field]
+
+    return feature_json
 
 
 def _user_to_string(user):

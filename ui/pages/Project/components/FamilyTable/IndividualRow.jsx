@@ -3,23 +3,31 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Label, Popup } from 'semantic-ui-react'
+import { Field } from 'redux-form'
+import { Label, Popup, Form, Input, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
+import { Select, SearchInput, RadioGroup } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import TagFieldView from 'shared/components/panel/view-fields/TagFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
+import NullableBoolFieldView, { getNullableBoolField } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import HpoPanel from 'shared/components/panel/HpoPanel'
+import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
-import { ColoredIcon } from 'shared/components/StyledComponents'
+import DataLoader from 'shared/components/DataLoader'
+import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { AFFECTED } from 'shared/utils/constants'
 
-import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
+import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
+import {
+  getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
+} from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -37,6 +45,16 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 220px;
+`
+
+const ScrollingTab = styled(Tab).attrs({ menu: { attached: true } })`
+  .menu.attached {
+    overflow-x: scroll;
+  }
+  
+  .menu.text {
+    margin: .1em -.5em;
+  }
 `
 
 const FLAG_TITLE = {
@@ -58,35 +76,36 @@ const POPULATION_MAP = {
   SAS: 'South Asian',
 }
 
-const ONSET_AGE_MAP = {
-  G: 'Congenital onset',
-  E: 'Embryonal onset',
-  F: 'Fetal onset',
-  N: 'Neonatal onset',
-  I: 'Infantile onset',
-  C: 'Childhood onset',
-  J: 'Juvenile onset',
-  A: 'Adult onset',
-  Y: 'Young adult onset',
-  M: 'Middle age onset',
-  L: 'Late onset',
-}
+const ONSET_AGE_OPTIONS = [
+  { value: 'G', text: 'Congenital onset' },
+  { value: 'E', text: 'Embryonal onset' },
+  { value: 'F', text: 'Fetal onset' },
+  { value: 'N', text: 'Neonatal onset' },
+  { value: 'I', text: 'Infantile onset' },
+  { value: 'C', text: 'Childhood onset' },
+  { value: 'J', text: 'Juvenile onset' },
+  { value: 'A', text: 'Adult onset' },
+  { value: 'Y', text: 'Young adult onset' },
+  { value: 'M', text: 'Middle age onset' },
+  { value: 'L', text: 'Late onset' },
+]
 
-const INHERITANCE_MODE_MAP = {
-  S: 'Sporadic',
-  D: 'Autosomal dominant inheritance',
-  L: 'Sex-limited autosomal dominant',
-  A: 'Male-limited autosomal dominant',
-  C: 'Autosomal dominant contiguous gene syndrome',
-  R: 'Autosomal recessive inheritance',
-  G: 'Gonosomal inheritance',
-  X: 'X-linked inheritance',
-  Z: 'X-linked recessive inheritance',
-  Y: 'Y-linked inheritance',
-  W: 'X-linked dominant inheritance',
-  F: 'Multifactorial inheritance',
-  M: 'Mitochondrial inheritance',
-}
+const INHERITANCE_MODE_OPTIONS = [
+  { value: 'S', text: 'Sporadic' },
+  { value: 'D', text: 'Autosomal dominant inheritance' },
+  { value: 'L', text: 'Sex-limited autosomal dominant' },
+  { value: 'A', text: 'Male-limited autosomal dominant' },
+  { value: 'C', text: 'Autosomal dominant contiguous gene syndrome' },
+  { value: 'R', text: 'Autosomal recessive inheritance' },
+  { value: 'G', text: 'Gonosomal inheritance' },
+  { value: 'X', text: 'X-linked inheritance' },
+  { value: 'Z', text: 'X-linked recessive inheritance' },
+  { value: 'Y', text: 'Y-linked inheritance' },
+  { value: 'W', text: 'X-linked dominant inheritance' },
+  { value: 'F', text: 'Multifactorial inheritance' },
+  { value: 'M', text: 'Mitochondrial inheritance' },
+]
+const INHERITANCE_MODE_MAP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
 
 const AR_FIELDS = {
   arFertilityMeds: 'Fertility medications',
@@ -98,7 +117,29 @@ const AR_FIELDS = {
   arDonorsperm: 'Donor sperm',
 }
 
-const BLOCK_DISPLAY_STYLE = { display: 'block' }
+const ETHNICITY_OPTIONS = [
+  'Aboriginal Australian',
+  'African',
+  'Arab',
+  'Ashkenazi Jewish',
+  'Asian',
+  'Australian',
+  'Caucasian',
+  'East Asian',
+  'Eastern European',
+  'European',
+  'Finnish',
+  'Gypsy',
+  'Hispanic',
+  'Indian',
+  'Latino/a',
+  'Native American',
+  'North American',
+  'Northern European',
+  'Sephardic Jewish',
+  'South Asian',
+  'Western European',
+].map(title => ({ title }))
 
 const ratioLabel = (flag) => {
   const words = snakecaseToTitlecase(flag).split(' ')
@@ -172,16 +213,21 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
-const formatGenes = genes => genes.map(gene =>
-  <div key={gene.gene}>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</div>,
-)
+const formatGene = gene =>
+  <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
 
 const AgeDetails = ({ birthYear, deathYear }) => {
   if (!!deathYear || deathYear === 0) {
+    let deathSummary
+    if (deathYear > 0) {
+      deathSummary = birthYear > 0 ? `at age ${deathYear - birthYear}` : `in ${deathYear}`
+    } else {
+      deathSummary = '(date unknown)'
+    }
     return (
       <div>
-        Deceased {deathYear > 0 ? `at age ${new Date().getFullYear() - deathYear}` : '(date unknown)'}
-        {birthYear > 0 && <div>Born in {birthYear}</div>}
+        Deceased {deathSummary}
+        {birthYear > 0 && <span> - Born in {birthYear}</span>}
       </div>
     )
   }
@@ -193,13 +239,313 @@ AgeDetails.propTypes = {
   deathYear: PropTypes.string,
 }
 
-const nullableBoolDisplay = (value) => {
-  if (value === true) {
-    return <Label horizontal basic size="small" content="Yes" color="green" />
-  } else if (value === false) {
-    return <Label horizontal basic size="small" content="No" color="red" />
+const OMIM_CATEGORIES = ['omim']
+const GENE_CATEGORIES = ['genes']
+
+const AwesomebarItemSelector = ({ icon, input, ...props }) => {
+  const { value, ...fieldProps } = input || props
+  return value ? <Input fluid icon={icon} value={value} readOnly /> : <AwesomeBarFormInput {...fieldProps} {...props} />
+}
+
+AwesomebarItemSelector.propTypes = {
+  input: PropTypes.object,
+  icon: PropTypes.node,
+  value: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+}
+
+const GeneEntry = ({ name, icon }) =>
+  <Form.Group inline>
+    <Form.Field width={1}>{icon}</Form.Field>
+    <Form.Field width={7}>
+      <Field
+        name={`${name}.gene`}
+        placeholder="Search for gene"
+        component={AwesomebarItemSelector}
+        categories={GENE_CATEGORIES}
+        parseResultItem={result => result.title}
+      />
+    </Form.Field>
+    <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
+  </Form.Group>
+
+GeneEntry.propTypes = {
+  icon: PropTypes.node,
+  name: PropTypes.string,
+}
+
+const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) =>
+  Object.values(getHpoTermsForCategory(
+    (features || []).map((term, index) => ({ ...term, index })),
+    nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
+  )).reduce((acc, { categoryName, terms }) => {
+    terms[0].categoryName = categoryName
+    return [...acc, ...terms]
+  }, [])
+
+
+const HPO_QUALIFIERS = [
+  {
+    type: 'age_of_onset',
+    options: [
+      'Congenital onset',
+      'Embryonal onset',
+      'Fetal onset',
+      'Neonatal onset',
+      'Infantile onset',
+      'Childhood onset',
+      'Juvenile onset',
+      'Adult onset',
+      'Young adult onset',
+      'Middle age onset',
+      'Late onset',
+    ],
+  },
+  {
+    type: 'pace_of_progression',
+    options: ['Nonprogressive', 'Slow progression', 'Progressive', 'Rapidly progressive', 'Variable progression rate'],
+  },
+  {
+    type: 'severity',
+    options: ['Borderline', 'Mild', 'Moderate', 'Severe', 'Profound'],
+  },
+  {
+    type: 'temporal_pattern',
+    options: ['Insidious onset', 'Chronic', 'Subacute', 'Acute'],
+  },
+  {
+    type: 'spatial_pattern',
+    options: ['Generalized', 'Localized', 'Distal', 'Proximal'],
+  },
+  {
+    type: 'laterality',
+    options: ['Bilateral', 'Unilateral', 'Left', 'Right'],
+  },
+]
+
+const HpoQualifiers = ({ input }) =>
+  <Accordion
+    exclusive={false}
+    panels={HPO_QUALIFIERS.map(({ type, options }) => ({
+      key: type,
+      title: { content: <b>{snakecaseToTitlecase(type)}</b> },
+      content: {
+        content: (
+          <RadioGroup
+            onChange={val => input.onChange(({ ...input.value, [type]: val }))}
+            value={input.value[type]}
+            options={options.map(value => ({ value, text: value }))}
+            margin="0 1em"
+          />
+        ),
+      },
+    }))}
+  />
+
+HpoQualifiers.propTypes = {
+  input: PropTypes.object,
+}
+
+const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) =>
+  <div>
+    {value.categoryName ? <Header content={value.categoryName} size="small" /> : null}
+    <Form.Group inline>
+      <Form.Field width={1}>{icon}</Form.Field>
+      <Form.Field width={13}>
+        {value.label ? `${value.label} (${value.id})` : value.id}
+      </Form.Field>
+      <Form.Field width={2}>
+        <ButtonLink
+          floated="right"
+          size="small"
+          onClick={toggleShowDetails}
+          content={showDetails ? 'Hide Details' : 'Edit Details'}
+        />
+      </Form.Field>
+    </Form.Group>
+    {showDetails && [
+      <Field
+        key="qualifiers"
+        name={`${name}.qualifiers`}
+        component={HpoQualifiers}
+        format={val => (val || []).reduce((acc, { type, label }) => ({ ...acc, [type]: label }), {})}
+        normalize={val => Object.entries(val || {}).map(([type, label]) => ({ type, label }))}
+      />,
+      <Form.Group key="notes">
+        <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />
+      </Form.Group>,
+    ]}
+  </div>,
+)
+
+HpoTermDetails.propTypes = {
+  icon: PropTypes.node,
+  value: PropTypes.object,
+  name: PropTypes.string,
+  showDetails: PropTypes.bool,
+  toggleShowDetails: PropTypes.func,
+}
+
+const CATEGORY_MENU = { text: true }
+
+const getTermPanes = (term, addItem) => ([{
+  menuItem: {
+    key: term.id,
+    content: term.label,
+    icon: { name: 'plus', color: 'green', size: 'large', onClick: () => addItem(term) },
+  },
+  render: () => <HpoCategory category={term.id} addItem={addItem} />,
+}])
+
+const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) =>
+  <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
+    {Object.values(hpoTerms || {}).length > 0 &&
+      <Tab.Pane attached={false}>
+        {Object.values(hpoTerms).map(term =>
+          <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />,
+        )}
+      </Tab.Pane>
+    }
+  </DataLoader>
+
+BaseHpoCategory.propTypes = {
+  category: PropTypes.string,
+  hpoTerms: PropTypes.object,
+  addItem: PropTypes.func,
+}
+
+const mapCategoryStateToProps = (state, ownProps) => {
+  const hpoTerms = getHpoTermsByParent(state)[ownProps.category]
+  return {
+    hpoTerms,
+    loading: !hpoTerms && getHpoTermsIsLoading(state),
   }
-  return 'Unknown'
+}
+
+const mapCategoryDispatchToProps = {
+  load: loadHpoTerms,
+}
+
+const HpoCategory = connect(mapCategoryStateToProps, mapCategoryDispatchToProps)(BaseHpoCategory)
+
+const HPO_CATEGORIES = ['hpo_terms']
+
+const getCategoryPanes = addItem =>
+  Object.entries(CATEGORY_NAMES).map(
+    ([key, menuItem]) => ({
+      key,
+      menuItem,
+      render: () => <HpoCategory category={key} addItem={addItem} />,
+    }),
+  ).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
+
+const HpoTermSelector = ({ addItem }) =>
+  <div>
+    <AwesomeBarFormInput
+      parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
+      categories={HPO_CATEGORIES}
+      placeholder="Search for HPO terms"
+      onChange={addItem}
+    />
+    <VerticalSpacer height={10} />
+    <ScrollingTab panes={getCategoryPanes(addItem)} defaultActiveIndex={null} />
+  </div>
+
+HpoTermSelector.propTypes = {
+  addItem: PropTypes.func,
+}
+
+class HpoTermsEditor extends React.PureComponent {
+
+  static propTypes = {
+    value: PropTypes.array,
+    name: PropTypes.string,
+    onChange: PropTypes.func,
+    header: PropTypes.object,
+    allowAdditions: PropTypes.bool,
+  }
+
+  state = { showDetails: {}, showAddItem: false }
+
+  toggleShowDetails = id => (e) => {
+    e.preventDefault()
+    const { showDetails } = this.state
+    this.setState({
+      showDetails: { ...showDetails, [id]: !showDetails[id] },
+    })
+  }
+
+  toggleShowAddItems = (e) => {
+    e.preventDefault()
+    this.setState({
+      showAddItem: !this.state.showAddItem,
+    })
+  }
+
+  addItem = (data) => {
+    this.props.onChange([...this.props.value, data])
+    this.setState({ showAddItem: false })
+  }
+
+  removeItem = (e, data) => {
+    e.preventDefault()
+    this.props.onChange(this.props.value.filter(({ id }) => id !== data.id))
+  }
+
+  render() {
+    const { value, name, allowAdditions, header } = this.props
+    const { showDetails, showAddItem } = this.state
+    return (
+      <div>
+        {header && <div><Header dividing {...header} /><VerticalSpacer height={5} /></div>}
+        {value.map(({ index, ...item }) =>
+          <HpoTermDetails
+            key={item.id}
+            value={item}
+            name={`${name}[${index}]`}
+            icon={<Icon name="remove" link id={item.id} onClick={this.removeItem} />}
+            showDetails={!!showDetails[item.id]}
+            toggleShowDetails={this.toggleShowDetails(item.id)}
+          />,
+        )}
+        {allowAdditions && (showAddItem ? <HpoTermSelector addItem={this.addItem} /> :
+        <ButtonLink icon="plus" content="Add Feature" onClick={this.toggleShowAddItems} />)}
+        {allowAdditions && <VerticalSpacer height={20} />}
+      </div>
+    )
+  }
+}
+
+const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
+const YEAR_SELECTOR_PROPS = {
+  component: Select,
+  options: YEAR_OPTIONS,
+  search: true,
+  inline: true,
+  width: 8,
+}
+
+const ETHNICITY_FIELD = {
+  component: ListFieldView,
+  isEditable: true,
+  formFieldProps: {
+    control: SearchInput,
+    options: ETHNICITY_OPTIONS,
+    showNoResults: false,
+    fluid: true,
+    maxLength: 40,
+  },
+  itemJoin: ' / ',
+}
+
+const GENES_FIELD = {
+  component: ListFieldView,
+  isEditable: true,
+  itemDisplay: formatGene,
+  itemKey: ({ gene }) => gene,
+  formFieldProps: { itemComponent: GeneEntry },
+  individualFields: ({ affected }) => ({
+    isVisible: affected === AFFECTED,
+  }),
 }
 
 const INDIVIDUAL_FIELDS = [
@@ -207,20 +553,31 @@ const INDIVIDUAL_FIELDS = [
     field: 'age',
     fieldName: 'Age',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    formFields: [
+      { name: 'birthYear', label: 'Birth Year', ...YEAR_SELECTOR_PROPS },
+      {
+        name: 'deathYear',
+        label: 'Death Year',
+        format: val => (val === 0 ? 0 : (val || -1)),
+        normalize: val => (val < 0 ? null : val),
+        ...YEAR_SELECTOR_PROPS,
+        options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
+      },
+    ],
     fieldDisplay: AgeDetails,
     individualFields: individual => ({
       fieldValue: individual,
     }),
   },
   {
+    component: OptionFieldView,
     field: 'onsetAge',
     fieldName: 'Age of Onset',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: age => ONSET_AGE_MAP[age],
+    tagOptions: ONSET_AGE_OPTIONS,
+    formFieldProps: {
+      search: true,
+    },
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -230,44 +587,32 @@ const INDIVIDUAL_FIELDS = [
     isEditable: true,
     fieldName: 'Individual Notes',
     field: 'notes',
-    individualFields: ({ displayName }) => ({
-      modalTitle: `Notes for Individual ${displayName}`,
-    }),
   },
   {
+    component: NullableBoolFieldView,
     field: 'consanguinity',
     fieldName: 'Consanguinity',
     isEditable: true,
-    showEmptyValues: true,
-    compact: true,
-    style: BLOCK_DISPLAY_STYLE,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: nullableBoolDisplay,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
   },
   {
+    component: NullableBoolFieldView,
     field: 'affectedRelatives',
     fieldName: 'Other Affected Relatives',
     isEditable: true,
-    showEmptyValues: true,
-    compact: true,
-    style: BLOCK_DISPLAY_STYLE,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: nullableBoolDisplay,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
   },
   {
+    component: TagFieldView,
     field: 'expectedInheritance',
     fieldName: 'Expected Mode of Inheritance',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
+    tagOptions: INHERITANCE_MODE_OPTIONS,
+    simplifiedValue: true,
     fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_MAP[inheritance]).join(', '),
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
@@ -277,12 +622,14 @@ const INDIVIDUAL_FIELDS = [
     field: 'ar',
     fieldName: 'Assisted Reproduction',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false).map(field =>
-        <div>{AR_FIELDS[field]}: <b>{individual[field] ? 'Yes' : 'No'}</b></div>,
+        <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
     ),
+    formFields: Object.entries(AR_FIELDS).map(([field, label]) => ({
+      margin: '0 100px 10px 0',
+      ...getNullableBoolField({ field, label }),
+    })),
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,
@@ -291,18 +638,12 @@ const INDIVIDUAL_FIELDS = [
   {
     field: 'maternalEthnicity',
     fieldName: 'Maternal Ancestry',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: ancestries => ancestries.join(' / '),
+    ...ETHNICITY_FIELD,
   },
   {
     field: 'paternalEthnicity',
     fieldName: 'Paternal Ancestry',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: ancestries => ancestries.join(' / '),
+    ...ETHNICITY_FIELD,
   },
   {
     fieldName: 'Imputed Population',
@@ -339,21 +680,51 @@ const INDIVIDUAL_FIELDS = [
     field: 'features',
     fieldName: 'Features',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
     fieldDisplay: individual => <HpoPanel individual={individual} />,
+    formFields: [
+      {
+        name: 'nonstandardFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory([], val),
+        allowAdditions: false,
+        header: { content: 'Present', color: 'green' },
+      },
+      {
+        name: 'features',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory(val),
+        allowAdditions: true,
+      },
+      {
+        name: 'absentNonstandardFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory([], val),
+        allowAdditions: false,
+        header: { content: 'Not Present', color: 'red' },
+      },
+      {
+        name: 'absentFeatures',
+        component: HpoTermsEditor,
+        format: val => getFlattenedHpoTermsByCategory(val),
+        allowAdditions: true,
+      },
+    ],
     individualFields: individual => ({
+      initialValues: { ...individual, individualField: 'hpo_terms' },
       fieldValue: individual,
     }),
   },
   {
+    component: ListFieldView,
     field: 'disorders',
     fieldName: 'Pre-discovery OMIM disorders',
     isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: disorders =>
-      disorders.map(mim => <div><a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a></div>),
+    formFieldProps: {
+      itemComponent: AwesomebarItemSelector,
+      placeholder: 'Search for OMIM disorder',
+      categories: OMIM_CATEGORIES,
+    },
+    itemDisplay: mim => <a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a>,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -361,24 +732,12 @@ const INDIVIDUAL_FIELDS = [
   {
     field: 'rejectedGenes',
     fieldName: 'Previously Tested Genes',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: formatGenes,
-    individualFields: ({ affected }) => ({
-      isVisible: affected === AFFECTED,
-    }),
+    ...GENES_FIELD,
   },
   {
     field: 'candidateGenes',
     fieldName: 'Candidate Genes',
-    isEditable: true,
-    editButton: (modalId, initialValues) =>
-      <ShowPhenotipsModalButton individual={initialValues} isViewOnly={false} modalId={modalId} />,
-    fieldDisplay: formatGenes,
-    individualFields: ({ affected }) => ({
-      isVisible: affected === AFFECTED,
-    }),
+    ...GENES_FIELD,
   },
 ]
 
@@ -461,6 +820,7 @@ const IndividualRow = React.memo((
           key: field.field,
           isEditable: isEditable && project.canEdit,
           onSubmit: isEditable && dispatchUpdateIndividual,
+          modalTitle: isEditable && `${field.fieldName} for Individual ${displayName}`,
           initialValues: individual,
           idField: 'individualGuid',
           ...individualFields(individual),

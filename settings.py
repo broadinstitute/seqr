@@ -250,8 +250,9 @@ API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
+ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200')
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
-    host=ELASTICSEARCH_SERVICE_HOSTNAME, port=os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200'))
+    host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),

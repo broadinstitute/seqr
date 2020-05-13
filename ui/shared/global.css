@@ -34,6 +34,10 @@ body {
   padding: 0.3em 1em;
 }
 
+.ui.search.fluid .ui.icon.input {
+  max-width: 100%;
+}
+
 .ui.search .result .title,
 .ui.search .result .description {
   display: inline-block;

@@ -233,11 +233,11 @@ def anvil_export(request, project_guid):
         variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
 
     return export_multiple_files([
-        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
-        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
-        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
+        [u'{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
+        [u'{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
+        [u'{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
+        [u'{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
+    ], u'{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -246,7 +246,8 @@ def sample_metadata_export(request, project_guid):
 
     mme_family_guids = {family.guid for family in _get_has_mme_submission_families(project)}
 
-    individual_samples = _get_loaded_before_date_project_individual_samples(project, request.GET.get('loadedBefore'))
+    individual_samples = _get_loaded_before_date_project_individual_samples(
+        project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
         project, individual_samples, _get_parsed_saved_discovery_variants_by_family)
