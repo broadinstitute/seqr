@@ -1306,6 +1306,10 @@ class EsUtilsTest(TestCase):
                 'bool': {
                     'should': [
                         {'range': {'xpos': {'gte': 2000001234, 'lte': 2000005678}}},
+                        {'range': {'xstop': {'gte': 2000001234, 'lte': 2000005678}}},
+                        {'bool': {'must': [
+                            {'range': {'xpos': {'lte': 2000001234}}},
+                            {'range': {'xstop': {'gte': 2000005678}}}]}},
                         {'terms': {'geneIds': ['ENSG00000223972']}},
                         {'terms': {'rsid': ['rs9876']}},
                         {'terms': {'variantId': ['2-1234-A-C']}},

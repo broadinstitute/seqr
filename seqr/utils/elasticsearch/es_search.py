@@ -1058,12 +1058,21 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
 def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
     q = None
     if intervals:
-        q = _build_or_filter('range', [{
-            'xpos': {
-                'gte': get_xpos(interval['chrom'], interval['start']),
-                'lte': get_xpos(interval['chrom'], interval['end'])
-            }
-        } for interval in intervals])
+        interval_xpos_range = [
+            (get_xpos(interval['chrom'], interval['start']), get_xpos(interval['chrom'], interval['end']))
+            for interval in intervals
+        ]
+        range_filters = []
+        for key in ['xpos', 'xstop']:
+            range_filters += [{
+                key: {
+                    'gte': xstart,
+                    'lte': xstop,
+                }
+            } for (xstart, xstop) in interval_xpos_range]
+        q = _build_or_filter('range', range_filters)
+        for (xstart, xstop) in interval_xpos_range:
+            q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
 
     if genes:
         gene_q = Q('terms', geneIds=genes.keys())
