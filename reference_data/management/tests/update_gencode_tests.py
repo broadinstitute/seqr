@@ -95,21 +95,24 @@ class UpdateGencodeTest(TestCase):
         mock_isfile.assert_called_with('/var/tmp2.gz')
         self.assertEqual(ce.exception.message, "Invalid genome_version for file: /var/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
-        # Test --reset option and wrong number data feilds in a line
+    @mock.patch('reference_data.management.commands.update_gencode.logger')
+    def test_update_gencode_command_bad_gtf_data(self, mock_logger):
+        # Test wrong number data feilds in a line
         temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v23lift37.annotation.gtf.gz')
         with gzip.open(temp_bad_file_path, 'w') as f:
             f.write(u''.join(BAD_FIELDS_GTF_DATA))
         with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--reset', '--gencode-release=23', temp_bad_file_path, '37')
+            call_command('update_gencode', '--gencode-release=23', temp_bad_file_path, '37')
         self.assertEqual(ve.exception.message, 'Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']')
+        mock_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(temp_bad_file_path))
 
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     @mock.patch('reference_data.management.commands.update_gencode.download_file')
-    def test_update_gencode_command_special_paths(self, mock_download, mock_logger):
+    def test_update_gencode_command_url_generation(self, mock_download, mock_logger):
         # Test the code paths of generating urls, gencode_release == 19, and --reset option
         mock_logger.reset_mock()
         mock_download.return_value = self.temp_file_path
-        call_command('update_gencode', '--reset', '--gencode-release=19')
+        call_command('update_gencode', '--gencode-release=19')
         mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz")
 
         # Test the code paths of generating urls, gencode_release <= 22
@@ -117,7 +120,7 @@ class UpdateGencodeTest(TestCase):
         call_command('update_gencode', '--gencode-release=20')
         mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz")
 
-        # test the code paths of generating urls, gencode_release > 22
+        # Test the code paths of generating urls, gencode_release > 22
         mock_logger.reset_mock()
         mock_download.return_value = self.temp_file_path
         call_command('update_gencode', '--gencode-release=23')
@@ -131,22 +134,36 @@ class UpdateGencodeTest(TestCase):
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     def test_update_gencode_command(self, mock_logger):
         # Test normal command function
-        gene_info_count = GeneInfo.objects.all().count()
-        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
+        call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
         calls = [
+            mock.call('Dropping the 0 existing TranscriptInfo entries'),
+            mock.call('Dropping the 49 existing GeneInfo entries'),
             mock.call(
                 'Loading {} (genome version: 37)'.format(self.temp_file_path)),
-            mock.call('Creating 1 GeneInfo records'),
+            mock.call('Creating 2 GeneInfo records'),
             mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
-            mock.call('  genes_skipped: 1'),
-            mock.call('  genes_created: 1'),
+            mock.call('  genes_created: 2'),
             mock.call('  transcripts_created: 2')
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        self.assertEqual(GeneInfo.objects.all().count(), gene_info_count+1)
+        gene_infos = [{
+            'start_grch37': gene.start_grch37,
+            'chrom_grch37': gene.chrom_grch37,
+            'coding_region_size_grch37': gene.coding_region_size_grch37,
+            'gencode_release': gene.gencode_release,
+            'gencode_gene_type': gene.gencode_gene_type,
+            'gene_id': gene.gene_id,
+            'gene_symbol': gene.gene_symbol,
+            'end_grch37': gene.end_grch37,
+            'strand_grch37': gene.strand_grch37
+        } for gene in GeneInfo.objects.all()]
+        self.assertEqual(len(gene_infos), 2)
+        self.assertDictEqual(gene_infos[0], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
+        self.assertDictEqual(gene_infos[1], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
+
         transcript_infos = {trans.transcript_id: {
             'start_grch37': trans.start_grch37,
             'end_grch37': trans.end_grch37,
@@ -157,3 +174,20 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(len(transcript_infos), 2)
         self.assertDictEqual(transcript_infos['ENST00000456328'], {'start_grch37': 11869, 'end_grch37': 14409, 'strand_grch37': u'+', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000223972'})
         self.assertDictEqual(transcript_infos['ENST00000332831'], {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
+
+        # Test normal command function without a --reset option
+        mock_logger.reset_mock()
+        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
+        calls = [
+            mock.call(
+                'Loading {} (genome version: 37)'.format(self.temp_file_path)),
+            mock.call('Creating 0 GeneInfo records'),
+            mock.call('Creating 0 TranscriptInfo records'),
+            mock.call('Done'),
+            mock.call('Stats: '),
+            mock.call('  genes_skipped: 2'),
+            mock.call('  transcripts_skipped: 2'),
+            mock.call('  genes_created: 0'),
+            mock.call('  transcripts_created: 0')
+        ]
+        mock_logger.info.assert_has_calls(calls)
