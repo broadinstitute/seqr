@@ -1,11 +1,14 @@
 import mock
-import __builtin__
+import os
+import tempfile
+import shutil
+import gzip
 
 from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, TranscriptInfo
 
 BAD_FIELDS_GTF_DATA = [
     'gene	11869	14412	.	+	.	gene_id "ENSG00000223972.4";\n',
@@ -34,6 +37,18 @@ GTF_DATA = [
 class UpdateGencodeTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
+
+
+    def setUp(self):
+        # Create a temporary directory
+        self.test_dir = tempfile.mkdtemp()
+        self.temp_file_path = os.path.join(self.test_dir, 'gencode.v31lift37.annotation.gtf.gz')
+        with gzip.open(self.temp_file_path, 'w') as f:
+            f.write(u''.join(GTF_DATA))
+
+    def tearDown(self):
+        # Close the file, the directory will be removed after the test
+        shutil.rmtree(self.test_dir)
 
     @mock.patch('os.path.isfile')
     def test_update_gencode_command_arguments(self, mock_isfile):
@@ -80,90 +95,47 @@ class UpdateGencodeTest(TestCase):
         mock_isfile.assert_called_with('/var/tmp2.gz')
         self.assertEqual(ce.exception.message, "Invalid genome_version for file: /var/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
-    @mock.patch('os.path.isfile')
+        # Test --reset option and wrong number data feilds in a line
+        temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v23lift37.annotation.gtf.gz')
+        with gzip.open(temp_bad_file_path, 'w') as f:
+            f.write(u''.join(BAD_FIELDS_GTF_DATA))
+        with self.assertRaises(ValueError) as ve:
+            call_command('update_gencode', '--reset', '--gencode-release=23', temp_bad_file_path, '37')
+        self.assertEqual(ve.exception.message, 'Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']')
+
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     @mock.patch('reference_data.management.commands.update_gencode.download_file')
-    @mock.patch('reference_data.management.commands.update_gencode.tqdm')
-    @mock.patch('gzip.open')
-    def test_update_gencode_command_special_paths(self, mock_gzip_open, mock_tqdm, mock_download, mock_logger, mock_isfile):
-        # Test --reset option and wrong number data feilds in a line
-        gtf_path = '/var/gencode.v31lift37.annotation.gtf.gz'
-        mock_isfile.return_value = True
-        mock_file = mock_gzip_open.return_value.__enter__.return_value
-        mock_tqdm.return_value = BAD_FIELDS_GTF_DATA
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--reset', '--gencode-release=23', gtf_path, '37')
-        mock_isfile.assert_called_with(gtf_path)
-        self.assertEqual(ve.exception.message, 'Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']')
-        mock_gzip_open.assert_called_with(gtf_path)
-        mock_tqdm.assert_called_with(mock_file, unit=' gencode records')
-        mock_logger.info.assert_called_with('Loading /var/gencode.v31lift37.annotation.gtf.gz (genome version: 37)')
-
-        # Test generating urls, gencode_release == 19
+    def test_update_gencode_command_special_paths(self, mock_download, mock_logger):
+        # Test the code paths of generating urls, gencode_release == 19, and --reset option
         mock_logger.reset_mock()
-        mock_gzip_open.reset_mock()
-        mock_download.return_value = '/var/downloaded_file.gz'
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--gencode-release=19')
+        mock_download.return_value = self.temp_file_path
+        call_command('update_gencode', '--reset', '--gencode-release=19')
         mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz")
-        mock_gzip_open.assert_called_with('/var/downloaded_file.gz')
-        mock_logger.info.assert_called_with('Loading /var/downloaded_file.gz (genome version: 37)')
 
-        # Test generating urls, gencode_release <= 22
+        # Test the code paths of generating urls, gencode_release <= 22
         mock_logger.reset_mock()
-        mock_gzip_open.reset_mock()
-        mock_download.reset_mock()
-        mock_download.return_value = '/var/downloaded_file.gz'
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--gencode-release=20')
+        call_command('update_gencode', '--gencode-release=20')
         mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz")
-        mock_gzip_open.assert_called_with('/var/downloaded_file.gz')
-        mock_logger.info.assert_called_with('Loading /var/downloaded_file.gz (genome version: 38)')
 
-        # test generating urls, gencode_release > 22
+        # test the code paths of generating urls, gencode_release > 22
         mock_logger.reset_mock()
-        mock_download.reset_mock()
-        mock_gzip_open.reset_mock()
-        mock_download.side_effect = ['/var/downloaded_file37.gz', '/var/downloaded_file38.gz']
-        mock_tqdm.side_effect = [[], BAD_FIELDS_GTF_DATA]
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_gencode', '--gencode-release=23')
+        mock_download.return_value = self.temp_file_path
+        call_command('update_gencode', '--gencode-release=23')
         calls = [
             mock.call("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/GRCh37_mapping/gencode.v23lift37.annotation.gtf.gz"),
             mock.call(
                 "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/gencode.v23.annotation.gtf.gz"),
         ]
         mock_download.assert_has_calls(calls)
-        calls = [
-            mock.call('/var/downloaded_file37.gz'),
-            mock.call('/var/downloaded_file38.gz'),
-        ]
-        mock_gzip_open.assert_has_calls(calls, any_order = True)
-        calls = [
-            mock.call('Loading /var/downloaded_file38.gz (genome version: 38)'),
-            mock.call('Loading /var/downloaded_file37.gz (genome version: 37)'),
-        ]
-        mock_logger.info.assert_has_calls(calls, any_order = True)
 
-    @mock.patch('os.path.isfile')
     @mock.patch('reference_data.management.commands.update_gencode.logger')
-    @mock.patch('reference_data.management.commands.update_gencode.tqdm')
-    @mock.patch('gzip.open')
-    def test_update_gencode_command(self, mock_gzip_open, mock_tqdm, mock_logger, mock_isfile):
+    def test_update_gencode_command(self, mock_logger):
         # Test normal command function
-        mock_isfile.return_value = True
-        mock_file = mock_gzip_open.return_value.__enter__.return_value
-        mock_tqdm.return_value = GTF_DATA
-        gtf_path = '/var/folders/p8/c2yjwplx5n5c8z8s5c91ddqc0000gq/T/gencode.v31lift37.annotation.gtf.gz'
-        call_command('update_gencode', '--gencode-release=31', gtf_path, '37')
-
-        mock_gzip_open.assert_called_with(gtf_path)
-        mock_tqdm.assert_called_with(mock_file, unit=' gencode records')
-        mock_isfile.assert_called_with(gtf_path)
-
+        gene_info_count = GeneInfo.objects.all().count()
+        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
         calls = [
             mock.call(
-                'Loading /var/folders/p8/c2yjwplx5n5c8z8s5c91ddqc0000gq/T/gencode.v31lift37.annotation.gtf.gz (genome version: 37)'),
+                'Loading {} (genome version: 37)'.format(self.temp_file_path)),
             mock.call('Creating 1 GeneInfo records'),
             mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
@@ -173,3 +145,15 @@ class UpdateGencodeTest(TestCase):
             mock.call('  transcripts_created: 2')
         ]
         mock_logger.info.assert_has_calls(calls)
+
+        self.assertEqual(GeneInfo.objects.all().count(), gene_info_count+1)
+        transcript_infos = {trans.transcript_id: {
+            'start_grch37': trans.start_grch37,
+            'end_grch37': trans.end_grch37,
+            'strand_grch37': trans.strand_grch37,
+            'chrom_grch37': trans.chrom_grch37,
+            'gene_id': trans.gene.gene_id
+        } for trans in TranscriptInfo.objects.all()}
+        self.assertEqual(len(transcript_infos), 2)
+        self.assertDictEqual(transcript_infos['ENST00000456328'], {'start_grch37': 11869, 'end_grch37': 14409, 'strand_grch37': u'+', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000223972'})
+        self.assertDictEqual(transcript_infos['ENST00000332831'], {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
