@@ -109,7 +109,7 @@ class UpdateGencodeTest(TestCase):
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     @mock.patch('reference_data.management.commands.update_gencode.download_file')
     def test_update_gencode_command_url_generation(self, mock_download, mock_logger):
-        # Test the code paths of generating urls, gencode_release == 19, and --reset option
+        # Test the code paths of generating urls, gencode_release == 19
         mock_logger.reset_mock()
         mock_download.return_value = self.temp_file_path
         call_command('update_gencode', '--gencode-release=19')
