@@ -231,7 +231,7 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary,
 VariantSearchFormContent.propTypes = {
   user: PropTypes.object,
   displayAnnotationSecondary: PropTypes.bool,
-  datasetTypes: PropTypes.array,
+  datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({

@@ -112,9 +112,9 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   (savedSearches) => {
     const savedSeachOptions = savedSearches.map(({ name, savedSearchGuid, createdById }) => (
       { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
-    )).sort(compareObjects('text')).sort(compareObjects('category'))
+    ))
     savedSeachOptions.push({ text: 'None', value: null, category: 'Default Searches', search: {} })
-    return savedSeachOptions
+    return savedSeachOptions.sort(compareObjects('text')).sort(compareObjects('category'))
   },
 )
 
