@@ -81,9 +81,8 @@ class UpdateOmimTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.update_omim.os')
-    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_omim_command_exceptions(self, mock_download, mock_logger, mock_os):
+    def test_update_omim_command_exceptions(self, mock_download, mock_os):
         # Test required argument
         mock_os.environ.get.return_value = ''
         with self.assertRaises(CommandError) as ce:
@@ -121,8 +120,9 @@ class UpdateOmimTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
+    @mock.patch('reference_data.management.commands.update_omim.logger')
     @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_omim_command(self, mock_download, mock_logger):
+    def test_update_omim_command(self, mock_download, mock_omim_logger, mock_utils_logger):
         mock_download.return_value = self.temp_file_path
 
         # Test omim api response error
@@ -146,7 +146,7 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(ce.exception.message, 'Expected 1 omim entries but recieved 0')
 
         # Test without a file_path parameter
-        mock_logger.reset_mock()
+        mock_utils_logger.reset_mock()
         call_command('update_omim', '--omim-key=test_key')
 
         mock_download.assert_called_with('https://data.omim.org/downloads/test_key/genemap2.txt')
@@ -159,11 +159,18 @@ class UpdateOmimTest(TestCase):
             mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
-        mock_logger.info.assert_has_calls(calls)
+        mock_utils_logger.info.assert_has_calls(calls)
+        calls = [
+            mock.call('Adding phenotypic series information'),
+            mock.call('Found 1 records with phenotypic series')
+        ]
+        mock_omim_logger.info.assert_has_calls(calls)
+        mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
 
         # test with a file_path parameter
         mock_download.reset_mock()
-        mock_logger.reset_mock()
+        mock_utils_logger.reset_mock()
+        mock_omim_logger.reset_mock()
         call_command('update_omim', '--omim-key=test_key', self.temp_file_path)
         mock_download.assert_not_called()
         calls = [
@@ -174,26 +181,21 @@ class UpdateOmimTest(TestCase):
             mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
-        mock_logger.info.assert_has_calls(calls)
+        mock_utils_logger.info.assert_has_calls(calls)
+        calls = [
+            mock.call('Adding phenotypic series information'),
+            mock.call('Found 1 records with phenotypic series')
+        ]
+        mock_omim_logger.info.assert_has_calls(calls)
+        mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
 
         self.assertEqual(Omim.objects.all().count(), 2)
         record = Omim.objects.get(gene__gene_symbol = 'OR4F5')
-        self.assertDictEqual({
-            "comments": record.comments,
-            "gene_description": record.gene_description,
-            "mim_number": record.mim_number,
-            "phenotype_description": record.phenotype_description,
-            "phenotype_inheritance": record.phenotype_inheritance,
-            "phenotype_map_method": record.phenotype_map_method,
-            "phenotype_mim_number": record.phenotype_mim_number,
-            "phenotypic_series_number": record.phenotypic_series_number
-        }, {
-            "comments": u'linkage with rs1780324',
-            "gene_description": u'Alkaline phosphatase, plasma level of, QTL 2',
-            "mim_number": 612367,
-            "phenotype_description": u'Alkaline phosphatase, plasma level of, QTL 2',
-            "phenotype_inheritance": None,
-            "phenotype_map_method": u'2',
-            "phenotype_mim_number": 612367,
-            "phenotypic_series_number": u'PS300755'
-        })
+        self.assertEqual(record.comments, u'linkage with rs1780324')
+        self.assertEqual(record.gene_description, u'Alkaline phosphatase, plasma level of, QTL 2')
+        self.assertEqual(record.mim_number, 612367)
+        self.assertEqual(record.phenotype_description, u'Alkaline phosphatase, plasma level of, QTL 2')
+        self.assertEqual(record.phenotype_inheritance, None)
+        self.assertEqual(record.phenotype_map_method, u'2')
+        self.assertEqual(record.phenotype_mim_number, 612367)
+        self.assertEqual(record.phenotypic_series_number, u'PS300755')
