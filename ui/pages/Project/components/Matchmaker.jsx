@@ -121,12 +121,14 @@ const PHENOTYPE_FIELDS = [
   { name: 'label', content: 'Description', width: 11 },
 ]
 
+const EMPTY_LIST = []
+
 const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
   <SelectableTableFormInput
     idField="id"
     defaultSortColumn="label"
     columns={PHENOTYPE_FIELDS}
-    data={individual.features}
+    data={individual.features || EMPTY_LIST}
     value={value}
     onChange={newValue => onChange(
       individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
