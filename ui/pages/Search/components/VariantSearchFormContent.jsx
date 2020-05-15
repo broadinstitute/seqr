@@ -42,6 +42,10 @@ const BaseDetailLink = styled(ButtonLink)`
 `
 const DetailLink = props => <BaseDetailLink {...props} />
 
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
+`
+
 const SAVED_SEARCH_FIELD = {
   name: 'search',
   component: SavedSearchDropdown,
@@ -157,11 +161,12 @@ SVFrequecyHeaderFilter.propTypes = {
 
 const QS_FILTER_FIELD = {
   name: 'min_qs',
-  label: 'Quality Score',
-  labelHelp: 'The quality scors (QS) represents the quality of a Structural Variant call.',
+  label: 'SV Quality Score',
+  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplications > 50; deletions > 100; homdel (CN=0) > 400',
   min: 0,
   max: 1000,
   step: 10,
+  component: DividedFormField,
 }
 
 const PANELS = [
