@@ -4,6 +4,8 @@ import os
 import tempfile
 import shutil
 
+from reference_data.models import GeneConstraint
+
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -20,8 +22,11 @@ class UpdateGeneConstraintTest(TestCase):
     multi_db = True
 
     def setUp(self):
-        # Create a temporary directory
+        # Create a temporary directory and a test data file in it
         self.test_dir = tempfile.mkdtemp()
+        self.temp_file_path = os.path.join(self.test_dir, 'gnomad.v2.1.1.lof_metrics.by_gene.txt')
+        with open(self.temp_file_path, 'w') as f:
+            f.write(u''.join(GNOMAD_LOF_METRICS_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -30,10 +35,7 @@ class UpdateGeneConstraintTest(TestCase):
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
     def test_update_gene_constraint_command(self, mock_download, mock_logger):
-        temp_file_path = os.path.join(self.test_dir, 'gnomad.v2.1.1.lof_metrics.by_gene.txt')
-        with open(temp_file_path, 'w') as f:
-            f.write(u''.join(GNOMAD_LOF_METRICS_DATA))
-        mock_download.return_value = temp_file_path
+        mock_download.return_value = self.temp_file_path
 
         # test without a file_path parameter
         call_command('update_gene_constraint')
@@ -45,7 +47,7 @@ class UpdateGeneConstraintTest(TestCase):
             mock.call('Parsing file'),
             mock.call('Creating 2 GeneConstraint records'),
             mock.call('Done'),
-            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(temp_file_path)),
+            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -53,14 +55,20 @@ class UpdateGeneConstraintTest(TestCase):
         # test with a file_path parameter
         mock_download.reset_mock()
         mock_logger.reset_mock()
-        call_command('update_gene_constraint', temp_file_path)
+        call_command('update_gene_constraint', self.temp_file_path)
         mock_download.assert_not_called()
         calls = [
             mock.call('Deleting 2 existing GeneConstraint records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 GeneConstraint records'),
             mock.call('Done'),
-            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(temp_file_path)),
+            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
+
+        self.assertEqual(GeneConstraint.objects.count(), 2)
+        record = GeneConstraint.objects.get(gene__gene_id = 'ENSG00000237683')
+        self.assertEqual(record.mis_z, -0.7773)
+        self.assertEqual(record.louef, 1.606)
+        self.assertEqual(record.pLI, 0.00090576)
