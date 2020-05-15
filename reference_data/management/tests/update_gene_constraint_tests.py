@@ -70,5 +70,8 @@ class UpdateGeneConstraintTest(TestCase):
         self.assertEqual(GeneConstraint.objects.count(), 2)
         record = GeneConstraint.objects.get(gene__gene_id = 'ENSG00000237683')
         self.assertEqual(record.mis_z, -0.7773)
+        self.assertEqual(record.mis_z_rank, 1)
         self.assertEqual(record.louef, 1.606)
+        self.assertEqual(record.louef_rank, 0)
         self.assertEqual(record.pLI, 0.00090576)
+        self.assertEqual(record.pLI_rank, 1)
