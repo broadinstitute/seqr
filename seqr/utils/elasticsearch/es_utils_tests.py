@@ -344,14 +344,16 @@ ES_SV_VARIANT = {
           'cn': 1,
           'defragged': False,
           'sample_id': 'HG00731',
-          'num_exon': 1,
+          'num_exon': 2,
+          'start': 49045487,
+          'end': 49045898,
         }
       ],
-      'xpos': 1049045487,
+      'xpos': 1049045387,
       'end': 49045898,
-      'start': 49045487,
-      'xstart': 1049045487,
-      'num_exon': 2,
+      'start': 49045387,
+      'xstart': 1049045587,
+      'num_exon': 1,
       'pos': 49045487,
       'StrVCTVRE_score': 0.374,
       'svType': 'DEL',
@@ -605,7 +607,7 @@ PARSED_SV_VARIANT = {
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': 1, 'defragged': False, 'qs': 33,
+            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33,
         },
         'I000005_hg00732': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,
@@ -655,7 +657,7 @@ PARSED_SV_VARIANT = {
     'end': 49045898,
     'svType': 'DEL',
     'numExon': 2,
-    '_sort': [1049045487],
+    '_sort': [1049045387],
 }
 
 PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
@@ -668,7 +670,7 @@ PARSED_COMPOUND_HET_VARIANTS[1]['_sort'] = [2103343453]
 PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000003_3']
 
 PARSED_SV_COMPOUND_HET_VARIANTS = [deepcopy(PARSED_SV_VARIANT), deepcopy(PARSED_COMPOUND_HET_VARIANTS[1])]
-PARSED_SV_COMPOUND_HET_VARIANTS[0]['_sort'] = [1049045587]
+PARSED_SV_COMPOUND_HET_VARIANTS[0]['_sort'] = [1049045487]
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
@@ -2141,6 +2143,7 @@ class EsUtilsTest(TestCase):
             filters=[ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY],
             size=1, index=INDEX_NAME, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
 
+        expected_cached_results = {'gene_aggs': gene_counts}
         expected_cached_results = {'gene_aggs': gene_counts}
         expected_cached_results.update(initial_cached_results)
         self.assertCachedResults(results_model, expected_cached_results)

@@ -536,13 +536,14 @@ class EsSearch(object):
                                    for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
+        is_sv = raw_hit.meta.doc_type == SV_DOC_TYPE
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             genotypes.update({
                 samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
                 for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
             })
-            if len(samples_by_id) != len(genotypes) and raw_hit.meta.doc_type == SV_DOC_TYPE:
+            if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
@@ -551,6 +552,23 @@ class EsSearch(object):
                         genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
+
+        # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
+        if is_sv and all((gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
+            start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
+            end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
+            num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
+            if start != hit['start']:
+                hit['start'] = start
+                hit['xpos'] = get_xpos(hit['contig'], start)
+            if end != hit['end']:
+                hit['end'] = end
+            if num_exon != hit['num_exon']:
+                hit['num_exon'] = num_exon
+            for gen in genotypes.values():
+                if gen.get('start') == start and gen.get('end') == end:
+                    gen['start'] = None
+                    gen['end'] = None
 
         genome_version = self.index_metadata[index_name]['genomeVersion']
         lifted_over_genome_version = None
