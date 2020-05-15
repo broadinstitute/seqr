@@ -9,6 +9,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
+from reference_data.models import Omim
+
 OMIM_DATA = [
     '# Copyright (c) 1966-2020 Johns Hopkins University. Use of this file adheres to the terms specified at https://omim.org/help/agreement.\n',
     '# Chromosome	Genomic Position Start	Genomic Position End	Cyto Location	Computed Cyto Location	MIM Number	Gene Symbols	Gene Name	Approved Symbol	Entrez Gene ID	Ensembl Gene ID	Comments	Phenotypes	Mouse Gene Symbol/ID\n',
@@ -26,7 +28,7 @@ OMIM_ENTRIES = {
             {
                 "entry": {
                     "prefix": "#",
-                    "mimNumber": 616126,
+                    "mimNumber": 612367,
                     "status": "live",
                     "titles": {
                         "preferredTitle": "IMMUNODEFICIENCY 38 WITH BASAL GANGLIA CALCIFICATION; IMD38",
@@ -38,7 +40,7 @@ OMIM_ENTRIES = {
                             "phenotypeMap": {
                                 "mimNumber": 147571,
                                 "phenotype": "Immunodeficiency 38",
-                                "phenotypeMimNumber": 616126,
+                                "phenotypeMimNumber": 612367,
                                 "phenotypeMappingKey": 3,
                                 "phenotypeInheritance": "Autosomal recessive",
                                 "phenotypicSeriesNumber": "PS300755",
@@ -67,8 +69,11 @@ class UpdateOmimTest(TestCase):
     multi_db = True
 
     def setUp(self):
-        # Create a temporary directory
+        # Create a temporary directory and a test data file
         self.test_dir = tempfile.mkdtemp()
+        self.temp_file_path = os.path.join(self.test_dir, 'genemap2.txt')
+        with open(self.temp_file_path, 'w') as f:
+            f.write(u''.join(OMIM_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -115,15 +120,10 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(ve.exception.message, 'No phenotypes found: {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "bad_phenotype_field", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"}')
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.update_omim.os')
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_omim_command(self, mock_download, mock_logger, mock_os):
-
-        temp_file_path = os.path.join(self.test_dir, 'genemap2.txt')
-        with open(temp_file_path, 'w') as f:
-            f.write(u''.join(OMIM_DATA))
-        mock_download.return_value = temp_file_path
+    def test_update_omim_command(self, mock_download, mock_logger):
+        mock_download.return_value = self.temp_file_path
 
         # Test omim api response error
         responses.add(responses.GET, 'https://api.omim.org/api/entry?apiKey=test_key&include=geneMap&format=json&mimNumber=612367',
@@ -156,7 +156,7 @@ class UpdateOmimTest(TestCase):
             mock.call('Parsing file'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(temp_file_path)),
+            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -164,14 +164,36 @@ class UpdateOmimTest(TestCase):
         # test with a file_path parameter
         mock_download.reset_mock()
         mock_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', temp_file_path)
+        call_command('update_omim', '--omim-key=test_key', self.temp_file_path)
         mock_download.assert_not_called()
         calls = [
             mock.call('Deleting 2 existing Omim records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(temp_file_path)),
+            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
+
+        self.assertEqual(Omim.objects.all().count(), 2)
+        record = Omim.objects.get(gene__gene_symbol = 'OR4F5')
+        self.assertDictEqual({
+            "comments": record.comments,
+            "gene_description": record.gene_description,
+            "mim_number": record.mim_number,
+            "phenotype_description": record.phenotype_description,
+            "phenotype_inheritance": record.phenotype_inheritance,
+            "phenotype_map_method": record.phenotype_map_method,
+            "phenotype_mim_number": record.phenotype_mim_number,
+            "phenotypic_series_number": record.phenotypic_series_number
+        }, {
+            "comments": u'linkage with rs1780324',
+            "gene_description": u'Alkaline phosphatase, plasma level of, QTL 2',
+            "mim_number": 612367,
+            "phenotype_description": u'Alkaline phosphatase, plasma level of, QTL 2',
+            "phenotype_inheritance": None,
+            "phenotype_map_method": u'2',
+            "phenotype_mim_number": 612367,
+            "phenotypic_series_number": u'PS300755'
+        })
