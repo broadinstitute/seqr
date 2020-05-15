@@ -150,17 +150,9 @@ export const getDatasetTypes = createSelector(
     const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
       new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
         ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
-    return [...datasetTypes]
+    return [...datasetTypes].sort().join(',')
   },
 )
-
-
-export const getSelectedDatasetTypes = createSelector(
-  getSearchInput,
-  getDatasetTypes,
-  (search, datasetTypes) => ((search || {}).datasetType ? search.datasetType : datasetTypes.sort().join(',')),
-)
-
 
 const getSingleFamlilyGuidInput = createSelector(
   getProjectsFamiliesFieldInput,

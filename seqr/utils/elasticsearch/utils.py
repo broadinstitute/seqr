@@ -41,10 +41,9 @@ def get_index_metadata(index_name, client):
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id, return_all_queried_families=False,
-                          dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+def get_single_es_variant(families, variant_id, return_all_queried_families=False):
     variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families, dataset_type=dataset_type,
+        families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
@@ -58,9 +57,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
         if chrom == 'M':
             chrom = 'MT'
         variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-    variants = EsSearch(
-        families, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-    ).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
+    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 
@@ -85,7 +82,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
         search_model.families.all(),
         previous_search_results=previous_search_results,
         skip_unaffected_families=search.get('inheritance'),
-        dataset_type=search.get('datasetType')
     )
 
     if search.get('customQuery'):

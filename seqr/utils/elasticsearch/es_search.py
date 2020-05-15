@@ -29,14 +29,12 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False,
-                 return_all_queried_families=False, dataset_type=None):
+                 return_all_queried_families=False):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
-        if dataset_type:
-            samples = samples.filter(dataset_type=dataset_type)
         for s in samples.select_related('individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
@@ -65,12 +63,18 @@ class EsSearch(object):
             if len(self.samples_by_family_index) < 1:
                 raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
+        self._indices = self.samples_by_family_index.keys()
         self._set_index_metadata()
 
         if len(self.samples_by_family_index) != len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
-                ', '.join(set(self.samples_by_family_index.keys()) - set(self.index_metadata.keys()))
+                ', '.join(set(self._indices) - set(self.index_metadata.keys()))
             ))
+
+        self.indices_by_dataset_type = defaultdict(list)
+        for index in self._indices:
+            dataset_type = self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+            self.indices_by_dataset_type[dataset_type].append(index)
 
         self.previous_search_results = previous_search_results or {}
         self._return_all_queried_families = return_all_queried_families
@@ -85,19 +89,26 @@ class EsSearch(object):
         self._any_affected_sample_filters = False
         self._family_individual_affected_status = {}
 
-    def _set_index_metadata(self):
-        from seqr.utils.elasticsearch.utils import get_index_metadata
-        self.index_name = ','.join(sorted(self.samples_by_family_index.keys()))
+    def _set_index_name(self):
+        self.index_name = ','.join(sorted(self._indices))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
             alias = hashlib.md5(self.index_name).hexdigest()
             cache_key = 'index_alias__{}'.format(alias)
             if safe_redis_get_json(cache_key) != self.index_name:
                 self._client.indices.update_aliases(body={'actions': [
-                    {'add': {'indices': self.samples_by_family_index.keys(), 'alias': alias}}
+                    {'add': {'indices': self._indices, 'alias': alias}}
                 ]})
                 safe_redis_set_json(cache_key, self.index_name)
             self.index_name = alias
+
+    def _set_index_metadata(self):
+        self._set_index_name()
+        from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client)
+
+    def _update_dataset_type(self, dataset_type):
+        self._indices = self.indices_by_dataset_type[dataset_type]
+        self._set_index_name()
 
     def sort(self, sort):
         self._sort = _get_sort(sort)
@@ -113,7 +124,7 @@ class EsSearch(object):
             if freqs.get('af') is not None:
                 filter_field = next(
                     (field_key for field_key in POPULATIONS[pop]['filter_AF']
-                     if all(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
+                     if any(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
                     POPULATIONS[pop]['AF'])
                 q &= _pop_freq_filter(filter_field, freqs['af'])
             elif freqs.get('ac') is not None:
@@ -132,6 +143,9 @@ class EsSearch(object):
                 consequences_filter |= pathogenicity_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
+            dataset_type = _dataset_type_for_annotations(annotations)
+            if dataset_type:
+                self._update_dataset_type(dataset_type)
         elif pathogenicity_filter:
             self.filter(pathogenicity_filter)
 
@@ -153,8 +167,11 @@ class EsSearch(object):
                         variant_ids.append(lifted_variant_id)
 
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
-        if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
-            self._filtered_variant_ids = variant_id_genome_versions
+        if not (genes or intervals or rs_ids):
+            if variant_ids:
+                self._update_dataset_type(Sample.DATASET_TYPE_VARIANT_CALLS)
+            if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
+                self._filtered_variant_ids = variant_id_genome_versions
         return self
 
     def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None):
@@ -168,26 +185,29 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
-        quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index)
-
         annotations_secondary_search = None
+        secondary_dataset_type = None
         if annotations_secondary:
             annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
             annotations_filter, _ = _annotations_filter(annotations)
             annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
             self._allowed_consequences_secondary = allowed_consequences_secondary
+            secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
         pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
         if annotations or pathogenicity_filter:
             self.filter_by_annotations(annotations, pathogenicity_filter)
 
         if inheritance_filter or inheritance_mode:
-            for family_samples_by_id in self.samples_by_family_index.values():
-                    affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                    self._family_individual_affected_status.update(affected_status)
+            for index in self._indices:
+                family_samples_by_id = self.samples_by_family_index[index]
+                affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
+                self._family_individual_affected_status.update(affected_status)
+
+        quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
-            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search)
+            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search, secondary_dataset_type)
             if inheritance_mode == COMPOUND_HET:
                 return
 
@@ -196,8 +216,9 @@ class EsSearch(object):
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family):
         has_inheritance_filter = inheritance_filter or inheritance_mode
         all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
-
-        for index, family_samples_by_id in self.samples_by_family_index.items():
+        no_filter_indices = set()
+        for index in self._indices:
+            family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
 
             genotypes_q = None
@@ -217,6 +238,7 @@ class EsSearch(object):
                         # If searching across all families in an index with no inheritance mode we do not need to explicitly
                         # filter on inheritance, as all variants have some inheritance for at least one family
                         self._no_sample_filters = True
+                        no_filter_indices.add(index)
                         continue
 
             if not genotypes_q:
@@ -259,27 +281,39 @@ class EsSearch(object):
 
             self._index_searches[index].append(self._search.filter(genotypes_q))
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
-        indices_by_dataset_type = defaultdict(list)
-        for index in self.samples_by_family_index.keys():
-            dataset_type = self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
-            indices_by_dataset_type[dataset_type].append(index)
+        if no_filter_indices and self._index_searches:
+            for index in no_filter_indices:
+                self._index_searches[index].append(self._search)
+
+    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search, secondary_dataset_type):
+        indices = set(self._indices)
+        if annotations_secondary_search:
+            if secondary_dataset_type:
+                indices.update(self.indices_by_dataset_type[secondary_dataset_type])
+            else:
+                indices = set(self.samples_by_family_index.keys())
 
         paired_index_families = defaultdict(dict)
-        if len(indices_by_dataset_type) > 1:
-            sv_indices = indices_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS]
-            variant_indices = indices_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
-            for sv_index in sv_indices:
-                sv_families = set(self.samples_by_family_index[sv_index].keys())
-                for var_index in variant_indices:
-                    overlapping_families = sv_families & set(self.samples_by_family_index[var_index].keys())
-                    if overlapping_families:
-                        paired_index_families[sv_index].update({var_index: overlapping_families})
-                        paired_index_families[var_index].update({sv_index: overlapping_families})
+        if len(indices) > 1:
+            sv_indices = [
+                index for index in self.indices_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS] if index in indices
+            ]
+            variant_indices = [
+                index for index in self.indices_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if index in indices
+            ]
+            if sv_indices and variant_indices:
+                for sv_index in sv_indices:
+                    sv_families = set(self.samples_by_family_index[sv_index].keys())
+                    for var_index in variant_indices:
+                        overlapping_families = sv_families & set(self.samples_by_family_index[var_index].keys())
+                        if overlapping_families:
+                            paired_index_families[sv_index].update({var_index: overlapping_families})
+                            paired_index_families[var_index].update({sv_index: overlapping_families})
 
         seen_paired_indices = set()
         comp_het_q_by_index = {}
-        for index, family_samples_by_id in self.samples_by_family_index.items():
+        for index in indices:
+            family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
             seen_paired_indices.add(index)
 
@@ -326,7 +360,7 @@ class EsSearch(object):
             self._index_searches[index].append(compound_het_search)
 
     def search(self,  **kwargs):
-        indices = self.samples_by_family_index.keys()
+        indices = self._indices
 
         logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
 
@@ -339,9 +373,12 @@ class EsSearch(object):
         else:
             return self._execute_multi_search(**search_kwargs)
 
+    def _is_single_search(self):
+        return len(self._indices) == 1 and len(self._index_searches) < 2 and \
+               len(self._index_searches.get(self._indices[0], [])) <= 1
+
     def _should_execute_single_search(self, page=1, num_results=100):
-        indices = self.samples_by_family_index.keys()
-        is_single_search = len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1
+        is_single_search = self._is_single_search()
         num_loaded = len(self.previous_search_results.get('all_results', []))
 
         if is_single_search and not self.previous_search_results.get('grouped_results'):
@@ -362,7 +399,7 @@ class EsSearch(object):
             return False, {'page': page, 'num_results': num_results}
 
     def _execute_single_search(self, page=1, num_results=100, start_index=None, deduplicate=False, **kwargs):
-        num_results_for_search = num_results * len(self.samples_by_family_index) if deduplicate else num_results
+        num_results_for_search = num_results * len(self._indices) if deduplicate else num_results
         if num_results_for_search > MAX_VARIANTS and deduplicate:
             num_results_for_search = MAX_VARIANTS
         search = self._get_paginated_searches(
@@ -396,7 +433,7 @@ class EsSearch(object):
         return variant_results[:num_results]
 
     def _execute_multi_search(self, **kwargs):
-        indices = self._index_searches.keys() or self.samples_by_family_index.keys()
+        indices = self._index_searches.keys() or self._indices
 
         if self.CACHED_COUNTS_KEY and not self.previous_search_results.get(self.CACHED_COUNTS_KEY):
             self.previous_search_results[self.CACHED_COUNTS_KEY] = {}
@@ -468,7 +505,6 @@ class EsSearch(object):
 
         response_total = response.hits.total
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
-
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
     def _parse_hit(self, raw_hit):
@@ -961,7 +997,7 @@ def _get_family_affected_status(family_samples_by_id, inheritance_filter):
     return affected_status
 
 
-def _quality_filters_by_family(quality_filter, samples_by_family_index):
+def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
     quality_field_configs = {
         'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_FIELDS.items()
     }
@@ -972,7 +1008,8 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index):
 
     quality_filters_by_family = {}
     if any(quality_filter[field] for field in quality_field_configs.keys()):
-        for family_samples_by_id in samples_by_family_index.values():
+        for index in indices:
+            family_samples_by_id = samples_by_family_index[index]
             for family_guid, samples_by_id in family_samples_by_id.items():
                 quality_q = Q()
                 for sample_id in samples_by_id.keys():
@@ -1133,6 +1170,16 @@ def _annotations_filter(annotations):
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
 
     return consequences_filter, vep_consequences
+
+
+def _dataset_type_for_annotations(annotations):
+    sv = bool(annotations.get('structural'))
+    non_sv = any(v for k, v in annotations.items() if k != 'structural')
+    if sv and not non_sv:
+        return Sample.DATASET_TYPE_SV_CALLS
+    elif not sv and non_sv:
+        return Sample.DATASET_TYPE_VARIANT_CALLS
+    return None
 
 
 def _pop_freq_filter(filter_key, value):

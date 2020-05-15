@@ -29,8 +29,7 @@ class EsGeneAggSearch(EsSearch):
                 )
 
     def _should_execute_single_search(self, page=1, num_results=100):
-        indices = self.samples_by_family_index.keys()
-        return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
+        return self._is_single_search(), {}
 
     def _process_single_search_response(self, parsed_response, page=1, num_results=100, deduplicate=False, **kwargs):
         gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in parsed_response.items()}

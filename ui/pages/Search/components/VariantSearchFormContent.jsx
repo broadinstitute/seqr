@@ -8,7 +8,7 @@ import { getUser, getAnnotationSecondary } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
-import { Select, ButtonRadioGroup } from 'shared/components/form/Inputs'
+import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   STAFF_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
@@ -30,7 +30,7 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
-import { getDatasetTypes, getSelectedDatasetTypes } from '../selectors'
+import { getDatasetTypes } from '../selectors'
 
 const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
@@ -46,18 +46,6 @@ const SAVED_SEARCH_FIELD = {
   name: 'search',
   component: SavedSearchDropdown,
   format: val => val || {},
-}
-
-const DATASET_TYPE_FIELD = {
-  name: 'search.datasetType',
-  component: ButtonRadioGroup,
-  format: val => val || null,
-  options: [
-    { value: null, text: 'All' },
-    { value: DATASET_TYPE_VARIANT_CALLS, text: 'SNV/ Indel' },
-    { value: DATASET_TYPE_SV_CALLS, text: 'SV' },
-  ],
-  margin: '0em',
 }
 
 const INHERITANCE_PANEL = {
@@ -230,19 +218,13 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   }
 }, {})
 
-const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes, selectedDatasetTypes }) => (
+const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
     <VerticalSpacer height={10} />
     <InlineHeader content="Saved Search:" />
     {configuredField(SAVED_SEARCH_FIELD)}
-    {datasetTypes.length > 1 &&
-      <div>
-        <InlineHeader content="Dataset Type:" />
-        {configuredField(DATASET_TYPE_FIELD)}
-      </div>
-    }
-    <VariantSearchFormPanels panels={PANEL_MAP[selectedDatasetTypes][user.isStaff][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isStaff][displayAnnotationSecondary]} />
   </div>
 ))
 
@@ -250,14 +232,12 @@ VariantSearchFormContent.propTypes = {
   user: PropTypes.object,
   displayAnnotationSecondary: PropTypes.bool,
   datasetTypes: PropTypes.array,
-  selectedDatasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
   datasetTypes: getDatasetTypes(state),
-  selectedDatasetTypes: getSelectedDatasetTypes(state),
 })
 
 export default connect(mapStateToProps)(VariantSearchFormContent)
