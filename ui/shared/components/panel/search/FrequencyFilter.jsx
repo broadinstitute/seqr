@@ -83,7 +83,6 @@ export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }
       </div>
     }
     <Form.Group inline>
-      {children}
       {inlineAF &&
         <AfFilter value={value} onChange={onChange} inline />
       }
@@ -98,6 +97,7 @@ export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }
       {homHemi &&
         <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />
       }
+      {children}
     </Form.Group>
   </span>
 )
@@ -121,17 +121,24 @@ export const HeaderFrequencyFilter = ({ value, onChange, ...props }) => {
   const { callset, sv_callset: svCallset, ...freqValues } = value || {}
   const headerValue = freqValues ? formatHeaderValue(freqValues) : {}
 
-  const onCallsetAfChange = val =>
+  const onCallsetChange = val =>
     onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val })
 
   const onFreqChange = val =>
-    onChange(FREQUENCIES.reduce((acc, { name }) => (
-      { ...acc, [name]: (name === THIS_CALLSET_FREQUENCY || name === SV_CALLSET_FREQUENCY) ? callset : val }
-    ), {}))
+    onChange(FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
+      (acc, { name }) => ({ ...acc, [name]: val }), value || {}))
 
   return (
     <FrequencyFilter {...props} value={headerValue} onChange={onFreqChange} homHemi inlineAF>
-      <AfFilter value={callset} onChange={onCallsetAfChange} inline label="Callset" />
+      <AfFilter value={callset} onChange={onCallsetChange} inline label="Callset AF" />
+      <FrequencyIntegerInput
+        label="Callset AC"
+        field="ac"
+        nullField="af"
+        value={callset}
+        inlineAF
+        onChange={onCallsetChange}
+      />
     </FrequencyFilter>
   )
 }
