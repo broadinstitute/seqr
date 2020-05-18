@@ -42,5 +42,5 @@ test('getSearchGeneBreakdownValues', () => {
 test('getDatasetTypes', () => {
   expect(getDatasetTypes.resultFunc(
     [PROJECT_GUID], { [PROJECT_GUID]: STATE.samplesByGuid },
-  )).toEqual(['VARIANTS', 'SV'])
+  )).toEqual('SV,VARIANTS')
 })
