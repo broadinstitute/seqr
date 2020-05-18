@@ -1606,7 +1606,7 @@ class EsUtilsTest(TestCase):
             'qualityFilter': {'min_gq': 10},
             'annotations': {'frameshift': ['frameshift_variant']},
             'inheritance': {'mode': 'compound_het'},
-            'annotations_secondary': {'other': ['intron']},
+            'annotations_secondary': {'frameshift': ['frameshift_variant'], 'other': ['intron']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1621,9 +1621,10 @@ class EsUtilsTest(TestCase):
             'total_results': 1,
         })
 
-        self.maxDiff = None
-        annotation_query = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-                                                {'terms': {'transcriptConsequenceTerms': ['intron']}}]}}
+        annotation_query = {'bool': {'should': [
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+            {'terms': {'transcriptConsequenceTerms': ['intron', 'frameshift_variant']}}]}}
+
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
             gene_aggs=True,
@@ -1635,6 +1636,32 @@ class EsUtilsTest(TestCase):
         # test pagination does not fetch
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
+
+        # variants require both primary and secondary annotations
+        search_model.search = {
+            'qualityFilter': {'min_gq': 10},
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'compound_het'},
+            'annotations_secondary': {'other': ['intron']},
+        }
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertIsNone(variants)
+        self.assertEqual(total_results, 0)
+
+        annotation_query = {'bool': {'should': [
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+            {'terms': {'transcriptConsequenceTerms': ['intron']}}]}}
+
+        self.assertExecutedSearch(
+            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
+            gene_aggs=True,
+            sort=['xpos'],
+            start_index=0,
+            size=1
+        )
 
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -2143,7 +2170,6 @@ class EsUtilsTest(TestCase):
             filters=[ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY],
             size=1, index=INDEX_NAME, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
 
-        expected_cached_results = {'gene_aggs': gene_counts}
         expected_cached_results = {'gene_aggs': gene_counts}
         expected_cached_results.update(initial_cached_results)
         self.assertCachedResults(results_model, expected_cached_results)

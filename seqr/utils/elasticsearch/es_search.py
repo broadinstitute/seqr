@@ -106,8 +106,14 @@ class EsSearch(object):
         from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client)
 
-    def _update_dataset_type(self, dataset_type):
-        self._indices = self.indices_by_dataset_type[dataset_type]
+    def _update_dataset_type(self, dataset_type, keep_previous=False):
+        new_indices = self.indices_by_dataset_type[dataset_type]
+        if keep_previous:
+            indices = set(self._indices)
+            indices.update(new_indices)
+            self._indices = list(indices)
+        else:
+            self._indices = new_indices
         self._set_index_name()
 
     def sort(self, sort):
@@ -207,7 +213,9 @@ class EsSearch(object):
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
-            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search, secondary_dataset_type)
+            if secondary_dataset_type:
+                self._update_dataset_type(secondary_dataset_type, keep_previous=True)
+            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search)
             if inheritance_mode == COMPOUND_HET:
                 return
 
@@ -285,13 +293,8 @@ class EsSearch(object):
             for index in no_filter_indices:
                 self._index_searches[index].append(self._search)
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search, secondary_dataset_type):
+    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
         indices = set(self._indices)
-        if annotations_secondary_search:
-            if secondary_dataset_type:
-                indices.update(self.indices_by_dataset_type[secondary_dataset_type])
-            else:
-                indices = set(self.samples_by_family_index.keys())
 
         paired_index_families = defaultdict(dict)
         if len(indices) > 1:
@@ -733,7 +736,11 @@ class EsSearch(object):
                 for individual_guid in family_unaffected_individual_guids.get(family_guid, [])
             ]
 
-            def _is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
+            gene_consequences = [
+                variant['gene_consequences'].get(gene_id, []) for variant in variants
+            ]
+
+            def _is_valid_compound_het_pair(variant_1_index, variant_2_index):
                 # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                 for genotype in unaffected_genotypes:
                     is_valid_for_individual = any(
@@ -742,20 +749,20 @@ class EsSearch(object):
                     )
                     if not is_valid_for_individual:
                         return False
+                if self._allowed_consequences and self._allowed_consequences_secondary:
+                    consequences = gene_consequences[variant_1_index] + gene_consequences[variant_2_index]
+                    if all(consequence not in self._allowed_consequences for consequence in consequences) or all(
+                            consequence not in self._allowed_consequences_secondary for consequence in consequences):
+                        return False
                 return True
 
             valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in
                                   combinations(range(len(variants)), 2)
-                                  if _is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
-            compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for
-                                  valid_ch_1_index, valid_ch_2_index in valid_combinations]
+                                  if _is_valid_compound_het_pair(ch_1_index, ch_2_index)]
 
-            # remove compound hets pair that only satisfied secondary consequence
-            if self._allowed_consequences and self._allowed_consequences_secondary:
-                compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if any([
-                    any(consequence in self._allowed_consequences for consequence in
-                        variant['gene_consequences'].get(gene_id, [])) for variant in compound_het_pair])]
-            family_compound_het_pairs[family_guid] = compound_het_pairs
+            family_compound_het_pairs[family_guid] = [
+                [variants[valid_ch_1_index], variants[valid_ch_2_index]] for
+                valid_ch_1_index, valid_ch_2_index in valid_combinations]
 
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
