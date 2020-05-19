@@ -3,6 +3,7 @@ from elasticsearch_dsl import Index
 import json
 import logging
 import requests
+import urllib3
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
@@ -29,7 +30,6 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_js
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
     get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions, \
     get_json_for_saved_variants_with_tags
-from seqr.views.utils.proxy_request_utils import proxy_request
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
@@ -1443,14 +1443,63 @@ EXCLUDE_PROJECTS = [
 ]
 EXCLUDE_PROJECT_CATEGORY = 'Demo'
 
+# Hop-by-hop HTTP response headers shouldn't be forwarded.
+# More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
+EXCLUDE_HTTP_RESPONSE_HEADERS = {
+    'connection', 'keep-alive', 'proxy-authenticate',
+    'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade',
+}
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def proxy_to_kibana(request):
+    headers = _convert_django_meta_to_http_headers(request.META)
+    headers['Host'] = KIBANA_SERVER
+
+    url = "{scheme}://{host}{path}".format(scheme=request.scheme, host=KIBANA_SERVER, path=request.get_full_path())
+
+    request_method = getattr(requests.Session(), request.method.lower())
+
     try:
-        return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
         # use stream=True because kibana returns gziped responses, and this prevents the requests module from
         # automatically unziping them
+        response = request_method(url, headers=headers, data=request.body, stream=True, verify=True)
+        response_content = response.raw.read()
+        # make sure the connection is released back to the connection pool
+        # (based on http://docs.python-requests.org/en/master/user/advanced/#body-content-workflow)
+        response.close()
+
+        proxy_response = HttpResponse(
+            content=response_content,
+            status=response.status_code,
+            reason=response.reason,
+            charset=response.encoding
+        )
+
+        for key, value in response.headers.iteritems():
+            if key.lower() not in EXCLUDE_HTTP_RESPONSE_HEADERS:
+                proxy_response[key.title()] = value
+
+        return proxy_response
     except ConnectionError as e:
         logger.error(e)
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e))
+
+
+def _convert_django_meta_to_http_headers(request_meta_dict):
+    """Converts django request.META dictionary into a dictionary of HTTP headers"""
+
+    def convert_key(key):
+        # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
+        return key.replace("HTTP_", "").replace('_', '-').title()
+
+    http_headers = {
+        convert_key(key): str(value).lstrip()
+        for key, value in request_meta_dict.items()
+        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
+    }
+
+    return http_headers
