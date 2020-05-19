@@ -134,7 +134,7 @@ def query_single_variant_handler(request, variant_id):
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
 
-    variant = get_single_es_variant(families, variant_id, dataset_type=None)
+    variant = get_single_es_variant(families, variant_id)
 
     response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))

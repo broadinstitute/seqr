@@ -8,7 +8,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { VEP_GROUP_OTHER } from 'shared/utils/constants'
+import { VEP_GROUP_OTHER, VEP_GROUP_SV } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -26,7 +26,7 @@ import {
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
   CODING_IMPACT_GROUPS,
-  HIGH_IMPACT_GROUPS,
+  HIGH_IMPACT_GROUPS_NO_SV,
   MODERATE_IMPACT_GROUPS,
 } from './constants'
 
@@ -127,16 +127,17 @@ export const ANNOTATION_PANEL = {
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
 }
 
 export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
     title: 'Frequency',
-    inputSize: 8,
+    inputSize: 10,
     inputProps: {
       component: HeaderFrequencyFilter,
+      format: val => val || {},
     },
   },
   fields: FREQUENCIES,
@@ -161,7 +162,7 @@ export const QUALITY_PANEL = {
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>
   <Grid>
     <Grid.Row>
-      <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
+      <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps &&
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
           {configuredField({ ...inputProps, name })}

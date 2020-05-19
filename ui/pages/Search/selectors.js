@@ -112,9 +112,9 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   (savedSearches) => {
     const savedSeachOptions = savedSearches.map(({ name, savedSearchGuid, createdById }) => (
       { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
-    )).sort(compareObjects('text')).sort(compareObjects('category'))
+    ))
     savedSeachOptions.push({ text: 'None', value: null, category: 'Default Searches', search: {} })
-    return savedSeachOptions
+    return savedSeachOptions.sort(compareObjects('text')).sort(compareObjects('category'))
   },
 )
 
@@ -150,17 +150,9 @@ export const getDatasetTypes = createSelector(
     const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
       new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
         ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
-    return [...datasetTypes]
+    return [...datasetTypes].sort().join(',')
   },
 )
-
-
-export const getSelectedDatasetTypes = createSelector(
-  getSearchInput,
-  getDatasetTypes,
-  (search, datasetTypes) => ((search || {}).datasetType ? search.datasetType : datasetTypes.sort().join(',')),
-)
-
 
 const getSingleFamlilyGuidInput = createSelector(
   getProjectsFamiliesFieldInput,

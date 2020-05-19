@@ -3,7 +3,6 @@ from elasticsearch_dsl import Q
 import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
-from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
@@ -20,6 +19,7 @@ class InvalidIndexException(Exception):
 
 def get_es_client(timeout=60):
     return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
+
 
 def get_index_metadata(index_name, client):
     cache_key = 'index_metadata__{}'.format(index_name)
@@ -41,10 +41,9 @@ def get_index_metadata(index_name, client):
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id, return_all_queried_families=False,
-                          dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+def get_single_es_variant(families, variant_id, return_all_queried_families=False):
     variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families, dataset_type=dataset_type,
+        families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
@@ -58,9 +57,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
         if chrom == 'M':
             chrom = 'MT'
         variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-    variants = EsSearch(
-        families, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-    ).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
+    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 
@@ -85,7 +82,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
         search_model.families.all(),
         previous_search_results=previous_search_results,
         skip_unaffected_families=search.get('inheritance'),
-        dataset_type=search.get('datasetType')
     )
 
     if search.get('customQuery'):
