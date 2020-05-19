@@ -15,7 +15,7 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { VerticalSpacer } from '../../Spacers'
 
-const StyledVariantRow = styled(({ isCompoundHet, ...props }) => <Grid.Row {...props} />)`  
+const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
    ${(props => props.isCompoundHet) ? // eslint-disable-line  no-constant-condition
     '{ margin-top: 0em !important; margin-left: 1em !important; }' :
@@ -24,13 +24,15 @@ const StyledVariantRow = styled(({ isCompoundHet, ...props }) => <Grid.Row {...p
   
   padding: 0;
   color: #999;
-  background-color: ${({ severity }) => {
+  background-color: ${({ severity, isSV }) => {
     if (severity > 0) {
       return '#eaa8a857'
     } else if (severity === 0) {
       return '#f5d55c57'
     } else if (severity < 0) {
       return '#21a92624'
+    } else if (isSV) {
+      return '#f3f8fa'
     }
     return 'inherit'
   }}
@@ -65,8 +67,9 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
   const variantIndividuals = variant.familyGuids.map(familyGuid =>
     <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
   )
+  const severity = CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]
   return (
-    <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]} isCompoundHet >
+    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
         {variant.discoveryTags && variant.discoveryTags.length > 0 &&
