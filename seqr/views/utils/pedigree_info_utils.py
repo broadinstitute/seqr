@@ -761,6 +761,8 @@ class DatstatConstants:
         '4': {'1': 'Cousin (male)', '2': 'Cousin (female)', '3': 'Cousin (unspecified sex)'},
         '5': {'1': 'Nephew', '2': 'Niece', '3': 'Niece or nephew (unspecified sex)'},
         OTHER_RELATIONSHIP_CODE: {'1': ' (male)', '2': ' (female)', '3': ' (unspecified sex)'},
+        '7': {'1': 'Minor Son', '2': 'Minor Daughter', '3': 'Minor Child (unspecified sex)'},
+        '8': {'1': 'Adult Son', '2': 'Adult Daughter', '3': 'Adult Child (unspecified sex)'},
     }
 
     NONE_TEST = 'NONE'
