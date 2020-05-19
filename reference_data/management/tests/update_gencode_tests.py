@@ -134,22 +134,21 @@ class UpdateGencodeTest(TestCase):
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     def test_update_gencode_command(self, mock_logger):
         # Test normal command function
-        call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
+        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
         calls = [
-            mock.call('Dropping the 0 existing TranscriptInfo entries'),
-            mock.call('Dropping the 49 existing GeneInfo entries'),
             mock.call(
                 'Loading {} (genome version: 37)'.format(self.temp_file_path)),
-            mock.call('Creating 2 GeneInfo records'),
+            mock.call('Creating 1 GeneInfo records'),
             mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
-            mock.call('  genes_created: 2'),
+            mock.call('  genes_skipped: 1'),
+            mock.call('  genes_created: 1'),
             mock.call('  transcripts_created: 2')
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        gene_infos = [{
+        gene_infos = {gene.gene_id: {
             'start_grch37': gene.start_grch37,
             'chrom_grch37': gene.chrom_grch37,
             'coding_region_size_grch37': gene.coding_region_size_grch37,
@@ -159,10 +158,9 @@ class UpdateGencodeTest(TestCase):
             'gene_symbol': gene.gene_symbol,
             'end_grch37': gene.end_grch37,
             'strand_grch37': gene.strand_grch37
-        } for gene in GeneInfo.objects.all()]
-        self.assertEqual(len(gene_infos), 2)
-        self.assertDictEqual(gene_infos[0], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
-        self.assertDictEqual(gene_infos[1], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
+        } for gene in GeneInfo.objects.filter(gene_id__in = ['ENSG00000223972', 'ENSG00000284662'])}
+        self.assertDictEqual(gene_infos['ENSG00000223972'], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 27, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
+        self.assertDictEqual(gene_infos['ENSG00000284662'], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
 
         transcript_infos = {trans.transcript_id: {
             'start_grch37': trans.start_grch37,
@@ -177,17 +175,33 @@ class UpdateGencodeTest(TestCase):
 
         # Test normal command function without a --reset option
         mock_logger.reset_mock()
-        call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
+        call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
         calls = [
+            mock.call('Dropping the 2 existing TranscriptInfo entries'),
+            mock.call('Dropping the 50 existing GeneInfo entries'),
             mock.call(
                 'Loading {} (genome version: 37)'.format(self.temp_file_path)),
-            mock.call('Creating 0 GeneInfo records'),
-            mock.call('Creating 0 TranscriptInfo records'),
+            mock.call('Creating 2 GeneInfo records'),
+            mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
-            mock.call('  genes_skipped: 2'),
-            mock.call('  transcripts_skipped: 2'),
-            mock.call('  genes_created: 0'),
-            mock.call('  transcripts_created: 0')
+            mock.call('  genes_created: 2'),
+            mock.call('  transcripts_created: 2')
         ]
         mock_logger.info.assert_has_calls(calls)
+
+        gene_infos = {gene.gene_id: {
+            'start_grch37': gene.start_grch37,
+            'chrom_grch37': gene.chrom_grch37,
+            'coding_region_size_grch37': gene.coding_region_size_grch37,
+            'gencode_release': gene.gencode_release,
+            'gencode_gene_type': gene.gencode_gene_type,
+            'gene_id': gene.gene_id,
+            'gene_symbol': gene.gene_symbol,
+            'end_grch37': gene.end_grch37,
+            'strand_grch37': gene.strand_grch37
+        } for gene in GeneInfo.objects.all()}
+        self.assertEqual(len(gene_infos), 2)
+        self.assertDictEqual(gene_infos['ENSG00000223972'], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
+        self.assertDictEqual(gene_infos['ENSG00000284662'], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
+
