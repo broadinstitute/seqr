@@ -1,3 +1,4 @@
+coverage==5.1
 django-compressor==2.1.1
 django-debug-toolbar==1.11                      # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history==0.0.11    # for debugging database queries on async requests.
