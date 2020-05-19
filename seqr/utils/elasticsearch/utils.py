@@ -3,6 +3,7 @@ from elasticsearch_dsl import Q
 import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
+from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
@@ -57,7 +58,8 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
         if chrom == 'M':
             chrom = 'MT'
         variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
-    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).search(num_results=len(xpos_ref_alt_tuples))
+    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids).update_dataset_type(
+        Sample.DATASET_TYPE_VARIANT_CALLS).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 

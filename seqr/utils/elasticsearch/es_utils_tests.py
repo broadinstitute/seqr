@@ -1212,7 +1212,8 @@ class EsUtilsTest(TestCase):
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[0])
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G', return_all_queried_families=True)
@@ -1224,7 +1225,8 @@ class EsUtilsTest(TestCase):
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
     def test_get_es_variants(self):
