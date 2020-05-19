@@ -37,14 +37,6 @@ def check_permissions(project, user, permission_level=CAN_VIEW):
     )
 
 
-def check_object_permissions(obj, user, permission_level=CAN_VIEW):
-    _check_object_permissions(obj, user, permission_level, check_permission=None)
-
-
-def check_public_object_permissions(obj, user, permission_level=CAN_VIEW):
-    _check_object_permissions(obj, user, permission_level, check_permission=lambda obj, user: obj.is_public)
-
-
 def check_user_created_object_permissions(obj, user, permission_level=CAN_VIEW):
     _check_object_permissions(obj, user, permission_level, check_permission=lambda obj, user: obj.created_by == user)
 
@@ -60,7 +52,7 @@ def _check_object_permissions(obj, user, permission_level, check_permission):
 def check_multi_project_permissions(obj, user, permission_level=CAN_VIEW):
     for project in obj.projects.all():
         try:
-            check_object_permissions(project, user, permission_level)
+            check_permissions(project, user, permission_level)
             return
         except PermissionDenied:
             continue

@@ -8,7 +8,6 @@ import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import seqr.models
-from seqr.views.utils.individual_utils import get_parsed_feature
 from seqr.views.utils.json_utils import _to_snake_case
 
 # Valid MIM numbers that are not in the seqr DB because they do not map to a valid gene
@@ -34,6 +33,21 @@ HPO_ID_REMAP = {
 
 # HPO terms that are obsolete but have no updated ID
 OBSOLETE_HPO_IDS = ['HP:0200144', 'HP:0011607']
+
+
+def get_parsed_feature(feature, feature_id=None, additional_fields=None):
+    optional_fields = ['notes', 'qualifiers']
+    if additional_fields:
+        optional_fields += additional_fields
+    if not feature_id:
+        feature_id = feature['id']
+    feature_json = {'id': feature_id}
+
+    for field in optional_fields:
+        if field in feature:
+            feature_json[field] = feature[field]
+
+    return feature_json
 
 
 def update_phenotips_fields(apps, schema_editor):
