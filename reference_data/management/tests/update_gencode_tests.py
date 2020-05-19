@@ -34,6 +34,30 @@ GTF_DATA = [
 ]
 
 
+def _get_gene_infos(gene):
+    return {
+        'start_grch37': gene.start_grch37,
+        'chrom_grch37': gene.chrom_grch37,
+        'coding_region_size_grch37': gene.coding_region_size_grch37,
+        'gencode_release': gene.gencode_release,
+        'gencode_gene_type': gene.gencode_gene_type,
+        'gene_id': gene.gene_id,
+        'gene_symbol': gene.gene_symbol,
+        'end_grch37': gene.end_grch37,
+        'strand_grch37': gene.strand_grch37
+    }
+
+
+def _get_transcript_info(trans):
+    return {
+        'start_grch37': trans.start_grch37,
+        'end_grch37': trans.end_grch37,
+        'strand_grch37': trans.strand_grch37,
+        'chrom_grch37': trans.chrom_grch37,
+        'gene_id': trans.gene.gene_id,
+    }
+
+
 class UpdateGencodeTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
@@ -64,36 +88,36 @@ class UpdateGencodeTest(TestCase):
 
         # Test genome_version out-of-range
         with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', '/var/tmp', '39')
+            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp', '39')
         self.assertEqual(ce.exception.message, "Error: argument genome_version: invalid choice: u'39' (choose from '37', '38')")
 
         # Test missing genome_version when a GTF file is provided
         with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', '/var/tmp')
+            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp')
         self.assertEqual(ce.exception.message, "The genome version must also be specified after the gencode GTF file path")
 
         # Test gencode_release and genome_version mis-matched case 1
         mock_isfile.return_value = True
         with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=19', '/var/tmp.gz', '38')
-        mock_isfile.assert_called_with('/var/tmp.gz')
+            call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp.gz', '38')
+        mock_isfile.assert_called_with('mock_path/tmp.gz')
         self.assertEqual(ce.exception.message, "Invalid genome_version: 38. gencode v19 only has a GRCh37 version")
 
         # Test gencode_release and genome_version mis-matched case 2
         mock_isfile.reset_mock()
         mock_isfile.return_value = True
         with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=20', '/var/tmp1.gz', '37')
-        mock_isfile.assert_called_with('/var/tmp1.gz')
+            call_command('update_gencode', '--gencode-release=20', 'mock_path/tmp1.gz', '37')
+        mock_isfile.assert_called_with('mock_path/tmp1.gz')
         self.assertEqual(ce.exception.message, "Invalid genome_version: 37. gencode v20, v21, v22 only have a GRCh38 version")
 
         # Test genome_version != 38 requires lifted data
         mock_isfile.reset_mock()
         mock_isfile.return_value = True
         with self.assertRaises(CommandError) as ce:
-            call_command('update_gencode', '--gencode-release=23', '/var/tmp2.gz', '37')
-        mock_isfile.assert_called_with('/var/tmp2.gz')
-        self.assertEqual(ce.exception.message, "Invalid genome_version for file: /var/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
+            call_command('update_gencode', '--gencode-release=23', 'mock_path/tmp2.gz', '37')
+        mock_isfile.assert_called_with('mock_path/tmp2.gz')
+        self.assertEqual(ce.exception.message, "Invalid genome_version for file: mock_path/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
@@ -148,30 +172,17 @@ class UpdateGencodeTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        gene_infos = {gene.gene_id: {
-            'start_grch37': gene.start_grch37,
-            'chrom_grch37': gene.chrom_grch37,
-            'coding_region_size_grch37': gene.coding_region_size_grch37,
-            'gencode_release': gene.gencode_release,
-            'gencode_gene_type': gene.gencode_gene_type,
-            'gene_id': gene.gene_id,
-            'gene_symbol': gene.gene_symbol,
-            'end_grch37': gene.end_grch37,
-            'strand_grch37': gene.strand_grch37
-        } for gene in GeneInfo.objects.filter(gene_id__in = ['ENSG00000223972', 'ENSG00000284662'])}
-        self.assertDictEqual(gene_infos['ENSG00000223972'], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 27, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
-        self.assertDictEqual(gene_infos['ENSG00000284662'], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
+        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000223972'))
+        self.assertDictEqual(gene_info, {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 27, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
+        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000284662'))
+        self.assertDictEqual(gene_info, {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
 
-        transcript_infos = {trans.transcript_id: {
-            'start_grch37': trans.start_grch37,
-            'end_grch37': trans.end_grch37,
-            'strand_grch37': trans.strand_grch37,
-            'chrom_grch37': trans.chrom_grch37,
-            'gene_id': trans.gene.gene_id
-        } for trans in TranscriptInfo.objects.all()}
-        self.assertEqual(len(transcript_infos), 2)
-        self.assertDictEqual(transcript_infos['ENST00000456328'], {'start_grch37': 11869, 'end_grch37': 14409, 'strand_grch37': u'+', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000223972'})
-        self.assertDictEqual(transcript_infos['ENST00000332831'], {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
+
+        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
+        trans_info = _get_transcript_info(TranscriptInfo.objects.get(transcript_id = 'ENST00000456328'))
+        self.assertDictEqual(trans_info, {'start_grch37': 11869, 'end_grch37': 14409, 'strand_grch37': u'+', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000223972'})
+        trans_info = _get_transcript_info(TranscriptInfo.objects.get(transcript_id = 'ENST00000332831'))
+        self.assertDictEqual(trans_info, {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
 
         # Test normal command function without a --reset option
         mock_logger.reset_mock()
@@ -201,7 +212,9 @@ class UpdateGencodeTest(TestCase):
             'end_grch37': gene.end_grch37,
             'strand_grch37': gene.strand_grch37
         } for gene in GeneInfo.objects.all()}
-        self.assertEqual(len(gene_infos), 2)
-        self.assertDictEqual(gene_infos['ENSG00000223972'], {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
-        self.assertDictEqual(gene_infos['ENSG00000284662'], {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
+        self.assertEqual(GeneInfo.objects.all().count(), 2)
+        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000223972'))
+        self.assertDictEqual(gene_info, {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
+        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000284662'))
+        self.assertDictEqual(gene_info, {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
 
