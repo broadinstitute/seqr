@@ -184,7 +184,7 @@ class UpdateGencodeTest(TestCase):
         trans_info = _get_transcript_info(TranscriptInfo.objects.get(transcript_id = 'ENST00000332831'))
         self.assertDictEqual(trans_info, {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
 
-        # Test normal command function without a --reset option
+        # Test normal command function with a --reset option
         mock_logger.reset_mock()
         call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
         calls = [
