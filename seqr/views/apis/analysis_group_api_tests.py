@@ -1,21 +1,20 @@
 import json
 
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import AnalysisGroup
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 
 
-class AnalysisGroupAPITest(TransactionTestCase):
+class AnalysisGroupAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     def test_create_update_and_delete_analysis_group(self):
         create_analysis_group_url = reverse(update_analysis_group_handler, args=[PROJECT_GUID])
-        _check_login(self, create_analysis_group_url)
+        self.check_manager_login(create_analysis_group_url)
 
         # send invalid requests to create analysis_group
         response = self.client.post(create_analysis_group_url, content_type='application/json', data=json.dumps({}))

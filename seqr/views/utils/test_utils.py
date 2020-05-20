@@ -1,25 +1,69 @@
 # Utilities used for unit and integration tests.
-from django.contrib.auth.models import User
-
-def _check_login(test_case, url):
-    """For integration tests of django views that can only be accessed by a logged-in user,
-    the 1st step is to authenticate. This function checks that the given url redirects requests
-    if the user isn't logged-in, and then authenticates a test user.
-
-    Args:
-        test_case (object): the django.TestCase or unittest.TestCase object
-        url (string): The url of the django view being tested.
-     """
-    response = test_case.client.get(url)
-    test_case.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
-
-    test_user = User.objects.get(username='test_user')
-    test_case.client.force_login(test_user)
+from django.contrib.auth.models import User, Group
+from django.test import TestCase
+from guardian.shortcuts import assign_perm
+from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
-def login_non_staff_user(test_case):
-    test_user = User.objects.get(username='test_user_non_staff')
-    test_case.client.force_login(test_user)
+class AuthenticationTestCase(TestCase):
+
+    STAFF = 'staff'
+    MANAGER = 'manager'
+    COLLABORATOR = 'collaborator'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+
+        edit_group = Group.objects.get(pk=2)
+        view_group = Group.objects.get(pk=3)
+        edit_group.user_set.add(cls.manager_user)
+        view_group.user_set.add(cls.manager_user, cls.collaborator_user)
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
+
+    def check_collaborator_login(self, url):
+        self._check_login(url, self.COLLABORATOR)
+
+    def check_manager_login(self, url):
+        self._check_login(url, self.MANAGER)
+
+    def check_staff_login(self, url):
+        self._check_login(url, self.STAFF)
+
+    def login_staff_user(self):
+        self.client.force_login(self.staff_user)
+
+    def _check_login(self, url, permission_level):
+        """For integration tests of django views that can only be accessed by a logged-in user,
+        the 1st step is to authenticate. This function checks that the given url redirects requests
+        if the user isn't logged-in, and then authenticates a test user.
+
+        Args:
+            test_case (object): the django.TestCase or unittest.TestCase object
+            url (string): The url of the django view being tested.
+            permission_level (string): what level of permission this url requires
+         """
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
+
+        self.client.force_login(self.collaborator_user)
+        if permission_level == self.COLLABORATOR:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403 if permission_level == self.MANAGER else 302)
+
+        self.client.force_login(self.manager_user)
+        if permission_level == self.MANAGER:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.login_staff_user()
 
 
 USER_FIELDS = {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}

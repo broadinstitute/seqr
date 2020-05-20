@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.utils.deprecation import MiddlewareMixin
 import logging
 import traceback
@@ -18,5 +19,5 @@ class JsonErrorMiddleware(MiddlewareMixin):
             logger.error(traceback_message)
             if DEBUG:
                 exception_json['traceback'] = traceback_message.split('\n')
-            return create_json_response(exception_json, status=500)
+            return create_json_response(exception_json, status=403 if isinstance(exception, PermissionDenied) else 500)
         return None

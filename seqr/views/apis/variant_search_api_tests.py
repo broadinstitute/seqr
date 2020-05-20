@@ -2,16 +2,15 @@ import json
 import mock
 from copy import deepcopy
 
-from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.models import VariantSearchResults
+from seqr.models import VariantSearchResults, LocusList, Project
 from seqr.utils.elasticsearch.utils import InvalidIndexException
 from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
-from seqr.views.utils.test_utils import _check_login, login_non_staff_user, VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -35,16 +34,18 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'createdBy': None,
 }]
 
+
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
     return deepcopy(VARIANTS), len(VARIANTS)
+
 
 def _get_empty_es_variants(results_model, **kwargs):
     results_model.save()
     return [], 0
 
 
-class VariantSearchAPITest(TestCase):
+class VariantSearchAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
     multi_db = True
 
@@ -52,13 +53,10 @@ class VariantSearchAPITest(TestCase):
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_variants(self, mock_get_variants, mock_get_gene_counts):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         # add a locus list
-        response = self.client.post(
-            reverse(add_project_locus_lists, args=[PROJECT_GUID]), content_type='application/json',
-            data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 200)
+        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(guid=PROJECT_GUID))
 
         # Test invalid inputs
         response = self.client.get(url)
@@ -86,9 +84,8 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
-
-        self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
+            'variantFunctionalDataByGuid', 'locusListsByGuid'})
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS)
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': PROJECT_FAMILIES,
@@ -111,7 +108,6 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
@@ -165,15 +161,17 @@ class VariantSearchAPITest(TestCase):
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
 
-        # Test no cross-project discovery for non-staff users
-        login_non_staff_user(self)
+        # Test cross-project discovery for staff users
+        self.login_staff_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-            'variantFunctionalDataByGuid', 'locusListsByGuid'})
-        self.assertListEqual(response_json['searchedVariants'], VARIANTS)
+            'variantFunctionalDataByGuid', 'familiesByGuid', 'locusListsByGuid'})
+
+        self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants
@@ -193,7 +191,7 @@ class VariantSearchAPITest(TestCase):
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
-        _check_login(self, search_context_url)
+        self.check_collaborator_login(search_context_url)
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'foo': 'bar'}))
         self.assertEqual(response.status_code, 400)
@@ -294,7 +292,7 @@ class VariantSearchAPITest(TestCase):
         mock_get_variant.return_value = VARIANTS[0]
 
         url = reverse(query_single_variant_handler, args=['21-3343353-GAGA-G'])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get('{}?familyGuid=F000001_1'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -313,7 +311,7 @@ class VariantSearchAPITest(TestCase):
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)
-        _check_login(self, get_saved_search_url)
+        self.check_collaborator_login(get_saved_search_url)
 
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
@@ -340,7 +338,7 @@ class VariantSearchAPITest(TestCase):
         self.assertEqual(len(saved_searches), 1)
         search_guid = saved_searches.keys()[0]
         self.assertDictEqual(saved_searches[search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 10,
+            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 12,
         })
 
         response = self.client.get(get_saved_search_url)
@@ -352,7 +350,7 @@ class VariantSearchAPITest(TestCase):
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['savedSearchesByGuid'][search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 10,
+            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 12,
         })
 
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[search_guid])

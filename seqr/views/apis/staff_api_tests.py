@@ -8,11 +8,10 @@ from django.http import HttpResponse
 from settings import AIRTABLE_URL
 import json
 
-from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 from seqr.models import Individual
 
 PROJECT_GUID = 'R0001_1kg'
@@ -453,7 +452,7 @@ SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE = [
 ]
 
 
-class StaffAPITest(TestCase):
+class StaffAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
@@ -461,7 +460,7 @@ class StaffAPITest(TestCase):
     @mock.patch('elasticsearch.Elasticsearch')
     def test_elasticsearch_status(self, mock_elasticsearch, mock_get_mapping):
         url = reverse(elasticsearch_status)
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         mock_es_client = mock_elasticsearch.return_value
         mock_es_client.cat.allocation.return_value = ES_CAT_ALLOCATION
@@ -491,7 +490,7 @@ class StaffAPITest(TestCase):
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 01)
         response = self.client.get(url)
@@ -505,7 +504,7 @@ class StaffAPITest(TestCase):
 
     def test_seqr_stats(self):
         url = reverse(seqr_stats)
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -517,7 +516,7 @@ class StaffAPITest(TestCase):
 
     def test_get_projects_for_category(self):
         url = reverse(get_projects_for_category, args=[PROJECT_CATEGRORY_NAME])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -528,7 +527,7 @@ class StaffAPITest(TestCase):
     @mock.patch('seqr.views.apis.staff_api.timezone')
     def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
-        _check_login(self, non_project_url)
+        self.check_staff_login(non_project_url)
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -557,7 +556,7 @@ class StaffAPITest(TestCase):
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -581,7 +580,7 @@ class StaffAPITest(TestCase):
     @responses.activate
     def test_anvil_export(self, mock_export_multiple_files):
         url = reverse(anvil_export, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # We will test the inputs of the export_multiple_files method.
         # Outputs of the method are not important for this test but an HttpResponse data is still required by the API.
@@ -612,7 +611,7 @@ class StaffAPITest(TestCase):
     @responses.activate
     def test_sample_metadata_export(self):
         url = reverse(sample_metadata_export, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
                       json=AIRTABLE_SAMPLE_RECORDS, status=200)
@@ -626,7 +625,7 @@ class StaffAPITest(TestCase):
 
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -636,7 +635,7 @@ class StaffAPITest(TestCase):
     @mock.patch('seqr.views.apis.staff_api.file_iter')
     def test_upload_qc_pipeline_output(self, mock_file_iter):
         url = reverse(upload_qc_pipeline_output,)
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # Test no dataset type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE

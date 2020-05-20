@@ -1,16 +1,16 @@
 from django.test import TestCase
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
-class AwesomebarAPITest(TestCase):
+class AwesomebarAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     def test_awesomebar_autocomplete_handler(self):
         url = reverse(awesomebar_autocomplete_handler)
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url+"?q=1")
         self.assertEqual(response.status_code, 200)

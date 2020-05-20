@@ -4,14 +4,13 @@ import json
 import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_hpo_table_handler, save_hpo_table_handler, update_individual_hpo_terms, get_hpo_terms
-from seqr.views.utils.test_utils import _check_login, INTERNAL_INDIVIDUAL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -55,13 +54,13 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 CHILD_UPDATE_GUID = "I000001_na19675"
 
 
-class IndividualAPITest(TestCase):
+class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
-        _check_login(self, edit_individuals_url)
+        self.check_manager_login(edit_individuals_url)
 
         response = self.client.post(edit_individuals_url, content_type='application/json',
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
@@ -75,7 +74,7 @@ class IndividualAPITest(TestCase):
 
     def test_update_individual_hpo_terms(self):
         edit_individuals_url = reverse(update_individual_hpo_terms, args=[INDIVIDUAL_UPDATE_GUID])
-        _check_login(self, edit_individuals_url)
+        self.check_manager_login(edit_individuals_url)
 
         response = self.client.post(edit_individuals_url, content_type='application/json',
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
@@ -106,7 +105,7 @@ class IndividualAPITest(TestCase):
 
     def test_edit_individuals(self):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
-        _check_login(self, edit_individuals_url)
+        self.check_staff_login(edit_individuals_url)
 
         # send invalid requests
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
@@ -136,7 +135,7 @@ class IndividualAPITest(TestCase):
 
     def test_delete_individuals(self):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
-        _check_login(self, individuals_url)
+        self.check_staff_login(individuals_url)
 
         # send invalid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
@@ -154,7 +153,7 @@ class IndividualAPITest(TestCase):
 
     def test_individuals_table_handler(self):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
-        _check_login(self, individuals_url)
+        self.check_staff_login(individuals_url)
 
         data = 'Family ID	Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes\n\
 "1"	"NA19675"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"\n\
@@ -177,7 +176,7 @@ class IndividualAPITest(TestCase):
 
     def test_hpo_table_handler(self):
         url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         # Send invalid requests
         header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
@@ -236,7 +235,7 @@ class IndividualAPITest(TestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['individualsByGuid'])
         self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000001_na19675'])
-        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['features'],
             [{'id': 'HP:0002017', 'category': 'HP:0025031', 'label': 'Nausea and vomiting'}]
@@ -248,7 +247,7 @@ class IndividualAPITest(TestCase):
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)

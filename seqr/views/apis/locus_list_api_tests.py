@@ -7,35 +7,41 @@ from django.urls.base import reverse
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
     update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.test_utils import _check_login, LOCUS_LIST_FIELDS, LOCUS_LIST_DETAIL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS, LOCUS_LIST_DETAIL_FIELDS
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
 
 
-class LocusListAPITest(TransactionTestCase):
+class LocusListAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     def test_locus_lists(self):
         url = reverse(locus_lists)
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {'LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'})
+        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
         fields = {'numProjects'}
         fields.update(LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        locus_lists_dict = response.json()['locusListsByGuid']
+        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
+
     def test_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -53,7 +59,7 @@ class LocusListAPITest(TransactionTestCase):
 
     def test_create_update_and_delete_locus_list(self):
         create_locus_list_url = reverse(create_locus_list_handler)
-        _check_login(self, create_locus_list_url)
+        self.check_collaborator_login(create_locus_list_url)
 
         # send invalid requests to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({}))
@@ -146,7 +152,7 @@ class LocusListAPITest(TransactionTestCase):
 
         # add a locus list
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)

@@ -7,7 +7,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, receive_families_table_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -19,14 +19,12 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-class FamilyAPITest(TestCase):
+class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
-
-    #  TODO test other family api methods
 
     def test_edit_families_handler(self):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # send request with a "families" attribute
         req_values = {
@@ -51,7 +49,7 @@ class FamilyAPITest(TestCase):
 
     def test_delete_families_handler(self):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # send request with a "families" attribute to provide a list of families
         req_values = {
@@ -74,7 +72,7 @@ class FamilyAPITest(TestCase):
 
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         # send request
         response = self.client.post(url)
@@ -82,11 +80,11 @@ class FamilyAPITest(TestCase):
         response_json = response.json()
 
         self.assertListEqual(response_json.keys(), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Non Staff User')
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         f = SimpleUploadedFile("new_ped_image_123.png", b"file_content")
 
@@ -113,7 +111,7 @@ class FamilyAPITest(TestCase):
 
     def test_update_family_assigned_analyst(self):
         url = reverse(update_family_assigned_analyst, args=[FAMILY_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         # send invalid username (without permission)
         response = self.client.post(url, content_type='application/json',
@@ -140,7 +138,12 @@ class FamilyAPITest(TestCase):
 
     def test_update_success_story_types(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
+
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({'successStoryTypes': ['O', 'D']}))
+        self.assertEqual(response.status_code, 403)
+        self.login_staff_user()
 
         # send valid request
         response = self.client.post(url, content_type='application/json',
@@ -151,7 +154,7 @@ class FamilyAPITest(TestCase):
 
     def test_receive_families_table_handler(self):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # send request with a "families" attribute
         data = b'Family ID	Display Name	Description	Coded Phenotype\n\
