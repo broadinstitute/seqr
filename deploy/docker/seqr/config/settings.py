@@ -202,7 +202,7 @@ LOGOUT_URL = '/logout'
 
 POSTGRES_DB_CONFIG = {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
+    'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'postgres'),
     'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
     'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
@@ -249,24 +249,24 @@ UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIP
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
 # External service settings
-ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
+ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'elasticsearch')
 ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200')
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
     host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
 KIBANA_SERVER = '{host}:{port}'.format(
-    host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
+    host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'kibana'),
     port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
 
 PHENOTIPS_SERVER = '{host}:{port}'.format(
-    host=os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'),
+    host=os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'phenotips'),
     port=os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
 )
 PHENOTIPS_ADMIN_UNAME = 'Admin'
 PHENOTIPS_ADMIN_PWD = 'admin'
 
-REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
+REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'redis')
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
