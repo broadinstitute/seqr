@@ -1486,7 +1486,7 @@ def proxy_to_kibana(request):
         return proxy_response
     except ConnectionError as e:
         logger.error(e)
-        return HttpResponse("Error: Unable to connect to Kibana {}".format(e))
+        return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
 
 def _convert_django_meta_to_http_headers(request_meta_dict):
