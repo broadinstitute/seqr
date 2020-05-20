@@ -736,5 +736,4 @@ class StaffAPITest(TestCase):
 
         # Test with connection error
         response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana')
-        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
