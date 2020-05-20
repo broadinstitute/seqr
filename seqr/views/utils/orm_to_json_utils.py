@@ -12,9 +12,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
-from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
-from seqr.utils.xpos_utils import get_chrom_pos
+from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
+from seqr.models import CAN_EDIT, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -89,24 +88,6 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
-
-
-def get_json_for_sample_dict(sample_dict):
-    """Returns a JSON representation of the given Sample dictionary.
-
-        Args:
-            sample (object): dictionary representation for the Sample.
-        Returns:
-            dict: json object
-        """
-    result = {_to_camel_case(field): sample_dict.get('sample_{}'.format(field)) for field in Sample._meta.json_fields}
-
-    result.update({
-        'projectGuid': sample_dict['project_guid'],
-        'individualGuid': sample_dict['individual_guid'],
-        'sampleGuid': result.pop('guid'),
-    })
-    return result
 
 
 def _get_json_for_user(user):
@@ -227,7 +208,8 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None, skip_nested=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
+                              family_fields=None, skip_nested=False, add_hpo_details=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -243,22 +225,12 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     def _get_case_review_status_modified_by(modified_by):
         return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
 
-    def _load_phenotips_data(phenotips_data):
-        phenotips_json = None
-        if phenotips_data:
-            try:
-                phenotips_json = json.loads(phenotips_data)
-            except Exception as e:
-                logger.error("Couldn't parse phenotips: {}".format(e))
-        return phenotips_json
-
     def _process_result(result, individual):
         mother = result.pop('mother', None)
         father = result.pop('father', None)
 
         result.update({
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
-            'phenotipsData': _load_phenotips_data(result['phenotipsData']),
             'maternalGuid': mother.guid if mother else None,
             'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,
@@ -268,6 +240,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
+            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
     if project_guid or not skip_nested:
         nested_fields = [
@@ -277,17 +250,39 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         if family_fields:
             for field in family_fields:
                 nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs = {'nested_fields': nested_fields}
+        kwargs = {'nested_fields': nested_fields, 'additional_model_fields': []}
     else:
         kwargs = {'additional_model_fields': ['family_id']}
+
+    if add_hpo_details:
+        kwargs['additional_model_fields'] += [
+            'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features']
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
     prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
+        prefetch_related_objects(individuals, 'igvsample_set')
 
-    return _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
+    parsed_individuals = _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
+    if add_hpo_details:
+        all_hpo_ids = set()
+        for i in parsed_individuals:
+            all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
+            all_hpo_ids.update([feature['id'] for feature in i.get('absentFeatures') or []])
+        hpo_terms_by_id = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_ids)}
+        for i in parsed_individuals:
+            for feature in i.get('features') or []:
+                hpo = hpo_terms_by_id.get(feature['id'])
+                if hpo:
+                    feature.update({'category': hpo.category_id, 'label': hpo.name})
+            for feature in i.get('absentFeatures') or []:
+                hpo = hpo_terms_by_id.get(feature['id'])
+                if hpo:
+                    feature.update({'category': hpo.category_id, 'label': hpo.name})
+
+    return parsed_individuals
 
 
 def _get_json_for_individual(individual, user=None, **kwargs):
@@ -319,7 +314,7 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     else:
         kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, **kwargs)
+    return _get_json_for_models(samples, guid_key='sampleGuid', **kwargs)
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -381,9 +376,6 @@ def get_json_for_saved_variants(saved_variants, add_details=False):
     def _process_result(variant_json, saved_variant):
         if add_details:
             variant_json.update(saved_variant.saved_variant_json)
-        if 'variantId' not in variant_json:
-            chrom, pos = get_chrom_pos(saved_variant.xpos)
-            variant_json['variantId'] = '{}-{}-{}-{}'.format(chrom, pos, saved_variant.ref, saved_variant.alt)
         variant_json['familyGuids'] = [saved_variant.family.guid]
         return variant_json
 
@@ -404,43 +396,122 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
+def get_json_for_saved_variants_with_tags(
+        saved_variants, include_missing_variants=False, discovery_tags_query=None, **kwargs):
 
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
         for variant in get_json_for_saved_variants(saved_variants, **kwargs)
     }
 
-    tags = get_json_for_variant_tags(VariantTag.objects.filter(saved_variants__in=saved_variants).distinct())
+    missing_ids = set()
+    saved_variant_id_map = {var.id: var.guid for var in saved_variants}
+
+    variant_tag_id_map = defaultdict(list)
+    for tag_mapping in VariantTag.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
+        variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
+    tag_models = VariantTag.objects.filter(id__in=variant_tag_id_map.keys())
+    tag_id_map = {tag.guid: tag.id for tag in tag_models}
+
+    tags = get_json_for_variant_tags(tag_models, add_variant_guids=False)
     for tag in tags:
-        for variant_guid in tag['variantGuids']:
-            if variants_by_guid.get(variant_guid):
+        tag_guid = tag['tagGuid']
+        tag['variantGuids'] = []
+        variant_ids = variant_tag_id_map[tag_id_map[tag_guid]]
+        for variant_id in variant_ids:
+            variant_guid = saved_variant_id_map.get(variant_id)
+            if variant_guid:
                 variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
+                tag['variantGuids'].append(variant_guid)
+            else:
+                missing_ids.add(variant_id)
 
-    functional_data = get_json_for_variant_functional_data_tags(
-        VariantFunctionalData.objects.filter(saved_variants__in=saved_variants).distinct()
-    )
+    variant_functional_id_map = defaultdict(list)
+    for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
+            savedvariant_id__in=saved_variant_id_map.keys()):
+        variant_functional_id_map[functional_mapping.variantfunctionaldata_id].append(functional_mapping.savedvariant_id)
+    functional_models = VariantFunctionalData.objects.filter(id__in=variant_functional_id_map.keys())
+    functional_id_map = {tag.guid: tag.id for tag in functional_models}
+
+    functional_data = get_json_for_variant_functional_data_tags(functional_models, add_variant_guids=False)
     for tag in functional_data:
-        for variant_guid in tag['variantGuids']:
-            if variants_by_guid.get(variant_guid):
+        tag_guid = tag['tagGuid']
+        tag['variantGuids'] = []
+        variant_ids = variant_functional_id_map[functional_id_map[tag_guid]]
+        for variant_id in variant_ids:
+            variant_guid = saved_variant_id_map.get(variant_id)
+            if variant_guid:
                 variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
+                tag['variantGuids'].append(variant_guid)
+            else:
+                missing_ids.add(variant_id)
 
-    notes = get_json_for_variant_notes(VariantNote.objects.filter(saved_variants__in=saved_variants).distinct())
+    variant_note_id_map = defaultdict(list)
+    for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
+        variant_note_id_map[note_mapping.variantnote_id].append(note_mapping.savedvariant_id)
+    note_models = VariantNote.objects.filter(id__in=variant_note_id_map.keys())
+    note_id_map = {note.guid: note.id for note in note_models}
+
+    notes = get_json_for_variant_notes(note_models, add_variant_guids=False)
     for note in notes:
-        for variant_guid in note['variantGuids']:
-            if variants_by_guid.get(variant_guid):
+        note_guid = note['noteGuid']
+        note['variantGuids'] = []
+        variant_ids = variant_note_id_map[note_id_map[note_guid]]
+        for variant_id in variant_ids:
+            variant_guid = saved_variant_id_map.get(variant_id)
+            if variant_guid:
                 variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
+                note['variantGuids'].append(variant_guid)
+            else:
+                missing_ids.add(variant_id)
 
-    return {
+    if include_missing_variants and missing_ids:
+        variants_by_guid.update({
+            variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
+            for variant in get_json_for_saved_variants(SavedVariant.objects.filter(id__in=missing_ids), **kwargs)
+        })
+
+    response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
         'variantNotesByGuid': {note['noteGuid']: note for note in notes},
         'variantFunctionalDataByGuid': {tag['tagGuid']: tag for tag in functional_data},
-        'savedVariantsByGuid': {variant_guid: variant for variant_guid, variant in variants_by_guid.items() if
-                                variant['noteGuids'] or variant['tagGuids']},
+        'savedVariantsByGuid': variants_by_guid,
     }
 
+    if discovery_tags_query:
+        from seqr.views.utils.variant_utils import get_variant_key
 
-def get_json_for_variant_tags(tags):
+        discovery_saved_variant_by_guid = {
+            var.guid: var for var in SavedVariant.objects.filter(discovery_tags_query).prefetch_related('family', 'family__project')}
+        discovery_tags = get_json_for_variant_tags(VariantTag.objects.filter(
+            variant_tag_type__category='CMG Discovery Tags',
+            saved_variants__in=discovery_saved_variant_by_guid.values()
+        ))
+        if discovery_tags:
+            families = set()
+            response['discoveryTags'] = defaultdict(list)
+            for tag in discovery_tags:
+                for variant_guid in tag.pop('variantGuids'):
+                    variant = discovery_saved_variant_by_guid.get(variant_guid)
+                    if variant:
+                        families.add(variant.family)
+                        tag_json = {'savedVariant': {
+                            'variantGuid': variant.guid,
+                            'familyGuid': variant.family.guid,
+                            'projectGuid': variant.family.project.guid,
+                        }}
+                        tag_json.update(tag)
+                        variant_key = get_variant_key(
+                            genomeVersion=variant.family.project.genome_version,
+                            xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
+                        )
+                        response['discoveryTags'][variant_key].append(tag_json)
+            response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
+
+    return response
+
+
+def get_json_for_variant_tags(tags, add_variant_guids=True):
     """Returns a JSON representation of the given variant tags.
 
     Args:
@@ -449,15 +520,17 @@ def get_json_for_variant_tags(tags):
         dict: json objects
     """
     def _process_result(tag_json, tag):
-        tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
+        if add_variant_guids:
+            tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
 
-    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
+    if add_variant_guids:
+        prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
     return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)
 
 
-def get_json_for_variant_functional_data_tags(tags):
+def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
     """Returns a JSON representation of the given variant tags.
 
     Args:
@@ -469,13 +542,15 @@ def get_json_for_variant_functional_data_tags(tags):
     def _process_result(tag_json, tag):
         display_data = json.loads(tag.get_functional_data_tag_display())
         tag_json.update({
-            'variantGuids': [variant.guid for variant in tag.saved_variants.all()],
             'name': tag_json.pop('functionalDataTag'),
             'metadataTitle': display_data.get('metadata_title'),
             'color': display_data['color'],
         })
+        if add_variant_guids:
+            tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
 
-    prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
+    if add_variant_guids:
+        prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
@@ -538,18 +613,6 @@ def get_json_for_gene_notes(notes, user):
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
-
-
-def get_json_for_gene_note(note, user):
-    """Returns a JSON representation of the given gene note.
-
-    Args:
-        note (object): Django model for the GeneNote.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(note, user=user, get_json_for_models=get_json_for_gene_notes)
 
 
 def get_json_for_gene_notes_by_gene_id(gene_ids, user):

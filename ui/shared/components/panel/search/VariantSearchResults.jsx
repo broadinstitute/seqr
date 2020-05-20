@@ -5,14 +5,6 @@ import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { loadSearchedVariants, unloadSearchResults } from 'redux/rootReducer'
-import DataLoader from 'shared/components/DataLoader'
-import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
-import { HorizontalSpacer } from 'shared/components/Spacers'
-import ExportTableButton from 'shared/components/buttons/ExportTableButton'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
-
 import {
   getDisplayVariants,
   getSearchedVariantsIsLoading,
@@ -21,6 +13,13 @@ import {
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
 } from 'redux/selectors'
+import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
+import DataLoader from '../../DataLoader'
+import { QueryParamsEditor } from '../../QueryParamEditor'
+import { HorizontalSpacer } from '../../Spacers'
+import ExportTableButton from '../../buttons/ExportTableButton'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 
 const LargeRow = styled(Grid.Row)`
@@ -37,18 +36,19 @@ const FIELDS = [
   VARIANT_SORT_FIELD_NO_FAMILY_SORT,
 ]
 
-export const DisplayVariants = ({ displayVariants }) =>
+export const DisplayVariants = React.memo(({ displayVariants }) =>
   <Grid.Row>
     <Grid.Column width={16}>
       <Variants variants={displayVariants} />
     </Grid.Column>
-  </Grid.Row>
+  </Grid.Row>,
+)
 
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
-const BaseVariantSearchResultsContent = (
+const BaseVariantSearchResultsContent = React.memo((
   { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
@@ -97,7 +97,7 @@ const BaseVariantSearchResultsContent = (
       </Grid.Column>
     </LargeRow>,
   ]
-}
+})
 
 BaseVariantSearchResultsContent.propTypes = {
   match: PropTypes.object,
@@ -130,7 +130,7 @@ const mapContentDispatchToProps = (dispatch, ownProps) => {
 
 const VariantSearchResultsContent = connect(mapContentStateToProps, mapContentDispatchToProps)(BaseVariantSearchResultsContent)
 
-const BaseVariantSearchResults = (
+const BaseVariantSearchResults = React.memo((
   { match, displayVariants, load, unload, variantsLoading, contextLoading, errorMessage, contentComponent, ...props }) => {
   return (
     <DataLoader
@@ -151,7 +151,7 @@ const BaseVariantSearchResults = (
       {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
     </DataLoader>
   )
-}
+})
 
 BaseVariantSearchResults.propTypes = {
   match: PropTypes.object,
@@ -161,7 +161,7 @@ BaseVariantSearchResults.propTypes = {
   contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
   displayVariants: PropTypes.array,
-  contentComponent: PropTypes.node,
+  contentComponent: PropTypes.elementType,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -183,11 +183,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
-const LoadedVariantSearchResults = ({ contentComponent, flattenCompoundHet, ...props }) => (
+const LoadedVariantSearchResults = React.memo(({ contentComponent, flattenCompoundHet, ...props }) => (
   <QueryParamsEditor {...props}>
     <VariantSearchResults contentComponent={contentComponent} flattenCompoundHet={flattenCompoundHet} />
   </QueryParamsEditor>
-)
+))
 
 LoadedVariantSearchResults.propTypes = {
   contentComponent: PropTypes.node,

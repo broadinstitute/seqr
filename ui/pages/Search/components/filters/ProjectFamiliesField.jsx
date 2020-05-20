@@ -20,7 +20,7 @@ import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAna
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
 
 
-const ProjectFamiliesFilterInput = ({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
+const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
   const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
   const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
@@ -77,7 +77,7 @@ const ProjectFamiliesFilterInput = ({ familyOptions, analysisGroupOptions, proje
       />
     </Form.Group>
   )
-}
+})
 
 ProjectFamiliesFilterInput.propTypes = {
   familyOptions: PropTypes.array,

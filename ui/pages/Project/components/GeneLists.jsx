@@ -28,7 +28,7 @@ const FIELDS = [
   LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD,
 ]
 
-const LocusListItem = ({ project, locusList, updateLocusLists: onSubmit }) => {
+const LocusListItem = React.memo(({ project, locusList, updateLocusLists: onSubmit }) => {
   const submitValues = { locusListGuids: [locusList.locusListGuid] }
   return (
     <ItemContainer key={locusList.locusListGuid}>
@@ -60,7 +60,7 @@ const LocusListItem = ({ project, locusList, updateLocusLists: onSubmit }) => {
       }
     </ItemContainer>
   )
-}
+})
 
 LocusListItem.propTypes = {
   project: PropTypes.object.isRequired,
@@ -76,14 +76,18 @@ const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
 
 const LocusList = connect(mapStateToProps, mapDispatchToProps)(LocusListItem)
 
-export const GeneLists = ({ project }) =>
+export const GeneLists = React.memo(({ project }) =>
   project.locusListGuids.map(locusListGuid =>
     <LocusList
       key={locusListGuid}
       project={project}
       locusListGuid={locusListGuid}
     />,
-  )
+  ))
+
+GeneLists.propTypes = {
+  project: PropTypes.object.isRequired,
+}
 
 class AddGeneLists extends React.PureComponent {
 

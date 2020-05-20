@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -46,7 +46,7 @@ export class BaseSemanticInput extends React.Component {
 }
 
 
-export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
+export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) =>
   <BaseSemanticInput
     {...props}
     value={Number.isInteger(value) ? value : ''}
@@ -63,7 +63,8 @@ export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
         onChange(val)
       }
     }}
-  />
+  />,
+)
 
 IntegerInput.propTypes = {
   onChange: PropTypes.func,
@@ -101,14 +102,15 @@ const processOptions = (options, includeCategories) => {
   }, []).map(styledOption)
 }
 
-export const Dropdown = ({ options, includeCategories, ...props }) =>
+export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
     options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
-  />
+  />,
+)
 
 
 Dropdown.propTypes = {
@@ -196,12 +198,44 @@ export class AddableSelect extends React.PureComponent {
   }
 }
 
+
+export class SearchInput extends React.PureComponent {
+  static propTypes = {
+    onChange: PropTypes.func,
+    options: PropTypes.array,
+  }
+
+  state = {
+    results: this.props.options,
+  }
+
+  handleResultSelect = (e, { result }) => this.props.onChange(e, result.title)
+
+  handleSearchChange = (e, data) => {
+    this.setState({
+      results: this.props.options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+    })
+    this.props.onChange(e, data)
+  }
+
+  render() {
+    const { options, onChange, ...props } = this.props
+    return <Search
+      {...props}
+      results={this.state.results}
+      onResultSelect={this.handleResultSelect}
+      onSearchChange={this.handleSearchChange}
+    />
+  }
+}
+
+
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
   margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
 
-export const CheckboxGroup = (props) => {
+export const CheckboxGroup = React.memo((props) => {
   const { value, options, label, groupLabel, onChange, ...baseProps } = props
   return (
     <List>
@@ -244,7 +278,7 @@ export const CheckboxGroup = (props) => {
       </List.Item>
     </List>
   )
-}
+})
 
 CheckboxGroup.propTypes = {
   value: PropTypes.any,
@@ -259,75 +293,67 @@ export const AlignedCheckboxGroup = styled(CheckboxGroup)`
   text-align: left;
 `
 
-
-export const StringValueCheckboxGroup = (props) => {
-  const { value = '', options, onChange, ...baseProps } = props
+const BaseRadioGroup = React.memo((props) => {
+  const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, ...baseProps } = props
   return (
-    <InlineFormGroup>
-      {options.map(option =>
-        <BaseSemanticInput
-          {...baseProps}
-          key={option.value}
-          inputType="Checkbox"
-          defaultChecked={value && value.includes(option.value)}
-          label={option.name}
-          onChange={({ checked }) => {
-            let newValue
-            if (checked) {
-              newValue = value + option.value
-            } else {
-              newValue = value.replace(option.value, '')
-            }
-            onChange(newValue)
-          }}
-        />,
-      )}
-    </InlineFormGroup>
-  )
-}
-
-StringValueCheckboxGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
-  onChange: PropTypes.func,
-}
-
-
-export const RadioGroup = (props) => {
-  const { value, options, label, onChange, margin, widths, ...baseProps } = props
-  return (
-    <InlineFormGroup margin={margin} widths={widths}>
+    <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
       {options.map(option =>
         <BaseSemanticInput
           {...baseProps}
+          {...getOptionProps(option, value, onChange)}
           key={option.value}
           inline
           inputType="Radio"
-          checked={value === option.value}
-          label={option.text}
-          onChange={({ checked }) => {
-            if (checked) {
-              onChange(option.value)
-            }
-          }}
         />,
       )}
     </InlineFormGroup>
   )
-}
+})
 
-RadioGroup.propTypes = {
+BaseRadioGroup.propTypes = {
   value: PropTypes.any,
   options: PropTypes.array,
   onChange: PropTypes.func,
   label: PropTypes.node,
+  formGroupAs: PropTypes.any,
   margin: PropTypes.string,
   widths: PropTypes.string,
+  getOptionProps: PropTypes.func,
 }
 
-export const BooleanCheckbox = (props) => {
+const getRadioOptionProps = (option, value, onChange) => ({
+  checked: value === option.value,
+  label: option.text,
+  onChange: ({ checked }) => {
+    if (checked) {
+      onChange(option.value)
+    }
+  },
+})
+
+export const RadioGroup = React.memo((props) => {
+  return <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />
+})
+
+const getButtonRadioOptionProps = (option, value, onChange) => ({
+  active: value === option.value,
+  basic: value !== option.value,
+  color: value === option.value ? (option.color || 'grey') : 'black',
+  content: option.text,
+  label: option.label,
+  onClick: (e) => {
+    e.preventDefault()
+    onChange(option.value)
+  },
+})
+
+export const ButtonRadioGroup = React.memo((props) => {
+  return <BaseRadioGroup as={Button} formGroupAs={Button.Group} getOptionProps={getButtonRadioOptionProps} {...props} />
+})
+
+export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props
   return <BaseSemanticInput
     {...baseProps}
@@ -335,14 +361,14 @@ export const BooleanCheckbox = (props) => {
     checked={Boolean(value)}
     onChange={data => onChange(data.checked)}
   />
-}
+})
 
 BooleanCheckbox.propTypes = {
   value: PropTypes.any,
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+const BaseInlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   margin-bottom: 0 !important;
   &:last-child {
     padding-right: 0 !important;
@@ -376,12 +402,14 @@ export const InlineToggle = styled(({ divided, fullHeight, ...props }) => <Boole
     right: 2em !important;
   }
 `
+// This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
+export const InlineToggle = props => <BaseInlineToggle {...props} />
 
-export const LabeledSlider = styled(Slider).attrs({
-  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
-  labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
+export const LabeledSlider = styled(Slider).attrs(props => ({
+  handleLabel: `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
+  labels: { [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max },
   tooltip: false,
-})`
+}))`
   width: 100%;
 
   .rangeslider__fill {
@@ -410,7 +438,7 @@ export const LabeledSlider = styled(Slider).attrs({
   }
 `
 
-export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
+export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) =>
   <LabeledSlider
     {...props}
     min={0}
@@ -420,7 +448,8 @@ export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
     value={steps.indexOf(value)}
     valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
     onChange={val => onChange(steps[val])}
-  />
+  />,
+)
 
 
 StepSlider.propTypes = {
@@ -430,12 +459,13 @@ StepSlider.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const Pagination = ({ onChange, value, error, ...props }) =>
+export const Pagination = React.memo(({ onChange, value, error, ...props }) =>
   <PaginationComponent
     activePage={value}
     onPageChange={(e, data) => onChange(data.activePage)}
     {...props}
-  />
+  />,
+)
 
 Pagination.propTypes = {
   value: PropTypes.number,
@@ -444,8 +474,9 @@ Pagination.propTypes = {
 }
 
 const JSON_EDITOR_MODES = ['code', 'tree']
-export const JsonInput = ({ value, onChange }) =>
-  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />
+export const JsonInput = React.memo(({ value, onChange }) =>
+  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />,
+)
 
 JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),

@@ -26,6 +26,8 @@ class DispatchRequestButton extends React.PureComponent {
 
     /** Optional callback when request succeeds **/
     onSuccess: PropTypes.func,
+
+    hideNoRequestStatus: PropTypes.bool,
   }
 
   constructor(props) {
@@ -39,12 +41,14 @@ class DispatchRequestButton extends React.PureComponent {
   }
 
   render() {
-    const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, ...props } = this.props
+    const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, hideNoRequestStatus, ...props } = this.props
     return React.cloneElement(buttonContainer || <span />, { children: [
       children ?
         React.cloneElement(children, { onClick: this.handleButtonClick, key: 'button' }) :
         <ButtonLink key="button" onClick={this.handleButtonClick} content={buttonContent} {...props} />,
-      <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />,
+      (!hideNoRequestStatus || this.state.requestStatus !== NONE) ?
+        <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
+        : null,
       <Confirm
         key="confirm"
         content={confirmDialog}

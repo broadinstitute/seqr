@@ -4,10 +4,10 @@ import mock
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
-from seqr.models import LocusList, Project
+from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
     update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, LOCUS_LIST_FIELDS, LOCUS_LIST_DETAIL_FIELDS
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -29,11 +29,9 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(set(locus_lists_dict.keys()), {'LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'})
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
-        self.assertSetEqual(
-            set(locus_list.keys()),
-            {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name', 'numProjects'}
-        )
+        fields = {'numProjects'}
+        fields.update(LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(locus_list.keys()), fields)
 
     def test_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
@@ -47,11 +45,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertListEqual(locus_lists_dict.keys(), [LOCUS_LIST_GUID])
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
-        self.assertSetEqual(
-            set(locus_list.keys()),
-            {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name', 'items', 'intervalGenomeVersion'}
-        )
+        self.assertSetEqual(set(locus_list.keys()), LOCUS_LIST_DETAIL_FIELDS)
         self.assertSetEqual(
             {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
             set(response_json['genesById'].keys())

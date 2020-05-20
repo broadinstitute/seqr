@@ -142,7 +142,7 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
-const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -167,7 +167,8 @@ const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
-  </DataLoader>
+  </DataLoader>,
+)
 
 ProjectsTable.propTypes = {
   visibleProjects: PropTypes.array.isRequired,

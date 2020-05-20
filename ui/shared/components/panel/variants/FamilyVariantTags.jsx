@@ -2,15 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Icon, Popup, Table, Header } from 'semantic-ui-react'
+import { Icon, Popup, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
   getFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  getProjectTagTypes,
-  getProjectFunctionalTagTypes,
+  getTagTypesByProject,
+  getFunctionalTagTypesTypesByProject,
   getVariantId,
 } from 'redux/selectors'
 import {
@@ -25,7 +25,7 @@ import {
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { ColoredComponent, NoBorderTable } from '../../StyledComponents'
+import { ColoredLink, NoBorderTable, InlineHeader } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -36,8 +36,6 @@ const TagTitle = styled.span`
   font-weight: bolder;
   color: #999;
 `
-
-const ColoredLink = ColoredComponent(NavLink)
 
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
@@ -64,7 +62,7 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
-const taggedByPopup = (tag, title) => trigger =>
+export const taggedByPopup = (tag, title) => trigger =>
   <Popup
     position="top right"
     size="tiny"
@@ -83,16 +81,16 @@ const taggedByPopup = (tag, title) => trigger =>
   />
 
 
-const ShortcutTagToggle = ({ tag, ...props }) => {
+const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
   return tag ? taggedByPopup(tag)(toggle) : toggle
-}
+})
 
 ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = ({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
+const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = ((variantTagNotes || {}).tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
@@ -125,7 +123,7 @@ const ShortcutTags = ({ variantTagNotes, dispatchUpdateFamilyVariantTags, family
       fields={shortcutTagFields}
     />
   )
-}
+})
 
 ShortcutTags.propTypes = {
   variantTagNotes: PropTypes.object,
@@ -135,7 +133,7 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variantTagNotes, variantId, fieldName, family, ...props }) =>
+const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) =>
   <TagFieldView
     idField="variantGuids"
     defaultId={variantId}
@@ -152,7 +150,8 @@ const VariantTagField = ({ variantTagNotes, variantId, fieldName, family, ...pro
     isEditable
     popup={taggedByPopup}
     {...props}
-  />
+  />,
+)
 
 VariantTagField.propTypes = {
   variantTagNotes: PropTypes.object,
@@ -161,7 +160,7 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) => {
+const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ...props }) => {
   const values = { ...variantTagNotes, ...note }
   return (
     <div>
@@ -181,7 +180,7 @@ const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) =
       />
     </div>
   )
-}
+})
 
 VariantNoteField.propTypes = {
   note: PropTypes.object,
@@ -190,9 +189,7 @@ VariantNoteField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantLink = (
-  { variant, variantTagNotes, family },
-) =>
+const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
   <NavLink
     to={variantTagNotes ?
       `/project/${family.projectGuid}/saved_variants/variant/${variantTagNotes.variantGuids}` :
@@ -207,7 +204,8 @@ const VariantLink = (
       position="right center"
       wide
     />
-  </NavLink>
+  </NavLink>,
+)
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -215,7 +213,41 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyVariantTags = (
+const FamilyLabel = React.memo(({ family, disableEdit, target, to }) =>
+  <InlineHeader size="small">
+    Family<HorizontalSpacer width={5} />
+    <PopupWithModal
+      hoverable
+      wide="very"
+      position="right center"
+      keepInViewPort
+      trigger={
+        <ColoredLink
+          to={to || `/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+          color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+          target={target}
+        >
+          {family.displayName}
+        </ColoredLink>
+      }
+      content={<Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} useFullWidth disablePedigreeZoom />}
+    />
+  </InlineHeader>,
+)
+
+
+FamilyLabel.propTypes = {
+  family: PropTypes.object,
+  disableEdit: PropTypes.bool,
+  to: PropTypes.string,
+  target: PropTypes.string,
+}
+
+export const LoadedFamilyLabel = connect((state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
+}))(FamilyLabel)
+
+const FamilyVariantTags = React.memo((
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
     dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
 ) => (
@@ -225,24 +257,7 @@ const FamilyVariantTags = (
         <Table.Row verticalAlign="top">
           {!isCompoundHet &&
           <Table.Cell collapsing rowSpan={2}>
-            <Header size="small">
-              Family<HorizontalSpacer width={5} />
-              <PopupWithModal
-                hoverable
-                wide="very"
-                position="right center"
-                keepInViewPort
-                trigger={
-                  <ColoredLink
-                    to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
-                    color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-                  >
-                    {family.displayName}
-                  </ColoredLink>
-                }
-                content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-              />
-            </Header>
+            <FamilyLabel family={family} />
           </Table.Cell>}
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Tags:</TagTitle>
@@ -319,7 +334,7 @@ const FamilyVariantTags = (
         </Table.Row>
       </Table.Body>
     </NoBorderTable> : null
-)
+))
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -336,11 +351,13 @@ FamilyVariantTags.propTypes = {
 
 const mapStateToProps = (state, ownProps) => {
   const variantId = getVariantId(ownProps.variant)
+  const family = getFamiliesByGuid(state)[ownProps.familyGuid]
+  const { projectGuid } = family || {}
   return {
     variantId,
-    family: getFamiliesByGuid(state)[ownProps.familyGuid],
-    projectTagTypes: getProjectTagTypes(state, ownProps),
-    projectFunctionalTagTypes: getProjectFunctionalTagTypes(state, ownProps),
+    family,
+    projectTagTypes: getTagTypesByProject(state)[projectGuid],
+    projectFunctionalTagTypes: getFunctionalTagTypesTypesByProject(state)[projectGuid],
     variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
   }
 }

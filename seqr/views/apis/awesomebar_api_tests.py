@@ -18,6 +18,6 @@ class AwesomebarAPITest(TestCase):
             set(response.json()['matches'].keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'}
         )
 
-        response = self.client.get(url + "?q=T&categories=project_groups,projects")
+        response = self.client.get(url + "?q=T&categories=project_groups,projects,hpo_terms,omim")
         self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json()['matches'].keys()), {'projects', 'project_groups'})
+        self.assertSetEqual(set(response.json()['matches'].keys()), {'projects', 'project_groups', 'omim', 'hpo_terms'})

@@ -9,6 +9,7 @@ import {
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
@@ -49,6 +50,8 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
       projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
       familyGuids: [familyGuid],
     }
+  } else if (params.searchHash) {
+    return params
   }
   return null
 }
@@ -109,9 +112,9 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   (savedSearches) => {
     const savedSeachOptions = savedSearches.map(({ name, savedSearchGuid, createdById }) => (
       { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
-    )).sort(compareObjects('text')).sort(compareObjects('category'))
+    ))
     savedSeachOptions.push({ text: 'None', value: null, category: 'Default Searches', search: {} })
-    return savedSeachOptions
+    return savedSeachOptions.sort(compareObjects('text')).sort(compareObjects('category'))
   },
 )
 
@@ -137,6 +140,17 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
       { text: locusListsByGuid[locusListGuid].name, value: locusListsByGuid[locusListGuid].locusListGuid }
     ))
     return [{ value: null }, ...locusListOptions]
+  },
+)
+
+export const getDatasetTypes = createSelector(
+  getProjectsInput,
+  getSamplesGroupedByProjectGuid,
+  (projectGuids, samplesByProjectGuid) => {
+    const datasetTypes = projectGuids.reduce((acc, projectGuid) =>
+      new Set([...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
+    return [...datasetTypes].sort().join(',')
   },
 )
 

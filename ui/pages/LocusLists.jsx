@@ -11,14 +11,15 @@ import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListTables from 'shared/components/table/LocusListTables'
 
-const PageHeader = ({ locusList }) =>
+const PageHeader = React.memo(({ locusList }) =>
   <PageHeaderLayout
     entity="gene_lists"
     entityGuid={locusList && locusList.locusListGuid}
     title={locusList && locusList.name}
     description={!locusList && 'This page shows all of the gene lists that are available in your account'}
     button={locusList ? <DeleteLocusListButton locusList={locusList} /> : <CreateLocusListButton />}
-  />
+  />,
+)
 
 PageHeader.propTypes = {
   locusList: PropTypes.object,

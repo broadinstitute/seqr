@@ -58,7 +58,7 @@ def get_xpos(chrom, pos):
     if pos < 1 or pos > 3e8:
         raise ValueError("Invalid position: %s" % (pos,))
 
-    return (1 + CHROM_TO_CHROM_NUMBER[chrom])*int(1e9) + pos
+    return ((1 + CHROM_TO_CHROM_NUMBER[chrom])*int(1e9)) + pos
 
 
 def get_chrom_pos(xpos):

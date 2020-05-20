@@ -8,7 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, login_non_staff_user, SAVED_VARIANT_FIELDS, TAG_FIELDS
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -74,7 +74,7 @@ COMPOUND_HET_5_JSON = {
 }
 
 
-class ProjectAPITest(TransactionTestCase):
+class SavedVariantAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
     def test_saved_variant_data(self):
@@ -86,30 +86,48 @@ class ProjectAPITest(TransactionTestCase):
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById'
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
+            'familiesByGuid', 'locusListsByGuid',
         })
 
         variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
+        self.assertSetEqual(
+            set(variants.keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
 
         variant = variants['SV0000001_2103343353_r0390_100']
-        self.assertSetEqual(
-            set(variant.keys()),
-            {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
-             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tagGuids', 'functionalDataGuids', 'noteGuids',
-             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts',
-             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',}
-        )
+        fields = {
+            'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
+            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
+            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
+        }
+        fields.update(SAVED_VARIANT_FIELDS)
+        self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
             set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
         )
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
-        self.assertSetEqual(
-            set(tag.keys()),
-            {'tagGuid', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids', 'category', 'color', 'name'}
-        )
+        self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
+
+        fields.add('discoveryTags')
+        matched_variant = variants['SV0000002_1248367227_r0390_100']
+        self.assertSetEqual(set(matched_variant.keys()), fields)
+        self.assertListEqual(matched_variant['discoveryTags'], [{
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0003_tes',
+                'familyGuid': 'F000011_11',
+                'projectGuid': 'R0003_test',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0003_tes',
+            'name': 'Tier 1 - Novel gene and phenotype',
+            'category': 'CMG Discovery Tags',
+            'color': '#03441E',
+            'searchHash': None,
+            'lastModifiedDate': '2018-05-29T16:32:51.449Z',
+            'createdBy': None,
+        }])
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
@@ -126,6 +144,22 @@ class ProjectAPITest(TransactionTestCase):
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
+
+        # Test no cross-project discovery for non-staff users
+        login_non_staff_user(self)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+            'genesById', 'locusListsByGuid',
+        })
+        variants = response_json['savedVariantsByGuid']
+        self.assertSetEqual(
+            set(variants.keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID}
+        )
+        self.assertFalse('discoveryTags' in variants['SV0000002_1248367227_r0390_100'])
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -152,7 +186,7 @@ class ProjectAPITest(TransactionTestCase):
             'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
             'familyGuid': 'F000001_1',
             'tags': [{'name': 'Review'}],
-            'notes': [],
+            'note': '',
             'functionalData': [],
             'variant': variant_json,
         }
@@ -182,6 +216,60 @@ class ProjectAPITest(TransactionTestCase):
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
 
+    def test_create_saved_sv_variant(self):
+        create_saved_variant_url = reverse(create_saved_variant_handler)
+        _check_login(self, create_saved_variant_url)
+
+        variant_json = {
+            'chrom': '2',
+            'genotypes': {},
+            'genomeVersion': '37',
+            'mainTranscriptId': None,
+            'populations': {'sv_callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+            'pos': 61413835,
+            'end': 61414175,
+            'predictions': {'strvctvre': 21.9},
+            'transcripts': {},
+            'projectGuid': 'R0001_1kg',
+            'familyGuids': ['F000001_1', 'F000002_2'],
+            'svType': 'DUP',
+            'variantId': 'batch_123_DUP',
+        }
+
+        request_body = {
+            'familyGuid': 'F000001_1',
+            'tags': [],
+            'note': 'A promising SV',
+            'functionalData': [],
+            'variant': variant_json,
+        }
+
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
+        variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
+
+        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        variant_json.update({'xpos': 2061413835})
+        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
+        self.assertEqual(saved_variant.xpos_end, 2061414175)
+
+        variant_json.update({
+            'variantGuid': variant_guid,
+            'familyGuids': ['F000001_1'],
+            'alt': None,
+            'ref': None,
+            'selectedMainTranscriptId': None,
+            'tagGuids': [],
+            'functionalDataGuids': [],
+        })
+        response_json = response.json()
+        response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
+        notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
+        self.assertDictEqual(variant_json, response_variant_json)
+        self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
+
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
         _check_login(self, create_saved_compound_hets_url)
@@ -198,8 +286,10 @@ class ProjectAPITest(TransactionTestCase):
         response = self.client.post(create_saved_compound_hets_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        new_compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[1]
-        new_compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[0]
+        new_compound_het_3_guid = next(guid for guid, variant_json in response.json()['savedVariantsByGuid'].items()
+                                       if variant_json['xpos'] == 15062456358)
+        new_compound_het_4_guid = next(guid for guid, variant_json in response.json()['savedVariantsByGuid'].items()
+                                       if variant_json['xpos'] == 15062456406)
 
         saved_compound_het_3 = SavedVariant.objects.get(guid=new_compound_het_3_guid, family__guid='F000001_1')
         saved_compound_het_4 = SavedVariant.objects.get(guid=new_compound_het_4_guid, family__guid='F000001_1')
@@ -268,7 +358,7 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
 
         # save variant_note as gene_note for user selected main gene
-        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=['SV0000003_2246859832_r0390_100'])
+        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         response = self.client.post(create_variant_note_seetced_gene_url, content_type='application/json', data=json.dumps(
             {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
@@ -310,7 +400,7 @@ class ProjectAPITest(TransactionTestCase):
         _check_login(self, create_saved_variant_url)
 
         request_body = {
-            'variant': [COMPOUND_HET_5_JSON, {'variantId': 'abc123', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
+            'variant': [COMPOUND_HET_5_JSON, {'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
             'note': 'one_saved_one_not_saved_compount_hets_note',
             'submitToClinvar': True,
             'familyGuid': 'F000001_1',
@@ -386,20 +476,6 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(updated_variant_note.note, updated_note_response['note'])
         self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response['submitToClinvar'])
 
-        # delete the variant_note for both compound hets
-        delete_variant_note_url = reverse(delete_variant_note_handler,
-                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
-        response = self.client.post(delete_variant_note_url, content_type='application/json')
-
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: {'noteGuids': []}, COMPOUND_HET_2_GUID: {'noteGuids': []}},
-            'variantNotesByGuid': {new_note_guid: None}})
-
-        # check that variant_note was deleted
-        new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
-        self.assertEqual(len(new_variant_note), 0)
-
         # save variant_note as gene_note for both compound hets
         response = self.client.post(
             create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps({
@@ -407,15 +483,52 @@ class ProjectAPITest(TransactionTestCase):
             }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        new_gene_note_guid = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0]
-        self.assertEqual(new_gene_note_guid, response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids'][0])
-
+        note_guids = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids']
+        self.assertListEqual(
+            note_guids,
+            response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids']
+        )
+        self.assertTrue(new_note_guid in note_guids)
+        new_gene_note_guid = next(guid for guid in note_guids if guid != new_note_guid)
         self.assertEqual(
             response_json['variantNotesByGuid'][new_gene_note_guid]['note'],
             'new_compound_hets_variant_note_as_gene_note',
         )
         new_gene_note_response = response.json()['genesById'][GENE_GUID_2]['notes'][0]
         self.assertEqual(new_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
+        
+        # delete the variant_note for both compound hets
+        delete_variant_note_url = reverse(delete_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
+        response = self.client.post(delete_variant_note_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {
+                COMPOUND_HET_1_GUID: {'noteGuids': [new_gene_note_guid]}, 
+                COMPOUND_HET_2_GUID: {'noteGuids': [new_gene_note_guid]}
+            },
+            'variantNotesByGuid': {new_note_guid: None}})
+        
+        # check that variant_note was deleted
+        new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
+        self.assertEqual(len(new_variant_note), 0)
+
+        # delete the last variant_note for both compound hets
+        delete_variant_note_url = reverse(delete_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_gene_note_guid])
+        response = self.client.post(delete_variant_note_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: None, COMPOUND_HET_2_GUID: None},
+            'variantNotesByGuid': {new_gene_note_guid: None}})
+
+        # check that variant_note and saved variants was deleted
+        new_variant_note = VariantNote.objects.filter(guid=new_gene_note_guid)
+        self.assertEqual(len(new_variant_note), 0)
+        variants = SavedVariant.objects.filter(guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
+        self.assertEqual(len(variants), 0)
 
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
@@ -442,6 +555,19 @@ class ProjectAPITest(TransactionTestCase):
         self.assertSetEqual(
             {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in
                                      VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
+
+        # test delete all
+        response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
+            'tags': [],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'variantTagsByGuid': {excluded_guid: None, 'VT1708633_2103343353_r0390_100': None},
+            'savedVariantsByGuid': {VARIANT_GUID: None},
+        })
+        self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID).count(), 0)
+        self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 0)
 
     def test_update_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
@@ -551,7 +677,7 @@ class ProjectAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
     def test_update_saved_variant_json(self, mock_retrieve_variants):
         mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
-            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'familyGuids': [var[3].guid]} for var in variant_tuples]
+            [{'variantId': var[0], 'familyGuids': [var[1].guid]} for var in variant_tuples]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         _check_login(self, url)
@@ -562,7 +688,7 @@ class ProjectAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(response.json().keys()),
             {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100',
-             'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
+            'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
         )
 
     def test_update_variant_main_transcript(self):

@@ -76,7 +76,9 @@ FamilyTableRow.propTypes = {
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props }) =>
+const FamilyTable = React.memo((
+  { visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
+) =>
   <div>
     <ExportContainer>
       {headerStatus &&
@@ -121,7 +123,8 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>
-  </div>
+  </div>,
+)
 
 
 export { FamilyTable as FamilyTableComponent }

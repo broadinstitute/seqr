@@ -46,7 +46,7 @@ const FormContentContainer = styled.div`
 `
 
 
-class EditRecordsForm extends React.Component
+class EditRecordsForm extends React.PureComponent
 {
   static propTypes = {
     /* Object of records to be edited in this form */

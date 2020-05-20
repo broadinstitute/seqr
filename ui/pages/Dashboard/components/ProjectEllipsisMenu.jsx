@@ -21,7 +21,7 @@ const EllipsisContainer = styled.span`
   }
 `
 
-const ProjectEllipsisMenu = (props) => {
+const ProjectEllipsisMenu = React.memo((props) => {
   if (!props.user.isStaff && !props.project.canEdit) {
     return null
   }
@@ -68,7 +68,7 @@ const ProjectEllipsisMenu = (props) => {
       </Dropdown>
     </EllipsisContainer>
   )
-}
+})
 
 
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }

@@ -98,8 +98,7 @@ class BaseFieldView extends React.PureComponent {
               confirmDialog={this.props.addConfirm}
               size="tiny"
             />
-      }
-      else {
+      } else {
         editButton =
           <DispatchRequestButton
             key="edit"

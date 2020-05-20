@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
 import { updateIgvReadsVisibility } from 'redux/rootReducer'
-import { getIndividualsByGuid, getActiveAlignmentSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
+import { getIndividualsByGuid, getIGVSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
@@ -24,20 +24,20 @@ const BAM_TRACK_OPTIONS = {
   format: 'bam',
 }
 
-const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideReads }) => {
+const FamilyVariantReads = React.memo(({ variant, igvSamples, individualsByGuid, hideReads }) => {
 
-  if (!activeSamples || !activeSamples.length) {
+  if (!igvSamples || !igvSamples.length) {
     return null
   }
 
-  const igvTracks = activeSamples.map((sample) => {
+  const igvTracks = igvSamples.map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
 
-    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`
+    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
 
     let trackOptions = BAM_TRACK_OPTIONS
-    if (sample.datasetFilePath.endsWith('.cram')) {
-      if (sample.datasetFilePath.startsWith('gs://')) {
+    if (sample.filePath.endsWith('.cram')) {
+      if (sample.filePath.startsWith('gs://')) {
         trackOptions = {
           format: 'cram',
           indexURL: `${url}.crai`,
@@ -61,7 +61,7 @@ const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideRea
   }).filter(track => track)
 
   // TODO better determiner of genome version?
-  const isBuild38 = activeSamples.some(sample => sample.datasetFilePath.endsWith('.cram'))
+  const isBuild38 = igvSamples.some(sample => sample.filePath.endsWith('.cram'))
   const genome = isBuild38 ? 'hg38' : 'hg19'
 
   const locus = variant && getLocus(
@@ -94,11 +94,11 @@ const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideRea
       <IGV igvOptions={igvOptions} />
     </Segment>
   )
-}
+})
 
 FamilyVariantReads.propTypes = {
   variant: PropTypes.object,
-  activeSamples: PropTypes.array,
+  igvSamples: PropTypes.array,
   individualsByGuid: PropTypes.object,
   hideReads: PropTypes.func,
 }
@@ -106,7 +106,7 @@ FamilyVariantReads.propTypes = {
 const mapStateToProps = (state, ownProps) => {
   const familyGuid = getIgvReadsVisibility(state)[ownProps.igvId || ownProps.variant.variantId]
   return {
-    activeSamples: getActiveAlignmentSamplesByFamily(state)[familyGuid],
+    igvSamples: getIGVSamplesByFamily(state)[familyGuid],
     individualsByGuid: getIndividualsByGuid(state),
   }
 }

@@ -47,12 +47,13 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
-const BaseFirstSample = ({ firstFamilySample, compact, hasActiveVariantSample }) =>
+const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) =>
   <Sample
     loadedSample={firstFamilySample}
     hoverDetails={compact ? 'first loaded' : null}
     isOutdated={!hasActiveVariantSample}
-  />
+  />,
+)
 
 BaseFirstSample.propTypes = {
   firstFamilySample: PropTypes.object,
@@ -67,7 +68,7 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
+const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
     <Select
       loading={loading}
@@ -78,7 +79,8 @@ const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
       search
       {...props}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
@@ -135,7 +137,7 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div>{successStoryTypeDisplay(tag)}</div>,
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
     ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
@@ -147,9 +149,7 @@ const familyFieldRenderProps = {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
-    fieldDisplay: values => values.map(value =>
-      <div key={value}><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
-    ),
+    itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
@@ -161,7 +161,7 @@ const formatAnalysedByList = analysedByList =>
     `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
   ).join(', ')
 
-export const AnalysedBy = ({ analysedByList, compact }) => {
+export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
   if (compact) {
     return [...analysedByList.reduce(
       (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
@@ -175,29 +175,38 @@ export const AnalysedBy = ({ analysedByList, compact }) => {
     staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
     externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
   ]
-}
+})
 
 AnalysedBy.propTypes = {
   analysedByList: PropTypes.array,
   compact: PropTypes.bool,
 }
 
-export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
+const getContentWidth = (useFullWidth, leftContent, rightContent) => {
+  if (!useFullWidth || (leftContent && rightContent)) {
+    return 10
+  }
+  if (leftContent || rightContent) {
+    return 13
+  }
+  return 16
+}
+
+export const FamilyLayout = React.memo(({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
   <div>
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
-        <Grid.Column width={3}>
-          {leftContent}
-        </Grid.Column>
+        {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
         {compact ? fields.map(field =>
           <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={(useFullWidth && !rightContent) ? 13 : 10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) : <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>
     </FamilyGrid>
-  </div>
+  </div>,
+)
 
 FamilyLayout.propTypes = {
   fieldDisplay: PropTypes.func,
@@ -210,9 +219,9 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const SearchLink = ({ family, disabled, children }) => (
+const SearchLink = React.memo(({ family, disabled, children }) => (
   <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
-)
+))
 
 SearchLink.propTypes = {
   family: PropTypes.object.isRequired,
@@ -220,13 +229,13 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
-const DiscoveryGenes = ({ project, familyGuid, genesById }) => {
+const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
   const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
     (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
   ) : null
-}
+})
 
 DiscoveryGenes.propTypes = {
   project: PropTypes.object.isRequired,
@@ -234,13 +243,16 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const Family = (
+const Family = React.memo((
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample, hidePedigree,
+    disableEdit,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
+
+  const isEditable = !disableEdit && project.canEdit
 
   const familyField = (field) => {
     const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
@@ -248,7 +260,7 @@ const Family = (
       values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
     return React.createElement(renderDetails.component || TextFieldView, {
       key: field.id,
-      isEditable: project.canEdit && field.canEdit,
+      isEditable: field.collaboratorEdit || (isEditable && field.canEdit),
       isPrivate: renderDetails.internal,
       fieldName: compact ? null : renderDetails.name,
       field: field.id,
@@ -261,18 +273,21 @@ const Family = (
     })
   }
 
-  const leftContent = [
-    <InlineHeader
+  let leftContent = null
+  if (!hidePedigree) {
+    const familyHeader = <InlineHeader
       key="name"
-      overrideInline={!compact}
       size="small"
       content={showFamilyPageLink ?
         <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
         family.displayName
       }
-    />,
-    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
-  ]
+    />
+    leftContent = [
+      compact ? familyHeader : <div key="header">{familyHeader}</div>,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
+    ]
+  }
 
   const rightContent = showVariantDetails ? [
     <div key="variants">
@@ -306,7 +321,7 @@ const Family = (
     leftContent={leftContent}
     rightContent={rightContent}
   />
-}
+})
 
 export { Family as FamilyComponent }
 
@@ -319,10 +334,12 @@ Family.propTypes = {
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
   showFamilyPageLink: PropTypes.bool,
+  hidePedigree: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   genesById: PropTypes.object,
   hasActiveVariantSample: PropTypes.bool,
+  disableEdit: PropTypes.bool,
 }
 
 

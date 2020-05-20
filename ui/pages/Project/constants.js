@@ -1,6 +1,5 @@
 /* eslint-disable no-multi-spaces */
 
-import { hasPhenotipsDetails } from 'shared/components/panel/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
   FAMILY_STATUS_SOLVED,
@@ -50,6 +49,9 @@ export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
 const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
 const CASE_REVIEW_STATUS_WAITLIST = 'W'
 const CASE_REVIEW_STATUS_NMI_REVIEW = 'N'
+const CASE_REVIEW_STATUS_LOST = 'L'
+const CASE_REVIEW_STATUS_INACTIVE = 'V'
+
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -60,6 +62,8 @@ export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
   { value: CASE_REVIEW_STATUS_NMI_REVIEW,                  name: 'NMI Review',            color: '#3827c1' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
+  { value: CASE_REVIEW_STATUS_LOST,                        name: 'Lost To Follow-Up',     color: '#eb7f2f' },
+  { value: CASE_REVIEW_STATUS_INACTIVE,                    name: 'Inactive',              color: '#6c6d85' },
 ]
 
 export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
@@ -155,18 +159,14 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Data Status:',
     name: 'Phenotypes Entered',
     createFilter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).some(
-        phenotipsData => hasPhenotipsDetails(phenotipsData),
-      ),
+      family.individualGuids.some(individualGuid => (individualsByGuid[individualGuid].features || []).length > 0),
   },
   {
     value: SHOW_NO_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'No Phenotypes Entered',
     createFilter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).every(
-        phenotipsData => !hasPhenotipsDetails(phenotipsData),
-      ),
+      family.individualGuids.every(individualGuid => (individualsByGuid[individualGuid].features || []).length < 1),
   },
   { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
   {

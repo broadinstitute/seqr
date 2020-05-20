@@ -10,8 +10,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, _slugify, CAN_EDIT, IS_OWNER
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
@@ -20,10 +20,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
-    delete_phenotips_patient
-from seqr.views.utils.individual_utils import export_individuals
-from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
@@ -53,9 +50,6 @@ def create_project_handler(request):
 
     description = request_json.get('description', '')
     genome_version = request_json.get('genomeVersion')
-
-    #if not created:
-    #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
     project = _create_project(name, description=description, genome_version=genome_version, user=request.user)
 
@@ -154,7 +148,7 @@ def project_page_data(request, project_guid):
 
     gene_ids = set()
     for tag in project_json['discoveryTags']:
-        gene_ids.update(tag['transcripts'].keys())
+        gene_ids.update(tag.get('transcripts', {}).keys())
 
     response.update({
         'projectsByGuid': {project_guid: project_json},
@@ -163,39 +157,16 @@ def project_page_data(request, project_guid):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_individuals_handler(request, project_guid):
-    """Export project Individuals table.
-
-    Args:
-        project_guid (string): GUID of the project for which to export individual data
-    """
-
-    file_format = request.GET.get('file_format', 'tsv')
-    include_phenotypes = bool(request.GET.get('include_phenotypes'))
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    # get all individuals in this project
-    individuals = Individual.objects.filter(family__project=project).order_by('family__family_id', 'affected')
-
-    filename_prefix = "%s_individuals" % _slugify(project.name)
-
-    return export_individuals(
-        filename_prefix,
-        individuals,
-        file_format,
-        include_hpo_terms_present=include_phenotypes,
-        include_hpo_terms_absent=include_phenotypes,
-    )
-
-
 def _get_project_child_entities(project, user):
     families_by_guid = _retrieve_families(project.guid, user)
     individuals_by_guid, individual_models = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid, individual_models)
+    samples_by_guid = _retrieve_samples(
+        project.guid, individuals_by_guid, Sample.objects.filter(individual__in=individual_models))
+    igv_samples_by_guid = _retrieve_samples(
+        project.guid, individuals_by_guid, IgvSample.objects.filter(individual__in=individual_models),
+        sample_guid_key='igvSampleGuids')
     mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
     locus_lists = get_json_for_locus_lists(LocusList.objects.filter(projects__id=project.id), user)
@@ -204,6 +175,7 @@ def _get_project_child_entities(project, user):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'igvSamplesByGuid': igv_samples_by_guid,
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': analysis_groups_by_guid,
         'mmeSubmissionsByGuid': mme_submissions_by_guid,
@@ -244,11 +216,13 @@ def _retrieve_individuals(project_guid, user):
 
     individual_models = Individual.objects.filter(family__project__guid=project_guid)
 
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
+    individuals = _get_json_for_individuals(
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True)
 
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()
+        i['igvSampleGuids'] = set()
         i['mmeSubmissionGuid'] = None
         individual_guid = i['individualGuid']
         individuals_by_guid[individual_guid] = i
@@ -256,7 +230,7 @@ def _retrieve_individuals(project_guid, user):
     return individuals_by_guid, individual_models
 
 
-def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
+def _retrieve_samples(project_guid, individuals_by_guid, sample_models, sample_guid_key='sampleGuids'):
     """Retrieves sample metadata for the given project.
 
         Args:
@@ -266,8 +240,6 @@ def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
-    sample_models = Sample.objects.filter(individual__in=individual_models)
-
     samples = get_json_for_samples(sample_models, project_guid=project_guid)
 
     samples_by_guid = {}
@@ -276,7 +248,7 @@ def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
         samples_by_guid[sample_guid] = s
 
         individual_guid = s['individualGuid']
-        individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
+        individuals_by_guid[individual_guid][sample_guid_key].add(sample_guid)
 
     return samples_by_guid
 
@@ -378,13 +350,6 @@ def _create_project(name, description=None, genome_version=None, user=None):
 
     project, _ = Project.objects.get_or_create(**project_args)
 
-    if PHENOTIPS_SERVER:
-        try:
-            _enable_phenotips_for_project(project)
-        except Exception as e:
-            logger.error("Unable to create patient in PhenoTips. Make sure PhenoTips is running: %s", e)
-            raise
-
     return project
 
 
@@ -394,30 +359,11 @@ def _delete_project(project):
     Args:
         project (object): Django ORM model for the project to delete
     """
-
+    IgvSample.objects.filter(individual__family__project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
 
-    individuals = Individual.objects.filter(family__project=project)
-    for individual in individuals:
-        delete_phenotips_patient(project, individual)
-    individuals.delete()
+    Individual.objects.filter(family__project=project).delete()
 
     Family.objects.filter(project=project).delete()
 
     project.delete()
-
-
-def _enable_phenotips_for_project(project):
-    """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
-    have edit permissions for patients in the project).
-    """
-    project.phenotips_user_id = _slugify(project.name)
-
-    # view-only user
-    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    create_phenotips_user(username, password)
-
-    # user with edit permissions
-    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    create_phenotips_user(username, password)
-    project.save()

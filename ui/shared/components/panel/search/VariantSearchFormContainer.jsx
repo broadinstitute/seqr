@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 
-const VariantSearchFormContainer = ({ history, saveSearch, resultsPath, children, ...formProps }) => {
+const VariantSearchFormContainer = React.memo(({ history, saveSearch, resultsPath, children, ...formProps }) => {
 
   const search = (searchParams) => {
     saveSearch(searchParams, history.push, resultsPath)
@@ -21,7 +21,7 @@ const VariantSearchFormContainer = ({ history, saveSearch, resultsPath, children
       {children}
     </ReduxFormWrapper>
   )
-}
+})
 
 
 VariantSearchFormContainer.propTypes = {

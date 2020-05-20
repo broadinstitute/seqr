@@ -15,7 +15,7 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
-const Footer = ({ version }) =>
+const Footer = React.memo(({ version }) =>
   <Table>
     <Table.Header>
       <Table.Row>
@@ -37,7 +37,8 @@ const Footer = ({ version }) =>
         <TableHeaderCell width={2} />
       </Table.Row>
     </Table.Header>
-  </Table>
+  </Table>,
+)
 
 Footer.propTypes = {
   version: PropTypes.string,

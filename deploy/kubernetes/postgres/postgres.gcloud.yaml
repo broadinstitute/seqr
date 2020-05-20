@@ -67,6 +67,6 @@ spec:
             - postgres
         volumeMounts:
         - name: postgres-dbpath
-          mountPath: /var/lib/postgresql
+          mountPath: /var/lib/postgresql/data
       restartPolicy: Always
       dnsPolicy: ClusterFirst

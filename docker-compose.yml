@@ -1,0 +1,109 @@
+version: '2.4'
+
+services:
+  postgres:
+    image: gcr.io/seqr-project/postgres:gcloud-prod
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -h postgres -U postgres
+      interval: 5s
+      timeout: 10s
+      retries: 100
+
+
+  redis:
+    image: gcr.io/seqr-project/redis:gcloud-prod
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 5s
+      retries: 100
+
+
+  elasticsearch:
+    image: gcr.io/seqr-project/elasticsearch:gcloud-prod
+    ports:
+      - 9200:9200
+    volumes:
+      - ./data/elasticsearch:/elasticsearch-data
+    healthcheck:
+      test: bash -c "curl -s elasticsearch:9200 | grep search"
+      interval: 3s
+      timeout: 5s
+      retries: 100
+
+
+  kibana:
+    image: gcr.io/seqr-project/kibana:gcloud-prod
+    ports:
+      - 5601:5601
+    environment:
+      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
+      - ELASTICSEARCH_SERVICE_PORT=9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s kibana:5601 | grep kibana"
+      interval: 3s
+      timeout: 5s
+      retries: 100
+
+
+  phenotips:
+    image: gcr.io/seqr-project/phenotips:gcloud-prod
+    ports:
+      - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s 'http://localhost:8080/bin/login/XWiki/XWikiLogin' | grep phenotips"
+      interval: 5s
+      timeout: 10s
+      retries: 100
+
+
+  seqr:
+    image: gcr.io/seqr-project/seqr:gcloud-prod
+    ports:
+      - 80:8000
+    environment:
+      - SEQR_GIT_BRANCH=dev
+      - PYTHONPATH=/seqr
+      - STATIC_MEDIA_DIR=/seqr_static_files
+      - POSTGRES_SERVICE_HOSTNAME=postgres
+      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
+      - PHENOTIPS_SERVICE_HOSTNAME=phenotips
+      - REDIS_SERVICE_HOSTNAME=redis
+      - PGHOST=postgres
+      - PGUSER=postgres
+      - GUNICORN_WORKER_THREADS=4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      phenotips:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "curl -s 'http://localhost:8000' | grep html"
+
+
+  pipeline-runner:
+    image: gcr.io/seqr-project/pipeline-runner:gcloud-prod
+    volumes:
+      - ./data/vep_data:/vep_data
+      - ./data/input_vcfs:/input_vcfs
+      - ~/.config:/root/.config
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+

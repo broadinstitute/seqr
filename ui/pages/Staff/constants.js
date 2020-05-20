@@ -2,72 +2,62 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
-import { parseHgvs } from 'shared/components/panel/variants/Annotations'
-import {
-  INDIVIDUAL_FIELD_CONFIGS,
-  INDIVIDUAL_HPO_EXPORT_DATA,
-  FAMILY_FIELD_CODED_PHENOTYPE,
-  FAMILY_FIELD_ID,
-  successStoryTypeDisplay,
-  INDIVIDUAL_FIELD_ID,
-  INDIVIDUAL_FIELD_PATERNAL_ID,
-  INDIVIDUAL_FIELD_MATERNAL_ID,
-  INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED,
-} from 'shared/utils/constants'
+import { successStoryTypeDisplay } from 'shared/utils/constants'
 
 export const STAFF_SEARCH_FORM_NAME = 'customVariantSearch'
 export const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'
 
-const PROJECT_ID_FIELD = 'Project_ID'
-
-const FORMAT_FIELDS = {
-  [PROJECT_ID_FIELD]: row =>
-    <Link to={`/project/${row.projectGuid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
-  [FAMILY_FIELD_ID]: row =>
-    <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
-}
-
-const PROJECT_ID_COL = { name: PROJECT_ID_FIELD }
-const CODED_PHENPOTYPE_COL = { name: FAMILY_FIELD_CODED_PHENOTYPE, content: 'Phenotype', style: { minWidth: '200px' } }
-
-const INDIVIDUAL_COLUMNS = [
-  FAMILY_FIELD_ID,
-  INDIVIDUAL_FIELD_ID,
-  INDIVIDUAL_FIELD_PATERNAL_ID,
-  INDIVIDUAL_FIELD_MATERNAL_ID,
-  INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED,
-].map((field) => {
-  const { label, format } = INDIVIDUAL_FIELD_CONFIGS[field]
-  return {
-    name: field,
-    content: label.replace(' ', '_'),
-    format: format ? row => format(row[field]) : null,
-  }
-})
-
-const HPO_COLUMNS = INDIVIDUAL_HPO_EXPORT_DATA.map(({ field, header, format }) => (
-  {
-    name: header,
-    content: header.replace(/[()]/g, '').split(' ').map(word => word[0].toUpperCase() + word.slice(1)).join('_'),
-    format: row => format(row[field]),
-    style: { minWidth: '400px' },
-  }
-))
+const PROJECT_ID_FIELD = 'project_id'
+const FAMILY_FIELD_ID = 'family_id'
 
 export const CORE_ANVIL_COLUMNS = [
-  PROJECT_ID_COL, ...INDIVIDUAL_COLUMNS, CODED_PHENPOTYPE_COL, ...HPO_COLUMNS,
-].map(({ name, content, format, ...props }) => ({
-  name,
-  content: content || name,
-  format: format || FORMAT_FIELDS[name],
-  noFormatExport: Boolean(FORMAT_FIELDS[name]),
-  ...props,
-}))
+  { name: 'subject_id' },
+  {
+    name: PROJECT_ID_FIELD,
+    format: row =>
+      <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
+    noFormatExport: true,
+  },
+  {
+    name: FAMILY_FIELD_ID,
+    format: row =>
+      <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
+    noFormatExport: true,
+  },
+  { name: 'pmid_id' },
+  { name: 'dbgap_submission' },
+  { name: 'dbgap_study_id' },
+  { name: 'dbgap_subject_id' },
+  { name: 'multiple_datasets' },
+  { name: 'sex' },
+  { name: 'ancestry' },
+  { name: 'phenotype_group' },
+  { name: 'disease_id' },
+  { name: 'disease_description' },
+  { name: 'affected_status' },
+  { name: 'onset_category' },
+  { name: 'hpo_present', style: { minWidth: '400px' } },
+  { name: 'hpo_absent', style: { minWidth: '400px' } },
+  { name: 'phenotype_description', style: { minWidth: '200px' } },
+  { name: 'solve_state' },
+  { name: 'MME' },
+  { name: 'sample_id' },
+  { name: 'dbgap_sample_id' },
+  { name: 'sample_provider' },
+  { name: 'data_type' },
+  { name: 'date_data_generation' },
+  { name: 'paternal_id' },
+  { name: 'maternal_id' },
+  { name: 'consanguinity' },
+  { name: 'family_history' },
+]
 
 export const VARIANT_ANVIL_COLUMNS = [
   'Gene',
+  'Gene_Class',
+  'novel_mendelian_gene',
+  'phenotype_class',
+  'inheritance_description',
   'Zygosity',
   'Chrom',
   'Pos',
@@ -76,12 +66,9 @@ export const VARIANT_ANVIL_COLUMNS = [
   'hgvsc',
   'hgvsp',
   'Transcript',
+  'sv_name',
+  'sv_type',
 ]
-
-export const VARIANT_ANVIL_COLUMN_FORMATS = {
-  hgvsc: parseHgvs,
-  hgvsp: parseHgvs,
-}
 
 const formatT0 = row => new Date(row.t0).toISOString().slice(0, 10)
 const pedigreeImageFamily = row => ({ pedigreeImage: row.extras_pedigree_url })

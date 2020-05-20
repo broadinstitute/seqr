@@ -26,6 +26,11 @@ export const GENOME_VERSION_FIELD = {
   name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
 }
 
+export const GENOME_VERSION_DISPLAY_LOOKUP = {
+  GRCh37: 'hg19',
+  GRCh38: 'hg38',
+}
+
 // PROJECT FIELDS
 
 export const EDITABLE_PROJECT_FIELDS = [
@@ -50,8 +55,8 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 // SAMPLES
 
-export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_SV_CALLS = 'SV'
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
@@ -144,6 +149,7 @@ export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
 export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_MME_NOTES = 'mmeNotes'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
@@ -175,6 +181,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes' },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView },
   [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView },
   [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView },
@@ -185,12 +192,13 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
 export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true, collaboratorEdit: true },
+  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true, collaboratorEdit: true },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
   { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_MME_NOTES, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
   { id: FAMILY_FIELD_OMIM_NUMBER, canEdit: true },
   { id: FAMILY_FIELD_PMIDS, canEdit: true },
@@ -260,22 +268,14 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
 export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
-    field: 'phenotipsData',
-    format: phenotipsData => (
-      (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => `${feature.id} (${feature.label})`).join('; ') :
-        ''
-    ),
+    field: 'features',
+    format: features => (features ? features.map(feature => `${feature.id} (${feature.label})`).join('; ') : ''),
     description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
   },
   {
     header: 'HPO Terms (absent)',
-    field: 'phenotipsData',
-    format: phenotipsData => (
-      (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => `${feature.id} (${feature.label})`).join('; ') :
-        ''
-    ),
+    field: 'absentFeatures',
+    format: features => (features ? features.map(feature => `${feature.id} (${feature.label})`).join('; ') : ''),
     description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
 ]
@@ -284,13 +284,9 @@ export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) =
   const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
     (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
   )]
-  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
-    sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.loadedDate,
-  )
+  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
   return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
-
-export const isActiveVariantSample = sample => sample.isActive && sample.datasetType === DATASET_TYPE_VARIANT_CALLS
 
 // CLINVAR
 
@@ -399,6 +395,7 @@ export const VEP_GROUP_FRAMESHIFT = 'frameshift'
 export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
+export const VEP_GROUP_SV = 'structural'
 
 
 const ORDERED_VEP_CONSEQUENCES = [
@@ -435,6 +432,18 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'frameshift_variant',
     group: VEP_GROUP_FRAMESHIFT,
     so: 'SO:0001589',
+  },
+  {
+    description: 'A large deletion',
+    text: 'Deletion',
+    value: 'DEL',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A large duplication',
+    text: 'Duplication',
+    value: 'DUP',
+    group: VEP_GROUP_SV,
   },
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
@@ -672,8 +681,9 @@ const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 
 
 const clinsigSeverity = (variant, user) => {
-  const clinvarSignificance = variant.clinvar.clinicalSignificance && variant.clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.isStaff && variant.hgmd.class
+  const { clinvar = {}, hgmd = {} } = variant
+  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
+  const hgmdSignificance = user.isStaff && hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {
@@ -821,7 +831,7 @@ export const MUTTASTER_MAP = {
   D: { value: 'disease causing' },
 }
 
-export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) => {
+export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
     return (Object.entries(transcripts).find(entry =>
       entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),

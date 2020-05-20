@@ -17,7 +17,7 @@ const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
  Style menu bar is based on this example:
  https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
  */
-class RichTextEditor extends React.Component {
+class RichTextEditor extends React.PureComponent {
   static propTypes = {
     value: PropTypes.string,
     onChange: PropTypes.func,
@@ -113,7 +113,7 @@ class RichTextEditor extends React.Component {
   }
 }
 
-const InlineStyleButtonPanel = props => (
+const InlineStyleButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
     {
       RichTextEditor.INLINE_STYLES.map(type =>
@@ -127,14 +127,14 @@ const InlineStyleButtonPanel = props => (
           toggle
         />)
     }
-  </div>)
+  </div>))
 
 InlineStyleButtonPanel.propTypes = {
   currentInlineStyle: PropTypes.object.isRequired,
   onButtonClick: PropTypes.func.isRequired,
 }
 
-const BlockTypeButtonPanel = props => (
+const BlockTypeButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
     {
       RichTextEditor.BLOCK_TYPES.map(type =>
@@ -149,7 +149,7 @@ const BlockTypeButtonPanel = props => (
         />)
     }
   </div>
-)
+))
 
 BlockTypeButtonPanel.propTypes = {
   currentBlockType: PropTypes.string.isRequired,

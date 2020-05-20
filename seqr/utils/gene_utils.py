@@ -56,8 +56,10 @@ def parse_locus_list_items(request_json):
     intervals = []
     gene_ids = set()
     gene_symbols = set()
-    for item in raw_items.replace(',', ' ').split():
+    for item in raw_items.replace(',', ' ').replace('\t', '<TAB>').split():
         interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)', item)
+        if not interval_match:
+            interval_match = re.match('(?P<chrom>\w+)<TAB>(?P<start>\d+)<TAB>(?P<end>\d+)', item)
         if interval_match:
             interval = interval_match.groupdict()
             try:
@@ -73,9 +75,9 @@ def parse_locus_list_items(request_json):
                     chrom=interval.get('chrom'), start=interval.get('start'), end=interval.get('end')
                 ))
         elif item.upper().startswith('ENSG'):
-            gene_ids.add(item)
+            gene_ids.add(item.replace('<TAB>', ''))
         else:
-            gene_symbols.add(item)
+            gene_symbols.add(item.replace('<TAB>', ''))
 
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
     invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]

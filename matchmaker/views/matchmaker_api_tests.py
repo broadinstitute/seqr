@@ -177,7 +177,10 @@ class MatchmakerAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000135953'}
         )
-        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000001_2103343353_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
+        )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
@@ -284,7 +287,6 @@ class MatchmakerAPITest(TestCase):
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
                 'species': 'NCBITaxon:9606',
-                'sex': 'MALE',
                 'features': [
                     {'id': 'HP:0001252', 'observed': 'yes'},
                     {'id': 'HP:0001263', 'observed': 'no'},
@@ -298,6 +300,7 @@ class MatchmakerAPITest(TestCase):
                     },
                     'zygosity': 1
                 }],
+                'sex': 'MALE',
             },
         }
         expected_body = json.dumps(dict(_disclaimer=MME_DISCLAIMER, **expected_patient_body))
