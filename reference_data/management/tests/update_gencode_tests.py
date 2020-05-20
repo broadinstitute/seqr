@@ -34,34 +34,9 @@ GTF_DATA = [
 ]
 
 
-def _get_gene_infos(gene):
-    return {
-        'start_grch37': gene.start_grch37,
-        'chrom_grch37': gene.chrom_grch37,
-        'coding_region_size_grch37': gene.coding_region_size_grch37,
-        'gencode_release': gene.gencode_release,
-        'gencode_gene_type': gene.gencode_gene_type,
-        'gene_id': gene.gene_id,
-        'gene_symbol': gene.gene_symbol,
-        'end_grch37': gene.end_grch37,
-        'strand_grch37': gene.strand_grch37
-    }
-
-
-def _get_transcript_info(trans):
-    return {
-        'start_grch37': trans.start_grch37,
-        'end_grch37': trans.end_grch37,
-        'strand_grch37': trans.strand_grch37,
-        'chrom_grch37': trans.chrom_grch37,
-        'gene_id': trans.gene.gene_id,
-    }
-
-
 class UpdateGencodeTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
-
 
     def setUp(self):
         # Create a temporary directory
@@ -172,17 +147,25 @@ class UpdateGencodeTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000223972'))
-        self.assertDictEqual(gene_info, {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 27, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
-        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000284662'))
-        self.assertDictEqual(gene_info, {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
-
+        gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000223972')
+        self.assertEqual(gene_info.gencode_release, 27)
+        gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000284662')
+        self.assertEqual(gene_info.start_grch37, 621059)
+        self.assertEqual(gene_info.chrom_grch37, u'1')
+        self.assertEqual(gene_info.coding_region_size_grch37, 936)
+        self.assertEqual(gene_info.gencode_release, 31)
+        self.assertEqual(gene_info.gencode_gene_type, u'protein_coding')
+        self.assertEqual(gene_info.gene_symbol, u'OR4F16')
 
         self.assertEqual(TranscriptInfo.objects.all().count(), 2)
-        trans_info = _get_transcript_info(TranscriptInfo.objects.get(transcript_id = 'ENST00000456328'))
-        self.assertDictEqual(trans_info, {'start_grch37': 11869, 'end_grch37': 14409, 'strand_grch37': u'+', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000223972'})
-        trans_info = _get_transcript_info(TranscriptInfo.objects.get(transcript_id = 'ENST00000332831'))
-        self.assertDictEqual(trans_info, {'start_grch37': 621059, 'end_grch37': 622053, 'strand_grch37': u'-', 'chrom_grch37': u'1', 'gene_id': u'ENSG00000284662'})
+        trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000456328')
+        self.assertEqual(trans_info.gene.gene_id, u'ENSG00000223972')
+        trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000332831')
+        self.assertEqual(trans_info.start_grch37, 621059)
+        self.assertEqual(trans_info.end_grch37, 622053)
+        self.assertEqual(trans_info.strand_grch37, u'-')
+        self.assertEqual(trans_info.chrom_grch37, u'1')
+        self.assertEqual(trans_info.gene.gene_id, u'ENSG00000284662')
 
         # Test normal command function with a --reset option
         mock_logger.reset_mock()
@@ -201,20 +184,16 @@ class UpdateGencodeTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        gene_infos = {gene.gene_id: {
-            'start_grch37': gene.start_grch37,
-            'chrom_grch37': gene.chrom_grch37,
-            'coding_region_size_grch37': gene.coding_region_size_grch37,
-            'gencode_release': gene.gencode_release,
-            'gencode_gene_type': gene.gencode_gene_type,
-            'gene_id': gene.gene_id,
-            'gene_symbol': gene.gene_symbol,
-            'end_grch37': gene.end_grch37,
-            'strand_grch37': gene.strand_grch37
-        } for gene in GeneInfo.objects.all()}
         self.assertEqual(GeneInfo.objects.all().count(), 2)
-        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000223972'))
-        self.assertDictEqual(gene_info, {'start_grch37': 11869, 'chrom_grch37': u'1', 'coding_region_size_grch37': 0, 'gencode_release': 31, 'gencode_gene_type': u'transcribed_unprocessed_pseudogene', 'gene_id': u'ENSG00000223972', 'gene_symbol': u'DDX11L1', 'end_grch37': 14409, 'strand_grch37': u'+'})
-        gene_info = _get_gene_infos(GeneInfo.objects.get(gene_id = 'ENSG00000284662'))
-        self.assertDictEqual(gene_info, {'start_grch37': 621059, 'chrom_grch37': u'1', 'coding_region_size_grch37': 936, 'gencode_release': 31, 'gencode_gene_type': u'protein_coding', 'gene_id': u'ENSG00000284662', 'gene_symbol': u'OR4F16', 'end_grch37': 622053, 'strand_grch37': u'-'})
-
+        gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000223972')
+        self.assertEqual(gene_info.gencode_release, 31)
+        gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000284662')
+        self.assertEqual(gene_info.start_grch37, 621059)
+        self.assertEqual(gene_info.chrom_grch37, u'1')
+        self.assertEqual(gene_info.coding_region_size_grch37, 936)
+        self.assertEqual(gene_info.gencode_release, 31)
+        self.assertEqual(gene_info.gencode_gene_type, u'protein_coding')
+        self.assertEqual(gene_info.gene_id, u'ENSG00000284662')
+        self.assertEqual(gene_info.gene_symbol, u'OR4F16')
+        self.assertEqual(gene_info.end_grch37, 622053)
+        self.assertEqual(gene_info.strand_grch37, u'-')
