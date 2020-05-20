@@ -11,7 +11,7 @@ import json
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet , success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
+from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet, success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
 from seqr.views.utils.test_utils import _check_login
 from seqr.models import Individual
 
@@ -695,3 +695,45 @@ class StaffAPITest(TestCase):
         self.assertDictEqual(indiv.filter_flags, {u'contamination': u'2.79E+00'})
         self.assertDictEqual(indiv.pop_platform_filters, {u'n_insertion': '38051', u'r_insertion_deletion': '1.8064E+00'})
         self.assertEqual(indiv.population, 'OTH')
+
+    @responses.activate
+    def test_kibana_proxy(self):
+        url = '/api/kibana/random/path'
+        _check_login(self, url)
+
+        response_args = {
+            'stream': True,
+            'body': 'Test response',
+            'content_type': 'text/custom',
+            'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
+        }
+        proxy_url = 'http://localhost:5601{}'.format(url)
+        responses.add(responses.GET, proxy_url, status=200, **response_args)
+        responses.add(responses.POST, proxy_url, status=201, **response_args)
+
+        response = self.client.get(url, HTTP_TEST_HEADER='some/value')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, 'Test response')
+        self.assertEqual(response.get('content-type'), 'text/custom')
+        self.assertEqual(response.get('x-test-header'), 'test')
+        self.assertIsNone(response.get('keep-alive'))
+
+        data = json.dumps({'content': 'Test Body'})
+        response = self.client.post(url, content_type='application/json', data=data)
+        self.assertEqual(response.status_code, 201)
+
+        self.assertEqual(len(responses.calls), 2)
+
+        get_request = responses.calls[0].request
+        self.assertEqual(get_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(get_request.headers['Test-Header'], 'some/value')
+
+        post_request = responses.calls[1].request
+        self.assertEqual(post_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(post_request.headers['Content-Type'], 'application/json')
+        self.assertEqual(post_request.headers['Content-Length'], '24')
+        self.assertEqual(post_request.body, data)
+
+        # Test with connection error
+        response = self.client.get('{}/bad_path'.format(url))
+        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
