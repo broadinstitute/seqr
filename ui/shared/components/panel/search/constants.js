@@ -9,6 +9,7 @@ import {
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_OTHER,
+  VEP_GROUP_SV,
   GROUPED_VEP_CONSEQUENCES,
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
@@ -238,11 +239,16 @@ export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_OTHER,
+  VEP_GROUP_SV,
 ]
-export const HIGH_IMPACT_GROUPS = [
+export const HIGH_IMPACT_GROUPS_NO_SV = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
+]
+export const HIGH_IMPACT_GROUPS = [
+  ...HIGH_IMPACT_GROUPS_NO_SV,
+  VEP_GROUP_SV,
 ]
 export const MODERATE_IMPACT_GROUPS = [
   VEP_GROUP_MISSENSE,
@@ -286,6 +292,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
+export const SV_CALLSET_FREQUENCY = 'sv_callset'
 export const FREQUENCIES = [
   {
     name: 'g1k',
@@ -322,6 +329,12 @@ export const FREQUENCIES = [
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+  },
+  {
+    name: SV_CALLSET_FREQUENCY,
+    label: 'SV Callset',
+    homHemi: false,
+    labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
   },
 ]
 
@@ -387,6 +400,7 @@ export const ALL_QUALITY_FILTER = {
     vcf_filter: null,
     min_gq: 0,
     min_ab: 0,
+    min_qs: 0,
   },
 }
 
@@ -398,6 +412,7 @@ export const QUALITY_FILTER_OPTIONS = [
       vcf_filter: 'pass',
       min_gq: 20,
       min_ab: 25,
+      min_qs: 100,
     },
   },
   {
@@ -406,6 +421,7 @@ export const QUALITY_FILTER_OPTIONS = [
       vcf_filter: 'pass',
       min_gq: 0,
       min_ab: 0,
+      min_qs: 10,
     },
   },
 ]

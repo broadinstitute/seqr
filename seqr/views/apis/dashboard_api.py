@@ -8,7 +8,7 @@ from django.db import models
 from django.contrib.auth.decorators import login_required
 
 from seqr.models import ProjectCategory, Sample, Family
-from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
@@ -62,8 +62,7 @@ def _get_projects_json(user):
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
         projects_by_guid[project_guid]['analysisStatusCounts'][agg['analysis_status']] = agg['count']
 
-    sample_type_status_counts = Sample.objects.filter(
-        individual__family__project__in=projects, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
+    sample_type_status_counts = Sample.objects.filter(individual__family__project__in=projects, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
     ).values(
         'individual__family__project__guid', 'sample_type',
     ).annotate(count=models.Count('individual_id', distinct=True))

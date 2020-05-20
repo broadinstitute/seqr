@@ -161,6 +161,7 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/airtable_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
     ]) % settings, errors_to_ignore=["already exists"])
 
@@ -538,7 +539,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
     # make sure namespace exists
-    if "init-cluster" not in components:
+    if "init-cluster" not in components and not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
 
     # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS

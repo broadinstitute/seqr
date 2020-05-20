@@ -2,9 +2,9 @@ import elasticsearch
 from elasticsearch_dsl import Q
 import logging
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -18,7 +18,7 @@ class InvalidIndexException(Exception):
 
 
 def get_es_client(timeout=60):
-    return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout)
+    return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
 
 
 def get_index_metadata(index_name, client):
@@ -28,13 +28,13 @@ def get_index_metadata(index_name, client):
         return cached_metadata
 
     try:
-        mappings = client.indices.get_mapping(index=index_name, doc_type=[VARIANT_DOC_TYPE])
+        mappings = client.indices.get_mapping(index=index_name)
     except Exception as e:
         raise InvalidIndexException('Error accessing index "{}": {}'.format(
             index_name, e.error if hasattr(e, 'error') else e.message))
     index_metadata = {}
     for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
+        variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE) or mapping['mappings'].get(SV_DOC_TYPE, {})
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
     safe_redis_set_json(cache_key, index_metadata)
@@ -43,7 +43,7 @@ def get_index_metadata(index_name, client):
 
 def get_single_es_variant(families, variant_id, return_all_queried_families=False):
     variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families
+        families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
@@ -78,7 +78,11 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
     if invalid_items:
         raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
 
-    es_search = es_search_cls(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
+    es_search = es_search_cls(
+        search_model.families.all(),
+        previous_search_results=previous_search_results,
+        skip_unaffected_families=search.get('inheritance'),
+    )
 
     if search.get('customQuery'):
         custom_q = search['customQuery']

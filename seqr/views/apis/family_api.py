@@ -16,7 +16,7 @@ from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
-from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
+from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -141,7 +141,8 @@ def update_family_assigned_analyst(request, family_guid):
         family_guid (string): GUID of the family.
     """
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_EDIT)
+    # assigned_analyst can be edited by anyone with access to the project
+    check_permissions(family.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     assigned_analyst_username = request_json.get('assigned_analyst_username')
@@ -173,7 +174,8 @@ def update_family_analysed_by(request, family_guid):
     """
 
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_EDIT)
+    # analysed_by can be edited by anyone with access to the project
+    check_permissions(family.project, request.user, CAN_VIEW)
 
     FamilyAnalysedBy.objects.create(family=family, created_by=request.user)
 

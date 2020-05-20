@@ -70,13 +70,14 @@ const mapDispatchToProps = (dispatch) => {
 
 const EditPedigreeImageButton = connect(null, mapDispatchToProps)(BaseEditPedigreeImageButton)
 
-const BaseDeletePedigreeImageButton = ({ onSubmit, onSuccess }) =>
+const BaseDeletePedigreeImageButton = React.memo(({ onSubmit, onSuccess }) =>
   <DeleteButton
     onSubmit={onSubmit}
     onSuccess={onSuccess}
     confirmDialog="Are you sure you want to delete the pedigree image for this family?"
     buttonText="Delete Pedigree Image"
-  />
+  />,
+)
 
 BaseDeletePedigreeImageButton.propTypes = {
   onSubmit: PropTypes.func,
@@ -96,7 +97,7 @@ const mapDeleteDispatchToProps = (dispatch, ownProps) => {
 
 const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
 
-const PedigreeImagePanel = (props) => {
+const PedigreeImagePanel = React.memo((props) => {
   if (!props.family.pedigreeImage) {
     return props.isEditable && !props.compact ?
       <EditPedigreeImageButton family={props.family} buttonText="Upload Pedigree" /> : null
@@ -129,7 +130,7 @@ const PedigreeImagePanel = (props) => {
       <DeletePedigreeImageButton familyGuid={props.family.familyGuid} modalId={modalId} />
     </Modal>
   )
-}
+})
 
 PedigreeImagePanel.propTypes = {
   family: PropTypes.object.isRequired,

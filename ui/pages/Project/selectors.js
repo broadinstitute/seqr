@@ -7,10 +7,10 @@ import {
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
   SHOW_ALL,
+  GENOME_VERSION_DISPLAY_LOOKUP,
   familyVariantSamples,
   getVariantMainTranscript,
   getVariantMainGeneId,
-  isActiveVariantSample,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -90,6 +90,26 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
     }), {}),
 )
 
+export const getProjectAnalysisGroupMmeSubmissions = createSelector(
+  getMmeSubmissionsByGuid,
+  getProjectAnalysisGroupFamiliesByGuid,
+  getProjectAnalysisGroupIndividualsByGuid,
+  (submissionsByGuid, familiesByGuid, individualsByGuid) =>
+    Object.values(individualsByGuid).reduce((acc, individual) => (
+      individual.mmeSubmissionGuid ? [
+        ...acc,
+        {
+          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes,
+          familyName: familiesByGuid[individual.familyGuid].displayName,
+          individualName: individual.displayName,
+          familyGuid: individual.familyGuid,
+          projectGuid: individual.projectGuid,
+          ...submissionsByGuid[individual.mmeSubmissionGuid],
+        },
+      ] : acc
+    ), []),
+)
+
 
 export const getIndividualTaggedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -150,7 +170,7 @@ export const getVisibleFamilies = createSelector(
       `${family.displayName};${family.familyId};${(family.assignedAnalyst || {}).fullName};${
         (family.assignedAnalyst || {}).email};${family.analysedBy.map(({ createdBy }) =>
         `${createdBy.fullName}${createdBy.email}`)};${family.individualGuids.map(individualGuid =>
-        ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
+        (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';'),
       ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
     const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
 
@@ -223,7 +243,7 @@ export const getIndividualsExportData = createSelector(
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
       [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
-        isActiveVariantSample(samplesByGuid[sampleGuid]),
+        samplesByGuid[sampleGuid].isActive,
       ),
     }))], [],
   ),
@@ -337,7 +357,7 @@ export const getMmeDefaultContactEmail = createSelector(
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
 
-    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos }) => {
+    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, genomeVersion }) => {
       const savedVariant = Object.values(savedVariants).find(
         o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
           && o.familyGuids.includes(familyGuid)) || {}
@@ -345,8 +365,9 @@ export const getMmeDefaultContactEmail = createSelector(
       const mainTranscript = getVariantMainTranscript(savedVariant)
       const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
       const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
-
-      return `a ${genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${hgvs ? ` (${hgvs})` : ''}`
+      const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
+      const inheritance = genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'
+      return `a ${inheritance} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${hgvs ? ` (${hgvs})` : ''}`
     }).join(', ')
 
     const submittedPhenotypeList = (phenotypes || []).filter(

@@ -230,6 +230,7 @@ class Family(ModelWithGUID):
     ), default=list())
     success_story = models.TextField(null=True, blank=True)
 
+    mme_notes = models.TextField(null=True, blank=True)
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
 
@@ -265,7 +266,7 @@ class Family(ModelWithGUID):
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
             'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
+            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
@@ -285,6 +286,13 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
+
+
+class YearField(models.PositiveSmallIntegerField):
+    YEAR_CHOICES = [(y, y) for y in range(1900, 2030)] + [(0, 'Unknown')]
+
+    def __init__(self, *args, **kwargs):
+        super(YearField, self).__init__(*args, choices=YearField.YEAR_CHOICES, null=True)
 
 
 class Individual(ModelWithGUID):
@@ -316,12 +324,48 @@ class Individual(ModelWithGUID):
         ('P', 'Pending Results and Records'),
         ('N', 'NMI Review'),
         ('W', 'Waitlist'),
+        ('L', 'Lost To Follow-Up'),
+        ('V', 'Inactive'),
     )
+
+    ONSET_AGE_CHOICES = [
+        ('G', 'Congenital onset'),
+        ('E', 'Embryonal onset'),
+        ('F', 'Fetal onset'),
+        ('N', 'Neonatal onset'),
+        ('I', 'Infantile onset'),
+        ('C', 'Childhood onset'),
+        ('J', 'Juvenile onset'),
+        ('A', 'Adult onset'),
+        ('Y', 'Young adult onset'),
+        ('M', 'Middle age onset'),
+        ('L', 'Late onset'),
+    ]
+
+    INHERITANCE_CHOICES = [
+        ('S', 'Sporadic'),
+        ('D', 'Autosomal dominant inheritance'),
+        ('L', 'Sex-limited autosomal dominant'),
+        ('A', 'Male-limited autosomal dominant'),
+        ('C', 'Autosomal dominant contiguous gene syndrome'),
+        ('R', 'Autosomal recessive inheritance'),
+        ('G', 'Gonosomal inheritance'),
+        ('X', 'X-linked inheritance'),
+        ('Z', 'X-linked recessive inheritance'),
+        ('Y', 'Y-linked inheritance'),
+        ('W', 'X-linked dominant inheritance'),
+        ('F', 'Multifactorial inheritance'),
+        ('M', 'Mitochondrial inheritance'),
+    ]
 
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
     CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
+    ONSET_AGE_LOOKUP = dict(ONSET_AGE_CHOICES)
+    ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
+    INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
+    INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -348,6 +392,39 @@ class Individual(ModelWithGUID):
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
+    birth_year = YearField()
+    death_year = YearField()
+    onset_age = models.CharField(max_length=1, choices=ONSET_AGE_CHOICES, null=True)
+
+    maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
+    paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
+    consanguinity = models.NullBooleanField()
+    affected_relatives = models.NullBooleanField()
+    expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
+
+    # features are objects with an id field for HPO id and optional notes and qualifiers fields
+    features = JSONField(null=True)
+    absent_features = JSONField(null=True)
+    # nonstandard_features are objects with an id field for a free text label and optional
+    # notes, qualifiers, and categories fields
+    nonstandard_features = JSONField(null=True)
+    absent_nonstandard_features = JSONField(null=True)
+
+    # Disorders are a list of MIM IDs
+    disorders = ArrayField(models.CharField(max_length=10), null=True)
+
+    # genes are objects with required key gene (may be blank) and optional key comments
+    candidate_genes = JSONField(null=True)
+    rejected_genes = JSONField(null=True)
+
+    ar_fertility_meds = models.NullBooleanField()
+    ar_iui = models.NullBooleanField()
+    ar_ivf = models.NullBooleanField()
+    ar_icsi = models.NullBooleanField()
+    ar_surrogacy = models.NullBooleanField()
+    ar_donoregg = models.NullBooleanField()
+    ar_donorsperm = models.NullBooleanField()
+
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
@@ -363,7 +440,10 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'phenotips_data', 'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population'
+            'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population',
+            'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
+            'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',
+            'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',
@@ -372,66 +452,43 @@ class Individual(ModelWithGUID):
 
 
 class Sample(ModelWithGUID):
-    """This model represents a single data type (eg. Read Alignments, Variant Calls, or SV Calls) that's generated from
-    a single biological sample (eg. WES, WGS, RNA, Array).
+    """This model represents a single data type (eg. Variant Calls, or SV Calls) that's generated from a single
+    biological sample (eg. WES, WGS).
 
-    It stores metadata on both the dataset (fields: dataset_type, dataset_file_path, loaded_date, etc.) and the
-    underlying sample (fields: sample_type)
-
-    A sample can have be used to generate multiple types of analysis results, depending on the
-    sample type. For example, an exome, genome or rna sample can be used to generate an aligned bam,
-    a variant callset, CNV callset, etc., and an rna sample can also yield ASE, and splice junction
-    data.
-
-    For now, all meta-data on these analysis results is stored in the sample record, but
-    if versioning is needed for analysis results, it'll be necessary to create a separate table
-    for each analysis type, where records have a many(analysis-versions)-to-one(sample) relationship with this table.
+    It stores metadata on both the dataset (fields: dataset_type, loaded_date, etc.) and the underlying sample
+    (fields: sample_type, sample_id etc.)
     """
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
     SAMPLE_TYPE_RNA = 'RNA'
-    SAMPLE_TYPE_ARRAY = 'ARRAY'
     SAMPLE_TYPE_CHOICES = (
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
         (SAMPLE_TYPE_RNA, 'RNA'),
-        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
-        # ('ILLUMINA_INFINIUM_250K', ),
     )
 
-    DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
     DATASET_TYPE_SV_CALLS = 'SV'
-    DATASET_TYPE_BREAKPOINTS = 'BREAK'
-    DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
-    DATASET_TYPE_ASE = 'ASE'
     DATASET_TYPE_CHOICES = (
-        (DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
-        (DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
-        (DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        (DATASET_TYPE_ASE, 'Allele Specific Expression'),
     )
+    DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
-    individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
-    sample_type = models.CharField(max_length=20, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
-    dataset_type = models.CharField(max_length=20, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
+    sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    # only set for data stored in elasticsearch
-    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
-
-    # source file
-    dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
+    elasticsearch_index = models.TextField(db_index=True)
 
     # sample status
     is_active = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField(null=True, blank=True)
+    loaded_date = models.DateTimeField()
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -442,8 +499,25 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-           'dataset_file_path',
        ]
+
+
+class IgvSample(ModelWithGUID):
+    """This model represents a single data type that can be displayed in IGV (eg. Read Alignments) that's generated from
+    a single biological sample (eg. WES, WGS, RNA, Array).
+    """
+
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    file_path = models.TextField()
+
+    def __unicode__(self):
+        return self.file_path.split('/')[-1].split('.')[0].strip()
+
+    def _compute_guid(self):
+        return 'S%010d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+       json_fields = ['guid', 'file_path',]
 
 
 class AliasField(models.Field):
@@ -461,8 +535,9 @@ class SavedVariant(ModelWithGUID):
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
+    variant_id = models.TextField(db_index=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
@@ -475,9 +550,9 @@ class SavedVariant(ModelWithGUID):
         return 'SV%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        unique_together = ('xpos_start', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'selected_main_transcript_id']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
 
 
 class VariantTagType(ModelWithGUID):

@@ -34,6 +34,9 @@ const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
+const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
+const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
+
 
 // action creators
 
@@ -130,7 +133,8 @@ export const updateFamily = (values) => {
 
 export const updateIndividual = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update`,
+    const individualField = values.individualField ? `_${values.individualField}` : ''
+    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update${individualField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
       },
@@ -201,6 +205,22 @@ export const loadLocusListItems = (locusListId) => {
         (e) => {
           const updates = { locusListsByGuid: { [locusListId]: { items: [] } } }
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: updates })
+        },
+      ).get()
+    }
+  }
+}
+
+export const loadHpoTerms = (hpoId) => {
+  return (dispatch, getState) => {
+    if (!getState().hpoTermsByParent[hpoId]) {
+      dispatch({ type: REQUEST_HPO_TERMS })
+      new HttpRequestHelper(`/api/hpo_terms/${hpoId}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_HPO_TERMS, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_HPO_TERMS, error: e.message, updatesById: {} })
         },
       ).get()
     }
@@ -354,11 +374,14 @@ const rootReducer = combineReducers(Object.assign({
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
+  igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
+  hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
+  hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),

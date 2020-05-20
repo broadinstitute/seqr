@@ -93,6 +93,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: slack_token
+        - name: AIRTABLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: airtable_key
         - name: DJANGO_KEY
           valueFrom:
             secretKeyRef:

@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Header, List } from 'semantic-ui-react'
+import { Header, List, Form } from 'semantic-ui-react'
 
 import { getUser, getAnnotationSecondary } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -12,8 +12,13 @@ import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   STAFF_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
-import { ALL_INHERITANCE_FILTER } from 'shared/utils//constants'
+import {
+  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+} from 'shared/components/panel/search/constants'
+import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
+import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -25,14 +30,20 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
+import { getDatasetTypes } from '../selectors'
 
-const DetailLink = styled(ButtonLink)`
+const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
     margin-left: .2em;
     margin-right: 0;
     font-weight: initial;
     font-style: inherit;
   }
+`
+const DetailLink = props => <BaseDetailLink {...props} />
+
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
 `
 
 const SAVED_SEARCH_FIELD = {
@@ -96,12 +107,6 @@ const INHERITANCE_PANEL = {
   ),
 }
 
-const ANNOTATION_PANEL_SECONDARY = {
-  ...ANNOTATION_PANEL,
-  headerProps: { ...ANNOTATION_PANEL.headerProps, title: 'Annotations (Second Hit)' },
-  name: 'annotations_secondary',
-}
-
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
@@ -112,47 +117,132 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
   },
 }
 
-const PANEL_DETAILS = [
-  INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
-]
-const STAFF_PANEL_DETAILS = [
-  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
-]
-const PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
-  INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
-]
-const STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS = [
-  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_PANEL_SECONDARY, FREQUENCY_PANEL, LOCATION_PANEL_WITH_GENE_LIST, QUALITY_PANEL,
-]
+const ALL_DATASET_TYPE = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
 
-const VariantSearchFormContent = ({ user, displayAnnotationSecondary }) => {
-  let panels
-  if (displayAnnotationSecondary) {
-    panels = user.isStaff ? STAFF_PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS : PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY_DETAILS
-  }
-  else {
-    panels = user.isStaff ? STAFF_PANEL_DETAILS : PANEL_DETAILS
-  }
-
-  return (
-    <div>
-      <ProjectFamiliesField />
-      <VerticalSpacer height={10} />
-      <InlineHeader content="Saved Search:" />
-      {configuredField(SAVED_SEARCH_FIELD)}
-      <VariantSearchFormPanels panels={panels} />
-    </div>
-  )
+const ANNOTATION_PANEL_MAP = {
+  ...ANNOTATION_PANEL,
+  [DATASET_TYPE_SV_CALLS]: {
+    ...ANNOTATION_PANEL,
+    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV]], true),
+  },
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    ...ANNOTATION_PANEL,
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  },
 }
+
+const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
+const secondaryPanel = panel => ({
+  ...panel,
+  headerProps: { ...panel.headerProps, title: 'Annotations (Second Hit)' },
+  name: ANNOTATION_SECONDARY_NAME,
+})
+const ANNOTATION_SECONDARY_PANEL_MAP = {
+  ...secondaryPanel(ANNOTATION_PANEL),
+  [DATASET_TYPE_SV_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
+  [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
+}
+
+const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+  <Form.Group inline>
+    <AfFilter
+      value={value[SV_CALLSET_FREQUENCY]}
+      onChange={val => onChange({ ...value, [SV_CALLSET_FREQUENCY]: val })}
+      inline
+      label="Callset"
+      width={16}
+    />
+  </Form.Group>
+
+SVFrequecyHeaderFilter.propTypes = {
+  value: PropTypes.any,
+  onChange: PropTypes.func,
+}
+
+const QS_FILTER_FIELD = {
+  name: 'min_qs',
+  label: 'SV Quality Score',
+  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplications > 50; deletions > 100; homdel (CN=0) > 400',
+  min: 0,
+  max: 1000,
+  step: 10,
+  component: DividedFormField,
+}
+
+const PANELS = [
+  INHERITANCE_PANEL,
+  {
+    [DATASET_TYPE_SV_CALLS]: null,
+    isStaff: { [true]: STAFF_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
+  },
+  ANNOTATION_PANEL_MAP,
+  ANNOTATION_SECONDARY_PANEL_MAP,
+  {
+    ...FREQUENCY_PANEL,
+    [DATASET_TYPE_VARIANT_CALLS]: {
+      ...FREQUENCY_PANEL,
+      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name !== SV_CALLSET_FREQUENCY),
+    },
+    [DATASET_TYPE_SV_CALLS]: {
+      ...FREQUENCY_PANEL,
+      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name === SV_CALLSET_FREQUENCY),
+      headerProps: {
+        ...FREQUENCY_PANEL.headerProps,
+        inputSize: 3,
+        inputProps: { component: SVFrequecyHeaderFilter },
+      },
+    },
+  },
+  LOCATION_PANEL_WITH_GENE_LIST,
+  {
+    ...QUALITY_PANEL,
+    [ALL_DATASET_TYPE]: {
+      ...QUALITY_PANEL,
+      fields: [...QUALITY_PANEL.fields, QS_FILTER_FIELD],
+    },
+    [DATASET_TYPE_SV_CALLS]: {
+      ...QUALITY_PANEL,
+      fields: [QS_FILTER_FIELD],
+    },
+  },
+]
+
+const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, ''].reduce((typeAcc, type) => {
+  const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
+  return {
+    ...typeAcc,
+    [type]: [true, false].reduce((staffAcc, isStaffBool) => {
+      const staffPanels = typePanels.map(({ isStaff, ...panel }) => (isStaff === undefined ? panel : isStaff[isStaffBool]))
+      return {
+        ...staffAcc,
+        [isStaffBool]: [true, false].reduce((acc, annSecondaryBool) => ({
+          ...acc,
+          [annSecondaryBool]: annSecondaryBool ? staffPanels : staffPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+        }), {}),
+      } }, {}),
+  }
+}, {})
+
+const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
+  <div>
+    <ProjectFamiliesField />
+    <VerticalSpacer height={10} />
+    <InlineHeader content="Saved Search:" />
+    {configuredField(SAVED_SEARCH_FIELD)}
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isStaff][displayAnnotationSecondary]} />
+  </div>
+))
 
 VariantSearchFormContent.propTypes = {
   user: PropTypes.object,
   displayAnnotationSecondary: PropTypes.bool,
+  datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
+  datasetTypes: getDatasetTypes(state),
 })
 
 export default connect(mapStateToProps)(VariantSearchFormContent)

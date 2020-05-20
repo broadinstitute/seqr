@@ -12,9 +12,10 @@ from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
+    _get_json_for_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
+from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -37,11 +38,20 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
-    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
+    discovery_tags_query = None
+    if request.user.is_staff:
+        discovery_tags_query = Q()
+        for variant in variant_query:
+            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
+
+    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
     variants = response['savedVariantsByGuid'].values()
     genes = _saved_variant_genes(variants)
-    _add_locus_lists([project], variants, genes)
+    response['locusListsByGuid'] = _add_locus_lists([project], genes)
+    discovery_tags = response.pop('discoveryTags', None)
+    if discovery_tags:
+        _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
     return create_json_response(response)
@@ -86,9 +96,9 @@ def _get_parsed_variant_args(variant_json, family):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
-    ref = variant_json['ref']
-    alt = variant_json['alt']
-    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
+    ref = variant_json.get('ref')
+    alt = variant_json.get('alt')
+    var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
     return {
         'xpos': xpos,
         'xpos_start':  xpos,
@@ -96,6 +106,7 @@ def _get_parsed_variant_args(variant_json, family):
         'ref':  ref,
         'alt':  alt,
         'family':  family,
+        'variant_id': variant_json['variantId']
     }
 
 
@@ -183,11 +194,17 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         check_permissions(project, request.user, CAN_VIEW)
     note.delete()
 
+    saved_variants_by_guid = {}
+    for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids):
+        notes = saved_variant.variantnote_set.all()
+        saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
+        if not notes:
+            if not saved_variant.varianttag_set.count() > 0:
+                saved_variant.delete()
+                saved_variants_by_guid[saved_variant.guid] = None
+
     return create_json_response({
-        'savedVariantsByGuid': {
-            saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
-            for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids)
-        },
+        'savedVariantsByGuid': saved_variants_by_guid,
         'variantNotesByGuid': {note_guid: None},
     })
 
@@ -213,10 +230,17 @@ def update_variant_tags_handler(request, variant_guids):
     tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
     tag_updates.update({guid: None for guid in deleted_tag_guids})
 
+    saved_variants_by_guid = {}
+    for saved_variant in saved_variants:
+        tags = saved_variant.varianttag_set.all()
+        saved_variants_by_guid[saved_variant.guid] = {'tagGuids': [t.guid for t in tags]}
+        if not tags:
+            if not saved_variant.variantnote_set.count() > 0:
+                saved_variant.delete()
+                saved_variants_by_guid[saved_variant.guid] = None
+
     return create_json_response({
-        'savedVariantsByGuid': {saved_variant.guid: {
-            'tagGuids': [t.guid for t in saved_variant.varianttag_set.all()],
-        } for saved_variant in saved_variants},
+        'savedVariantsByGuid': saved_variants_by_guid,
         'variantTagsByGuid': tag_updates,
     })
 
@@ -326,9 +350,9 @@ def _saved_variant_genes(variants):
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:
-                gene_ids.update(compound_het['transcripts'].keys())
+                gene_ids.update(compound_het.get('transcripts', {}).keys())
         else:
-            gene_ids.update(variant['transcripts'].keys())
+            gene_ids.update(variant.get('transcripts', {}).keys())
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:
@@ -336,26 +360,27 @@ def _saved_variant_genes(variants):
     return genes
 
 
-def _add_locus_lists(projects, variants, genes):
+def _add_locus_lists(projects, genes, include_all_lists=False):
     locus_lists = LocusList.objects.filter(projects__in=projects)
-    for variant in variants:
-        if isinstance(variant, list):
-            for compound_het in variant:
-                compound_het['locusListGuids'] = []
-        else:
-            variant['locusListGuids'] = []
 
-    locus_list_intervals_by_chrom = defaultdict(list)
-    for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
-        locus_list_intervals_by_chrom[interval.chrom].append(interval)
-    if locus_list_intervals_by_chrom:
-        for variant in variants:
-            for interval in locus_list_intervals_by_chrom[variant['chrom']]:
-                pos = variant['pos'] if variant['genomeVersion'] == interval.genome_version else variant['liftedOverPos']
-                if pos and interval.start <= int(pos) <= interval.end:
-                    variant['locusListGuids'].append(interval.locus_list.guid)
+    if include_all_lists:
+        locus_lists_by_guid = {locus_list.guid: {'intervals': []} for locus_list in locus_lists}
+    else:
+        locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
+    intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
+    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
+        locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
 
     for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
         genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
 
-    return [locus_list.guid for locus_list in locus_lists]
+    return locus_lists_by_guid
+
+
+def _add_discovery_tags(variants, discovery_tags):
+    for variant in variants:
+        tags = discovery_tags.get(get_variant_key(**variant))
+        if tags:
+            if not variant.get('discoveryTags'):
+                variant['discoveryTags'] = []
+            variant['discoveryTags'] += tags

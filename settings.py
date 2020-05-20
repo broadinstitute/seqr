@@ -241,14 +241,18 @@ BASE_URL = os.environ.get("BASE_URL", "/")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
+AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
+AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
+
 UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
+ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200')
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
-    host=ELASTICSEARCH_SERVICE_HOSTNAME, port=os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200'))
+    host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),

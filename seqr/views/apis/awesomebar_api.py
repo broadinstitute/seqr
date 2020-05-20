@@ -3,9 +3,10 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, ExpressionWrapper, BooleanField
 from django.views.decorators.http import require_GET
 
+from reference_data.models import Omim, HumanPhenotypeOntology
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
@@ -145,15 +146,61 @@ def _get_matching_genes(query, projects):
     return result
 
 
+def _get_matching_omim(query, projects):
+    """Returns OMIM records that match the given query string"""
+    records = Omim.objects.filter(
+        Q(phenotype_mim_number__icontains=query) | Q(phenotype_description__icontains=query)
+    ).filter(phenotype_mim_number__isnull=False).annotate(
+        description_start=ExpressionWrapper(Q(phenotype_description__istartswith=query), output_field=BooleanField()),
+        mim_number_start=ExpressionWrapper(Q(phenotype_mim_number__istartswith=query), output_field=BooleanField()),
+    ).only('phenotype_mim_number', 'phenotype_description').order_by(
+        '-description_start', '-mim_number_start', 'phenotype_description').distinct()[:MAX_RESULTS_PER_CATEGORY]
+    result = []
+    for record in records:
+        result.append({
+            'key': record.phenotype_mim_number,
+            'title': record.phenotype_description,
+            'description': '({})'.format(record.phenotype_mim_number) if record.phenotype_mim_number else None,
+        })
+
+    return result
+
+
+def _get_matching_hpo_terms(query, projects):
+    """Returns OMIM records that match the given query string"""
+    records = HumanPhenotypeOntology.objects.filter(
+        Q(hpo_id__icontains=query) | Q(name__icontains=query)
+    ).annotate(
+        name_start=ExpressionWrapper(Q(name__istartswith=query), output_field=BooleanField()),
+        hpo_id_start=ExpressionWrapper(Q(hpo_id__istartswith=query), output_field=BooleanField()),
+    ).only('hpo_id', 'name', 'category_id').order_by(
+        '-name_start', '-hpo_id_start', 'name').distinct()[:MAX_RESULTS_PER_CATEGORY]
+    result = []
+    for record in records:
+        result.append({
+            'key': record.hpo_id,
+            'title': record.name,
+            'description': '({})'.format(record.hpo_id),
+            'category': record.category_id,
+        })
+
+    return result
+
+
 CATEGORY_MAP = {
+    'genes': _get_matching_genes,
+    'omim': _get_matching_omim,
+    'hpo_terms': _get_matching_hpo_terms,
+}
+PROJECT_SPECIFIC_CATEGORY_MAP = {
     'projects': _get_matching_projects,
     'families': _get_matching_families,
     'analysis_groups': _get_matching_analysis_groups,
     'individuals': _get_matching_individuals,
-    'genes': _get_matching_genes,
     'project_groups': _get_matching_project_groups,
 }
-DEFAULT_CATEGORIES = [k for k in CATEGORY_MAP.keys() if k != 'project_groups']
+CATEGORY_MAP.update(PROJECT_SPECIFIC_CATEGORY_MAP)
+DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 'genes']
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -170,7 +217,7 @@ def awesomebar_autocomplete_handler(request):
     categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
     projects = get_projects_user_can_view(request.user) if any(
-        category for category in categories if category != 'genes') else None
+        category for category in categories if category in PROJECT_SPECIFIC_CATEGORY_MAP) else None
 
     results = {
         category: {'name': _to_title_case(category), 'results': CATEGORY_MAP[category](query, projects)}

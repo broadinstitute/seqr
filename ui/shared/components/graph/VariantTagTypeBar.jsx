@@ -19,7 +19,7 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, t
   return `/project/${project.projectGuid}/saved_variants${path}`
 }
 
-const VariantTagTypeBar = ({ project, familyGuid, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props }) => (
+const VariantTagTypeBar = React.memo(({ project, familyGuid, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props }) => (
   <HorizontalStackedBar
     {...props}
     minPercent={0.1}
@@ -37,7 +37,7 @@ const VariantTagTypeBar = ({ project, familyGuid, analysisGroup, sectionLinks = 
         ...vtt }
     })}
   />
-)
+))
 
 VariantTagTypeBar.propTypes = {
   project: PropTypes.object.isRequired,

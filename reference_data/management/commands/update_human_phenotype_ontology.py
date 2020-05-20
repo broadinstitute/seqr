@@ -43,19 +43,16 @@ def update_hpo(hpo_file_path=None):
         hpo_id_to_record[hpo_id]['category_id'] = get_category_id(hpo_id_to_record, hpo_id)
 
     # save to database
-    records_in_category = [
-        record for record in hpo_id_to_record.values() if record['category_id'] is not None
-    ]
 
     logger.info("Deleting HumanPhenotypeOntology table with %s records and creating new table with %s records" % (
         HumanPhenotypeOntology.objects.all().count(),
-        len(records_in_category)))
+        len(hpo_id_to_record)))
 
     with transaction.atomic():
         HumanPhenotypeOntology.objects.all().delete()
 
         HumanPhenotypeOntology.objects.bulk_create(
-            HumanPhenotypeOntology(**record) for record in tqdm(records_in_category, unit=" records"))
+            HumanPhenotypeOntology(**record) for record in tqdm(hpo_id_to_record.values(), unit=" records"))
 
     logger.info("Done")
 

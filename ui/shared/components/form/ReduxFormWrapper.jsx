@@ -49,7 +49,7 @@ const renderField = (props) => {
 }
 
 renderField.propTypes = {
-  fieldComponent: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
+  fieldComponent: PropTypes.elementType,
   meta: PropTypes.object,
   input: PropTypes.object,
   submitForm: PropTypes.func,

@@ -5,14 +5,14 @@ import styled from 'styled-components'
 import { Tab } from 'semantic-ui-react'
 
 import { getProjectGuid } from 'redux/selectors'
-import { SAMPLE_TYPE_OPTIONS, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from 'shared/utils/constants'
 import Modal from 'shared/components/modal/Modal'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
 
-import { addVariantsDataset, addAlignmentDataset } from '../reducers'
+import { addVariantsDataset, addIGVDataset } from '../reducers'
 
 const DropzoneLabel = styled.span`
   text-align: left;
@@ -25,33 +25,38 @@ const UPLOADER_STYLE = { textAlign: 'left' }
 
 const MODAL_NAME = 'Datasets'
 
+const ADD_VARIANT_FORM = 'variants'
+const ADD_IGV_FORM = 'igv'
+
 const SUBMIT_FUNCTIONS = {
-  [DATASET_TYPE_VARIANT_CALLS]: addVariantsDataset,
-  [DATASET_TYPE_READ_ALIGNMENTS]: addAlignmentDataset,
+  [ADD_VARIANT_FORM]: addVariantsDataset,
+  [ADD_IGV_FORM]: addIGVDataset,
 }
 
-const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
+const BaseUpdateDatasetForm = React.memo(({ formType, formFields, initialValues, onSubmit }) => (
   <ReduxFormWrapper
-    form={`upload${datasetType}`}
+    form={`upload${formType}`}
     modalName={MODAL_NAME}
     onSubmit={onSubmit}
     confirmCloseIfNotSaved
     showErrorPanel
     size="small"
     fields={formFields}
-    liveValidate={datasetType === DATASET_TYPE_READ_ALIGNMENTS}
+    liveValidate={formType === ADD_IGV_FORM}
+    initialValues={initialValues}
   />
-)
+))
 
 BaseUpdateDatasetForm.propTypes = {
   formFields: PropTypes.array.isRequired,
-  datasetType: PropTypes.string.isRequired,
+  formType: PropTypes.string.isRequired,
+  initialValues: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: (values) => {
-    return dispatch(SUBMIT_FUNCTIONS[ownProps.datasetType](values))
+    return dispatch(SUBMIT_FUNCTIONS[ownProps.formType](values))
   },
 })
 
@@ -63,6 +68,17 @@ const UPLOAD_CALLSET_FIELDS = [
     label: 'Elasticsearch Index*',
     labelHelp: 'The elasticsearch index where the callset has already been loaded.',
     validate: value => (value ? undefined : 'Specify the Elasticsearch Index where this callset has been loaded'),
+  },
+  {
+    name: 'datasetType',
+    label: 'Caller Type*',
+    labelHelp: 'The caller used to generate the raw data for this index',
+    component: Select,
+    options: [
+      { value: DATASET_TYPE_VARIANT_CALLS, name: 'Haplotypecaller' },
+      { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
+    ],
+    validate: value => (value ? undefined : 'Specify the caller type'),
   },
   {
     name: 'mappingFilePath',
@@ -78,7 +94,7 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
-const AlignmentFileUploadField = ({ projectGuid, ...props }) =>
+const IGVFileUploadField = React.memo(({ projectGuid, ...props }) =>
   <FileUploadField
     clearTimeOut={0}
     dropzoneLabel={
@@ -91,14 +107,15 @@ const AlignmentFileUploadField = ({ projectGuid, ...props }) =>
         <b>Column 2:</b> gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual<br />
       </DropzoneLabel>
     }
-    url={`/api/project/${projectGuid}/upload_alignment_dataset`}
+    url={`/api/project/${projectGuid}/upload_igv_dataset`}
     auto
     required
     uploaderStyle={UPLOADER_STYLE}
     {...props}
-  />
+  />,
+)
 
-AlignmentFileUploadField.propTypes = {
+IGVFileUploadField.propTypes = {
   projectGuid: PropTypes.string,
 }
 
@@ -106,46 +123,41 @@ const mapStateToProps = state => ({
   projectGuid: getProjectGuid(state),
 })
 
-const UPLOAD_ALIGNMENT_FIELDS = [
-  {
-    name: 'sampleType',
-    label: 'Sample Type',
-    labelHelp: 'Biological sample type',
-    component: Select,
-    options: SAMPLE_TYPE_OPTIONS,
-    validate: value => (value ? undefined : 'Specify the Sample Type'),
-  },
+const UPLOAD_IGV_FIELDS = [
   {
     name: 'mappingFile',
-    component: connect(mapStateToProps)(AlignmentFileUploadField),
+    component: connect(mapStateToProps)(IGVFileUploadField),
     validate: validateUploadedFile,
   },
 ]
 
+const DEFAULT_UPLOAD_CALLSET_VALUE = { datasetType: DATASET_TYPE_VARIANT_CALLS }
 
 const PANES = [
   {
     title: 'Upload New Callset',
-    datasetType: DATASET_TYPE_VARIANT_CALLS,
+    formType: ADD_VARIANT_FORM,
     formFields: UPLOAD_CALLSET_FIELDS,
+    initialValues: DEFAULT_UPLOAD_CALLSET_VALUE,
   },
   {
     title: 'Add BAM/CRAM Paths',
-    datasetType: DATASET_TYPE_READ_ALIGNMENTS,
-    formFields: UPLOAD_ALIGNMENT_FIELDS,
+    formType: ADD_IGV_FORM,
+    formFields: UPLOAD_IGV_FIELDS,
   },
-].map(({ title, datasetType, formFields }) => ({
+].map(({ title, formType, formFields, initialValues }) => ({
   menuItem: title,
   render: () =>
-    <Tab.Pane key={datasetType}>
+    <Tab.Pane key={formType}>
       <UpdateDatasetForm
-        datasetType={datasetType}
+        formType={formType}
         formFields={formFields}
+        initialValues={initialValues}
       />
     </Tab.Pane>,
 }))
 
-export default () => (
+export default React.memo(() => (
   <Modal
     modalName={MODAL_NAME}
     title="Datasets"
@@ -154,4 +166,4 @@ export default () => (
   >
     <Tab panes={PANES} />
   </Modal>
-)
+))

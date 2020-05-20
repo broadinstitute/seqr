@@ -1,10 +1,5 @@
 # seqr development environment
 
-# shell
-echo
-echo This shell is in the LOCAL DEV postgres container.
-echo
-
 export PS1="\h:\w]$ "
 
 export SHELL=/bin/bash

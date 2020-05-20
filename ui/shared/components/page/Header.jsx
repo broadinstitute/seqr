@@ -15,7 +15,7 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = ({ user }) =>
+const PageHeader = React.memo(({ user }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length && [
@@ -28,7 +28,8 @@ const PageHeader = ({ user }) =>
       </Menu.Item>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ]}
-  </HeaderMenu>
+  </HeaderMenu>,
+)
 
 PageHeader.propTypes = {
   user: PropTypes.object,

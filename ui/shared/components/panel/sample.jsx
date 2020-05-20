@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../Spacers'
+import { DATASET_TYPE_SV_CALLS } from '../../utils/constants'
 
 const Detail = styled.span`
   font-size: 11px;
@@ -15,12 +16,13 @@ const iconColor = (loadedSample, isOutdated) => {
   return isOutdated ? 'grey' : 'green'
 }
 
-const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
+const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) =>
   <Popup
     trigger={
       <span>
         <Icon size="small" name="circle" color={iconColor(loadedSample, isOutdated)} />
         {loadedSample && <b>{loadedSample.sampleType}</b>}
+        {loadedSample && loadedSample.datasetType === DATASET_TYPE_SV_CALLS && ' - SV'}
         {
           !hoverDetails && (loadedSample ?
             <Detail>
@@ -35,7 +37,8 @@ const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
       'no data available'
     }
     position="left center"
-  />
+  />,
+)
 
 Sample.propTypes = {
   loadedSample: PropTypes.object,

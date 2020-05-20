@@ -13,10 +13,10 @@ def update_project_saved_variant_json(project, family_id=None):
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
 
-    saved_variants_map = {(v.xpos_start, v.ref, v.alt, v.family): v for v in saved_variants}
+    saved_variants_map = {(v.variant_id, v.family): v for v in saved_variants}
     variant_tuples = saved_variants_map.keys()
     saved_variants_map = {
-        (xpos, ref, alt, family.guid): v for (xpos, ref, alt, family), v in saved_variants_map.items()
+        (variant_id, family.guid): v for (variant_id, family), v in saved_variants_map.items()
     }
 
     variants_json = _retrieve_saved_variants_json(project, variant_tuples)
@@ -24,7 +24,7 @@ def update_project_saved_variant_json(project, family_id=None):
     updated_saved_variant_guids = []
     for var in variants_json:
         for family_guid in var['familyGuids']:
-            saved_variant = saved_variants_map.get((var['xpos'], var['ref'], var['alt'], family_guid))
+            saved_variant = saved_variants_map.get((var['variantId'], family_guid))
             if saved_variant:
                 _update_saved_variant_json(saved_variant, var)
                 updated_saved_variant_guids.append(saved_variant.guid)
@@ -49,6 +49,10 @@ def reset_cached_search_results(project):
             logger.info('No cached results to reset')
     except Exception as e:
         logger.error("Unable to reset cached search results: {}".format(e))
+
+
+def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
+    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
 def _retrieve_saved_variants_json(project, variant_tuples):

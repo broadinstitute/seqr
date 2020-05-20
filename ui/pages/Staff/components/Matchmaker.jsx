@@ -49,7 +49,7 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = ({ metrics, submissions, error, loading, load }) =>
+const Matchmaker = React.memo(({ metrics, submissions, error, loading, load }) =>
   <div>
     <Header size="medium" content="Matchmaker Metrics:" />
     <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error}>
@@ -74,7 +74,8 @@ const Matchmaker = ({ metrics, submissions, error, loading, load }) =>
       data={submissions}
       columns={SUBMISSION_COLUMNS}
     />
-  </div>
+  </div>,
+)
 
 Matchmaker.propTypes = {
   metrics: PropTypes.object,

@@ -11,14 +11,14 @@ from elasticsearch.exceptions import ConnectionTimeout
 import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory, VariantTagType, LocusList
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
+    IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
@@ -34,6 +34,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
+from seqr.views.utils.variant_utils import get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def query_variants_handler(request, search_hash):
     except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants or [], results_model.families.all())
+    response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
@@ -135,23 +136,26 @@ def query_single_variant_handler(request, variant_id):
 
     variant = get_single_es_variant(families, variant_id)
 
-    response = _process_variants([variant], families)
+    response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
 
 
-def _process_variants(variants, families):
+def _process_variants(variants, families, user):
+    if not variants:
+        return {'searchedVariants': variants}
+
     prefetch_related_objects(families, 'project')
     genes = _saved_variant_genes(variants)
-    # TODO add locus lists on the client side (?)
     projects = {family.project for family in families}
-    _add_locus_lists(projects, variants, genes)
-    response_json, _ = _get_saved_variants(variants, families)
+    locus_lists_by_guid = _add_locus_lists(projects, genes)
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
 
     response_json.update({
         'searchedVariants': variants,
         'genesById': genes,
+        'locusListsByGuid': locus_lists_by_guid,
     })
     return response_json
 
@@ -360,10 +364,14 @@ def _get_projects_details(projects, user, project_category_guid=None):
     families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
 
     individual_models = Individual.objects.filter(family__in=family_models)
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, skip_nested=True)
+    individuals = _get_json_for_individuals(
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True)
 
     sample_models = Sample.objects.filter(individual__in=individual_models)
     samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
+
+    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
+    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True)
 
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
@@ -388,6 +396,10 @@ def _get_projects_details(projects, user, project_category_guid=None):
             individual_guid = individual_id_to_guid[sample.pop('individualId')]
             sample['individualGuid'] = individual_guid
             sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for sample in igv_samples:
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
         for group in analysis_groups:
             group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
@@ -400,14 +412,19 @@ def _get_projects_details(projects, user, project_category_guid=None):
     sample_guids_by_individual = defaultdict(list)
     for sample in samples:
         sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
+    igv_sample_guids_by_individual = defaultdict(list)
+    for sample in igv_samples:
+        igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
     for individual in individuals:
         individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
+        individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
 
     response = {
         'projectsByGuid': {p['projectGuid']: p for p in projects_json},
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
         'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
@@ -522,7 +539,7 @@ def _get_saved_searches(user):
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
-def _get_saved_variants(variants, families):
+def _get_saved_variants(variants, families, include_discovery_tags=False):
     if not variants:
         return {}, {}
 
@@ -532,25 +549,28 @@ def _get_saved_variants(variants, families):
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
 
     variant_q = Q()
+    discovery_variant_q = Q()
     variants_by_id = {}
     for variant in variants:
-        variants_by_id[_get_variant_key(**variant)] = variant
-        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+        variants_by_id[get_variant_key(**variant)] = variant
+        variant_q |= Q(variant_id=variant['variantId'], family__guid__in=variant['familyGuids'])
+        discovery_variant_q |= Q(Q(variant_id=variant['variantId']) & ~Q(family__guid__in=variant['familyGuids']))
         if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
                 variant_q |= Q(xpos_start=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant_hg37_families)
-                variants_by_id[_get_variant_key(
+                variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    json = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+    json = get_json_for_saved_variants_with_tags(
+        saved_variants, add_details=True, discovery_tags_query=discovery_variant_q if include_discovery_tags else None)
     variants_to_saved_variants = {}
     for saved_variant in json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id.get(_get_variant_key(**saved_variant))
+        searched_variant = variants_by_id.get(get_variant_key(**saved_variant))
         if not searched_variant:
             # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
             continue
@@ -563,11 +583,14 @@ def _get_saved_variants(variants, families):
         for family_guid in family_guids:
             variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
 
+    for variant_id, tags in json.pop('discoveryTags', {}).items():
+        searched_variant = variants_by_id.get(variant_id)
+        if searched_variant:
+            if not searched_variant.get('discoveryTags'):
+                searched_variant['discoveryTags'] = []
+            searched_variant['discoveryTags'] += tags
+
     return json, variants_to_saved_variants
-
-
-def _get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
-    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
 def _flatten_variants(variants):

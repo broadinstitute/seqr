@@ -1,120 +1,114 @@
-FROM perl:5.20
+FROM bitnami/minideb:stretch
 
 MAINTAINER MacArthur Lab
 
 # install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    apt-utils \
-    bzip2 \
-    cmake \
+RUN install_packages \
+    ca-certificates \
+    less \
+    nano \
+    wget \
     curl \
     emacs \
     g++ \
     git \
     htop \
-    less \
-    nano \
-    wget \
-    xterm
+    make \
+    autoconf \
+    unzip \
+    bzip2 \
+    zlib1g-dev \
+    dpkg-dev \
+    build-essential \
+    libcurl4-openssl-dev \
+    libbz2-dev \
+    liblzma-dev
 
-# install jdk-8 for running hail locally
-RUN echo deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
-RUN echo deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
-RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
-RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+# install java-8    (adds 340Mb)
+RUN install_packages default-jdk
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
-    && apt-get update \
-    && apt-get install -y oracle-java8-installer \
-    && apt-get install -y oracle-java8-set-default
+# install python3.7 (adds 800Mb)
+RUN apt-get update \
+	&& apt-get dist-upgrade -y \
+	&& apt-get install -y python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev libssl-dev openssl libffi-dev
 
-# install python and gcloud utils
-RUN apt-get install -y python-dev \
-    && wget https://bootstrap.pypa.io/get-pip.py \
-    && python get-pip.py \
-    && pip install --upgrade setuptools
+ENV PYTHON_VERSION="3.7.1"
+RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz \
+	&& tar xvf Python-${PYTHON_VERSION}.tar.xz \
+	&& rm Python-${PYTHON_VERSION}.tar.xz \
+	&& cd Python-${PYTHON_VERSION} \
+	&& ./configure --enable-optimizations \
+	&& make install \
+	&& make clean
 
-RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && curl https://sdk.cloud.google.com | bash \
-    && apt-get install -y lsb gcc python-dev python-setuptools libffi-dev libssl-dev \
-    && pip install gsutil
-
-RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
-    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update&& apt-get install -y google-cloud-sdk
-
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-    && chmod +x ./kubectl \
-    && mv ./kubectl /usr/local/bin/kubectl
-
-# install google storage connector which allows hail to access vds in google buckets without downloading them first
-RUN cd /usr/local \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
-
-# fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-RUN pip install decorator==4.2.1
-
-# install jupyter
-RUN pip install --upgrade pip jupyter
-
-#RUN git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
-#    && cd /hail \
-#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
+RUN install_packages python-pkg-resources
 
 
-# install picard
-#RUN mkdir /picard \
-#    && cd /picard \
-#    && wget https://github.com/broadinstitute/picard/releases/download/2.15.0/picard.jar
+# install gcloud tools
+RUN python3 -m pip install --upgrade pip
 
-# download LiftoverChain files
-#RUN mkdir -p /reference-data \
-#    && cd /reference-data \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
+RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
+RUN tar xzf google-cloud-sdk-286.0.0-linux-x86_64.tar.gz && rm google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
+RUN /google-cloud-sdk/install.sh -q
 
-# download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
-RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
-    && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
-    && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
+# python packages
+RUN python3 -m pip install --upgrade gsutil
 
+# install GCS connector using the same steps as in https://raw.githubusercontent.com/broadinstitute/install-gcs-connector/master/install_gcs_connector.py
+# assumes ~/.config/gcloud/application_default_credentials.json will be mounted into the docker container
+RUN python3 -m pip install hail
+COPY spark-defaults.conf /usr/local/lib/python3.7/site-packages/pyspark/conf/spark-defaults.conf
+RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connector/hadoop2-1.9.17/gcs-connector-hadoop2-1.9.17-shaded.jar -O /usr/local/lib/python3.7/site-packages/pyspark/jars/gcs-connector-hadoop2-1.9.17-shaded.jar
+
+# install htslib
+ENV SAMTOOLS_VERSION="1.9"
+RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION}/htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& tar xjf htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& rm htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& cd htslib-${SAMTOOLS_VERSION} \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& make clean
+
+# install VEP dependencies
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
-# VEP dependencies
+ENV VEP_VERSION="99"
+RUN wget https://github.com/Ensembl/ensembl-vep/archive/release/${VEP_VERSION}.zip \
+    && unzip ${VEP_VERSION}.zip \
+    && rm ${VEP_VERSION}.zip
+
+RUN /usr/bin/cpanm --notest Module::Build
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
+RUN /usr/bin/cpanm --notest Try::Tiny
 # LoFTEE dependencies
 RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
-# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
-ARG DISABLE_CACHE=1
+# install VEP
+RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
+RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
-# clone hail-elasticsearch-pipelines
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
+# clone and hail-elasticsearch-pipelines repo
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN cd hail-elasticsearch-pipelines
+RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
-# copy hail build
-RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar /usr/local/spark-2.0.2-bin-hadoop2.7/jars/
+COPY vep-GRCh37.json /
+COPY vep-GRCh38.json /
 
-ENV TERM=xterm
-ENV PYTHONPATH="$PYTHONPATH:/seqr:/hail-elasticsearch-pipelines"
-
-COPY config/gitconfig /root/.gitconfig
 COPY bashrc /root/.bashrc
-COPY config/run_hail_locally.sh /hail-elasticsearch-pipelines
-COPY config/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
-COPY config/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
+COPY gitconfig /root/.gitconfig
+
+ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:/google-cloud-sdk/bin:$PATH
+ENV PYTHONPATH=".:/hail-elasticsearch-pipelines:/hail-elasticsearch-pipelines/luigi_pipeline"
+
 COPY entrypoint.sh /
 
-
-WORKDIR /hail-elasticsearch-pipelines
+WORKDIR /
 
 CMD [ "/entrypoint.sh" ]

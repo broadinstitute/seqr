@@ -7,8 +7,6 @@ import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
-const REQUEST_ANVIL = 'REQUEST_ANVIL'
-const RECEIVE_ANVIL = 'RECEIVE_ANVIL'
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
 const RECEIVE_DISCOVERY_SHEET = 'RECEIVE_DISCOVERY_SHEET'
 const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
@@ -17,6 +15,8 @@ const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
+const REQUEST_SAMPLE_METADATA = 'REQUEST_SAMPLE_METADATA'
+const RECEIVE_SAMPLE_METADATA = 'RECEIVE_SAMPLE_METADATA'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const REQUEST_SEARCH_HASH_CONTEXT = 'REQUEST_SEARCH_HASH_CONTEXT'
 const RECEIVE_SEARCH_HASH_CONTEXT = 'RECEIVE_SEARCH_HASH_CONTEXT'
@@ -27,23 +27,6 @@ const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 
 
 // Data actions
-
-export const loadAnvil = (projectGuid, filterValues) => {
-  return (dispatch) => {
-    if (projectGuid) {
-      dispatch({ type: REQUEST_ANVIL })
-      new HttpRequestHelper(`/api/staff/anvil/${projectGuid}`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_ANVIL, newValue: responseJson.anvilRows })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_ANVIL, error: e.message, newValue: [] })
-        },
-      ).get(filterValues)
-    }
-  }
-}
-
 export const loadElasticsearchStatus = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })
@@ -73,53 +56,68 @@ export const loadMme = () => {
   }
 }
 
-export const loadDiscoverySheet = (projectGuid) => {
+const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => {
   return (dispatch) => {
     if (projectGuid === 'all') {
-      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+      dispatch({ type: requestAction })
 
       const errors = new Set()
       const rows = []
       new HttpRequestHelper('/api/staff/projects_for_category/CMG',
         (projectsResponseJson) => {
-          Promise.all(projectsResponseJson.projectGuids.map(cmgProjectGuid =>
-            new HttpRequestHelper(`/api/staff/discovery_sheet/${cmgProjectGuid}`,
-              (responseJson) => {
-                if (responseJson.errors.length) {
-                  console.log(responseJson.errors)
-                }
-                rows.push(...responseJson.rows)
-              },
-              e => errors.add(e.message),
-            ).get(),
-          )).then(() => {
-            if (errors.length) {
-              dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: [...errors].join(', '), newValue: [] })
+          const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
+            if (acc[0].length === 5) {
+              acc.unshift([])
+            }
+            acc[0].push(guid)
+            return acc
+          }, [[]])
+          chunkedProjects.reduce((previousPromise, projectsChunk) => {
+            return previousPromise.then(() => {
+              return Promise.all(projectsChunk.map(cmgProjectGuid =>
+                new HttpRequestHelper(`/api/staff/${urlPath}/${cmgProjectGuid}`,
+                  (responseJson) => {
+                    if (responseJson.errors && responseJson.errors.length) {
+                      console.log(responseJson.errors)
+                    }
+                    rows.push(...responseJson.rows)
+                  },
+                  e => errors.add(e.message),
+                ).get(),
+              ))
+            })
+          }, Promise.resolve()).then(() => {
+            if (errors.size) {
+              dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })
             } else {
-              dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: rows })
+              dispatch({ type: receiveAction, newValue: rows })
             }
           })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+          dispatch({ type: receiveAction, error: e.message, newValue: [] })
         },
-      ).get()
+      ).get(filterValues)
     }
 
     else if (projectGuid) {
-      dispatch({ type: REQUEST_DISCOVERY_SHEET })
-      new HttpRequestHelper(`/api/staff/discovery_sheet/${projectGuid}`,
+      dispatch({ type: requestAction })
+      new HttpRequestHelper(`/api/staff/${urlPath}/${projectGuid}`,
         (responseJson) => {
           console.log(responseJson.errors)
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: responseJson.rows })
+          dispatch({ type: receiveAction, newValue: responseJson.rows })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+          dispatch({ type: receiveAction, error: e.message, newValue: [] })
         },
-      ).get()
+      ).get(filterValues)
     }
   }
 }
+
+export const loadDiscoverySheet = loadMultiProjectData(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET, 'discovery_sheet')
+
+export const loadSampleMetadata = loadMultiProjectData(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA, 'sample_metadata')
 
 export const loadSuccessStory = (successStoryTypes) => {
   return (dispatch) => {
@@ -278,8 +276,8 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const reducers = {
-  anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
-  anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
+  sampleMetadataLoading: loadingReducer(REQUEST_SAMPLE_METADATA, RECEIVE_SAMPLE_METADATA),
+  sampleMetadataRows: createSingleValueReducer(RECEIVE_SAMPLE_METADATA, []),
   discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
   discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),

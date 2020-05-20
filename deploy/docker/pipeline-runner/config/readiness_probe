@@ -1,2 +1,0 @@
-#curl http://localhost:${SEQR_SERVICE_PORT}/login | grep -i "User Login" >& /readiness_probe.log
-echo Ready

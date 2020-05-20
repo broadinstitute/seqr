@@ -28,7 +28,7 @@ const CompactColumn = styled(Grid.Column)`
   padding-bottom: 0 !important;
 `
 
-const LocusListDetail = ({ locusList, onSubmit }) => {
+const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
   const itemExportDownloads = [
     {
       name: 'Genes',
@@ -94,7 +94,7 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       </Grid>
     </div>
   )
-}
+})
 
 LocusListDetail.propTypes = {
   locusList: PropTypes.object,
@@ -103,10 +103,11 @@ LocusListDetail.propTypes = {
 }
 
 
-const LoadedLocusListDetail = ({ locusListGuid, onSubmit }) =>
+const LoadedLocusListDetail = React.memo(({ locusListGuid, onSubmit }) =>
   <LocusListItemsLoader locusListGuid={locusListGuid}>
     <LocusListDetail onSubmit={onSubmit} />
-  </LocusListItemsLoader>
+  </LocusListItemsLoader>,
+)
 
 LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,

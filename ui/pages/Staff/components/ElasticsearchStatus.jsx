@@ -28,6 +28,7 @@ const INDEX_COLUMNS = [
       </div>,
     ) : ''),
   },
+  { name: 'docType', content: 'Caller Type', format: row => (row.docType === 'structural_variant' ? 'SV' : 'SNV') },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
   { name: 'creationDateString', content: 'Created Date', format: row => row.creationDateString.split('T')[0] },
@@ -36,7 +37,7 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
-const ElasticsearchStatus = ({ data, loading, load }) =>
+const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
     <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
 
@@ -63,7 +64,8 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
       data={data.indices}
       columns={INDEX_COLUMNS}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 ElasticsearchStatus.propTypes = {
   data: PropTypes.object,

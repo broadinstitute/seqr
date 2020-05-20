@@ -37,7 +37,7 @@ const ButtonDropdown = styled(Dropdown).attrs({ button: true, basic: true })`
   }
 `
 
-const SaveSearch = ({ search, savedSearch, onSubmit }) =>
+const SaveSearch = React.memo(({ search, savedSearch, onSubmit }) =>
   <FormButtonContainer>
     <UpdateButton
       formFields={savedSearch ? EXISTING_SAVED_SEARCH_FIELDS : SAVED_SEARCH_FIELDS}
@@ -49,7 +49,8 @@ const SaveSearch = ({ search, savedSearch, onSubmit }) =>
       buttonText={savedSearch ? 'Edit Saved Search' : 'Save Search'}
       editIconName={savedSearch ? 'write' : 'save'}
     />
-  </FormButtonContainer>
+  </FormButtonContainer>,
+)
 
 SaveSearch.propTypes = {
   search: PropTypes.object,
@@ -69,7 +70,7 @@ const mapDispatchToProps = {
 export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
 
 
-const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
+const SavedSearches = React.memo(({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
     <ButtonDropdown
       color="black"
@@ -81,7 +82,8 @@ const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loa
       onChange={val => onChange(savedSearchesByGuid[val] ? savedSearchesByGuid[val].search : {})}
       options={options}
     />
-  </DataLoader>
+  </DataLoader>,
+)
 
 SavedSearches.propTypes = {
   options: PropTypes.array,

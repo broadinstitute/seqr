@@ -77,7 +77,7 @@ const COLUMNS = [
   },
 ]
 
-const GeneBreakdown = ({ searchHash, geneBreakdown, loading, loadingErrorMessage, load }) =>
+const GeneBreakdown = React.memo(({ searchHash, geneBreakdown, loading, loadingErrorMessage, load }) =>
   <Modal
     modalName="geneBreakdown"
     size="large"
@@ -97,7 +97,8 @@ const GeneBreakdown = ({ searchHash, geneBreakdown, loading, loadingErrorMessage
         downloadTableType="Gene Results"
       />
     </DataLoader>
-  </Modal>
+  </Modal>,
+)
 
 GeneBreakdown.propTypes = {
   searchHash: PropTypes.string,

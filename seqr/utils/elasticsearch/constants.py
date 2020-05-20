@@ -2,6 +2,7 @@ from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
 VARIANT_DOC_TYPE = 'variant'
+SV_DOC_TYPE = 'structural_variant'
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 7500
@@ -17,18 +18,21 @@ REF_ALT = 'ref_alt'
 HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 GENOTYPE_QUERY_MAP = {
-    REF_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_1', 'num_alt_2']},
-    REF_ALT: {'allowed_num_alt': ['num_alt_1']},
-    ALT_ALT: {'allowed_num_alt': ['num_alt_2']},
-    HAS_ALT: {'allowed_num_alt': ['num_alt_1', 'num_alt_2']},
-    HAS_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_2']},
+    REF_REF: {'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_1', 'samples_num_alt_2', 'samples']},
+    REF_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples']},
+    ALT_ALT: {'allowed_num_alt': ['samples_num_alt_2', 'samples_cn_0', 'samples_cn_2', 'samples_cn_gte_4']},
+    HAS_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples_num_alt_2', 'samples']},
+    HAS_REF: {
+        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2'],
+        'allowed_num_alt': ['samples_cn_1', 'samples_cn_3'],
+    },
 }
 
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 COMPOUND_HET = 'compound_het'
-IS_OR_INHERITANCE = 'is_or_inheritance'
+ANY_AFFECTED = 'any_affected'
 RECESSIVE_FILTER = {
     AFFECTED: ALT_ALT,
     UNAFFECTED: HAS_REF,
@@ -44,10 +48,6 @@ INHERITANCE_FILTERS = {
     'de_novo': {
         AFFECTED: HAS_ALT,
         UNAFFECTED: REF_REF,
-    },
-    'any_affected': {
-        AFFECTED: HAS_ALT,
-        IS_OR_INHERITANCE: True,
     },
 }
 
@@ -71,6 +71,12 @@ HGMD_CLASS_MAP = {
 }
 
 POPULATIONS = {
+    'sv_callset': {
+        'AF': 'sf',
+        'filter_AF': [],
+        'AC': 'sc',
+        'AN': 'sn',
+    },
     'callset': {
         'AF': 'AF',
         'filter_AF': [],
@@ -125,7 +131,7 @@ CLINVAR_SORT = {
         'type': 'number',
         'script': {
            'source': """
-                if (doc['clinvar_clinical_significance'].empty ) {
+                if (!doc.containsKey('clinvar_clinical_significance') || doc['clinvar_clinical_significance'].empty ) {
                     return 2;
                 }
                 String clinsig = doc['clinvar_clinical_significance'].value;
@@ -146,32 +152,49 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "(!doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
+               'source': "(doc.containsKey('hgmd_class') && !doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
             }
         }
     }],
     'in_omim': [{
         '_script': {
             'type': 'number',
+            'order': 'desc',
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
                         phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
-                'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
+                'source': """
+                    int total = 0; 
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.omim_gene_ids.contains(doc['geneIds'][i])) {
+                            total += 1;
+                            if (doc.containsKey('mainTranscript_gene_id') && 
+                                doc['geneIds'][i] == doc['mainTranscript_gene_id'].value) {
+                                total += 1
+                            }
+                        }
+                    } 
+                    return total
+                """
             }
         }
     }],
-    'protein_consequence': ['mainTranscript_major_consequence_rank'],
-    'gnomad': [{POPULATIONS['gnomad_genomes']['AF']: {'missing': '_first'}}],
-    'exac': [{POPULATIONS['exac']['AF']: {'missing': '_first'}}],
-    '1kg': [{POPULATIONS['g1k']['AF']: {'missing': '_first'}}],
-    'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
-    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc'}}],
-    'eigen': [{'eigen_Eigen_phred': {'order': 'desc'}}],
-    'mpc': [{'mpc_MPC': {'order': 'desc'}}],
-    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc'}}],
-    'primate_ai': [{'primate_ai_score': {'order': 'desc'}}],
+    'protein_consequence': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': "doc.containsKey('svType') ? 4.5 : doc['mainTranscript_major_consequence_rank'].value"
+            }
+        }
+    }],
+    'cadd': [{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'eigen': [{'eigen_Eigen_phred': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'mpc': [{'mpc_MPC': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc', 'unmapped_type': 'float'}}],
+    'primate_ai': [{'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}],
     'constraint': [{
         '_script': {
             'order': 'asc',
@@ -182,17 +205,36 @@ SORT_FIELDS = {
                         constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
                         for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
                 },
-                'source': "params.constraint_ranks_by_gene.getOrDefault(doc['mainTranscript_gene_id'].value, 1000000000)"
+                'source': """
+                    int min = 1000000000; 
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.constraint_ranks_by_gene.getOrDefault(doc['geneIds'][i], 1000000000) < min) {
+                            min = params.constraint_ranks_by_gene.get(doc['geneIds'][i])
+                        }
+                    } 
+                    return min
+                """
             }
-        }
+        },
     }],
     XPOS_SORT_KEY: ['xpos'],
 }
+POPULATION_SORTS = {
+    sort: [{
+        '_script': {
+            'type': 'number',
+            'script': {
+                'params': {'field': POPULATIONS[pop_key]['AF']},
+                'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
+            }
+        }
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
+SORT_FIELDS.update(POPULATION_SORTS)
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
-HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2']
+HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
@@ -204,11 +246,14 @@ NESTED_FIELDS = {
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
+    'end': {'format_value': long},
     'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
+    'num_exon': {'response_key': 'numExon'},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
     'start': {'response_key': 'pos', 'format_value': long},
+    'svType': {},
     'variantId': {},
     'xpos': {'format_value': long},
 }
@@ -227,16 +272,23 @@ PREDICTION_FIELDS_CONFIG = {
     'splice_ai_delta_score': {'response_key': 'splice_ai'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
+    'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
+
+QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
 GENOTYPE_FIELDS_CONFIG = {
-    'ab': {},
     'ad': {},
     'dp': {},
-    'gq': {},
     'pl': {},
+    'cn': {'format_value': int, 'default_value': 2},
+    'end': {},
+    'start': {},
+    'num_exon': {},
+    'defragged': {'format_value': bool},
     'sample_id': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
+GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})
 
 QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS

@@ -2,19 +2,23 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Label, Popup, List } from 'semantic-ui-react'
+import { Label, Popup, List, Header } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getCurrentProject } from 'redux/selectors'
 import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD } from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader } from '../../StyledComponents'
+import { InlineHeader, ButtonLink } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-const GeneLabelContent = styled(
-  ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
+const INLINE_STYLE = {
+  display: 'inline-block',
+}
+
+const BaseGeneLabelContent = styled(
+  ({ color, label, maxWidth, containerStyle, dispatch, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
    overflow: hidden;
@@ -22,6 +26,7 @@ const GeneLabelContent = styled(
    white-space: nowrap;
    max-width: ${props => props.maxWidth || 'none'};
 `
+const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
 const GeneLinks = styled.div`
   font-size: .9em;
@@ -30,7 +35,7 @@ const GeneLinks = styled.div`
   padding-bottom: .5em;
 `
 
-const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
+const ListItemLink = styled(List.Item).attrs({ icon: 'linkify' })`
  .content {
     color: initial;
     cursor: auto;
@@ -41,11 +46,11 @@ const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
  }
 `
 
-const GeneLabel = ({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
+const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
     <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
-}
+})
 
 GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
@@ -55,43 +60,40 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
-  const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
-  return (
-    compact ?
-      <GeneDetailSection
-        compact
-        color="teal"
-        compactLabel="Gene Lists"
-        details={locusListGuids.length > 0 &&
-          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-        }
-      /> :
-      <CompondHetTagsInLine
-        inline={areCompoundHets}
-        wrapper={children => <div>{children}</div>}
-      >
-        <React.Fragment>
-          {locusListGuids.map(locusListGuid =>
-            <GeneDetailSection
-              key={locusListGuid}
-              color="teal"
-              maxWidth="7em"
-              showEmpty
-              label={(locusListsByGuid[locusListGuid] || {}).name}
-              description={(locusListsByGuid[locusListGuid] || {}).name}
-              details={(locusListsByGuid[locusListGuid] || {}).description}
-            />,
-          )}
-        </React.Fragment>
-      </CompondHetTagsInLine>)
-}
+const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps }) => (
+  compact ?
+    <GeneDetailSection
+      compact
+      color="teal"
+      compactLabel="Gene Lists"
+      details={locusListGuids.length > 0 &&
+        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+      }
+    /> :
+    <div style={containerStyle}>
+      <React.Fragment>
+        {locusListGuids.map(locusListGuid =>
+          <GeneDetailSection
+            key={locusListGuid}
+            color="teal"
+            maxWidth="7em"
+            showEmpty
+            label={(locusListsByGuid[locusListGuid] || {}).name}
+            description={(locusListsByGuid[locusListGuid] || {}).name}
+            details={(locusListsByGuid[locusListGuid] || {}).description}
+            containerStyle={containerStyle}
+            {...labelProps}
+          />,
+        )}
+      </React.Fragment>
+    </div>),
+)
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
-  areCompoundHets: PropTypes.bool,
+  containerStyle: PropTypes.object,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -101,7 +103,7 @@ const mapLocusListStateToProps = state => ({
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
 
-const GeneDetailSection = ({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
+const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
     return null
   }
@@ -114,7 +116,7 @@ const GeneDetailSection = ({ details, compact, description, compactLabel, showEm
       {details}
     </div>
   ) : <GeneLabel popupHeader={description} popupContent={details} showEmpty={showEmpty} {...labelProps} />
-}
+})
 
 GeneDetailSection.propTypes = {
   details: PropTypes.node,
@@ -126,67 +128,81 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
-  <div>
-    <GeneDetailSection
-      compact={compact}
-      color="orange"
-      description="Disease Phenotypes"
-      label="IN OMIM"
-      compactLabel="OMIM Disease Phenotypes"
-      details={gene.omimPhenotypes.length > 0 &&
-        <List>
-          {gene.omimPhenotypes.map(phenotype =>
-            <ListItemLink
-              key={phenotype.phenotypeDescription}
-              content={phenotype.phenotypeDescription}
-              target="_blank"
-              href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-            />,
-          )}
-        </List>}
-      {...labelProps}
-    />
-    <GeneDetailSection
-      compact={compact}
-      color="red"
-      label="MISSENSE CONSTR"
-      description="Missense Constraint"
-      details={((gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
-        (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
-        `This gene ranks ${gene.constraints.misZRank} most constrained out of
-        ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
-        ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
-        of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
-        statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-        via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`}
-      {...labelProps}
-    />
-    <GeneDetailSection
-      compact={compact}
-      color="red"
-      label="LOF CONSTR"
-      description="Loss of Function Constraint"
-      details={gene.constraints.louef < LOF_THRESHHOLD &&
-        `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
-         ${gene.constraints.totalGenes} genes under study (louef:
-         ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
-         LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
-         observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
-         loss-of-function mutations`}
-      {...labelProps}
-    />
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
-  </div>
+const GENE_DETAIL_SECTIONS = [
+  {
+    color: 'orange',
+    description: 'Disease Phenotypes',
+    label: 'IN OMIM',
+    compactLabel: 'OMIM Disease Phenotypes',
+    showDetails: gene => gene.omimPhenotypes.length > 0,
+    detailsDisplay: gene =>
+      <List>
+        {gene.omimPhenotypes.map(phenotype =>
+          <ListItemLink
+            key={phenotype.phenotypeDescription}
+            content={phenotype.phenotypeInheritance ?
+              <span>{phenotype.phenotypeDescription} (<i>{phenotype.phenotypeInheritance}</i>)</span> :
+              phenotype.phenotypeDescription}
+            target="_blank"
+            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+          />,
+        )}
+      </List>,
+  },
+  {
+    color: 'red',
+    description: 'Missense Constraint',
+    label: 'MISSENSE CONSTR',
+    showDetails: gene => (
+      (gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
+      (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)
+    ),
+    detailsDisplay: gene =>
+      `This gene ranks ${gene.constraints.misZRank} most constrained out of
+      ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
+      ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
+      of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
+      statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
+      via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`,
+  },
+  {
+    color: 'red',
+    description: 'Loss of Function Constraint',
+    label: 'LOF CONSTR',
+    showDetails: gene => gene.constraints.louef < LOF_THRESHHOLD,
+    detailsDisplay: gene =>
+      `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
+       ${gene.constraints.totalGenes} genes under study (louef:
+       ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
+       LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
+       observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
+       loss-of-function mutations`,
+  },
+]
+
+export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containerStyle, ...labelProps }) =>
+  <div style={containerStyle}>
+    {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) =>
+      <GeneDetailSection
+        key={sectionConfig.label}
+        compact={compact}
+        details={showDetails(gene) && detailsDisplay(gene)}
+        {...sectionConfig}
+        {...labelProps}
+      />,
+    )}
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} containerStyle={containerStyle} {...labelProps} />}
+  </div>,
+)
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
-  areCompoundHets: PropTypes.bool,
+  containerStyle: PropTypes.object,
 }
 
-const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets }) => {
+const BaseVariantGene = React.memo(({ geneId, gene, project, variant, compact, showInlineDetails, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -195,22 +211,41 @@ const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets 
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
   }
 
+  const compactDetails = compact && !showInlineDetails
+
+  const geneDetails = (
+    <GeneDetails
+      gene={gene}
+      compact={compactDetails}
+      containerStyle={(showInlineDetails || areCompoundHets) && INLINE_STYLE}
+      margin={showInlineDetails ? '1em .5em 0px 0px' : null}
+      horizontal={showInlineDetails}
+      showLocusLists
+    />
+  )
+
+  let summaryDetail
+  if (compact) {
+    summaryDetail = showInlineDetails ? geneDetails : geneConsequence
+  } else {
+    summaryDetail = (
+      <GeneLinks>
+        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
+        {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
+        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
+      </GeneLinks>
+    )
+  }
+
   const geneSummary = (
     <div>
       <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
-      {compact ? geneConsequence :
-      <GeneLinks>
-        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
-      </GeneLinks>}
+      {summaryDetail}
     </div>
   )
 
-  const geneDetails = <GeneDetails gene={gene} compact={compact} areCompoundHets={areCompoundHets} showLocusLists />
-
-  return compact ?
+  return compactDetails ?
     <Popup
       header="Gene Details"
       size="tiny"
@@ -222,17 +257,18 @@ const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets 
     /> : (
       <div>
         {geneSummary}
-        {geneDetails}
+        {!showInlineDetails && geneDetails}
       </div>
     )
-}
+})
 
-VariantGene.propTypes = {
+BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
   project: PropTypes.object,
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
+  showInlineDetails: PropTypes.bool,
   areCompoundHets: PropTypes.bool,
 }
 
@@ -241,4 +277,77 @@ const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
 })
 
-export default connect(mapStateToProps)(VariantGene)
+export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
+
+
+class VariantGenes extends React.PureComponent {
+
+  static propTypes = {
+    variant: PropTypes.object,
+    mainGeneId: PropTypes.string,
+    project: PropTypes.object,
+    genesById: PropTypes.object,
+  }
+
+  constructor(props) {
+    super(props)
+
+    this.state = { showAll: Object.keys(props.variant.transcripts || {}).length < 6 }
+  }
+
+  showGenes = () => {
+    this.setState({ showAll: true })
+  }
+
+  render() {
+    const geneIds = Object.keys(this.props.variant.transcripts || {})
+    if (this.state.showAll) {
+      return geneIds.filter(geneId => geneId !== this.props.mainGeneId).map(geneId =>
+        <BaseVariantGene
+          key={geneId}
+          geneId={geneId}
+          gene={this.props.genesById[geneId]}
+          variant={this.props.variant}
+          project={this.props.project}
+          showInlineDetails={!this.props.mainGeneId}
+          compact
+        />,
+      )
+    }
+
+    const genes = geneIds.map(geneId => this.props.genesById[geneId]).filter(gene => gene)
+
+    return (
+      <div>
+        <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{geneIds.length} Genes</ButtonLink>
+        <VerticalSpacer height={10} />
+        <div>
+          {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => {
+            const sectionGenes = genes.filter(gene => showDetails(gene))
+            return (
+              <GeneDetailSection
+                key={sectionConfig.label}
+                details={sectionGenes.length > 0 && sectionGenes.map(gene =>
+                  <div key={gene.geneId}>
+                    <Header size="small" content={gene.geneSymbol} />
+                    {detailsDisplay(gene)}
+                    <VerticalSpacer height={5} />
+                  </div>,
+                )}
+                {...sectionConfig}
+              />
+            )
+        })}
+        </div>
+      </div>
+    )
+  }
+}
+
+const mapAllGenesStateToProps = state => ({
+  project: getCurrentProject(state),
+  genesById: getGenesById(state),
+})
+
+
+export default connect(mapAllGenesStateToProps)(VariantGenes)
