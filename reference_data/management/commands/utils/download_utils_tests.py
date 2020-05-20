@@ -47,6 +47,7 @@ class DownloadUtilsTest(TestCase):
         mock_urllib.urlopen.return_value = "test data\nanother line\n"
         result = download_file('ftp://mock_url/test_file.txt', self.test_dir)
         mock_logger.info.assert_called_with("Downloading ftp://mock_url/test_file.txt to {}/test_file.txt".format(self.test_dir))
+        mock_urllib.urlopen.assert_called_with('ftp://mock_url/test_file.txt')
         self.assertEqual(result, "{}/test_file.txt".format(self.test_dir))
 
         with open("{}/test_file.txt".format(self.test_dir), 'r') as f:
