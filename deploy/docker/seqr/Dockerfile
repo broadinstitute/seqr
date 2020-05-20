@@ -94,7 +94,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 ARG DISABLE_CACHE=1
 
 # update seqr repo
-RUN git clone -q https://github.com/rsolano1/seqr
+RUN git clone -q https://github.com/macarthur-lab/seqr
 
 # get the settings file
 COPY ./config/settings.py /seqr/settings.py
