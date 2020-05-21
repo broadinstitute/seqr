@@ -19,7 +19,7 @@ class UsersAPITest(AuthenticationTestCase):
 
     def test_get_all_staff(self):
         get_all_staff_url = reverse(get_all_staff)
-        self.check_collaborator_login(get_all_staff_url)
+        self.check_require_login(get_all_staff_url)
         response = self.client.get(get_all_staff_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

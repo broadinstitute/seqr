@@ -52,8 +52,9 @@ class VariantSearchAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_variants(self, mock_get_variants, mock_get_gene_counts):
+        url = reverse(query_variants_handler, args=['abc'])
+        self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
-        self.check_collaborator_login(url)
 
         # add a locus list
         LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(guid=PROJECT_GUID))
@@ -191,7 +192,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
-        self.check_collaborator_login(search_context_url)
+        self.check_collaborator_login(search_context_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'foo': 'bar'}))
         self.assertEqual(response.status_code, 400)
@@ -291,10 +292,10 @@ class VariantSearchAPITest(AuthenticationTestCase):
     def test_query_single_variant(self, mock_get_variant):
         mock_get_variant.return_value = VARIANTS[0]
 
-        url = reverse(query_single_variant_handler, args=['21-3343353-GAGA-G'])
+        url = '{}?familyGuid=F000001_1'.format(reverse(query_single_variant_handler, args=['21-3343353-GAGA-G']))
         self.check_collaborator_login(url)
 
-        response = self.client.get('{}?familyGuid=F000001_1'.format(url))
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(
@@ -311,7 +312,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)
-        self.check_collaborator_login(get_saved_search_url)
+        self.check_require_login(get_saved_search_url)
 
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
@@ -338,7 +339,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(len(saved_searches), 1)
         search_guid = saved_searches.keys()[0]
         self.assertDictEqual(saved_searches[search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 12,
+            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 13,
         })
 
         response = self.client.get(get_saved_search_url)
@@ -350,7 +351,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['savedSearchesByGuid'][search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 12,
+            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 13,
         })
 
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[search_guid])

@@ -21,7 +21,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
     def test_locus_lists(self):
         url = reverse(locus_lists)
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -42,7 +42,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
     def test_public_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -71,7 +71,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
     def test_create_locus_list(self):
         create_locus_list_url = reverse(create_locus_list_handler)
-        self.check_collaborator_login(create_locus_list_url)
+        self.check_require_login(create_locus_list_url)
 
         # send invalid requests to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({}))

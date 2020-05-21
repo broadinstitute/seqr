@@ -19,7 +19,7 @@ class ProjectAPITest(AuthenticationTestCase):
 
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
-        self.check_collaborator_login(create_project_url)
+        self.check_require_login(create_project_url)
 
         # check validation of bad requests
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'bad_json': None}))

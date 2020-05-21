@@ -10,9 +10,17 @@ class AwesomebarAPITest(AuthenticationTestCase):
 
     def test_awesomebar_autocomplete_handler(self):
         url = reverse(awesomebar_autocomplete_handler)
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url+"?q=1")
+        self.assertEqual(response.status_code, 200)
+        # No objects returned as user has no access
+        self.assertSetEqual(
+            set(response.json()['matches'].keys()), {'genes'}
+        )
+
+        self.login_collaborator()
+        response = self.client.get(url + "?q=1")
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(
             set(response.json()['matches'].keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'}

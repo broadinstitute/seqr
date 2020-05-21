@@ -2,6 +2,7 @@
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
+import json
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
@@ -10,12 +11,14 @@ class AuthenticationTestCase(TestCase):
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
+    ANY = 'any'
 
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.get(username='test_user')
         cls.manager_user = User.objects.get(username='test_user_manager')
         cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
@@ -24,8 +27,11 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
-    def check_collaborator_login(self, url):
-        self._check_login(url, self.COLLABORATOR)
+    def check_require_login(self, url):
+        self._check_login(url, self.ANY)
+
+    def check_collaborator_login(self, url, **request_kwargs):
+        self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
     def check_manager_login(self, url):
         self._check_login(url, self.MANAGER)
@@ -33,10 +39,13 @@ class AuthenticationTestCase(TestCase):
     def check_staff_login(self, url):
         self._check_login(url, self.STAFF)
 
+    def login_collaborator(self):
+        self.client.force_login(self.collaborator_user)
+
     def login_staff_user(self):
         self.client.force_login(self.staff_user)
 
-    def _check_login(self, url, permission_level):
+    def _check_login(self, url, permission_level, request_data=None):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests
         if the user isn't logged-in, and then authenticates a test user.
@@ -49,9 +58,19 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
 
-        # check that non-viewer users can't access collaborator URLs
+        self.client.force_login(self.no_access_user)
+        if permission_level == self.ANY:
+            return
 
-        self.client.force_login(self.collaborator_user)
+        # check that users without view permission users can't access collaborator URLs
+        if permission_level == self.COLLABORATOR:
+            if request_data:
+                response = self.client.post(url, content_type='application/json', data=json.dumps(request_data))
+            else:
+                response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
         if permission_level == self.COLLABORATOR:
             return
 

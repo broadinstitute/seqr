@@ -16,7 +16,7 @@ class GeneAPITest(AuthenticationTestCase):
 
     def test_gene_info(self):
         url = reverse(gene_info, args=[GENE_ID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -26,7 +26,7 @@ class GeneAPITest(AuthenticationTestCase):
 
     def test_create_update_and_delete_gene_note(self):
         create_gene_note_url = reverse(create_gene_note_handler, args=[GENE_ID])
-        self.check_collaborator_login(create_gene_note_url)
+        self.check_require_login(create_gene_note_url)
 
         # send valid request to create gene_note
         response = self.client.post(create_gene_note_url, content_type='application/json', data=json.dumps(

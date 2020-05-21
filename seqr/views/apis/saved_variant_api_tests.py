@@ -158,7 +158,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
-        self.check_collaborator_login(create_saved_variant_url)
+        self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
         variant_json = {
             'alt': 'A',
@@ -213,7 +213,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
     def test_create_saved_sv_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
-        self.check_collaborator_login(create_saved_variant_url)
+        self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
         variant_json = {
             'chrom': '2',
@@ -267,7 +267,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
-        self.check_collaborator_login(create_saved_compound_hets_url)
+        self.check_collaborator_login(create_saved_compound_hets_url, request_data={'familyGuid': 'F000001_1'})
 
         request_body = {
             'searchHash': 'fe451c0cdf0ee1634e4dcaff7a49a59e',
@@ -322,7 +322,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
-        self.check_collaborator_login(create_variant_note_url)
+        self.check_collaborator_login(create_variant_note_url, request_data={'familyGuid': 'F000001_1'})
 
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
@@ -392,7 +392,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
     def test_create_partially_saved_compound_het_variant_note(self):
         # compound het 5 is not saved, whereas compound het 1 is saved
         create_saved_variant_url = reverse(create_saved_variant_handler)
-        self.check_collaborator_login(create_saved_variant_url)
+        self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
         request_body = {
             'variant': [COMPOUND_HET_5_JSON, {'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
@@ -432,7 +432,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
         create_compound_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
-        self.check_collaborator_login(create_compound_hets_variant_note_url)
+        self.check_collaborator_login(create_compound_hets_variant_note_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'new_compound_hets_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
@@ -530,7 +530,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertSetEqual({"Review", "Tier 1 - Novel gene and phenotype"}, {vt.variant_tag_type.name for vt in variant_tags})
 
         update_variant_tags_url = reverse(update_variant_tags_handler, args=[VARIANT_GUID])
-        self.check_collaborator_login(update_variant_tags_url)
+        self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [{'tagGuid': 'VT1708633_2103343353_r0390_100', 'name': 'Review'}, {'name': 'Excluded'}],
@@ -571,7 +571,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
 
         update_variant_tags_url = reverse(update_variant_functional_data_handler, args=[VARIANT_GUID])
-        self.check_collaborator_login(update_variant_tags_url)
+        self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'functionalData': [
@@ -606,7 +606,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
         update_variant_tags_url = reverse(
             update_variant_tags_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
-        self.check_collaborator_login(update_variant_tags_url)
+        self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [{'name': 'Review'}, {'name': 'Excluded'}],
@@ -640,7 +640,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         # send valid request to creat variant_tag for compound hets
         update_variant_tags_url = reverse(
             update_variant_functional_data_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
-        self.check_collaborator_login(update_variant_tags_url)
+        self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'functionalData': [

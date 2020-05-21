@@ -40,8 +40,7 @@
         "groups": [],
         "user_permissions": []
     }
-},
-        {
+}, {
     "model": "auth.user",
     "pk": 11,
     "fields": {
@@ -58,8 +57,7 @@
         "groups": [],
         "user_permissions": []
     }
-},
-    {
+}, {
     "model": "auth.user",
     "pk": 12,
     "fields": {
@@ -70,6 +68,23 @@
         "first_name": "Test Non Staff User",
         "last_name": "",
         "email": "test_user_no_staff@test.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+}, {
+    "model": "auth.user",
+    "pk": 13,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCyrtyrty+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "test_user_no_access",
+        "first_name": "Test No Access User",
+        "last_name": "",
+        "email": "test_user_no_access@test.com",
         "is_staff": false,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",

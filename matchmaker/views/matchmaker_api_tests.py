@@ -19,6 +19,24 @@ INVALID_PROJECT_SUBMISSION_GUID = 'MS000016_P0004515'
 NO_SUBMISSION_INDIVIDUAL_GUID = 'I000006_hg00733'
 RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
+SUBMISSION_DATA = {
+    'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+    'contactHref': 'mailto:test@broadinstitute.org',
+    'contactName': 'PI',
+    'phenotypes': [
+        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
+    ],
+    'geneVariants': [{
+        'geneId': 'ENSG00000235249',
+        'alt': 'C',
+        'ref': 'CCACT',
+        'chrom': '14',
+        'pos': 77027549,
+        'genomeVersion': '38',
+        'numAlt': 2,
+    }],
+}
+
 NEW_MATCH_JSON = {
     "score": {
         "patient": 0.92
@@ -359,7 +377,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
 
         url = reverse(update_mme_submission)
-        self.check_collaborator_login(url)
+        self.check_collaborator_login(url, request_data=SUBMISSION_DATA)
 
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -379,23 +397,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Individual is required for a new submission')
 
         # Test successful creation
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'contactHref': 'mailto:test@broadinstitute.org',
-            'contactName': 'PI',
-            'phenotypes': [
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-            ],
-            'geneVariants': [{
-                'geneId': 'ENSG00000235249',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'genomeVersion': '38',
-                'numAlt': 2,
-            }],
-        }))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(SUBMISSION_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {

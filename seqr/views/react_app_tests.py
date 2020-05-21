@@ -8,7 +8,7 @@ class DashboardPageTest(AuthenticationTestCase):
 
     def test_react_page(self):
         url = reverse(main_app)
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

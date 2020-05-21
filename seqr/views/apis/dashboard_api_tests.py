@@ -8,8 +8,13 @@ class DashboardPageTest(AuthenticationTestCase):
 
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'projectsByGuid': {}, 'projectCategoriesByGuid': {}})
+
+        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -37,7 +42,7 @@ class DashboardPageTest(AuthenticationTestCase):
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
 
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url+"?file_format=tsv")
         self.assertEqual(response.status_code, 200)

@@ -247,7 +247,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
