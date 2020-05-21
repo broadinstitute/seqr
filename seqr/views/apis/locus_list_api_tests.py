@@ -11,6 +11,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELD
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
+PRIVATE_LOCUS_LIST_GUID = 'LL00005_retina_proteome'
 PROJECT_GUID = 'R0001_1kg'
 
 
@@ -39,7 +40,7 @@ class LocusListAPITest(AuthenticationTestCase):
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
 
-    def test_locus_list_info(self):
+    def test_public_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
         self.check_collaborator_login(url)
 
@@ -57,7 +58,18 @@ class LocusListAPITest(AuthenticationTestCase):
             set(response_json['genesById'].keys())
         )
 
-    def test_create_update_and_delete_locus_list(self):
+    def test_private_locus_list_info(self):
+        url = reverse(locus_list_info, args=[PRIVATE_LOCUS_LIST_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        locus_lists_dict = response_json['locusListsByGuid']
+        self.assertListEqual(locus_lists_dict.keys(), [PRIVATE_LOCUS_LIST_GUID])
+
+    def test_create_locus_list(self):
         create_locus_list_url = reverse(create_locus_list_handler)
         self.check_collaborator_login(create_locus_list_url)
 
@@ -111,8 +123,19 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertEqual(new_interval.chrom, '2')
         self.assertEqual(new_interval.start, 1234)
 
-        # update the locus_list
-        update_locus_list_url = reverse(update_locus_list_handler, args=[guid])
+    def test_create_update_and_delete_locus_list(self):
+        update_locus_list_url = reverse(update_locus_list_handler, args=[LOCUS_LIST_GUID])
+        self.check_manager_login(update_locus_list_url)
+
+        response = self.client.post(update_locus_list_url, content_type='application/json', data=json.dumps(
+            {'name': 'updated_locus_list', 'isPublic': False, 'rawItems': 'DDX11L1 FAM138A NOT_GENE'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'invalidLocusListItems': ['NOT_GENE']})
+        self.assertEqual(
+            response.reason_phrase,
+            'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
+        )
+
         response = self.client.post(update_locus_list_url, content_type='application/json',  data=json.dumps(
             {'name': 'updated_locus_list', 'isPublic': False, 'rawItems': 'DDX11L1 FAM138A'}))
 
@@ -123,28 +146,32 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertEqual(updated_locus_list['name'], 'updated_locus_list')
         self.assertEqual(updated_locus_list['isPublic'], False)
 
-        self.assertEqual(len(updated_locus_list_response['genesById']), 2)
-        self.assertTrue(gene_id in updated_locus_list_response['genesById'])
-        new_gene_id = next(gid for gid in updated_locus_list_response['genesById'] if gid != gene_id)
-        self.assertSetEqual({item['geneId'] for item in updated_locus_list['items']}, {new_gene_id, gene_id})
+        existing_gene_id = 'ENSG00000223972'
+        new_gene_id = 'ENSG00000237613'
+        self.assertSetEqual(set(updated_locus_list_response['genesById'].keys()), {new_gene_id, existing_gene_id})
+        self.assertSetEqual({item['geneId'] for item in updated_locus_list['items']}, {new_gene_id, existing_gene_id})
 
-        updated_locus_list_model = LocusList.objects.filter(guid=guid).first()
+        updated_locus_list_model = LocusList.objects.filter(guid=LOCUS_LIST_GUID).first()
         self.assertIsNotNone(updated_locus_list_model)
         self.assertEqual(updated_locus_list_model.name, updated_locus_list['name'])
         self.assertEqual(updated_locus_list_model.is_public, updated_locus_list['isPublic'])
 
         self.assertEqual(updated_locus_list_model.locuslistgene_set.count(), 2)
+        self.assertEqual(updated_locus_list_model.locuslistgene_set.first().gene_id, existing_gene_id)
+        self.assertEqual(updated_locus_list_model.locuslistgene_set.first().guid, 'LLG0000011_nmd_nclensg00000171')
         self.assertEqual(updated_locus_list_model.locuslistgene_set.last().gene_id, new_gene_id)
         self.assertEqual(updated_locus_list_model.locuslistinterval_set.count(), 0)
 
-        # delete the locus_list
-        delete_locus_list_url = reverse(delete_locus_list_handler, args=[guid])
+    def test_delete_locus_list(self):
+        delete_locus_list_url = reverse(delete_locus_list_handler, args=[LOCUS_LIST_GUID])
+        self.check_manager_login(delete_locus_list_url)
+
         response = self.client.post(delete_locus_list_url, content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
 
         # check that locus_list was deleted
-        new_locus_list = LocusList.objects.filter(guid=guid)
+        new_locus_list = LocusList.objects.filter(guid=LOCUS_LIST_GUID)
         self.assertEqual(len(new_locus_list), 0)
 
     def test_add_and_remove_project_locus_lists(self):

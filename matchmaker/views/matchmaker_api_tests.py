@@ -15,6 +15,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 SUBMISSION_GUID = 'MS000001_na19675'
+INVALID_PROJECT_SUBMISSION_GUID = 'MS000016_P0004515'
 NO_SUBMISSION_INDIVIDUAL_GUID = 'I000006_hg00733'
 RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
@@ -87,6 +88,12 @@ class MatchmakerAPITest(AuthenticationTestCase):
     def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
+
+        # test MME disabled project
+        invalid_url = reverse(get_individual_mme_matches, args=[INVALID_PROJECT_SUBMISSION_GUID])
+        response = self.client.get(invalid_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['message'], 'Matchmaker is not enabled')
 
         response = self.client.get(url)
 

@@ -137,6 +137,12 @@ class ProjectAPITest(AuthenticationTestCase):
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
 
+        # Test invalid project guid
+        invalid_url = reverse(project_page_data, args=['FAKE_GUID'])
+        response = self.client.get(invalid_url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['message'], 'Project matching query does not exist.')
+
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
         self.check_collaborator_login(url)

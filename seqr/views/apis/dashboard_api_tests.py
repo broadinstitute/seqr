@@ -19,6 +19,7 @@ class DashboardPageTest(AuthenticationTestCase):
             set(response_json['projectCategoriesByGuid'].values()[0].keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
         )
+        self.assertEqual(len(response_json['projectsByGuid']), 2)
         self.assertSetEqual(
             set(response_json['projectsByGuid'].values()[0].keys()),
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
@@ -26,6 +27,12 @@ class DashboardPageTest(AuthenticationTestCase):
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
              'numVariantTags', }
         )
+
+        # Staff users can see all projects
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['projectsByGuid']), 3)
 
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)

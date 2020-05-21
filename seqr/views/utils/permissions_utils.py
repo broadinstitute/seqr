@@ -14,14 +14,8 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
          can_edit (bool): If user need edit permission
          is_owner (bool): If user need owner permission
      """
-
-    projects = Project.objects.filter(guid=project_guid)
-    if not projects:
-        raise ValueError("Invalid project GUID: %s" % project_guid)
-
-    project = projects[0]
+    project = Project.objects.get(guid=project_guid)
     check_project_permissions(project, user, **kwargs)
-
     return project
 
 
