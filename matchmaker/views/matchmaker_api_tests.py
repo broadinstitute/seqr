@@ -4,7 +4,6 @@ import mock
 
 from copy import deepcopy
 from datetime import datetime
-from django.test import TestCase
 from django.urls.base import reverse
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
@@ -12,7 +11,7 @@ from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
     update_mme_contact_note
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 SUBMISSION_GUID = 'MS000001_na19675'
@@ -81,13 +80,13 @@ class EmailException(Exception):
         self.status_code = 402
 
 
-class MatchmakerAPITest(TestCase):
+class MatchmakerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
 
@@ -189,7 +188,7 @@ class MatchmakerAPITest(TestCase):
     @responses.activate
     def test_search_individual_mme_matches(self, mock_nodes, mock_post_to_slack, mock_email):
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
@@ -265,12 +264,8 @@ class MatchmakerAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
         )
-
-        self.assertDictEqual(response_json['mmeContactNotes'], {
-            'st georges, university of london': {
-                'institution': 'st georges, university of london',
-                'comments': 'Some additional data about this institution',
-            }})
+        # non-staff users can't see contact notes
+        self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
 
         #  Test removed match is deleted
         self.assertEqual(MatchmakerResult.objects.filter(guid='MR0007228_VCGS_FAM50_156').count(), 0)
@@ -339,6 +334,17 @@ class MatchmakerAPITest(TestCase):
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
         self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
 
+        # staff users should see contact notes
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['mmeContactNotes'], {
+            'st georges, university of london': {
+                'institution': 'st georges, university of london',
+                'comments': 'Some additional data about this institution',
+            }})
+
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
     def test_update_mme_submission(self, mock_mme_nodes):
@@ -346,7 +352,7 @@ class MatchmakerAPITest(TestCase):
         mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
 
         url = reverse(update_mme_submission)
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -429,12 +435,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertEqual(response_json['mmeResultsByGuid'].values()[0]['submissionGuid'], new_submission_guid)
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249'})
-
-        self.assertDictEqual(response_json['mmeContactNotes'], {
-            'st georges, university of london': {
-                'institution': 'st georges, university of london',
-                'comments': 'Some additional data about this institution',
-            }})
+        self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test proxy calls
         expected_body = {
@@ -629,7 +630,7 @@ class MatchmakerAPITest(TestCase):
     @responses.activate
     def test_delete_mme_submission(self, mock_mme_nodes):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
@@ -677,7 +678,7 @@ class MatchmakerAPITest(TestCase):
 
     def test_update_mme_result_status(self):
         url = reverse(update_mme_result_status, args=[RESULT_STATUS_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'matchmakerResultGuid': RESULT_STATUS_GUID,
@@ -707,7 +708,7 @@ class MatchmakerAPITest(TestCase):
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     def test_send_mme_contact_email(self, mock_email):
         url = reverse(send_mme_contact_email, args=[RESULT_STATUS_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'to': 'test@test.com , other_test@gmail.com',
@@ -749,7 +750,7 @@ class MatchmakerAPITest(TestCase):
 
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
-        _check_login(self, url)
+        self.check_staff_login(url)
 
         # Test create
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -782,4 +783,3 @@ class MatchmakerAPITest(TestCase):
         models = MatchmakerContactNotes.objects.filter(institution='genedx')
         self.assertEqual(models.count(), 1)
         self.assertEqual(models.first().comments, 'test comment update')
-

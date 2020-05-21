@@ -49,6 +49,8 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
 
+        # check that non-viewer users can't access collaborator URLs
+
         self.client.force_login(self.collaborator_user)
         if permission_level == self.COLLABORATOR:
             return
