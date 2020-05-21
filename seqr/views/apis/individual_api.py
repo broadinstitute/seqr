@@ -11,14 +11,14 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, CAN_EDIT
+from seqr.models import Individual, Family
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -67,7 +67,7 @@ def update_individual_handler(request, individual_guid):
 
     project = individual.family.project
 
-    check_permissions(project, request.user, CAN_EDIT)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -88,7 +88,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     project = individual.family.project
 
-    check_permissions(project, request.user, CAN_EDIT)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -134,7 +134,7 @@ def edit_individuals_handler(request, project_guid):
             }
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -214,7 +214,7 @@ def delete_individuals_handler(request, project_guid):
     """
 
     # validate request
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')

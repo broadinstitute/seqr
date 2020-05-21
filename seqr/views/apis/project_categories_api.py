@@ -5,10 +5,10 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, ProjectCategory, CAN_EDIT
+from seqr.models import Project, ProjectCategory
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.permissions_utils import check_project_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -43,7 +43,7 @@ def update_project_categories_handler(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     # check permissions
-    check_permissions(project, request.user, CAN_EDIT)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 

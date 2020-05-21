@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import LocusList, LocusListGene, LocusListInterval, CAN_EDIT
+from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -84,7 +84,7 @@ def create_locus_list_handler(request):
 @csrf_exempt
 def update_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_user_created_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
+    check_user_created_object_permissions(locus_list, request.user)
 
     request_json = json.loads(request.body)
 
@@ -106,7 +106,7 @@ def update_locus_list_handler(request, locus_list_guid):
 @csrf_exempt
 def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_user_created_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
+    check_user_created_object_permissions(locus_list, request.user)
 
     locus_list.delete()
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
@@ -115,7 +115,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
@@ -130,7 +130,7 @@ def add_project_locus_lists(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:

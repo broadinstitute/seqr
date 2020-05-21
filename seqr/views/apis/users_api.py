@@ -11,7 +11,7 @@ from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
-from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
+from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL, BASE_URL
 
 
@@ -106,7 +106,7 @@ def create_staff_user(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_project_collaborator(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     try:
         user = _create_user(request)
@@ -168,7 +168,7 @@ def _update_existing_user(user, project, request_json):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)
@@ -178,7 +178,7 @@ def update_project_collaborator(request, project_guid, username):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
 
     project.can_view_group.user_set.remove(user)

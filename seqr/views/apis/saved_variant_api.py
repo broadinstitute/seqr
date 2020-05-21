@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
+    LocusList, LocusListInterval, LocusListGene, Family, GeneNote
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -14,7 +14,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -64,7 +64,7 @@ def create_saved_variant_handler(request):
     family_guid = variant_json['familyGuid']
 
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_VIEW)
+    check_project_permissions(family.project, request.user)
 
     if isinstance(variant_json['variant'], list):
         # are compound hets
@@ -118,7 +118,7 @@ def create_variant_note_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_VIEW)
+    check_project_permissions(family.project, request.user)
 
     all_variant_guids = variant_guids.split(',')
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -172,7 +172,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
-        check_permissions(project, request.user, CAN_VIEW)
+        check_project_permissions(project, request.user)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
@@ -191,7 +191,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
-        check_permissions(project, request.user, CAN_VIEW)
+        check_project_permissions(project, request.user)
     note.delete()
 
     saved_variants_by_guid = {}
@@ -216,7 +216,7 @@ def update_variant_tags_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_VIEW)
+    check_project_permissions(family.project, request.user)
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -252,7 +252,7 @@ def update_variant_functional_data_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_VIEW)
+    check_project_permissions(family.project, request.user)
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -326,7 +326,7 @@ def _create_new_tags(saved_variants, tags_json, user):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_saved_variant_json(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
     updated_saved_variant_guids = update_project_saved_variant_json(project)
 
@@ -337,7 +337,7 @@ def update_saved_variant_json(request, project_guid):
 @csrf_exempt
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.family.project, request.user, CAN_EDIT)
+    check_project_permissions(saved_variant.family.project, request.user, can_edit=True)
 
     saved_variant.selected_main_transcript_id = transcript_id
     saved_variant.save()
