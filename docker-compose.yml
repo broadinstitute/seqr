@@ -81,6 +81,7 @@ services:
       - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
       - PHENOTIPS_SERVICE_HOSTNAME=phenotips
       - REDIS_SERVICE_HOSTNAME=redis
+      - KIBANA_SERVICE_HOSTNAME=kibana
       - PGHOST=postgres
       - PGUSER=postgres
       - GUNICORN_WORKER_THREADS=4
