@@ -1,20 +1,17 @@
 import collections
 import glob
 import logging
-import multiprocessing
 import os
 from pprint import pformat
 
 import tempfile
-import psutil
 import time
-import sys
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
-from seqr.utils.shell_utils import run
+from deploy.servctl_utils.shell_utils import run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()

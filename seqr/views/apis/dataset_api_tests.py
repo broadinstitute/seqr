@@ -1,5 +1,6 @@
 import json
 import mock
+import subprocess
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -228,9 +229,9 @@ class DatasetAPITest(AuthenticationTestCase):
             'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
         })
 
-    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
-    def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
+    def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
         self.check_manager_login(url)
 
@@ -246,7 +247,7 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
 
         mock_local_file_exists.return_value = False
-        mock_google_bucket_file_exists.return_value = False
+        mock_subprocess.return_value.wait.return_value = 1
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': '/readviz/NA19675_new.cram',
         }))
@@ -261,7 +262,7 @@ class DatasetAPITest(AuthenticationTestCase):
 
         # Send valid request
         mock_local_file_exists.return_value = True
-        mock_google_bucket_file_exists.return_value = True
+        mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': '/readviz/NA19675_new.cram',
         }))
@@ -269,6 +270,7 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
             'filePath': '/readviz/NA19675_new.cram'}}})
+        mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
 
         new_sample_url = reverse(update_individual_igv_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
@@ -288,3 +290,4 @@ class DatasetAPITest(AuthenticationTestCase):
             set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
             {sample_guid}
         )
+        mock_subprocess.assert_called_with('gsutil ls gs://readviz/NA19679.bam', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
