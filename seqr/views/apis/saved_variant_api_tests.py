@@ -669,10 +669,11 @@ class SavedVariantAPITest(AuthenticationTestCase):
             {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
 
-    @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
-    def test_update_saved_variant_json(self, mock_retrieve_variants):
-        mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
-            [{'variantId': var[0], 'familyGuids': [var[1].guid]} for var in variant_tuples]
+    @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
+    def test_update_saved_variant_json(self, mock_get_variants):
+        mock_get_variants.side_effect = lambda families, variant_ids: \
+            [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
+             for variant_id in variant_ids]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         self.check_manager_login(url)
