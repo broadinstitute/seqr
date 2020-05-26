@@ -3,7 +3,7 @@ import mock
 
 from django.core.management import call_command
 from django.test import TestCase
-from seqr.models import Project, Family
+from seqr.models import Family
 
 PROJECT_NAME = u'1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
