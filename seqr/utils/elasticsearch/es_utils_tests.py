@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids
 from seqr.utils.elasticsearch.es_search import _get_family_affected_status
 
 INDEX_NAME = 'test_index'
@@ -1206,6 +1206,13 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T']}}],
+        )
+
+    def test_get_es_variants_for_variant_ids(self):
+        get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
+        self.assertExecutedSearch(
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
+            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
     def test_get_single_es_variant(self):
