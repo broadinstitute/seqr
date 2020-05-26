@@ -89,6 +89,8 @@ MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 
+MOCK_SLACK_TOKEN = 'xoxp-123'
+
 
 class EmailException(Exception):
 
@@ -207,11 +209,12 @@ class MatchmakerAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
+    @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
+    @mock.patch('seqr.utils.communication_utils.Slacker')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
-    @mock.patch('matchmaker.views.matchmaker_api.post_to_slack')
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_nodes, mock_post_to_slack, mock_email):
+    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_slacker):
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -343,10 +346,15 @@ class MatchmakerAPITest(AuthenticationTestCase):
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
-        mock_post_to_slack.assert_has_calls([
-            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
-                json.dumps(expected_patient_body))),
-            mock.call('matchmaker_seqr_match', message),
+        self.assertEqual(mock_slacker.call_count, 2)
+        mock_slacker.assert_called_with(MOCK_SLACK_TOKEN)
+        mock_slacker.return_value.chat.post_message.assert_has_calls([
+            mock.call(
+                'matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
+                    json.dumps(expected_patient_body)
+                ), as_user=False, icon_emoji=':beaker:', username='Beaker (engineering-minion)'),
+            mock.call('matchmaker_seqr_match', message,
+                      as_user=False, icon_emoji=':beaker:', username='Beaker (engineering-minion)'),
         ])
         mock_email.assert_called_with(
             subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
