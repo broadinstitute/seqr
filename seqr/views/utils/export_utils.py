@@ -70,9 +70,9 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
             for filename, header, rows in files:
                 header_display = header
                 if add_header_prefix:
-                    header_display = map(
-                        lambda (i, k): '{}-{}'.format(str(i).zfill(2), k), enumerate(header)
-                    )
+                    header_display = list(map(
+                        lambda header_tuple: '{}-{}'.format(str(header_tuple[0]).zfill(2), header_tuple[1]), enumerate(header)
+                    ))
                     header_display[0] = header[0]
                 content = DELIMITERS[file_format].join(header_display) + '\n'
                 content += '\n'.join([

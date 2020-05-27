@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from pyliftover.liftover import LiftOver
-from sys import maxint
+from sys import maxsize
 from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -1261,13 +1261,13 @@ def _parse_es_sort(sort, sort_config):
             sort = -1
         elif sort == '-Infinity' or sort is None:
             # None of the sorts used by seqr return negative values so -1 is fine
-            sort = maxint
+            sort = maxsize
         else:
             sort = sort * -1
 
     # ES returns these values for sort when a sort field is missing
     elif sort == 'Infinity':
-        sort = maxint
+        sort = maxsize
     elif sort == '-Infinity':
         # None of the sorts used by seqr return negative values so -1 is fine
         sort = -1
