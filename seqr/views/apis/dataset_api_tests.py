@@ -2,12 +2,11 @@ import json
 import mock
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -16,7 +15,7 @@ SV_INDEX_NAME = 'test_new_sv_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
-class DatasetAPITest(TransactionTestCase):
+class DatasetAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
@@ -25,7 +24,7 @@ class DatasetAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
     def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Confirm test DB is as expected
         existing_index_sample = Sample.objects.get(sample_id='NA19675')
@@ -204,7 +203,7 @@ class DatasetAPITest(TransactionTestCase):
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Send invalid requests
         f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
@@ -233,7 +232,7 @@ class DatasetAPITest(TransactionTestCase):
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))

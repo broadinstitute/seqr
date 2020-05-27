@@ -1,26 +1,25 @@
 import json
 from datetime import datetime
-from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data
-from seqr.views.utils.test_utils import _check_login, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
+    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
 
 
-class ProjectAPITest(TestCase):
+class ProjectAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
-        _check_login(self, create_project_url)
+        self.check_require_login(create_project_url)
 
         # check validation of bad requests
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'bad_json': None}))
@@ -72,7 +71,7 @@ class ProjectAPITest(TestCase):
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -101,9 +100,11 @@ class ProjectAPITest(TestCase):
         self.assertEqual(len(discovery_tags), 1)
         self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
-        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), INTERNAL_FAMILY_FIELDS)
+        family_fields = {'individualGuids'}
+        family_fields.update(FAMILY_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), family_fields)
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
-        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
         self.assertSetEqual(set(response_json['samplesByGuid'].values()[0].keys()), SAMPLE_FIELDS)
         self.assertSetEqual(set(response_json['igvSamplesByGuid'].values()[0].keys()), IGV_SAMPLE_FIELDS)
@@ -125,9 +126,26 @@ class ProjectAPITest(TestCase):
             {'id', 'category', 'label'}
         )
 
+        # Test staff users have internal fields returned
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        family_fields.update(INTERNAL_FAMILY_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), family_fields)
+        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
+
+        # Test invalid project guid
+        invalid_url = reverse(project_page_data, args=['FAKE_GUID'])
+        response = self.client.get(invalid_url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['message'], 'Project matching query does not exist.')
+
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
-        _check_login(self, url)
+        self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

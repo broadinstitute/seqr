@@ -33,7 +33,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
+from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
 from seqr.views.utils.variant_utils import get_variant_key
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -332,7 +332,7 @@ def search_context_handler(request):
 
 def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
-        check_permissions(project, user)
+        check_project_permissions(project, user)
 
     prefetch_related_objects(projects, 'can_view_group')
     project_models_by_guid = {project.guid: project for project in projects}
@@ -513,7 +513,7 @@ def _check_results_permission(results_model, user):
     families = results_model.families.prefetch_related('project').all()
     projects = {family.project for family in families}
     for project in projects:
-        check_permissions(project, user)
+        check_project_permissions(project, user)
 
 
 def _get_search_context(results_model):
