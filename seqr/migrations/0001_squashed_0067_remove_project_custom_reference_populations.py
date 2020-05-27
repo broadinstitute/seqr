@@ -249,7 +249,7 @@ class Migration(migrations.Migration):
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+',
                     to=settings.AUTH_USER_MODEL)),
-                ('projects', models.ManyToManyField(to=b'seqr.Project')),
+                ('projects', models.ManyToManyField(to='seqr.Project')),
             ],
             options={
                 'abstract': False,
@@ -533,7 +533,7 @@ class Migration(migrations.Migration):
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+',
                     to=settings.AUTH_USER_MODEL)),
-                ('families', models.ManyToManyField(to=b'seqr.Family')),
+                ('families', models.ManyToManyField(to='seqr.Family')),
                 ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='seqr.Project')),
             ],
         ),
@@ -572,7 +572,7 @@ class Migration(migrations.Migration):
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+',
                     to=settings.AUTH_USER_MODEL)),
-                ('families', models.ManyToManyField(to=b'seqr.Family')),
+                ('families', models.ManyToManyField(to='seqr.Family')),
                 ('variant_search', models.ForeignKey(
                     on_delete=django.db.models.deletion.CASCADE, to='seqr.VariantSearch')),
             ],
