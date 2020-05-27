@@ -55,7 +55,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
         response = HttpResponse(content_type='text/tsv')
         response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix)
         response.writelines(['\t'.join(header)+'\n'])
-        response.writelines(('\t'.join(row)+'\n' for row in rows))
+        response.writelines('\t'.join(list(map(str, row)))+'\n' for row in rows)
         return response
     elif file_format == "json":
         response = HttpResponse(content_type='application/json')
