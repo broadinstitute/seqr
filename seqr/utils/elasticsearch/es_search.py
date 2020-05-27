@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from collections import defaultdict
 from copy import deepcopy
 import elasticsearch
@@ -6,7 +8,7 @@ import hashlib
 import json
 import logging
 from pyliftover.liftover import LiftOver
-from sys import maxint
+from sys import maxsize
 from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -63,7 +65,7 @@ class EsSearch(object):
             if len(self.samples_by_family_index) < 1:
                 raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
-        self._indices = self.samples_by_family_index.keys()
+        self._indices = list(self.samples_by_family_index.keys())
         self._set_index_metadata()
 
         if len(self.samples_by_family_index) != len(self.index_metadata):
@@ -262,7 +264,7 @@ class EsSearch(object):
                         if inheritance_mode:
                             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-                        if inheritance_filter.keys() == ['affected']:
+                        if list(inheritance_filter.keys()) == ['affected']:
                             raise Exception('Inheritance must be specified if custom affected status is set')
 
                         family_samples_q = _family_genotype_inheritance_filter(
@@ -277,7 +279,7 @@ class EsSearch(object):
                             family_samples_q |= x_linked_q
                     else:
                         # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
-                        family_samples_q = _any_affected_sample_filter(samples_by_id.keys())
+                        family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))
 
                     family_samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
                     if not genotypes_q:
@@ -434,7 +436,7 @@ class EsSearch(object):
         return variant_results[:num_results]
 
     def _execute_multi_search(self, **kwargs):
-        indices = self._index_searches.keys() or self._indices
+        indices = list(self._index_searches.keys()) or self._indices
 
         if self.CACHED_COUNTS_KEY and not self.previous_search_results.get(self.CACHED_COUNTS_KEY):
             self.previous_search_results[self.CACHED_COUNTS_KEY] = {}
@@ -516,7 +518,7 @@ class EsSearch(object):
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
-            family_guids = index_family_samples.keys()
+            family_guids = list(index_family_samples.keys())
         else:
             # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
             alt_allele_samples = set()
@@ -755,7 +757,7 @@ class EsSearch(object):
                 return True
 
             valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in
-                                  combinations(range(len(variants)), 2)
+                                  combinations(list(range(len(variants))), 2)
                                   if _is_valid_compound_het_pair(ch_1_index, ch_2_index)]
 
             family_compound_het_pairs[family_guid] = [
@@ -835,7 +837,7 @@ class EsSearch(object):
         duplicates = 0
         results = {}
         for gene_compound_het_pair in compound_het_results:
-            gene = gene_compound_het_pair.keys()[0]
+            gene = list(gene_compound_het_pair.keys())[0]
             compound_het_pair = gene_compound_het_pair[gene]
             if gene in results:
                 variant_ids = {variant['variantId'] for variant in compound_het_pair}
@@ -888,7 +890,7 @@ class EsSearch(object):
         num_compound_hets = 0
         num_single_variants = 0
         for variants_group in grouped_variants:
-            variants = variants_group.values()[0]
+            variants = list(variants_group.values())[0]
 
             if loaded_result_count != self.previous_search_results['total_results']:
                 self.previous_search_results['grouped_results'].append(variants_group)
@@ -1135,7 +1137,7 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
             q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
 
     if genes:
-        gene_q = Q('terms', geneIds=genes.keys())
+        gene_q = Q('terms', geneIds=list(genes.keys()))
         if q:
             q |= gene_q
         else:
@@ -1233,7 +1235,7 @@ def _get_sort(sort_key):
 
 
 def _sort_compound_hets(grouped_variants):
-    return sorted(grouped_variants, key=lambda variants: variants.values()[0][0]['_sort'])
+    return sorted(grouped_variants, key=lambda variants: list(variants.values())[0][0]['_sort'])
 
 
 def _get_compound_het_page(grouped_variants, start_index, end_index):
@@ -1241,7 +1243,7 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
     variant_results = []
     variant_count = 0
     for variants in grouped_variants:
-        curr_variant = variants.values()[0]
+        curr_variant = list(variants.values())[0]
         if skipped < start_index:
             skipped += 1
         else:
@@ -1261,13 +1263,13 @@ def _parse_es_sort(sort, sort_config):
             sort = -1
         elif sort == '-Infinity' or sort is None:
             # None of the sorts used by seqr return negative values so -1 is fine
-            sort = maxint
+            sort = maxsize
         else:
             sort = sort * -1
 
     # ES returns these values for sort when a sort field is missing
     elif sort == 'Infinity':
-        sort = maxint
+        sort = maxsize
     elif sort == '-Infinity':
         # None of the sorts used by seqr return negative values so -1 is fine
         sort = -1

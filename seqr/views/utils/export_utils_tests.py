@@ -43,21 +43,21 @@ class ExportTableUtilsTest(TestCase):
     def test_export_multiple_files(self, mock_zip):
         mock_zip_content = {}
         def mock_write_zip(file, content):
-            mock_zip_content[file] = unicode(content)
+            mock_zip_content[file] = content.decode('utf-8')
         mock_zip.return_value.__enter__.return_value.writestr.side_effect = mock_write_zip
 
         header1 = ['col1', 'col2']
         header2 = ['col1']
         header3 = ['col2', 'col3', 'col1']
-        rows = [{'col2': 'row1_v2', 'col1': 'row1_v1\xe2'}, {'col1': 'row2_v1'}]
+        rows = [{'col2': 'row1_v2', 'col1': u'row1_v1\xe2'}, {'col1': 'row2_v1'}]
 
         # test csv format
-        response = export_multiple_files([['file1', header1, rows], ['file2', header2, rows]], 'zipfile')
+        response = export_multiple_files([[u'file1\xe3', header1, rows], ['file2', header2, rows]], 'zipfile')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('content-disposition'), 'attachment; filename="zipfile.zip"')
         self.assertDictEqual(mock_zip_content, {
-            'file1.csv': 'col1,col2\nrow1_v1,row1_v2\nrow2_v1,',
-            'file2.csv': 'col1\nrow1_v1\nrow2_v1',
+            u'file1\xe3.csv': u'col1,col2\nrow1_v1\xe2,row1_v2\nrow2_v1,',
+            'file2.csv': u'col1\nrow1_v1\xe2\nrow2_v1',
         })
         mock_zip_content = {}
 
@@ -66,8 +66,8 @@ class ExportTableUtilsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('content-disposition'), 'attachment; filename="zipfile.zip"')
         self.assertDictEqual(mock_zip_content, {
-            'file1.tsv': 'col1\tcol2\nrow1_v1\trow1_v2\nrow2_v1\t',
-            'file2.tsv': 'col1\nrow1_v1\nrow2_v1',
+            'file1.tsv': u'col1\tcol2\nrow1_v1\xe2\trow1_v2\nrow2_v1\t',
+            'file2.tsv': u'col1\nrow1_v1\xe2\nrow2_v1',
         })
         mock_zip_content = {}
 
@@ -76,8 +76,8 @@ class ExportTableUtilsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('content-disposition'), 'attachment; filename="zipfile.zip"')
         self.assertDictEqual(mock_zip_content, {
-            'file1.csv': 'col1,01-col2\nrow1_v1,row1_v2\nrow2_v1,X',
-            'file2.csv': 'col2,01-col3,02-col1\nrow1_v2,X,row1_v1\nX,X,row2_v1',
+            'file1.csv': u'col1,01-col2\nrow1_v1\xe2,row1_v2\nrow2_v1,X',
+            'file2.csv': u'col2,01-col3,02-col1\nrow1_v2,X,row1_v1\xe2\nX,X,row2_v1',
         })
         mock_zip_content = {}
 

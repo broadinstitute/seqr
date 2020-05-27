@@ -102,7 +102,7 @@ def copy_results(apps, schema_editor):
     db_alias = schema_editor.connection.alias
 
     field_process_funcs = {'submission': lambda model, field: model.individual.matchmakersubmission}
-    fields = RESULT_FIELDS + field_process_funcs.keys()
+    fields = RESULT_FIELDS + list(field_process_funcs.keys())
     bulk_copy_models(db_alias, SeqrResult, MatchmakerResult, fields, field_process_funcs=field_process_funcs)
 
 
@@ -133,7 +133,7 @@ def reverse_copy_results(apps, schema_editor):
     db_alias = schema_editor.connection.alias
 
     field_process_funcs = {'individual_id': lambda model, field: model.submission.individual_id}
-    fields = RESULT_FIELDS + field_process_funcs.keys()
+    fields = RESULT_FIELDS + list(field_process_funcs.keys())
     bulk_copy_models(
         db_alias, MatchmakerResult, SeqrResult, fields, field_process_funcs=field_process_funcs,
         db_filter=models.Q(submission__isnull=False))

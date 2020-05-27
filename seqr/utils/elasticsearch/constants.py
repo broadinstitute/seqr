@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
@@ -246,16 +248,16 @@ NESTED_FIELDS = {
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
-    'end': {'format_value': long},
+    'end': {'format_value': int},
     'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
     'num_exon': {'response_key': 'numExon'},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
-    'start': {'response_key': 'pos', 'format_value': long},
+    'start': {'response_key': 'pos', 'format_value': int},
     'svType': {},
     'variantId': {},
-    'xpos': {'format_value': long},
+    'xpos': {'format_value': int},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -290,7 +292,7 @@ GENOTYPE_FIELDS_CONFIG = {
 }
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})
 
-QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + \
+QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]

@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import datetime
 from collections import OrderedDict
 import json
@@ -28,7 +31,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
     """
     if isinstance(header, dict):
         # it's a mapping of row keys to values
-        column_keys = header.keys()
+        column_keys = list(header.keys())
         header = list(header.values())
     else:
         column_keys = header
@@ -52,21 +55,21 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
         response = HttpResponse(content_type='text/tsv')
         response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix)
         response.writelines(['\t'.join(header)+'\n'])
-        response.writelines(('\t'.join(map(unicode, row))+'\n' for row in rows))
+        response.writelines(('\t'.join(row)+'\n' for row in rows))
         return response
     elif file_format == "json":
         response = HttpResponse(content_type='application/json')
         response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix)
         for row in rows:
-            json_keys = map(lambda s: s.replace(" ", "_").lower(), header)
-            json_values = map(unicode, row)
-            response.write(json.dumps(OrderedDict(zip(json_keys, json_values)))+'\n')
+            json_keys = [s.replace(" ", "_").lower() for s in header]
+            json_values = row
+            response.write(json.dumps(OrderedDict(list(zip(json_keys, json_values))))+'\n')
         return response
     elif file_format == "xls":
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()
         if titlecase_header:
-            header = map(_to_title_case, header)
+            header = list(map(_to_title_case, header))
         ws.append(header)
         for row in rows:
             try:
@@ -96,17 +99,19 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
             for filename, header, rows in files:
                 header_display = header
                 if add_header_prefix:
-                    header_display = map(
-                        lambda (i, k): '{}-{}'.format(str(i).zfill(2), k), enumerate(header)
-                    )
+                    header_display = ['{}-{}'.format(str(i_k[0]).zfill(2), i_k[1]) for i_k in enumerate(header)]
                     header_display[0] = header[0]
                 content = DELIMITERS[file_format].join(header_display) + '\n'
                 content += '\n'.join([
                     DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
                 ])
-                if not isinstance(content, unicode):
-                    content = unicode(content, errors='ignore')
-                zip_file.writestr('{}.{}'.format(filename, file_format), content)
+                if not isinstance(content, str):
+                    content = str(content, errors='ignore')
+                try:
+                    zip_file.writestr('{}.{}'.format(filename, file_format), content.encode('utf-8'))
+                except Exception as ex:
+                    response = HttpResponse('Writing temp file failed: {}'.format(str(ex)), content_type="text/plain", status = 400)
+                    return response
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename)

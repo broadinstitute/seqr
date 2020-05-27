@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import json
 import logging
 from django.core.mail.message import EmailMessage
@@ -149,7 +150,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         individual = submission.individual
         project = individual.family.project
 
-        result_text = u"""seqr ID {individual_id} from project {project_name} in family {family_id} inserted into
+        result_text = """seqr ID {individual_id} from project {project_name} in family {family_id} inserted into
 matchbox on {insertion_date}, with seqr link
 {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange""".replace('\n', ' ').format(
             individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
@@ -160,9 +161,9 @@ matchbox on {insertion_date}, with seqr link
             if email.strip() != MME_DEFAULT_CONTACT_EMAIL]
         all_emails.update(emails)
         match_results.append((result_text, emails))
-    match_results = sorted(match_results, key=lambda (result_text, _): result_text)
+    match_results = sorted(match_results, key=lambda result_text__: result_text__[0])
 
-    base_message = u"""Dear collaborators,
+    base_message = """Dear collaborators,
 
     matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
     in matchbox. The following information was included with the query,
@@ -183,7 +184,7 @@ matchbox on {insertion_date}, with seqr link
         incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
     )
 
-    message_template = u"""{base_message}{match_results}
+    message_template = """{base_message}{match_results}
 
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 
