@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+from builtins import int
 
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual

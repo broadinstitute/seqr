@@ -161,7 +161,7 @@ matchbox on {insertion_date}, with seqr link
             if email.strip() != MME_DEFAULT_CONTACT_EMAIL]
         all_emails.update(emails)
         match_results.append((result_text, emails))
-    match_results = sorted(match_results, key=lambda result_text__: result_text__[0])
+    match_results = sorted(match_results, key=lambda result_tuple: result_tuple[0])
 
     base_message = """Dear collaborators,
 

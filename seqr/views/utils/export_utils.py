@@ -62,7 +62,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
         response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix)
         for row in rows:
             json_keys = [s.replace(" ", "_").lower() for s in header]
-            json_values = row
+            json_values = list(map(str, row))
             response.write(json.dumps(OrderedDict(list(zip(json_keys, json_values))))+'\n')
         return response
     elif file_format == "xls":
@@ -99,7 +99,7 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
             for filename, header, rows in files:
                 header_display = header
                 if add_header_prefix:
-                    header_display = ['{}-{}'.format(str(i_k[0]).zfill(2), i_k[1]) for i_k in enumerate(header)]
+                    header_display = ['{}-{}'.format(str(header_tuple[0]).zfill(2), header_tuple[1]) for header_tuple in enumerate(header)]
                     header_display[0] = header[0]
                 content = DELIMITERS[file_format].join(header_display) + '\n'
                 content += '\n'.join([
