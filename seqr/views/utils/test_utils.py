@@ -11,7 +11,7 @@ class AuthenticationTestCase(TestCase):
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
-    ANY = 'any'
+    AUTHENTICATED_USER = 'authenticated'
 
     @classmethod
     def setUpTestData(cls):
@@ -28,7 +28,7 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
     def check_require_login(self, url):
-        self._check_login(url, self.ANY)
+        self._check_login(url, self.AUTHENTICATED_USER)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
@@ -59,7 +59,7 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
 
         self.client.force_login(self.no_access_user)
-        if permission_level == self.ANY:
+        if permission_level == self.AUTHENTICATED_USER:
             return
 
         # check that users without view permission users can't access collaborator URLs
