@@ -114,7 +114,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [e.args[0] or str(e)]}, status=400)
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     if not matched_sample_id_to_sample_record:
         return create_json_response({'samplesByGuid': {}})
@@ -166,7 +166,7 @@ def receive_igv_table_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [e.args[0] or str(e)]}, status=400)
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     response = {
         'updatesByIndividualGuid': updates_by_individual_guid,
@@ -211,7 +211,7 @@ def update_individual_igv_sample(request, individual_guid):
             }
         return create_json_response(response)
     except Exception as e:
-        error = e.args[0] or str(e)
+        error = str(e)
         return create_json_response({'error': error}, status=400, reason=error)
 
 
