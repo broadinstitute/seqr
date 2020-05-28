@@ -26,16 +26,9 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
-    if isinstance(header, dict):
-        # it's a mapping of row keys to values
-        column_keys = header.keys()
-        header = list(header.values())
-    else:
-        column_keys = header
-
     for i, row in enumerate(rows):
         if isinstance(row, dict):
-            for column_key in column_keys:
+            for column_key in header:
                 if column_key not in row:
                     raise ValueError("row #%d doesn't have key '%s': %s" % (i, column_key, row))
         else:
@@ -71,7 +64,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
         for row in rows:
             try:
                 if isinstance(row, dict):
-                    row = [row[column_key] for column_key in column_keys]
+                    row = [row[column_key] for column_key in header]
                 ws.append(row)
             except ValueError:
                 raise ValueError("Unable to append row to xls writer: " + ','.join(row))
