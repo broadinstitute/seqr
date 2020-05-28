@@ -1,4 +1,3 @@
-import datetime
 from collections import OrderedDict
 import json
 import openpyxl as xl
@@ -15,7 +14,7 @@ DELIMITERS = {
 }
 
 
-def export_table(filename_prefix, header, rows, file_format, titlecase_header=True):
+def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_header=True):
     """Generates an HTTP response for a table with the given header and rows, exported into the given file_format.
 
     Args:
@@ -27,19 +26,9 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
         Django HttpResponse object with the table data as an attachment.
     """
     for i, row in enumerate(rows):
-        if isinstance(row, dict):
-            for column_key in header:
-                if column_key not in row:
-                    raise ValueError("row #%d doesn't have key '%s': %s" % (i, column_key, row))
-        else:
-            if len(header) != len(row):
-                raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
-
-        for i, value in enumerate(row):
-            if value is None:
-                row[i] = ""
-            elif type(value) == datetime.datetime:
-                row[i] = value.strftime("%m/%d/%Y %H:%M:%S %p %Z")
+        if len(header) != len(row):
+            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
+        rows[i] = ['' if value is None else value for value in row]
 
     if file_format == "tsv":
         response = HttpResponse(content_type='text/tsv')
@@ -62,12 +51,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             header = map(_to_title_case, header)
         ws.append(header)
         for row in rows:
-            try:
-                if isinstance(row, dict):
-                    row = [row[column_key] for column_key in header]
-                ws.append(row)
-            except ValueError:
-                raise ValueError("Unable to append row to xls writer: " + ','.join(row))
+            ws.append(row)
         with NamedTemporaryFile() as temporary_file:
             wb.save(temporary_file.name)
             temporary_file.seek(0)
@@ -75,10 +59,7 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
             return response
     else:
-        if not file_format:
-            raise ValueError("file_format arg not specified")
-        else:
-            raise ValueError("Invalid file_format: %s" % file_format)
+        raise ValueError("Invalid file_format: %s" % file_format)
 
 
 def export_multiple_files(files, zip_filename, file_format='csv', add_header_prefix=False, blank_value=''):
