@@ -3,9 +3,9 @@ language: node_js
 jobs:
   include:
   - python: '2.7'
-    env: TEST_PATTERN='*_tests.py'
+    env: TEST_PATTERN='*_tests.py' COVERAGE_THRESHHOLD=90
   - python: '3.7'
-    env: TEST_PATTERN='dataset_apt_tests.py'
+    env: TEST_PATTERN='dataset_api_tests.py'COVERAGE_THRESHHOLD=50
 
 node_js:
 - '11.8.0'
@@ -15,7 +15,7 @@ install:
 
 script:
 - coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p $TEST_PATTERN -v 2 reference_data seqr matchmaker
-- coverage report --fail-under=90
+- coverage report --fail-under=$COVERAGE_THRESHHOLD
 - cd ui/
 - npm test
 
