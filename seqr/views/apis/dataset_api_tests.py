@@ -195,8 +195,10 @@ class DatasetAPITest(TransactionTestCase):
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
-        self.assertIn(sv_sample_guid, response_json['individualsByGuid']['I000001_na19675']['sampleGuids'])
-        self.assertIn(existing_index_sample_guid, response_json['individualsByGuid']['I000001_na19675']['sampleGuids'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
+                            {sv_sample_guid, existing_index_sample_guid})
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
         self.assertEqual(len(sample_models), 2)
@@ -281,7 +283,7 @@ class DatasetAPITest(TransactionTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        sample_guid = list(response_json['igvSamplesByGuid'].keys())[0]
+        sample_guid = next(iter(response_json['igvSamplesByGuid'])) # get the first key
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'filePath': 'gs://readviz/NA19679.bam'})
