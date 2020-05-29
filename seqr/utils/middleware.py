@@ -13,7 +13,7 @@ class JsonErrorMiddleware(MiddlewareMixin):
     @staticmethod
     def process_exception(request, exception):
         if request.path.startswith('/api'):
-            exception_json = {'message': str(exception.message)}
+            exception_json = {'message': str(exception)}
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
             if DEBUG:
