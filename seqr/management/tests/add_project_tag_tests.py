@@ -45,20 +45,20 @@ class AddProjectTagTest(TestCase):
         out = StringIO()
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag', stdout = out)
-        self.assertEqual(err.exception.message, 'Error: argument --project is required')
+        self.assertRegex(str(err.exception), 'Error:.*argument.*--project')
 
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 stdout = out)
-        self.assertEqual(err.exception.message, 'Error: argument --name is required')
+        self.assertRegex(str(err.exception), 'Error:.*argument.*--name')
 
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 '--name={}'.format(TAG_ARGUMENTS["name"]),
                 stdout = out)
-        self.assertEqual(err.exception.message, 'Error: argument --order is required')
+        self.assertRegex(str(err.exception), 'Error:.*argument.*--order')
 
     def test_bad_argument_value(self):
         out = StringIO()
@@ -68,4 +68,4 @@ class AddProjectTagTest(TestCase):
                 '--category={}'.format(TAG_ARGUMENTS["category"]),
                 '--description={}'.format(TAG_ARGUMENTS["description"]),
                 '--color={}'.format(TAG_ARGUMENTS["color"]), stdout = out)
-        self.assertEqual(err.exception.message, 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Project')
+        self.assertEqual(str(err.exception), 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Project')
