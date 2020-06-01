@@ -9,7 +9,7 @@ import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'
-import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
+import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_BULK_UPDATE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
   getEntityExportConfig,
@@ -226,7 +226,7 @@ const IndividualsBulkForm = React.memo(props =>
       </div>
     }
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
-    optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
+    optionalFields={INDIVIDUAL_BULK_UPDATE_EXPORT_DATA}
     uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
     {...props}

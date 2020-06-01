@@ -29,7 +29,11 @@ import {
   getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
 } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
+import {
+  CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+  CASE_REVIEW_STATUS_OPTIONS,
+  PROBAND_RELATIONSHIP_OPTIONS,
+} from '../../constants'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
@@ -549,6 +553,17 @@ const GENES_FIELD = {
 }
 
 const INDIVIDUAL_FIELDS = [
+  {
+    component: OptionFieldView,
+    field: 'probandRelationship',
+    fieldName: 'Relationship to Proband',
+    isEditable: true,
+    tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
+    formFieldProps: {
+      search: true,
+    },
+    isPrivate: true,
+  },
   {
     field: 'age',
     fieldName: 'Age',
