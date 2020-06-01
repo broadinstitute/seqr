@@ -111,7 +111,7 @@ class JSONUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Male, age 44, affected, unspecified availability"""
 
         note_2 = """#### Clinical Information
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Patient is my:__ Adult Child (unspecified sex)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Patient is my:__ Adult Child (unspecified sex) - unable to provide consent
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Current Age:__ 47
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Age of Onset:__ 2
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Race/Ethnicity:__ White; Unknown
