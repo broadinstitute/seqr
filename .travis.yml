@@ -1,7 +1,12 @@
 language: node_js
 
-python:
-- '2.7'
+jobs:
+  include:
+  - python: '2.7'
+    env: TEST_PATTERN='*_tests.py' COVERAGE_THRESHHOLD=90
+  - python: '3.7'
+    env: TEST_PATTERN='*_2_3_tests.py' COVERAGE_THRESHHOLD=20
+
 node_js:
 - '11.8.0'
 
@@ -9,8 +14,8 @@ install:
 - ./install_dependencies.sh
 
 script:
-- coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
-- coverage report --fail-under=90
+- coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p $TEST_PATTERN -v 2 reference_data seqr matchmaker
+- coverage report --fail-under=$COVERAGE_THRESHHOLD
 - cd ui/
 - npm test
 
