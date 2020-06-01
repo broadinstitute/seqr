@@ -9,7 +9,7 @@ import os
 import tempfile
 import openpyxl as xl
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from io import TextIOWrapper
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -41,13 +41,9 @@ def save_temp_file(request):
 def parse_file(filename, stream):
 
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        if isinstance(stream, InMemoryUploadedFile):
-            stream = [line.decode('utf-8') for line in stream]
         return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
 
     elif filename.endswith('.csv'):
-        if isinstance(stream, InMemoryUploadedFile):
-            stream = [line.decode('utf-8') for line in stream]
         return [row for row in csv.reader(stream)]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
@@ -94,10 +90,10 @@ def save_uploaded_file(request, process_records=None):
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
 
     # parse file
-    stream = list(request.FILES.values())[0]
+    stream = next(iter(request.FILES.values()))
     filename = stream._name
 
-    json_records = parse_file(filename, stream)
+    json_records = parse_file(filename, TextIOWrapper(stream.file, encoding = 'utf-8'))
     if process_records:
         json_records = process_records(json_records, filename=filename)
 
