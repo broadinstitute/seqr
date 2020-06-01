@@ -1260,7 +1260,7 @@ class EsUtilsTest(TestCase):
 
         with self.assertRaises(Exception) as cm:
             get_single_es_variant(self.families, '10-10334333-A-G')
-        self.assertEqual(cm.exception.message, 'Variant 10-10334333-A-G not found')
+        self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
@@ -1332,16 +1332,12 @@ class EsUtilsTest(TestCase):
         search_model.search['locus'] = {'rawItems': 'chr27:1234-5678', 'rawVariantItems': 'chr2-A-C'}
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(
-            cm.exception.message, 'Invalid genes/intervals: chr27:1234-5678',
-        )
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678')
 
         search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678'
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(
-            cm.exception.message, 'Invalid variants: chr2-A-C',
-        )
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
         search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
 
         # Test edge case where searching by inheritance with no affected individuals
@@ -1350,7 +1346,7 @@ class EsUtilsTest(TestCase):
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, sort='protein_consequence', num_results=2)
         self.assertEqual(
-            cm.exception.message, 'Inheritance based search is disabled in families with no affected individuals',
+            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
         )
 
         # Test successful search
@@ -2677,6 +2673,4 @@ class EsUtilsTest(TestCase):
         # Affected specified with no other inheritance
         with self.assertRaises(Exception) as cm:
             _execute_inheritance_search(inheritance_filter={'affected': custom_affected})
-        self.assertEqual(
-            cm.exception.message, 'Inheritance must be specified if custom affected status is set',
-        )
+        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
