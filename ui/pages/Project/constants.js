@@ -32,6 +32,7 @@ import {
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
+  INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   INDIVIDUAL_FIELD_CONFIGS,
   INDIVIDUAL_HPO_EXPORT_DATA,
@@ -72,39 +73,6 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
     ...{ [opt.value]: opt },
   }), {},
 )
-
-
-export const PROBAND_RELATIONSHIP_OPTIONS = [
-  { value: 'S', name: 'Self' },
-  { value: 'M', name: 'Mother' },
-  { value: 'F', name: 'Father' },
-  { value: 'B', name: 'Sibling' },
-  { value: 'C', name: 'Child' },
-  { value: 'H', name: 'Maternal Half Sibling' },
-  { value: 'J', name: 'Paternal Half Sibling' },
-  { value: 'G', name: 'Maternal Grandmother' },
-  { value: 'W', name: 'Maternal Grandfather' },
-  { value: 'X', name: 'Paternal Grandmother' },
-  { value: 'Y', name: 'Paternal Grandfather' },
-  { value: 'A', name: 'Maternal Aunt' },
-  { value: 'L', name: 'Maternal Uncle' },
-  { value: 'E', name: 'Paternal Aunt' },
-  { value: 'D', name: 'Paternal Uncle' },
-  { value: 'N', name: 'Niece' },
-  { value: 'P', name: 'Nephew' },
-  { value: 'Z', name: 'Maternal 1st Cousin' },
-  { value: 'K', name: 'Paternal 1st Cousin' },
-  { value: 'O', name: 'Other' },
-  { value: 'U', name: 'Unknown' },
-]
-
-const PROBAND_RELATIONSHIP_LOOKUP = PROBAND_RELATIONSHIP_OPTIONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    ...{ [opt.value]: opt.name },
-  }), {},
-)
-
 
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
 const SHOW_ACCEPTED = 'ACCEPTED'
@@ -427,14 +395,6 @@ const INDIVIDUAL_HAS_DATA_EXPORT_CONFIG = {
   format: hasData => (hasData ? 'Yes' : 'No'),
 }
 
-const INDIVIDUAL_PROBAND_RELATIONSHIP_EXPORT_CONFIG = {
-  field: 'probandRelationship',
-  header: 'Relationship to Proband',
-  description: `Relationship of the individual to the family proband. Can be one of: ${
-    PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
-  format: relationship => PROBAND_RELATIONSHIP_LOOKUP[relationship],
-}
-
 export const INDIVIDUAL_FIELDS = [
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
@@ -442,6 +402,7 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_MATERNAL_ID,
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
 export const INTERNAL_FAMILY_EXPORT_DATA = [
@@ -463,7 +424,7 @@ const INDIVIDUAL_CORE_EXPORT_DATA = [
 ].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
 export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
-  ...INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_PROBAND_RELATIONSHIP_EXPORT_CONFIG,
+  ...INDIVIDUAL_CORE_EXPORT_DATA, exportConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP),
 ]
 
 export const INDIVIDUAL_EXPORT_DATA = [].concat(

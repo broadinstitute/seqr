@@ -22,18 +22,14 @@ import { FamilyLayout } from 'shared/components/panel/family'
 import DataLoader from 'shared/components/DataLoader'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { AFFECTED } from 'shared/utils/constants'
+import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS } from 'shared/utils/constants'
 
 import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
 import {
   getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
 } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import {
-  CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
-  CASE_REVIEW_STATUS_OPTIONS,
-  PROBAND_RELATIONSHIP_OPTIONS,
-} from '../../constants'
+import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
