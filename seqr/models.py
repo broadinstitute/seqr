@@ -396,6 +396,7 @@ class Individual(ModelWithGUID):
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
+    RELATIONSHIP_LOOKUP = dict(RELATIONSHIP_CHOICES)
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 

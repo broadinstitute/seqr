@@ -16,7 +16,7 @@ from seqr.models import Individual
 logger = logging.getLogger(__name__)
 
 
-RELATIONSHIP_LOOKUP = {v.lower(): k for k, v in dict(Individual.RELATIONSHIP_CHOICES).items()}
+RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
 def parse_pedigree_table(parsed_file, filename, user=None, project=None):
@@ -203,7 +203,7 @@ def _convert_fam_file_rows_to_json(rows):
                 raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
 
         if json_record.get(JsonConstants.PROBAND_RELATIONSHIP):
-            relationship = RELATIONSHIP_LOOKUP.get(json_record[JsonConstants.PROBAND_RELATIONSHIP].lower())
+            relationship =  RELATIONSHIP_REVERSE_LOOKUP.get(json_record[JsonConstants.PROBAND_RELATIONSHIP].lower())
             if not relationship:
                 raise ValueError('Invalid value "{}" for proband relationship in row #{}'.format(
                     json_record[JsonConstants.PROBAND_RELATIONSHIP], i + 1))
@@ -248,7 +248,7 @@ def validate_fam_file_records(records, fail_on_warnings=False):
             if invalid_choices and r[JsonConstants.PROBAND_RELATIONSHIP] in invalid_choices:
                 errors.append(
                     'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
-                        relationship=dict(Individual.RELATIONSHIP_CHOICES)[r[JsonConstants.PROBAND_RELATIONSHIP]],
+                        relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
                         individual_id=individual_id,
                         sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
                     ))

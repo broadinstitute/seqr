@@ -29,6 +29,9 @@ export const CORE_ANVIL_COLUMNS = [
   { name: 'dbgap_study_id' },
   { name: 'dbgap_subject_id' },
   { name: 'multiple_datasets' },
+  { name: 'paternal_id' },
+  { name: 'maternal_id' },
+  { name: 'relationship_to_proband' },
   { name: 'sex' },
   { name: 'ancestry' },
   { name: 'phenotype_group' },
@@ -46,8 +49,6 @@ export const CORE_ANVIL_COLUMNS = [
   { name: 'sample_provider' },
   { name: 'data_type' },
   { name: 'date_data_generation' },
-  { name: 'paternal_id' },
-  { name: 'maternal_id' },
   { name: 'consanguinity' },
   { name: 'family_history' },
 ]

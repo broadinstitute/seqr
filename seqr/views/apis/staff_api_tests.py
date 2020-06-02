@@ -4,7 +4,6 @@ from django.utils.dateparse import parse_datetime
 import pytz
 from datetime import datetime
 import responses
-from django.http import HttpResponse
 from settings import AIRTABLE_URL
 import json
 
@@ -323,65 +322,13 @@ AIRTABLE_COLLABORATOR_RECORDS = {
     ]
 }
 
-EXPECTED_PI_SUBJECT_FILE = [
-    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Subject',
-    ['entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id',
-     'dbgap_submission', 'dbgap_study_id', 'dbgap_subject_id', 'multiple_datasets', 'sex',
-     'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group', 'disease_id',
-     'disease_description', 'affected_status', 'onset_category', 'age_of_onset', 'hpo_present',
-     'hpo_absent', 'phenotype_description', 'solve_state']
-]
-EXPECTED_PI_SUBJECT_ROW = {
-    'project_guid': u'R0001_1kg', 'num_saved_variants': 0, 'dbgap_submission': 'Yes',
-    'hpo_absent': u'HP:0011675|HP:0001674|HP:0001508', 'solve_state': 'Unsolved', 'phenotype_group': '',
-    'sex': 'Male', 'phenotype_description': '', 'ancestry': '', 'ancestry_detail': '',
-    'entity:subject_id': u'NA19675_1', 'dbgap_subject_id': u'dbgap_subject_id_1',
-    'hpo_present': u'HP:0001631|HP:0002011|HP:0001636', 'dbgap_study_id': u'dbgap_stady_id_1',
-    'multiple_datasets': 'No', 'onset_category': u'Adult onset', 'subject_id': u'NA19675_1',
-    'family_guid': u'F000001_1', 'affected_status': 'Affected', 'pmid_id': '',
-    'project_id': u'1kg project n\xe5me with uni\xe7\xf8de'}
-
-EXPECTED_PI_SAMPLE_FILE = [
-    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample',
-    ['entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source',
-     'sample_provider', 'data_type', 'date_data_generation']
-]
-EXPECTED_PI_SAMPLE_ROW = {
-    'entity:sample_id': u'NA19675_1', 'data_type': u'WES', 'subject_id': u'NA19675_1',
-    'sample_provider': u'Hildebrandt', 'dbgap_sample_id': u'SM-A4GQ4', 'sample_id': u'NA19675',
-    'date_data_generation': '2017-02-05'}
-
-EXPECTED_PI_FAMILY_FILE = [
-    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family',
-    ['entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
-     'family_relationship', 'consanguinity', 'consanguinity_detail', 'pedigree_image',
-     'pedigree_detail', 'family_history', 'family_onset']
-]
-EXPECTED_PI_FAMILY_ROW = {
-    'maternal_id': u'NA19679', 'subject_id': u'NA19675_1', 'consanguinity': 'Present',
-    'family_id': u'1', 'entity:family_id': u'NA19675_1', 'paternal_id': u'NA19678'}
-
-EXPECTED_PI_DISCOVERY_FILE = [
-    u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery',
-    ['entity:discovery_id', 'subject_id', 'sample_id', 'Gene-1', 'Gene_Class-1',
-     'inheritance_description-1', 'Zygosity-1', 'Chrom-1', 'Pos-1', 'Ref-1', 'Alt-1', 'hgvsc-1',
-     'hgvsp-1', 'Transcript-1', 'sv_name-1', 'sv_type-1', 'significance-1']
-]
-EXPECTED_PI_DISCOVERY_ROW = {
-    'Zygosity-1': 'Heterozygous', 'Pos-1': '248367227', 'Ref-1': u'TC', 'Alt-1': u'T',
-    'Gene-1': u'RP11-206L10.5', 'subject_id': u'HG00731', 'hgvsp-1': u'p.Leu126del',
-    'Gene_Class-1': 'Known', 'Transcript-1': u'ENST00000258436',
-    'hgvsc-1': u'c.375_377delTCT', 'sample_id': u'HG00731',
-    'entity:discovery_id': u'HG00731', 'Chrom-1': u'1',
-    'inheritance_description-1': 'de novo'}
-
 EXPECTED_SAMPLE_METADATA_ROW = {
     "project_guid": "R0001_1kg",
     "num_saved_variants": 1,
     "dbgap_submission": "Yes",
     "solve_state": "Tier 1",
     "sample_id": "NA19675",
-    "Gene_Class-1": "Known",
+    "Gene_Class-1": "Tier 1 - Candidate",
     "sample_provider": "Hildebrandt",
     "inheritance_description-1": "de novo",
     "hpo_present": "HP:0001631 (Defect in the atrial septum)|HP:0002011 (Morphological abnormality of the central nervous system)|HP:0001636 (Tetralogy of Fallot)",
@@ -421,7 +368,8 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "affected_status": "Affected",
     "family_id": "1",
     "MME": "Y",
-    "subject_id": "NA19675_1"
+    "subject_id": "NA19675_1",
+    "relationship_to_proband": "",
   }
 
 SAMPLE_QC_DATA = [
@@ -576,37 +524,69 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
 
-    @mock.patch('seqr.views.apis.staff_api.export_multiple_files')
+    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
-    def test_anvil_export(self, mock_export_multiple_files):
+    def test_anvil_export(self, mock_zip):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_staff_login(url)
 
-        # We will test the inputs of the export_multiple_files method.
-        # Outputs of the method are not important for this test but an HttpResponse data is still required by the API.
-        mock_export_multiple_files.return_value = HttpResponse("Dummy text", content_type="text/plain")
-
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
-                      json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get('content-disposition'),
+            'attachment; filename="1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_AnVIL_Metadata.zip"'
+        )
 
-        mock_export_multiple_files.assert_called_with(mock.ANY,
-            u'1kg project n\u00e5me with uni\u00e7\u00f8de_AnVIL_Metadata',
-            add_header_prefix = True, file_format = 'tsv', blank_value = '-')
+        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
+        self.assertEqual(mock_write_zip.call_count, 4)
+        mock_write_zip.assert_has_calls([
+            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Subject.tsv', mock.ANY),
+            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Sample.tsv', mock.ANY),
+            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Family.tsv', mock.ANY),
+            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Discovery.tsv', mock.ANY),
+        ])
 
-        exported_files = mock_export_multiple_files.call_args.args[0]
+        subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
+        self.assertEqual(subject_file[0], '\t'.join([
+            'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
+            '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets', '09-sex',
+            '10-ancestry', '11-ancestry_detail', '12-age_at_last_observation', '13-phenotype_group', '14-disease_id',
+            '15-disease_description', '16-affected_status', '17-onset_category', '18-age_of_onset', '19-hpo_present',
+            '20-hpo_absent', '21-phenotype_description', '22-solve_state']))
+        self.assertIn(u'\t'.join([
+            'NA19675_1', 'NA19675_1', '-', u'1kg project n\xe5me with uni\xe7\xf8de', '-', 'Yes', 'dbgap_stady_id_1',
+            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', '-', '-', 'Affected', 'Adult onset', '-',
+            'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
 
-        self.assertListEqual(EXPECTED_PI_SUBJECT_FILE, exported_files[0][:2])
-        self.assertListEqual(EXPECTED_PI_SAMPLE_FILE, exported_files[1][:2])
-        self.assertListEqual(EXPECTED_PI_FAMILY_FILE, exported_files[2][:2])
-        self.assertListEqual(EXPECTED_PI_DISCOVERY_FILE, exported_files[3][:2])
-        self.assertIn(EXPECTED_PI_SUBJECT_ROW, exported_files[0][2])
-        self.assertIn(EXPECTED_PI_SAMPLE_ROW, exported_files[1][2])
-        self.assertIn(EXPECTED_PI_FAMILY_ROW, exported_files[2][2])
-        self.assertIn(EXPECTED_PI_DISCOVERY_ROW, exported_files[3][2])
+        sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
+        self.assertEqual(sample_file[0], '\t'.join([
+            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sample_source',
+            '05-sample_provider', '06-data_type', '07-date_data_generation']))
+        self.assertIn(
+            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', '-', 'Hildebrandt', 'WES', '2017-02-05']),
+            sample_file,
+        )
+
+        family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
+        self.assertEqual(family_file[0], '\t'.join([
+            'entity:family_id', '01-subject_id', '02-family_id', '03-paternal_id', '04-maternal_id', '05-twin_id',
+            '06-family_relationship', '07-consanguinity', '08-consanguinity_detail', '09-pedigree_image',
+            '10-pedigree_detail', '11-family_history', '12-family_onset']))
+        self.assertIn('\t'.join([
+            'NA19675_1', 'NA19675_1', '1', 'NA19678', 'NA19679', '-', '-', 'Present', '-', '-', '-', '-', '-',
+        ]), family_file)
+
+        discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
+        self.assertEqual(discovery_file[0], '\t'.join([
+            'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene-1', '04-Gene_Class-1',
+            '05-inheritance_description-1', '06-Zygosity-1', '07-Chrom-1', '08-Pos-1', '09-Ref-1', '10-Alt-1',
+            '11-hgvsc-1', '12-hgvsp-1', '13-Transcript-1', '14-sv_name-1', '15-sv_type-1', '16-significance-1']))
+        self.assertIn('\t'.join([
+            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'de novo', 'Heterozygous', '1', '248367227',
+            'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-', '-']), discovery_file)
 
     @responses.activate
     def test_sample_metadata_export(self):
