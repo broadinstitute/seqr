@@ -5,6 +5,10 @@ from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
+from io import StringIO
+import openpyxl as xl
+import tempfile
+
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
 from seqr.views.utils.test_utils import AuthenticationTestCase
@@ -126,7 +130,7 @@ class DatasetAPITest(AuthenticationTestCase):
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
             {'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'},
         ]
-        mock_file_iter.return_value = ['NA19678_1,NA19678']
+        mock_file_iter.return_value = StringIO('NA19678_1,NA19678\n')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
@@ -218,19 +222,43 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', "NA19675_1,/readviz\xe2/NA19675.cram\nNA19679,gs://readviz\xe3/NA19679.bam".encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(response.json(), {
             'uploadedFileId': mock.ANY,
             'errors': [],
-            'info': ['Parsed 2 rows from samples.csv', 'No change detected for 1 individuals'],
-            'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
+            'info': ['Parsed 2 rows from samples.csv'],
+            'updatesByIndividualGuid': {
+                'I000001_na19675': '/readviz\xe2/NA19675.cram',
+                'I000003_na19679': 'gs://readviz\xe3/NA19679.bam',
+            },
         })
 
+        # Test with tsv data formats
+        f = SimpleUploadedFile('samples.tsv', "NA19675_1\t/readviz\xe2/NA19675.cram\nNA19679\tgs://readviz\xe3/NA19679.bam".encode('utf-8'))
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['info'], ['Parsed 2 rows from samples.tsv'])
+
+        # Test with xlsx data formats
+        wb = xl.Workbook()
+        ws = wb[wb.sheetnames[0]]
+        ws['A1'], ws['B1'] = 'NA19675_1', '/readviz\xe2/NA19675.cram'
+        ws['A2'], ws['B2'] = 'NA19679', 'gs://readviz\xe3/NA19679.bam'
+        file = tempfile.TemporaryFile()
+        wb.save(file)
+        file.seek(0)
+        data = file.read()
+        file.close()
+        f = SimpleUploadedFile('samples.xlsx', data)
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['info'], ['Parsed 2 rows from samples.xlsx'])
+
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.utils.file_utils.os.path.isfile')
+    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
         self.check_manager_login(url)
