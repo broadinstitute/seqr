@@ -2,7 +2,7 @@ import logging
 import redis
 
 from seqr.models import SavedVariant, VariantSearchResults
-from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples
+from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
@@ -13,13 +13,18 @@ def update_project_saved_variant_json(project, family_id=None):
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
 
-    saved_variants_map = {(v.variant_id, v.family): v for v in saved_variants}
-    variant_tuples = saved_variants_map.keys()
-    saved_variants_map = {
-        (variant_id, family.guid): v for (variant_id, family), v in saved_variants_map.items()
-    }
+    if not saved_variants:
+        return []
 
-    variants_json = _retrieve_saved_variants_json(project, variant_tuples)
+    families = set()
+    variant_ids = set()
+    saved_variants_map = {}
+    for v in saved_variants:
+        families.add(v.family)
+        variant_ids.add(v.variant_id)
+        saved_variants_map[(v.variant_id, v.family.guid)] = v
+
+    variants_json = get_es_variants_for_variant_ids(families, variant_ids)
 
     updated_saved_variant_guids = []
     for var in variants_json:
@@ -53,19 +58,6 @@ def reset_cached_search_results(project):
 
 def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
-
-
-def _retrieve_saved_variants_json(project, variant_tuples):
-    xpos_ref_alt_tuples = []
-    xpos_ref_alt_family_tuples = []
-    family_id_to_guid = {}
-    for xpos, ref, alt, family in variant_tuples:
-        xpos_ref_alt_tuples.append((xpos, ref, alt))
-        xpos_ref_alt_family_tuples.append((xpos, ref, alt, family.family_id))
-        family_id_to_guid[family.family_id] = family.guid
-
-    families = project.family_set.filter(guid__in=family_id_to_guid.values())
-    return get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples)
 
 
 def _update_saved_variant_json(saved_variant, saved_variant_json):

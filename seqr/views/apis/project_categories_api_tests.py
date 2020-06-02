@@ -2,7 +2,7 @@ import json
 from django.test import TestCase
 from django.urls.base import reverse
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 from seqr.models import Project
 
@@ -12,12 +12,12 @@ PROJECT_CAT_GUID3 = 'PC000003_test_category_name'
 NEW_PROJECT_CAT_NAME = 'New project category'
 
 
-class ProjectCategoriesAPITest(TestCase):
+class ProjectCategoriesAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     def test_project_categories_api(self):
         url = reverse(update_project_categories_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         category_guids = [PROJECT_CAT_GUID2, NEW_PROJECT_CAT_NAME]
         response = self.client.post(url, content_type='application/json', data=json.dumps({

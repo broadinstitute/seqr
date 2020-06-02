@@ -4,19 +4,19 @@ from django.urls.base import reverse
 
 from seqr.models import GeneNote
 from seqr.views.apis.gene_api import gene_info, create_gene_note_handler, update_gene_note_handler, delete_gene_note_handler
-from seqr.views.utils.test_utils import _check_login, GENE_DETAIL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, GENE_DETAIL_FIELDS
 
 
 GENE_ID = 'ENSG00000223972'
 
 
-class GeneAPITest(TransactionTestCase):
+class GeneAPITest(AuthenticationTestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
     def test_gene_info(self):
         url = reverse(gene_info, args=[GENE_ID])
-        _check_login(self, url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -26,7 +26,7 @@ class GeneAPITest(TransactionTestCase):
 
     def test_create_update_and_delete_gene_note(self):
         create_gene_note_url = reverse(create_gene_note_handler, args=[GENE_ID])
-        _check_login(self, create_gene_note_url)
+        self.check_require_login(create_gene_note_url)
 
         # send valid request to create gene_note
         response = self.client.post(create_gene_note_url, content_type='application/json', data=json.dumps(
