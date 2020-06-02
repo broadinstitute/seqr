@@ -173,7 +173,7 @@ def _convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.NOTES_COLUMN] = value
             elif "coded" in key and "phenotype" in key:
                 json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
-            elif 'proband' in key and 'relationship' in key:
+            elif 'proband' in key and 'relation' in key:
                 json_record[JsonConstants.PROBAND_RELATIONSHIP] = value
 
         # validate

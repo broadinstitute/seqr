@@ -303,7 +303,7 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
   },
   [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual' },
   [INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP]: {
-    label: 'Relationship',
+    label: 'Proband Relation',
     description: `Relationship of the individual to the family proband. Can be one of: ${
       PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
     format: relationship => PROBAND_RELATIONSHIP_LOOKUP[relationship],
