@@ -48,25 +48,39 @@ class JSONUtilsTest(TestCase):
             errors, ["Error while converting {} rows to json: Invalid value 'no' for affected status in row #1".format(FILENAME)])
 
         records, errors, warnings = parse_pedigree_table(
-            [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-             ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2'], ['fam2', 'ind2', 'male', 'u', '.', '']], FILENAME)
+            [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
+             ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mom']], FILENAME)
+        self.assertListEqual(records, [])
+        self.assertListEqual(errors, [
+            'Error while converting {} rows to json: Invalid value "mom" for proband relationship in row #1'.format(
+                FILENAME)])
+
+        records, errors, warnings = parse_pedigree_table(
+            [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
+             ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mother'], ['fam2', 'ind2', 'male', 'u', '.', '', '']],
+            FILENAME)
         self.assertListEqual(records, [
-            {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': 'ind3', 'maternalId': 'ind2'},
-            {'familyId': 'fam2', 'individualId': 'ind2', 'sex': 'M', 'affected': 'N', 'paternalId': '', 'maternalId': ''},
+            {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': 'ind3',
+             'maternalId': 'ind2', 'probandRelationship': 'M'},
+            {'familyId': 'fam2', 'individualId': 'ind2', 'sex': 'M', 'affected': 'N', 'paternalId': '',
+             'maternalId': '', 'probandRelationship': ''},
         ])
         self.assertListEqual(errors, [
+            'Invalid proband relationship "Mother" for ind1 with given gender Male',
             'ind2 is recorded as Male and also as the mother of ind1',
             'ind2 is recorded as the mother of ind1 but they have different family ids: fam2 and fam1',
         ])
         self.assertListEqual(warnings, ["ind3 is the father of ind1 but doesn't have a separate record in the table"])
 
         records, errors, warnings = parse_pedigree_table(
-            [['family_id', 'individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded'],
-             ['fam1', 'ind1', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345'],
-             ['fam1', 'ind2', ' ', '', 'female', 'u', '.', '', 'HPO:56789']], FILENAME)
+            [['family_id', 'individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded', 'proband_relation'],
+             ['fam1', 'ind1', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345', ''],
+             ['fam1', 'ind2', ' ', '', 'female', 'u', '.', '', 'HPO:56789', 'mother']], FILENAME)
         self.assertListEqual(records, [
-            {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': '', 'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345'},
-            {'familyId': 'fam1', 'individualId': 'ind2', 'sex': 'F', 'affected': 'N', 'paternalId': '', 'maternalId': '', 'notes': '', 'codedPhenotype': 'HPO:56789'},
+            {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': '',
+             'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345', 'probandRelationship': ''},
+            {'familyId': 'fam1', 'individualId': 'ind2', 'sex': 'F', 'affected': 'N', 'paternalId': '',
+             'maternalId': '', 'notes': '', 'codedPhenotype': 'HPO:56789', 'probandRelationship': 'M'},
         ])
         self.assertListEqual(errors, [])
         self.assertListEqual(warnings, [])

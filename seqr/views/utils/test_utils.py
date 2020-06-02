@@ -121,6 +121,7 @@ INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
 
 INTERNAL_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
+    'probandRelationship',
 }
 INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
