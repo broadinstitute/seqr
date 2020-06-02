@@ -1,4 +1,5 @@
 import csv
+
 import gzip
 import hashlib
 import json
@@ -7,6 +8,7 @@ import os
 import tempfile
 import openpyxl as xl
 
+from io import TextIOWrapper
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -37,7 +39,7 @@ def save_temp_file(request):
 
 def parse_file(filename, stream):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split('\t')) for line in stream]
+        return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
 
     elif filename.endswith('.csv'):
         return [row for row in csv.reader(stream)]
@@ -89,6 +91,15 @@ def save_uploaded_file(request, process_records=None):
     stream = request.FILES.values()[0]
     filename = stream._name
 
+    if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
+        if filename.endswith('.csv'):
+            try:
+                a = unicode
+                stream = TextIOWrapper(stream.file, encoding = 'ascii', errors = 'ignore')
+            except:
+                stream = TextIOWrapper(stream.file, encoding = 'utf-8')
+        else:
+            stream = TextIOWrapper(stream.file, encoding = 'utf-8')
     json_records = parse_file(filename, stream)
     if process_records:
         json_records = process_records(json_records, filename=filename)

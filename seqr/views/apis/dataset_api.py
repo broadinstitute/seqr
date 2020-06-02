@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import json
 import logging
 import traceback
