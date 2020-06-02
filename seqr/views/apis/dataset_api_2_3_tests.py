@@ -260,7 +260,6 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['info'], ['Parsed 2 rows from samples.xlsx'])
 
-    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
