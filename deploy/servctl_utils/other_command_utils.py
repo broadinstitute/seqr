@@ -10,8 +10,7 @@ import time
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running
-from seqr.utils.shell_utils import run
-from deploy.servctl_utils.shell_utils import wait_for, run_in_background
+from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)

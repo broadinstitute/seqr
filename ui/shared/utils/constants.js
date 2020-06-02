@@ -849,6 +849,11 @@ export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, s
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
   ) || {}
 
+const getPopAf = population => (variant) => {
+  const populationData = (variant.populations || {})[population]
+  return (populationData || {}).af
+}
+
 export const VARIANT_EXPORT_DATA = [
   { header: 'chrom' },
   { header: 'pos' },
@@ -856,24 +861,24 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
-  { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
-  { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
-  { header: 'gnomad_exomes_freq', getVal: variant => variant.populations.gnomad_exomes.af },
-  { header: 'topmed_freq', getVal: variant => variant.populations.topmed.af },
-  { header: 'cadd', getVal: variant => variant.predictions.cadd },
-  { header: 'revel', getVal: variant => variant.predictions.revel },
-  { header: 'eigen', getVal: variant => variant.predictions.eigen },
-  { header: 'splice_ai', getVal: variant => variant.predictions.splice_ai },
-  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
-  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
-  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.fathmm] || {}).value },
+  { header: '1kg_freq', getVal: getPopAf('g1k') },
+  { header: 'exac_freq', getVal: getPopAf('exac') },
+  { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
+  { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },
+  { header: 'topmed_freq', getVal: getPopAf('topmed') },
+  { header: 'cadd', getVal: variant => (variant.predictions || {}).cadd },
+  { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
+  { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
+  { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
+  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).polyphen] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).polyphen] || {}).value },
+  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
+  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).mut_taster] || {}).value },
+  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
-  { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
+  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance },
+  { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },

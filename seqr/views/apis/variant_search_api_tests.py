@@ -6,7 +6,6 @@ from django.urls.base import reverse
 
 from seqr.models import VariantSearchResults, LocusList, Project
 from seqr.utils.elasticsearch.utils import InvalidIndexException
-from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
