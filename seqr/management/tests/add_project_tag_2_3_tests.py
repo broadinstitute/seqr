@@ -45,20 +45,23 @@ class AddProjectTagTest(TestCase):
         out = StringIO()
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag', stdout = out)
-        self.assertRegex(str(err.exception), 'Error:.*argument.*--project')
+        self.assertIn(str(err.exception), ['Error: argument --project is required',
+             'Error: the following arguments are required: --project, --name, --order'])
 
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 stdout = out)
-        self.assertRegex(str(err.exception), 'Error:.*argument.*--name')
+        self.assertIn(str(err.exception), ['Error: argument --name is required',
+             'Error: the following arguments are required: --name, --order'])
 
         with self.assertRaises(CommandError) as err:
             call_command('add_project_tag',
                 '--project={}'.format(TAG_ARGUMENTS["project"]),
                 '--name={}'.format(TAG_ARGUMENTS["name"]),
                 stdout = out)
-        self.assertRegex(str(err.exception), 'Error:.*argument.*--order')
+        self.assertIn(str(err.exception), ['Error: argument --order is required',
+             'Error: the following arguments are required: --order'])
 
     def test_bad_argument_value(self):
         out = StringIO()
