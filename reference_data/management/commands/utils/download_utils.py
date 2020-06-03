@@ -19,7 +19,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
     if not (url and url.startswith(("http://", "https://", "ftp://"))):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
-    remote_file_size = get_remote_file_size(url)
+    remote_file_size = _get_remote_file_size(url)
     if os.path.isfile(local_file_path) and os.path.getsize(local_file_path) == remote_file_size:
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
@@ -37,12 +37,10 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
     return local_file_path
 
 
-def get_remote_file_size(url):
+def _get_remote_file_size(url):
     if url.startswith("http"):
         response = requests.head(url)
         return int(response.headers.get('Content-Length', '0'))
-    elif url.startswith("ftp"):
-        return 0  # file size not yet implemented for FTP
     else:
-        raise ValueError("Invalid url: {}".format(url))
+        return 0  # file size not yet implemented for FTP and other protocols
 
