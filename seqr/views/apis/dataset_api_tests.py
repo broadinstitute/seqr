@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import mock
 import subprocess
@@ -190,12 +192,13 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
         sv_sample_guid = 'S1234567_NA19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
-        self.assertListEqual(response_json['samplesByGuid'].keys(), [sv_sample_guid])
+        self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
-        self.assertDictEqual(response_json['individualsByGuid'], {
-            'I000001_na19675': {'sampleGuids': [sv_sample_guid, existing_index_sample_guid]},
-        })
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
+                            {sv_sample_guid, existing_index_sample_guid})
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
         self.assertEqual(len(sample_models), 2)
@@ -207,18 +210,18 @@ class DatasetAPITest(AuthenticationTestCase):
         self.check_manager_login(url)
 
         # Send invalid requests
-        f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', "NA19675\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19675']})
 
-        f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', "NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', "NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
@@ -281,11 +284,11 @@ class DatasetAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        sample_guid = response_json['igvSamplesByGuid'].keys()[0]
+        sample_guid = next(iter(response_json['igvSamplesByGuid'])) # get the first key
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'filePath': 'gs://readviz/NA19679.bam'})
-        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000003_na19679'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
             {sample_guid}
