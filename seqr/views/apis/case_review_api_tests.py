@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import json
 
 from django.urls.base import reverse
@@ -27,7 +28,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
         self.assertEqual(response_json[FAMILY_GUID]['internalCaseReviewNotes'], req_values['value'])
 
@@ -52,7 +53,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
         self.assertEqual(response_json[FAMILY_GUID]['internalCaseReviewSummary'], req_values['value'])
         # send request with a "value" attribute
