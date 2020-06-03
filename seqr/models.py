@@ -358,6 +358,36 @@ class Individual(ModelWithGUID):
         ('M', 'Mitochondrial inheritance'),
     ]
 
+    FEMALE_RELATIONSHIP_CHOICES = {
+        'M': 'Mother',
+        'G': 'Maternal Grandmother',
+        'X': 'Paternal Grandmother',
+        'A': 'Maternal Aunt',
+        'E': 'Paternal Aunt',
+        'N': 'Niece',
+    }
+
+    MALE_RELATIONSHIP_CHOICES = {
+        'F': 'Father',
+        'W': 'Maternal Grandfather',
+        'Y': 'Paternal Grandfather',
+        'L': 'Maternal Uncle',
+        'D': 'Paternal Uncle',
+        'P': 'Nephew',
+    }
+
+    RELATIONSHIP_CHOICES = list(FEMALE_RELATIONSHIP_CHOICES.items()) + list(MALE_RELATIONSHIP_CHOICES.items()) + [
+        ('S', 'Self'),
+        ('B', 'Sibling'),
+        ('C', 'Child'),
+        ('H', 'Maternal Half Sibling'),
+        ('J', 'Paternal Half Sibling'),
+        ('Z', 'Maternal 1st Cousin'),
+        ('K', 'Paternal 1st Cousin'),
+        ('O', 'Other'),
+        ('U', 'Unknown'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -366,6 +396,7 @@ class Individual(ModelWithGUID):
     ONSET_AGE_REVERSE_LOOKUP = {name: key for key, name in ONSET_AGE_CHOICES}
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
+    RELATIONSHIP_LOOKUP = dict(RELATIONSHIP_CHOICES)
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -391,6 +422,8 @@ class Individual(ModelWithGUID):
     phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
+
+    proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
 
     birth_year = YearField()
     death_year = YearField()
@@ -446,7 +479,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'case_review_status', 'case_review_discussion',
+            'proband_relationship', 'case_review_status', 'case_review_discussion',
             'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
         ]
 

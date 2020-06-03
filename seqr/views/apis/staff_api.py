@@ -384,6 +384,10 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
                 parsed_variant['novel_mendelian_gene'] = is_novel
                 _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
+                if any('Tier 1' in name for name in variant['discovery_tag_names']):
+                    parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
+                elif any('Tier 2' in name for name in variant['discovery_tag_names']):
+                    parsed_variant['Gene_Class'] = 'Tier 2 - Candidate'
 
             if variant.get('svType'):
                 parsed_variant.update({
@@ -417,6 +421,11 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
             dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
             has_dbgap_submission = sample.sample_type in dbgap_submission
 
+            solve_state = 'Unsolved'
+            if parsed_variants:
+                all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
+                solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
+
             subject_row = {
                 'entity:subject_id': individual.individual_id,
                 'subject_id': individual.individual_id,
@@ -427,9 +436,10 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 'onset_category': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
-                'solve_state': 'Tier 1' if saved_variants else 'Unsolved',
+                'solve_state': solve_state,
                 'multiple_datasets': 'Yes' if multiple_datasets else 'No',
                 'dbgap_submission': 'No',
+                'relationship_to_proband': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
             }
             if has_dbgap_submission:
                 subject_row.update({

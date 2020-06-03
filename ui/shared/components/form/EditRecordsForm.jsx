@@ -21,6 +21,7 @@ const TableContainer = styled.div`
 
   .ui.table.basic.compact td {
     border-top: 0px !important;
+    overflow: visible;
   }
 
   .ui.table.basic.compact input[type="text"] {

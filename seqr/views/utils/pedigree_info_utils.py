@@ -16,6 +16,9 @@ from seqr.models import Individual
 logger = logging.getLogger(__name__)
 
 
+RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
+
+
 def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
@@ -170,6 +173,8 @@ def _convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.NOTES_COLUMN] = value
             elif "coded" in key and "phenotype" in key:
                 json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
+            elif 'proband' in key and 'relation' in key:
+                json_record[JsonConstants.PROBAND_RELATIONSHIP] = value
 
         # validate
         if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
@@ -196,6 +201,13 @@ def _convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.AFFECTED_COLUMN] = 'U'
             elif json_record[JsonConstants.AFFECTED_COLUMN]:
                 raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
+
+        if json_record.get(JsonConstants.PROBAND_RELATIONSHIP):
+            relationship =  RELATIONSHIP_REVERSE_LOOKUP.get(json_record[JsonConstants.PROBAND_RELATIONSHIP].lower())
+            if not relationship:
+                raise ValueError('Invalid value "{}" for proband relationship in row #{}'.format(
+                    json_record[JsonConstants.PROBAND_RELATIONSHIP], i + 1))
+            json_record[JsonConstants.PROBAND_RELATIONSHIP] = relationship
 
         json_results.append(json_record)
 
@@ -225,6 +237,21 @@ def validate_fam_file_records(records, fail_on_warnings=False):
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
+
+        # check proband relationship has valid gender
+        if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
+            invalid_choices = {}
+            if r[JsonConstants.SEX_COLUMN] == Individual.SEX_MALE:
+                invalid_choices = Individual.FEMALE_RELATIONSHIP_CHOICES
+            elif r[JsonConstants.SEX_COLUMN] == Individual.SEX_FEMALE:
+                invalid_choices = Individual.MALE_RELATIONSHIP_CHOICES
+            if invalid_choices and r[JsonConstants.PROBAND_RELATIONSHIP] in invalid_choices:
+                errors.append(
+                    'Invalid proband relationship "{relationship}" for {individual_id} with given gender {sex}'.format(
+                        relationship=Individual.RELATIONSHIP_LOOKUP[r[JsonConstants.PROBAND_RELATIONSHIP]],
+                        individual_id=individual_id,
+                        sex=dict(Individual.SEX_CHOICES)[r[JsonConstants.SEX_COLUMN]]
+                    ))
 
         # check maternal and paternal ids for consistency
         for parent_id_type, parent_id, expected_sex in [
@@ -613,6 +640,7 @@ class JsonConstants:
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
 
     # staff-only uploads
+    PROBAND_RELATIONSHIP = 'probandRelationship'
     #CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
 
     #POST_DISCOVERY_OMIM_COLUMN = 'postDiscoveryOmim'
