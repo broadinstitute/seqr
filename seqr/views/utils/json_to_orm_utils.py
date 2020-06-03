@@ -1,4 +1,5 @@
 import logging
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 from seqr.models import Individual
@@ -67,7 +68,7 @@ def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unkn
             continue
         if getattr(model_obj, orm_key) != value:
             if orm_key in internal_fields and not (user and user.is_staff):
-                raise ValueError('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
+                raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             if conditional_edit_keys and orm_key in conditional_edit_keys:
                 conditional_edit_keys[orm_key](model_obj)
             if verbose:

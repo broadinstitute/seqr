@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import json
 import logging
 import traceback
@@ -10,13 +8,13 @@ from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from seqr.models import Individual, CAN_EDIT, Sample, Family, IgvSample
+from seqr.models import Individual, Sample, Family, IgvSample
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -44,7 +42,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
 
     try:
@@ -89,7 +87,7 @@ def add_variants_dataset_handler(request, project_guid):
                 'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
                     ", ".join(unmatched_samples)))
 
-        prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
+        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
         included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
 
         missing_individuals = Individual.objects.filter(
@@ -114,7 +112,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [str(e)]}, status=400)
+        return create_json_response({'errors': [e.message or str(e)]}, status=400)
 
     if not matched_sample_id_to_sample_record:
         return create_json_response({'samplesByGuid': {}})
@@ -136,7 +134,7 @@ def add_variants_dataset_handler(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_igv_table_handler(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     info = []
 
     def _process_alignment_records(rows, **kwargs):
@@ -166,7 +164,7 @@ def receive_igv_table_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [str(e)]}, status=400)
+        return create_json_response({'errors': [e.message or str(e)]}, status=400)
 
     response = {
         'updatesByIndividualGuid': updates_by_individual_guid,
@@ -182,7 +180,7 @@ def receive_igv_table_handler(request, project_guid):
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
-    check_permissions(project, request.user, CAN_EDIT)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -211,7 +209,7 @@ def update_individual_igv_sample(request, individual_guid):
             }
         return create_json_response(response)
     except Exception as e:
-        error = str(e)
+        error = e.message or str(e)
         return create_json_response({'error': error}, status=400, reason=error)
 
 
@@ -244,7 +242,7 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
 
 
 def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):
-    updated_sample_json = get_json_for_samples(list(matched_sample_id_to_sample_record.values()), project_guid=project_guid)
+    updated_sample_json = get_json_for_samples(matched_sample_id_to_sample_record.values(), project_guid=project_guid)
     sample_response = {sample_guid: {'isActive': False} for sample_guid in inactivate_sample_guids}
     sample_response.update({s['sampleGuid']: s for s in updated_sample_json})
     response = {

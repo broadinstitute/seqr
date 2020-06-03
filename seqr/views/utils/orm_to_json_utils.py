@@ -13,8 +13,9 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
-from seqr.models import CAN_EDIT, GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
+from seqr.views.utils.permissions_utils import has_project_permissions
 logger = logging.getLogger(__name__)
 
 
@@ -121,7 +122,7 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     def _process_result(result, project):
         result.update({
             'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
-            'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
+            'canEdit': has_project_permissions(project, user, can_edit=True),
         })
 
     if add_project_category_guids_field:

@@ -1,15 +1,13 @@
-from __future__ import unicode_literals
-
 import json
 import mock
+import subprocess
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -18,7 +16,7 @@ SV_INDEX_NAME = 'test_new_sv_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
-class DatasetAPITest(TransactionTestCase):
+class DatasetAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
@@ -27,7 +25,7 @@ class DatasetAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
     def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Confirm test DB is as expected
         existing_index_sample = Sample.objects.get(sample_id='NA19675')
@@ -192,13 +190,12 @@ class DatasetAPITest(TransactionTestCase):
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
         sv_sample_guid = 'S1234567_NA19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
-        self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
+        self.assertListEqual(response_json['samplesByGuid'].keys(), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
-        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
-        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
-        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            {sv_sample_guid, existing_index_sample_guid})
+        self.assertDictEqual(response_json['individualsByGuid'], {
+            'I000001_na19675': {'sampleGuids': [sv_sample_guid, existing_index_sample_guid]},
+        })
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
         self.assertEqual(len(sample_models), 2)
@@ -207,21 +204,21 @@ class DatasetAPITest(TransactionTestCase):
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Send invalid requests
-        f = SimpleUploadedFile('samples.csv', "NA19675\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
+        f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19675']})
 
-        f = SimpleUploadedFile('samples.csv', "NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
+        f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', "NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
+        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
@@ -232,11 +229,11 @@ class DatasetAPITest(TransactionTestCase):
             'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
         })
 
-    @mock.patch('seqr.utils.file_utils.does_google_bucket_file_exist')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
-    def test_add_alignment_sample(self, mock_local_file_exists, mock_google_bucket_file_exists):
+    def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        _check_login(self, url)
+        self.check_manager_login(url)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -250,7 +247,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
 
         mock_local_file_exists.return_value = False
-        mock_google_bucket_file_exists.return_value = False
+        mock_subprocess.return_value.wait.return_value = 1
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': '/readviz/NA19675_new.cram',
         }))
@@ -265,7 +262,7 @@ class DatasetAPITest(TransactionTestCase):
 
         # Send valid request
         mock_local_file_exists.return_value = True
-        mock_google_bucket_file_exists.return_value = True
+        mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': '/readviz/NA19675_new.cram',
         }))
@@ -273,6 +270,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
             'filePath': '/readviz/NA19675_new.cram'}}})
+        mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
 
         new_sample_url = reverse(update_individual_igv_sample, args=['I000003_na19679'])
         response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
@@ -283,12 +281,13 @@ class DatasetAPITest(TransactionTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        sample_guid = next(iter(response_json['igvSamplesByGuid'])) # get the first key
+        sample_guid = response_json['igvSamplesByGuid'].keys()[0]
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'filePath': 'gs://readviz/NA19679.bam'})
-        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000003_na19679'])
+        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
             {sample_guid}
         )
+        mock_subprocess.assert_called_with('gsutil ls gs://readviz/NA19679.bam', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)

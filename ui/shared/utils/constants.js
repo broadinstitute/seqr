@@ -4,7 +4,15 @@ import orderBy from 'lodash/orderBy'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/ReduxFormWrapper'
-import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination, BaseSemanticInput } from '../components/form/Inputs'
+import {
+  BooleanCheckbox,
+  RadioGroup,
+  Dropdown,
+  Select,
+  InlineToggle,
+  Pagination,
+  BaseSemanticInput,
+} from '../components/form/Inputs'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
@@ -235,12 +243,44 @@ export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(
   }), {},
 )
 
+export const PROBAND_RELATIONSHIP_OPTIONS = [
+  { value: 'S', name: 'Self' },
+  { value: 'M', name: 'Mother' },
+  { value: 'F', name: 'Father' },
+  { value: 'B', name: 'Sibling' },
+  { value: 'C', name: 'Child' },
+  { value: 'H', name: 'Maternal Half Sibling' },
+  { value: 'J', name: 'Paternal Half Sibling' },
+  { value: 'G', name: 'Maternal Grandmother' },
+  { value: 'W', name: 'Maternal Grandfather' },
+  { value: 'X', name: 'Paternal Grandmother' },
+  { value: 'Y', name: 'Paternal Grandfather' },
+  { value: 'A', name: 'Maternal Aunt' },
+  { value: 'L', name: 'Maternal Uncle' },
+  { value: 'E', name: 'Paternal Aunt' },
+  { value: 'D', name: 'Paternal Uncle' },
+  { value: 'N', name: 'Niece' },
+  { value: 'P', name: 'Nephew' },
+  { value: 'Z', name: 'Maternal 1st Cousin' },
+  { value: 'K', name: 'Paternal 1st Cousin' },
+  { value: 'O', name: 'Other' },
+  { value: 'U', name: 'Unknown' },
+]
+
+const PROBAND_RELATIONSHIP_LOOKUP = PROBAND_RELATIONSHIP_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.name },
+  }), {},
+)
+
 export const INDIVIDUAL_FIELD_ID = 'individualId'
 export const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
 export const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
 export const INDIVIDUAL_FIELD_SEX = 'sex'
 export const INDIVIDUAL_FIELD_AFFECTED = 'affected'
 export const INDIVIDUAL_FIELD_NOTES = 'notes'
+export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
@@ -262,6 +302,13 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
     formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
   },
   [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual' },
+  [INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP]: {
+    label: 'Proband Relation',
+    description: `Relationship of the individual to the family proband. Can be one of: ${
+      PROBAND_RELATIONSHIP_OPTIONS.map(({ name }) => name).join(', ')}`,
+    format: relationship => PROBAND_RELATIONSHIP_LOOKUP[relationship],
+    formFieldProps: { component: Select, options: PROBAND_RELATIONSHIP_OPTIONS, search: true },
+  },
 }
 
 
@@ -849,6 +896,11 @@ export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, s
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
   ) || {}
 
+const getPopAf = population => (variant) => {
+  const populationData = (variant.populations || {})[population]
+  return (populationData || {}).af
+}
+
 export const VARIANT_EXPORT_DATA = [
   { header: 'chrom' },
   { header: 'pos' },
@@ -856,24 +908,24 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
-  { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
-  { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
-  { header: 'gnomad_exomes_freq', getVal: variant => variant.populations.gnomad_exomes.af },
-  { header: 'topmed_freq', getVal: variant => variant.populations.topmed.af },
-  { header: 'cadd', getVal: variant => variant.predictions.cadd },
-  { header: 'revel', getVal: variant => variant.predictions.revel },
-  { header: 'eigen', getVal: variant => variant.predictions.eigen },
-  { header: 'splice_ai', getVal: variant => variant.predictions.splice_ai },
-  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
-  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
-  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.fathmm] || {}).value },
+  { header: '1kg_freq', getVal: getPopAf('g1k') },
+  { header: 'exac_freq', getVal: getPopAf('exac') },
+  { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
+  { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },
+  { header: 'topmed_freq', getVal: getPopAf('topmed') },
+  { header: 'cadd', getVal: variant => (variant.predictions || {}).cadd },
+  { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
+  { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
+  { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
+  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).polyphen] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).polyphen] || {}).value },
+  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
+  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).mut_taster] || {}).value },
+  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
-  { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
+  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance },
+  { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },

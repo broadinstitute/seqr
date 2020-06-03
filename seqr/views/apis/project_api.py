@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -88,7 +88,7 @@ def update_project_handler(request, project_guid):
 
     project = Project.objects.get(guid=project_guid)
 
-    check_permissions(project, request.user, CAN_EDIT)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
     update_project_from_json(project, request_json, allow_unknown_keys=True)
@@ -109,7 +109,7 @@ def delete_project_handler(request, project_guid):
         project_guid (string): GUID of the project to delete
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=IS_OWNER)
+    project = get_project_and_check_permissions(project_guid, request.user, is_owner=True)
 
     _delete_project(project)
 
