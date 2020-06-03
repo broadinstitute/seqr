@@ -111,8 +111,6 @@ spec:
           value: "{{ GUNICORN_WORKER_THREADS }}"
         - name: POSTGRES_SERVICE_HOSTNAME
           value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: PHENOTIPS_SERVICE_HOSTNAME
-          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
         - name: ELASTICSEARCH_SERVICE_HOSTNAME
           value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
         - name: KIBANA_SERVICE_HOSTNAME
@@ -121,8 +119,6 @@ spec:
           value: "{{ REDIS_SERVICE_HOSTNAME }}"
         - name: SEQR_SERVICE_PORT
           value: "{{ SEQR_SERVICE_PORT }}"
-        - name: PHENOTIPS_SERVICE_PORT
-          value: "{{ PHENOTIPS_SERVICE_PORT }}"
         - name: POSTGRES_SERVICE_PORT
           value: "{{ POSTGRES_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT
