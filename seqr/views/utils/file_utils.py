@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+from builtins import str
 
 from io import TextIOWrapper
 
@@ -40,11 +41,9 @@ def save_temp_file(request):
 
 def parse_file(filename, stream):
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        stream = [line.decode('utf-8') if isinstance(line, bytes) else line for line in stream]
         return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
 
     elif filename.endswith('.csv'):
-        stream = [line.decode('utf-8') if isinstance(line, bytes) else line for line in stream]
         return [row for row in csv.reader(stream)]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
@@ -91,7 +90,7 @@ def save_uploaded_file(request, process_records=None):
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
 
     # parse file
-    stream = request.FILES.values()[0]
+    stream = list(request.FILES.values())[0]
     filename = stream._name
 
     if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
@@ -107,9 +106,9 @@ def save_uploaded_file(request, process_records=None):
         json_records = process_records(json_records, filename=filename)
 
     # save json to temporary file
-    uploaded_file_id = hashlib.md5(str(json_records)).hexdigest()
+    uploaded_file_id = hashlib.md5(str(json_records).encode('utf-8')).hexdigest()
     serialized_file_path = _compute_serialized_file_path(uploaded_file_id)
-    with gzip.open(serialized_file_path, "w") as f:
+    with gzip.open(serialized_file_path, "wt") as f:
         json.dump(json_records, f)
 
     return uploaded_file_id, filename, json_records
@@ -117,7 +116,7 @@ def save_uploaded_file(request, process_records=None):
 
 def load_uploaded_file(upload_file_id):
     serialized_file_path = _compute_serialized_file_path(upload_file_id)
-    with gzip.open(serialized_file_path) as f:
+    with gzip.open(serialized_file_path, "rt") as f:
         json_records = json.load(f)
 
     os.remove(serialized_file_path)
