@@ -1,9 +1,8 @@
-# from __future__ import unicode_literals
+from __future__ import unicode_literals
 
 import json
 import mock
 
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import LocusList
