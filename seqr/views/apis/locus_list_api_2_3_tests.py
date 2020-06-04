@@ -1,3 +1,5 @@
+# from __future__ import unicode_literals
+
 import json
 import mock
 
@@ -49,7 +51,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         locus_lists_dict = response_json['locusListsByGuid']
-        self.assertListEqual(locus_lists_dict.keys(), [LOCUS_LIST_GUID])
+        self.assertListEqual(list(locus_lists_dict.keys()), [LOCUS_LIST_GUID])
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
         self.assertSetEqual(set(locus_list.keys()), LOCUS_LIST_DETAIL_FIELDS)
@@ -67,7 +69,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         locus_lists_dict = response_json['locusListsByGuid']
-        self.assertListEqual(locus_lists_dict.keys(), [PRIVATE_LOCUS_LIST_GUID])
+        self.assertListEqual(list(locus_lists_dict.keys()), [PRIVATE_LOCUS_LIST_GUID])
 
     def test_create_locus_list(self):
         create_locus_list_url = reverse(create_locus_list_handler)
@@ -93,7 +95,7 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         new_locus_list_response = response.json()
         self.assertEqual(len(new_locus_list_response['locusListsByGuid']), 1)
-        new_locus_list = new_locus_list_response['locusListsByGuid'].values()[0]
+        new_locus_list = list(new_locus_list_response['locusListsByGuid'].values())[0]
         self.assertEqual(new_locus_list['name'], 'new_locus_list')
         self.assertEqual(new_locus_list['isPublic'], True)
 
@@ -142,7 +144,7 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         updated_locus_list_response = response.json()
         self.assertEqual(len(updated_locus_list_response['locusListsByGuid']), 1)
-        updated_locus_list = updated_locus_list_response['locusListsByGuid'].values()[0]
+        updated_locus_list = list(updated_locus_list_response['locusListsByGuid'].values())[0]
         self.assertEqual(updated_locus_list['name'], 'updated_locus_list')
         self.assertEqual(updated_locus_list['isPublic'], False)
 
