@@ -19,35 +19,6 @@ class DjangoJSONEncoderWithSets(DjangoJSONEncoder):
         return super(DjangoJSONEncoderWithSets, self).default(o)
 
 
-def render_with_initial_json(html_page, initial_json):
-    """Uses django template rendering utilities to read in the given html file, and embed the
-    given object as json within the page. This way when the browser sends an initial request
-    for the page, it comes back with the json bundle already embedded in it.
-
-    Args:
-        html_page (string): path of html template
-        initial_json (object): the object to be serialized to json
-    Returns:
-        HttpResponse: django HttpRepsonse object to send back to the client
-    """
-
-    initial_json_str = json.dumps(
-        initial_json,
-        sort_keys=True,
-        indent=4,
-        default=DjangoJSONEncoderWithSets().default
-    )
-    html = loader.render_to_string(html_page)
-
-    html = html.replace(
-        "window.initialJSON=null",
-        "window.initialJSON="+initial_json_str
-    )
-
-    html = re.sub(r'static/app(-.*)js', 'app.js', html)
-    return HttpResponse(html, content_type="text/html")
-
-
 def create_json_response(obj, **kwargs):
     """Encodes the give object into json and create a django JsonResponse object with it.
 
