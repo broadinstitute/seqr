@@ -91,17 +91,16 @@ def save_uploaded_file(request, process_records=None):
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
 
     # parse file
-    stream = list(request.FILES.values())[0]
+    stream = next(iter(request.FILES.values()))
     filename = stream._name
 
-    if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
-        if filename.endswith('.csv'):
-            try:
-                a = unicode
-            except:
-                stream = TextIOWrapper(stream.file, encoding = 'utf-8')
-        else:
+    if filename.endswith('.csv'):
+        try:
+            a = unicode
+        except:
             stream = TextIOWrapper(stream.file, encoding = 'utf-8')
+    elif not filename.endswith('.xls') and not filename.endswith('.xlsx'):
+        stream = TextIOWrapper(stream.file, encoding = 'utf-8')
     json_records = parse_file(filename, stream)
     if process_records:
         json_records = process_records(json_records, filename=filename)
