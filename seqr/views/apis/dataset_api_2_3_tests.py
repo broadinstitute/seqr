@@ -225,7 +225,7 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', "NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam".encode('utf-8'))
+        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
