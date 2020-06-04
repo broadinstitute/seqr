@@ -1,11 +1,8 @@
-import json
 import logging
 import re
 
 from django.http import JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-from django.template import loader
-from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
