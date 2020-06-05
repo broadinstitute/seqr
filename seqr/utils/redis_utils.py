@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import logging
 import redis
@@ -14,8 +16,10 @@ def safe_redis_get_json(cache_key):
         if value:
             logger.info('Loaded {} from redis'.format(cache_key))
             return json.loads(value)
+    except ValueError as e:
+        logger.warn('Unable to fetch "{}" from redis: {}'.format(cache_key, str(e)))
     except Exception as e:
-        logger.warn("Unable to connect to redis host: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+        logger.warn('Unable to connect to redis host {}: {}'.format(REDIS_SERVICE_HOSTNAME, str(e)))
     return None
 
 
@@ -24,4 +28,4 @@ def safe_redis_set_json(cache_key, value):
         redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
         redis_client.set(cache_key, json.dumps(value))
     except Exception as e:
-        logger.warn("Unable to write to redis: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
+        logger.warn('Unable to write to redis host {}: {}'.format(REDIS_SERVICE_HOSTNAME, str(e)))
