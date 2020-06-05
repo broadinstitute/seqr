@@ -105,8 +105,6 @@ class Project(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
-    phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
-
     is_mme_enabled = models.BooleanField(default=True)
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_NAME)
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
@@ -418,10 +416,6 @@ class Individual(ModelWithGUID):
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
-
-    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
-    phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
-    phenotips_data = models.TextField(null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
 

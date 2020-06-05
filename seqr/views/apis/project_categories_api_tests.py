@@ -1,5 +1,4 @@
 import json
-from django.test import TestCase
 from django.urls.base import reverse
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase

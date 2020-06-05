@@ -769,7 +769,7 @@ def discovery_sheet(request, project_guid):
             'errors': errors,
         })
 
-    if "external" in project.name or "reprocessed" in project.name:
+    if "external" in project.name.lower() or "reprocessed" in project.name.lower():
         sequencing_approach = "REAN"
     else:
         sequencing_approach = loaded_samples_by_family.values()[0][-1].sample_type
