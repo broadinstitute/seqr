@@ -1,6 +1,8 @@
+from __future__ import unicode_literals
+
 import mock
 
-from io import BytesIO
+from io import StringIO
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -10,8 +12,8 @@ class CheckBamCramPathsTest(TestCase):
 
     @mock.patch('seqr.views.utils.dataset_utils.validate_alignment_dataset_path')
     def test_command(self, mock_validate_path):
-        out = BytesIO()
-        call_command('check_bam_cram_paths', u'1kg project n\u00e5me with uni\u00e7\u00f8de', stdout=out)
+        out = StringIO()
+        call_command('check_bam_cram_paths', '1kg project n\u00e5me with uni\u00e7\u00f8de', stdout=out)
 
         self.assertEqual('---- DONE ----\nChecked 1 samples\n0 failed samples: \n',
                          out.getvalue())
@@ -19,8 +21,8 @@ class CheckBamCramPathsTest(TestCase):
 
         # Test exception
         mock_validate_path.side_effect = Exception('Error accessing "/readviz/NA19675.cram"')
-        out = BytesIO()
-        call_command('check_bam_cram_paths', u'1kg project n\u00e5me with uni\u00e7\u00f8de', stdout=out)
+        out = StringIO()
+        call_command('check_bam_cram_paths', '1kg project n\u00e5me with uni\u00e7\u00f8de', stdout=out)
 
         self.assertEqual('Error at /readviz/NA19675.cram (Individual: NA19675_1): Error accessing "/readviz/NA19675.cram" \n---- DONE ----\nChecked 1 samples\n1 failed samples: NA19675_1\n',
                          out.getvalue())

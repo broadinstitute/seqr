@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 from django.core.management.base import BaseCommand
 
 from seqr.models import IgvSample
@@ -21,8 +24,8 @@ class Command(BaseCommand):
             except Exception as e:
                 individual_id = sample.individual.individual_id
                 failed.append(individual_id)
-                self.stdout.write('Error at {} (Individual: {}): {} '.format(sample.file_path, individual_id, e.message))
+                self.stdout._out.write('Error at {} (Individual: {}): {} \n'.format(sample.file_path, individual_id, str(e)))
 
-        self.stdout.write('---- DONE ----')
-        self.stdout.write('Checked {} samples'.format(len(samples)))
-        self.stdout.write('{} failed samples: {}'.format(len(failed), ', '.join(failed)))
+        self.stdout._out.write('---- DONE ----\n')
+        self.stdout._out.write('Checked {} samples\n'.format(len(samples)))
+        self.stdout._out.write('{} failed samples: {}\n'.format(len(failed), ', '.join(failed)))
