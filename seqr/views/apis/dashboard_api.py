@@ -145,4 +145,8 @@ def export_projects_table_handler(request):
 
         rows.append(row)
 
-    return export_table('projects', header, rows, file_format)
+    try:
+        response = export_table('projects', header, rows, file_format)
+    except ValueError as e:
+        response = create_json_response({'error': str(e)}, status=400)
+    return response

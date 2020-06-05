@@ -3,24 +3,23 @@ import mock
 
 from django.contrib import auth
 from django.contrib.auth.models import User
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
 
 
-class UsersAPITest(TransactionTestCase):
+class UsersAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     def test_get_all_staff(self):
         get_all_staff_url = reverse(get_all_staff)
-        _check_login(self, get_all_staff_url)
+        self.check_require_login(get_all_staff_url)
         response = self.client.get(get_all_staff_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -36,7 +35,7 @@ class UsersAPITest(TransactionTestCase):
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
         create_url = reverse(create_project_collaborator, args=[PROJECT_GUID])
-        _check_login(self, create_url)
+        self.check_manager_login(create_url)
 
         # send invalid request
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
@@ -48,7 +47,7 @@ class UsersAPITest(TransactionTestCase):
             'email': 'test@test.com'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), 1)
+        self.assertEqual(len(collaborators), 3)
         self.assertSetEqual(
             set(collaborators[0].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
@@ -66,7 +65,7 @@ class UsersAPITest(TransactionTestCase):
         expected_email_content = """
     Hi there --
 
-    Test User has added you as a collaborator in seqr.
+    Test Manager User has added you as a collaborator in seqr.
 
     Please click this link to set up your account:
     /users/set_password/{password_token}
@@ -87,7 +86,7 @@ class UsersAPITest(TransactionTestCase):
         response = self.client.get(get_all_collaborators_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {username, 'test_user', 'test_user_non_staff'})
+        self.assertSetEqual(set(response_json.keys()), {username, 'test_user_manager', 'test_user_non_staff'})
         self.assertSetEqual(
             set(response_json[username].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
@@ -98,9 +97,9 @@ class UsersAPITest(TransactionTestCase):
             'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'User'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), 1)
-        self.assertEqual(collaborators[0]['username'], username)
-        self.assertEqual(collaborators[0]['displayName'], 'Test User')
+        self.assertEqual(len(collaborators), 3)
+        self.assertEqual(collaborators[2]['username'], username)
+        self.assertEqual(collaborators[2]['displayName'], 'Test User')
         mock_send_mail.assert_not_called()
 
         # update the user
@@ -108,12 +107,12 @@ class UsersAPITest(TransactionTestCase):
         response = self.client.post(update_url, content_type='application/json',  data=json.dumps(
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), 1)
-        self.assertEqual(collaborators[0]['email'], 'test@test.com')
-        self.assertEqual(collaborators[0]['displayName'], 'Edited Collaborator')
-        self.assertFalse(collaborators[0]['isStaff'])
-        self.assertTrue(collaborators[0]['hasViewPermissions'])
-        self.assertTrue(collaborators[0]['hasEditPermissions'])
+        self.assertEqual(len(collaborators), 3)
+        self.assertEqual(collaborators[2]['email'], 'test@test.com')
+        self.assertEqual(collaborators[2]['displayName'], 'Edited Collaborator')
+        self.assertFalse(collaborators[2]['isStaff'])
+        self.assertTrue(collaborators[2]['hasViewPermissions'])
+        self.assertTrue(collaborators[2]['hasEditPermissions'])
 
         # delete the project collaborator
         delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
@@ -121,7 +120,7 @@ class UsersAPITest(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), 0)
+        self.assertEqual(len(collaborators), 2)
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)
@@ -129,7 +128,7 @@ class UsersAPITest(TransactionTestCase):
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_staff_user(self, mock_send_mail):
         create_url = reverse(create_staff_user)
-        _check_login(self, create_url)
+        self.check_staff_login(create_url)
 
         # send invalid request
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))

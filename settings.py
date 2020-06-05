@@ -259,13 +259,6 @@ KIBANA_SERVER = '{host}:{port}'.format(
     port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
 
-PHENOTIPS_SERVER = '{host}:{port}'.format(
-    host=os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'),
-    port=os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
-)
-PHENOTIPS_ADMIN_UNAME = 'Admin'
-PHENOTIPS_ADMIN_PWD = 'admin'
-
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 
 # Matchmaker

@@ -22,7 +22,7 @@ import { FamilyLayout } from 'shared/components/panel/family'
 import DataLoader from 'shared/components/DataLoader'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { AFFECTED } from 'shared/utils/constants'
+import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS } from 'shared/utils/constants'
 
 import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
 import {
@@ -549,6 +549,17 @@ const GENES_FIELD = {
 }
 
 const INDIVIDUAL_FIELDS = [
+  {
+    component: OptionFieldView,
+    field: 'probandRelationship',
+    fieldName: 'Relationship to Proband',
+    isEditable: true,
+    tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
+    formFieldProps: {
+      search: true,
+    },
+    isPrivate: true,
+  },
   {
     field: 'age',
     fieldName: 'Age',

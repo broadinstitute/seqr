@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from pyliftover.liftover import LiftOver
-from sys import maxint
+from sys import maxsize
 from itertools import combinations
 
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
@@ -106,7 +106,7 @@ class EsSearch(object):
         from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client)
 
-    def _update_dataset_type(self, dataset_type, keep_previous=False):
+    def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
         if keep_previous:
             indices = set(self._indices)
@@ -115,6 +115,7 @@ class EsSearch(object):
         else:
             self._indices = new_indices
         self._set_index_name()
+        return self
 
     def sort(self, sort):
         self._sort = _get_sort(sort)
@@ -151,7 +152,7 @@ class EsSearch(object):
             self._allowed_consequences = allowed_consequences
             dataset_type = _dataset_type_for_annotations(annotations)
             if dataset_type:
-                self._update_dataset_type(dataset_type)
+                self.update_dataset_type(dataset_type)
         elif pathogenicity_filter:
             self.filter(pathogenicity_filter)
 
@@ -173,11 +174,8 @@ class EsSearch(object):
                         variant_ids.append(lifted_variant_id)
 
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
-        if not (genes or intervals or rs_ids):
-            if variant_ids:
-                self._update_dataset_type(Sample.DATASET_TYPE_VARIANT_CALLS)
-            if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
-                self._filtered_variant_ids = variant_id_genome_versions
+        if not (genes or intervals or rs_ids) and len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
+            self._filtered_variant_ids = variant_id_genome_versions
         return self
 
     def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None):
@@ -214,7 +212,7 @@ class EsSearch(object):
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
             if secondary_dataset_type:
-                self._update_dataset_type(secondary_dataset_type, keep_previous=True)
+                self.update_dataset_type(secondary_dataset_type, keep_previous=True)
             self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search)
             if inheritance_mode == COMPOUND_HET:
                 return
@@ -1263,13 +1261,13 @@ def _parse_es_sort(sort, sort_config):
             sort = -1
         elif sort == '-Infinity' or sort is None:
             # None of the sorts used by seqr return negative values so -1 is fine
-            sort = maxint
+            sort = maxsize
         else:
             sort = sort * -1
 
     # ES returns these values for sort when a sort field is missing
     elif sort == 'Infinity':
-        sort = maxint
+        sort = maxsize
     elif sort == '-Infinity':
         # None of the sorts used by seqr return negative values so -1 is fine
         sort = -1

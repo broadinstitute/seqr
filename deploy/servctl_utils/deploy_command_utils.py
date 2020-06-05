@@ -1,20 +1,17 @@
 import collections
 import glob
 import logging
-import multiprocessing
 import os
 from pprint import pformat
 
 import tempfile
-import psutil
 import time
-import sys
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
-from seqr.utils.shell_utils import run
+from deploy.servctl_utils.shell_utils import run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
@@ -31,7 +28,6 @@ DEPLOYABLE_COMPONENTS = [
     "elasticsearch",  # a single elasticsearch instance
     "postgres",
     "redis",
-    "phenotips",
     "seqr",
     "kibana",
     "nginx",
@@ -56,7 +52,6 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "external-elasticsearch-connector",
     "kibana",
     "redis",
-    "phenotips",
     "seqr",
     #"pipeline-runner",
     "kube-scan",
@@ -244,82 +239,6 @@ def deploy_redis(settings):
     docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
 
     deploy_pod("redis", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_phenotips(settings):
-    print_separator("phenotips")
-
-    phenotips_service_port = settings["PHENOTIPS_SERVICE_PORT"]
-    restore_phenotips_db_from_backup = settings.get("RESTORE_PHENOTIPS_DB_FROM_BACKUP")
-    reset_db = settings.get("RESET_DB")
-
-    deployment_target = settings["DEPLOY_TO"]
-
-    if reset_db or restore_phenotips_db_from_backup:
-        delete_pod("phenotips", settings)
-        run_in_pod("postgres", "psql -U postgres postgres -c 'drop database xwiki'" % locals(),
-           verbose=True,
-            errors_to_ignore=["does not exist"],
-            deployment_target=deployment_target,
-        )
-    elif settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("phenotips", settings)
-
-    # init postgres
-    if not settings["ONLY_PUSH_TO_REGISTRY"]:
-        run_in_pod("postgres",
-            "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
-            verbose=True,
-            errors_to_ignore=["already exists"],
-            deployment_target=deployment_target,
-        )
-
-        run_in_pod("postgres",
-            "psql -U xwiki postgres -c 'create database xwiki'" % locals(),
-            verbose=True,
-            errors_to_ignore=["already exists"],
-            deployment_target=deployment_target,
-        )
-
-        run_in_pod("postgres",
-            "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
-        )
-
-    # build container
-    docker_build("phenotips", settings, ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port])
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
-
-    for i in range(0, 3):
-        # opening the PhenoTips website for the 1st time triggers a final set of initialization
-        # steps which take ~ 1 minute, so run wget to trigger this
-
-        try:
-            run_in_pod("phenotips",
-                #command="wget http://localhost:%(phenotips_service_port)s -O test.html" % locals(),
-                command="curl --verbose -L -u Admin:admin http://localhost:%(phenotips_service_port)s -o test.html" % locals(),
-                verbose=True
-            )
-        except Exception as e:
-            logger.error(str(e))
-
-        if i < 2:
-            logger.info("Waiting for phenotips to start up...")
-            time.sleep(10)
-
-    if restore_phenotips_db_from_backup:
-        delete_pod("phenotips", settings)
-
-        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
-
-        run("kubectl cp '%(restore_phenotips_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
-        run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
-        run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
-
-        deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_seqr(settings):
@@ -525,7 +444,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     Args:
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
             indentifying which cluster to deploy these components to
-        components (list): The list of component names to deploy (eg. "postgres", "phenotips" - each string must be in
+        components (list): The list of component names to deploy (eg. "postgres", "redis" - each string must be in
             constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
         output_dir (string): path of directory where to put deployment logs and rendered config files
         runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.

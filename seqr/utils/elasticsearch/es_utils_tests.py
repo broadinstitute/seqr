@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids
 from seqr.utils.elasticsearch.es_search import _get_family_affected_status
 
 INDEX_NAME = 'test_index'
@@ -873,9 +873,18 @@ SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
 SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
 INDEX_METADATA = {
-    INDEX_NAME: {'genomeVersion': '37', 'fields': MAPPING_FIELDS},
-    SECOND_INDEX_NAME: {'genomeVersion': '38', 'fields': MAPPING_FIELDS, 'datasetType': 'VARIANTS'},
-    SV_INDEX_NAME: {'genomeVersion': '37', 'fields': SV_MAPPING_FIELDS, 'datasetType': 'SV'},
+    INDEX_NAME: {'variant': {
+        '_meta': {'genomeVersion': '37'},
+        'properties': {field: {} for field in MAPPING_FIELDS},
+    }},
+    SECOND_INDEX_NAME: {'variant': {
+        '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
+        'properties': {field: {} for field in MAPPING_FIELDS},
+    }},
+    SV_INDEX_NAME: {'structural_variant': {
+        '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
+        'properties': {field: {} for field in SV_MAPPING_FIELDS},
+    }},
 }
 
 ALL_INHERITANCE_QUERY = {
@@ -1027,6 +1036,10 @@ MOCK_REDIS.set.side_effect =_set_cache
 MOCK_LIFTOVER = mock.MagicMock()
 MOCK_LIFTOVER.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
 
+MOCK_ES_CLIENT = mock.MagicMock()
+MOCK_ES_CLIENT.indices.get_mapping.side_effect = lambda index='': {
+    k: {'mappings': INDEX_METADATA[k]} for k in index.split(',')}
+
 
 class MockHit:
 
@@ -1069,8 +1082,11 @@ class MockHit:
 def create_mock_response(search, index=INDEX_NAME):
     indices = index.split(',')
     no_matched_queries = True
+    variant_id_filters = None
     if 'query' in search:
         for search_filter in search['query']['bool']['filter']:
+            if not variant_id_filters:
+                variant_id_filters = search_filter.get('terms', {}).get('variantId')
             possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
                 no_matched_queries = False
@@ -1080,12 +1096,18 @@ def create_mock_response(search, index=INDEX_NAME):
     mock_response.hits.total = 5
     hits = []
     for index_name in sorted(indices):
-        hits += [
+        index_hits = [
             MockHit(no_matched_queries=no_matched_queries, sort=search.get('sort'), index=index_name, **var)
             for var in deepcopy(INDEX_ES_VARIANTS[index_name])
         ]
-    mock_response.__iter__.return_value = hits
-    mock_response.hits.__getitem__.side_effect = hits.__getitem__
+        if variant_id_filters:
+            index_hits = [hit for hit in index_hits if hit.meta.id in variant_id_filters]
+        hits += index_hits
+    if hits:
+        mock_response.__iter__.return_value = hits
+        mock_response.hits.__getitem__.side_effect = hits.__getitem__
+    else:
+        mock_response.hits.__nonzero__.return_value = False
 
     if search.get('aggs'):
         index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
@@ -1109,7 +1131,7 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.elasticsearch.utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
+@mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch', lambda **kwargs: MOCK_ES_CLIENT)
 @mock.patch('seqr.utils.elasticsearch.es_search._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1197,7 +1219,7 @@ class EsUtilsTest(TestCase):
     def test_get_es_variants_for_variant_tuples(self):
         variants = get_es_variants_for_variant_tuples(
             self.families,
-            [(2103343353, 'GAGA', 'G'), (1248367227, 'TC', 'T')]
+            [(2103343353, 'GAGA', 'G'), (1248367227, 'TC', 'T'), (25138367346, 'A', 'C')]
         )
 
         self.assertEqual(len(variants), 2)
@@ -1205,17 +1227,25 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_NO_SORT_VARIANTS[1])
 
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T']}}],
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=3,
+        )
+
+    def test_get_es_variants_for_variant_ids(self):
+        get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
+        self.assertExecutedSearch(
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
+            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
     def test_get_single_es_variant(self):
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
-        self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[0])
+        self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
-        variant = get_single_es_variant(self.families, '2-103343353-GAGA-G', return_all_queried_families=True)
+        variant = get_single_es_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
         all_family_variant = deepcopy(PARSED_NO_SORT_VARIANTS[0])
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
@@ -1224,8 +1254,13 @@ class EsUtilsTest(TestCase):
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}], size=1
+            filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
+
+        with self.assertRaises(Exception) as cm:
+            get_single_es_variant(self.families, '10-10334333-A-G')
+        self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
@@ -1289,15 +1324,29 @@ class EsUtilsTest(TestCase):
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
             'inheritance': {'mode': 'de_novo'},
+            'customQuery': {'term': {'customFlag': 'flagVal'}},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
 
+        # Test invalid locations
+        search_model.search['locus'] = {'rawItems': 'chr27:1234-5678', 'rawVariantItems': 'chr2-A-C'}
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model, sort='cadd', num_results=2)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678')
+
+        search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678'
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model, sort='cadd', num_results=2)
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
+
         # Test edge case where searching by inheritance with no affected individuals
+
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, sort='protein_consequence', num_results=2)
         self.assertEqual(
-            cm.exception.message, 'Inheritance based search is disabled in families with no affected individuals',
+            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
         )
 
         # Test successful search
@@ -1308,6 +1357,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         self.assertExecutedSearch(filters=[
+            {'term': {'customFlag': 'flagVal'}},
             {
                 'bool': {
                     'should': [
@@ -2126,8 +2176,8 @@ class EsUtilsTest(TestCase):
 
         self.assertCachedResults(results_model, {
             'all_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
-            'duplicate_doc_count': 2,
-            'total_results': 3,
+            'duplicate_doc_count': 1,
+            'total_results': 4,
         })
 
         self.assertExecutedSearch(
@@ -2623,6 +2673,4 @@ class EsUtilsTest(TestCase):
         # Affected specified with no other inheritance
         with self.assertRaises(Exception) as cm:
             _execute_inheritance_search(inheritance_filter={'affected': custom_affected})
-        self.assertEqual(
-            cm.exception.message, 'Inheritance must be specified if custom affected status is set',
-        )
+        self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')
