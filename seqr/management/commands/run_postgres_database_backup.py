@@ -30,7 +30,7 @@ class Command(BaseCommand):
 
         backup_dir = "/postgres_backups"
         if not os.path.isdir(backup_dir):
-            logger.info("Creating directory: {}".format(backup_dir))
+            logger.info("Creating directory: " + backup_dir)
             os.mkdir(backup_dir)
 
         db_name = 'seqrdb'
