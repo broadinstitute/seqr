@@ -26,7 +26,6 @@ GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 
 SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
-PHENOTIPS_POD_MEMORY_LIMIT: 3Gi
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'larkin@broadinstitute.org,shall@broadinstitute.org'
 

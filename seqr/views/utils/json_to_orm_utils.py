@@ -40,7 +40,7 @@ def update_individual_from_json(individual, json, user=None, allow_unknown_keys=
     update_model_from_json(
         individual, json, user=user, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=[
-            'phenotips_data', 'filter_flags', 'pop_platform_filters', 'population',
+            'filter_flags', 'pop_platform_filters', 'population',
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features',
         ],
     )
