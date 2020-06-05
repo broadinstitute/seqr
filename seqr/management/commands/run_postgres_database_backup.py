@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import os
 from django.core.management.base import BaseCommand
 import datetime
@@ -14,18 +16,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         def run(cmd):
-            self.stdout.write(cmd)
+            self.stdout._out.write('{}\n'.format(cmd))
             os.system(cmd)
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
 
-        self.stdout.write("=====================================")
-        self.stdout.write("======== %s ======= " % timestamp)
-        self.stdout.write("=====================================")
+        self.stdout._out.write("=====================================\n")
+        self.stdout._out.write("======== %s ======= \n" % timestamp)
+        self.stdout._out.write("=====================================\n")
 
         backup_dir = "/postgres_backups"
         if not os.path.isdir(backup_dir):
-            self.stdout.write("Creating directory: " + backup_dir)
+            self.stdout._out.write("Creating directory: {}\n".format(backup_dir))
             os.mkdir(backup_dir)
 
         for db_name in ['seqrdb', 'xwiki']:
