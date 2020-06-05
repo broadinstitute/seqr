@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import os
 import datetime
 from django.core.management.base import BaseCommand
@@ -12,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         def run(cmd):
-            self.stdout.write(cmd)
+            self.stdout._out.write('{}\n'.format(cmd))
             os.system(cmd)
 
         os.chdir('/')

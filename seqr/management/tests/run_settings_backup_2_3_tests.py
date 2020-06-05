@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+from  __future__ import unicode_literals
+
 import mock
-from io import BytesIO
+from io import StringIO
 import datetime
 
 from django.core.management import call_command
@@ -13,10 +15,10 @@ class RunSettingsBackupTest(TestCase):
 
     # Test the command without an argument
     def test_command_no_argument(self, mock_datetime, mock_os):
-        out = BytesIO()
+        out = StringIO()
 
         mock_os.environ.get.side_effect = ['setting_back_bucket', 'unknown']
-        mock_datetime.datetime.now.return_value = datetime.datetime(2020, 4, 27, 20, 16, 01)
+        mock_datetime.datetime.now.return_value = datetime.datetime(2020, 4, 27, 20, 16, 1)
         call_command('run_settings_backup', stdout = out)
 
         mock_os.chdir.assert_called_with('/')
@@ -35,9 +37,9 @@ class RunSettingsBackupTest(TestCase):
 
     # Test the command with different arguments
     def test_command_with_arguments(self, mock_datetime, mock_os):
-        out = BytesIO()
+        out = StringIO()
 
-        mock_datetime.datetime.now.return_value = datetime.datetime(2020, 4, 27, 20, 16, 01)
+        mock_datetime.datetime.now.return_value = datetime.datetime(2020, 4, 27, 20, 16, 1)
         call_command('run_settings_backup', '--bucket=test_bucket',
                      '--deployment-type=test_deployment',
                      stdout = out)
