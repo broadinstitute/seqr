@@ -6,6 +6,10 @@ from django.core.management.base import BaseCommand
 from seqr.models import IgvSample
 from seqr.views.utils.dataset_utils import validate_alignment_dataset_path
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
 
@@ -24,8 +28,8 @@ class Command(BaseCommand):
             except Exception as e:
                 individual_id = sample.individual.individual_id
                 failed.append(individual_id)
-                self.stdout._out.write('Error at {} (Individual: {}): {} \n'.format(sample.file_path, individual_id, str(e)))
+                logger.info('Error at {} (Individual: {}): {} '.format(sample.file_path, individual_id, str(e)))
 
-        self.stdout._out.write('---- DONE ----\n')
-        self.stdout._out.write('Checked {} samples\n'.format(len(samples)))
-        self.stdout._out.write('{} failed samples: {}\n'.format(len(failed), ', '.join(failed)))
+        logger.info('---- DONE ----')
+        logger.info('Checked {} samples'.format(len(samples)))
+        logger.info('{} failed samples: {}'.format(len(failed), ', '.join(failed)))
