@@ -3,6 +3,9 @@ from __future__ import unicode_literals
 import os
 from django.core.management.base import BaseCommand
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -16,18 +19,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         def run(cmd):
-            self.stdout._out.write('{}\n'.format(cmd))
+            logger.info(cmd)
             os.system(cmd)
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
 
-        self.stdout._out.write("=====================================\n")
-        self.stdout._out.write("======== %s ======= \n" % timestamp)
-        self.stdout._out.write("=====================================\n")
+        logger.info("=====================================")
+        logger.info("======== %s ======= " % timestamp)
+        logger.info("=====================================")
 
         backup_dir = "/postgres_backups"
         if not os.path.isdir(backup_dir):
-            self.stdout._out.write("Creating directory: {}\n".format(backup_dir))
+            logger.info("Creating directory: {}".format(backup_dir))
             os.mkdir(backup_dir)
 
         db_name = 'seqrdb'
