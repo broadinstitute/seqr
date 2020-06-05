@@ -4,6 +4,10 @@ import os
 import datetime
 from django.core.management.base import BaseCommand
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     help = 'Run settings backups.'
@@ -14,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         def run(cmd):
-            self.stdout._out.write('{}\n'.format(cmd))
+            logger.info(cmd)
             os.system(cmd)
 
         os.chdir('/')
