@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 
@@ -26,5 +28,5 @@ class Command(BaseCommand):
             tag.id = None
             tag.project = target_project
             tag.save()
-            self.stdout.write('Saved tag %s (new id = %d)' % (tag.name, tag.id))
+            self.stdout._out.write('Saved tag %s (new id = %d)\n' % (tag.name, tag.id))
 

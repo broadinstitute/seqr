@@ -1,4 +1,7 @@
-from io import BytesIO
+from __future__ import  unicode_literals
+from builtins import str
+
+from io import StringIO
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -11,11 +14,12 @@ class CopyProjectTagsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     def test_command(self):
-        out = BytesIO()
+        out = StringIO()
         # Test missing required arguments
         with self.assertRaises(CommandError) as ce:
             call_command('copy_project_tags')
-        self.assertEqual(ce.exception.message, 'Error: argument --source is required')
+        self.assertIn(str(ce.exception), ['Error: argument --source is required',
+                'Error: the following arguments are required: --source, --target'])
 
         # Test user did confirm.
         call_command('copy_project_tags', '--source=R0001_1kg', '--target=R0003_test', stdout=out)
