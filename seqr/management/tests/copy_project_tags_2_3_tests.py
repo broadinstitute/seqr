@@ -23,7 +23,7 @@ class CopyProjectTagsTest(TestCase):
 
         # Test user did confirm.
         call_command('copy_project_tags', '--source=R0001_1kg', '--target=R0003_test')
-        mock_logger.info.assert_called_with('Saved tag Known gene for phenotype (new id = 5)\n')
+        mock_logger.info.assert_called_with('Saved tag Known gene for phenotype (new id = 5)')
 
         src_tags = VariantTagType.objects.filter(project__guid = 'R0001_1kg')
         target_tags = VariantTagType.objects.filter(project__guid = 'R0003_test')

@@ -32,5 +32,5 @@ class Command(BaseCommand):
             tag.id = None
             tag.project = target_project
             tag.save()
-            logger.info('Saved tag %s (new id = %d)\n' % (tag.name, tag.id))
+            logger.info('Saved tag %s (new id = %d)' % (tag.name, tag.id))
 
