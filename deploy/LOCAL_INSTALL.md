@@ -29,7 +29,7 @@ SEQR_DIR=$(pwd)
 
 wget https://raw.githubusercontent.com/macarthur-lab/seqr/master/docker-compose.yml
 
-docker-compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch, phenotips). This may take 10+ minutes.
+docker-compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
 docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
 
 docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin user 

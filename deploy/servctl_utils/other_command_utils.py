@@ -30,7 +30,6 @@ COMPONENT_PORTS = {
 
     "redis":           [6379],
 
-    "phenotips":       [8080],
     "postgres":        [5432],
     "seqr":            [8000],
     "pipeline-runner": [30005],
@@ -45,7 +44,6 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "elasticsearch",
     "kibana",
     "es-kibana",
-    "phenotips",
     "seqr",
     "pipeline-runner",  # python notebook
 ])
@@ -138,7 +136,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
-        components (list): one or more kubernetes pod labels (eg. 'phenotips' or 'nginx').
+        components (list): one or more kubernetes pod labels (eg. 'postgres' or 'nginx').
             If more than one is specified, logs will be printed from all components in parallel.
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev", etc.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
@@ -210,11 +208,11 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
 
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
-            pod, along with the port to forward to that pod (eg. ('phenotips', 8080))
+            pod, along with the port to forward to that pod (eg. ('postgres', 5432))
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
-            (eg. "seqr" or "phenotips"), then open a web browser window to the forwarded port.
+            (eg. "seqr" or "postgres"), then open a web browser window to the forwarded port.
         use_kubectl_proxy (bool): Whether to use kubectl proxy instead of kubectl port-forward
             (see https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#manually-constructing-apiserver-proxy-urls)
     Returns:
@@ -299,7 +297,7 @@ def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 
     Args:
-        component (string): component to delete (eg. 'phenotips' or 'nginx').
+        component (string): component to delete (eg. 'postgres' or 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
     if component == "cockpit":
@@ -330,7 +328,7 @@ def reset_database(database=[], deployment_target=None):
     """Runs kubectl commands to delete and reset the given database(s).
 
     Args:
-        component (list): one more database labels - "seqrdb", "phenotipsdb",
+        component (list): one more database labels - "seqrdb"
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
     if "seqrdb" in database:
@@ -340,15 +338,6 @@ def reset_database(database=[], deployment_target=None):
         else:
             run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
             run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
-
-    if "phenotipsdb" in database:
-        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
-        if not postgres_pod_name:
-            logger.error("postgres pod must be running")
-        else:
-            run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
-            run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'create database xwiki'" % locals())
-            #run("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals())
 
 
 def delete_all(deployment_target):

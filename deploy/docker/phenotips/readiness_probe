@@ -1,1 +1,0 @@
-curl http://localhost:${PHENOTIPS_SERVICE_PORT}/bin/login/XWiki/XWikiLogin | grep loginform >& /readiness_probe.log

@@ -2,7 +2,6 @@
 import json
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \

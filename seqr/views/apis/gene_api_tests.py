@@ -1,5 +1,4 @@
 import json
-from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import GeneNote
