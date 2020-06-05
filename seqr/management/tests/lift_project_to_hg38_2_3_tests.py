@@ -1,6 +1,8 @@
 #-*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from builtins import int, str
+
 import mock
-import __builtin__
 from copy import deepcopy
 from django.core.management.base import CommandError
 from seqr.models import Family
@@ -10,7 +12,7 @@ from seqr.views.utils.test_utils import VARIANTS, SINGLE_VARIANT
 from django.core.management import call_command
 from django.test import TestCase
 
-PROJECT_NAME = u'1kg project n\u00e5me with uni\u00e7\u00f8de'
+PROJECT_NAME = '1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
 ELASTICSEARCH_INDEX = 'test_index'
 INDEX_METADATA = {
@@ -25,10 +27,10 @@ SAMPLE_IDS = ["NA19679", "NA19675_1", "NA19678", "HG00731", "HG00732", "HG00733"
 liftover_to_38 = LiftOver('hg19', 'hg38')
 
 LIFT_MAP = {
-    21003343353L: [('chr21', 3343400)],
-    1248367227L: [('chr1', 248203925)],
-    1001562437L: [('chr1',   1627057)],
-    1001560662L: [('chr1',  46394160)],
+    21003343353: [('chr21', 3343400)],
+    1248367227: [('chr1', 248203925)],
+    1001562437: [('chr1',   1627057)],
+    1001560662: [('chr1',  46394160)],
 }
 
 
@@ -42,7 +44,7 @@ def mock_convert_coordinate(chrom, pos):
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch.object(__builtin__, 'raw_input')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command(self, mock_liftover, mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
@@ -51,11 +53,11 @@ class LiftProjectToHg38Test(TestCase):
         mock_liftover_to_38 = mock_liftover.return_value
         mock_liftover_to_38.convert_coordinate.side_effect = mock_convert_coordinate
         mock_input.return_value = 'y'
-        call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+        call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                      '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
             mock.call('Successfully lifted over 3 variants'),
@@ -77,20 +79,20 @@ class LiftProjectToHg38Test(TestCase):
         
         families = {family for family in Family.objects.filter(pk__in = [1, 2])}
         self.assertSetEqual(families, mock_get_es_variants.call_args.args[0])
-        self.assertSetEqual(set([(1001627057, u'G', u'C'), (21003343400, u'GAGA', u'G'), (1248203925, u'TC', u'T'),
-                                 (1046394160, u'G', u'A')]), set(mock_get_es_variants.call_args.args[1]))
+        self.assertSetEqual(set([(1001627057, 'G', 'C'), (21003343400, 'GAGA', 'G'), (1248203925, 'TC', 'T'),
+                                 (1046394160, 'G', 'A')]), set(mock_get_es_variants.call_args.args[1]))
 
         # Test discontinue on lifted variants
         mock_logger.reset_mock()
         mock_input.side_effect = 'n'
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message, 'Error: found 1 saved variants already on Hg38')
+        self.assertEqual(str(ce.exception), 'Error: found 1 saved variants already on Hg38')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -99,13 +101,13 @@ class LiftProjectToHg38Test(TestCase):
         mock_get_es_samples.return_value = ['ID_NOT_EXIST'], INDEX_METADATA
 
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message, 'Matches not found for ES sample ids: ID_NOT_EXIST.')
+        self.assertEqual(str(ce.exception), 'Matches not found for ES sample ids: ID_NOT_EXIST.')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -116,14 +118,14 @@ class LiftProjectToHg38Test(TestCase):
         mock_get_es_samples.return_value = ['NA19675_1'], INDEX_METADATA
 
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message,
+        self.assertEqual(str(ce.exception),
             'The following families are included in the callset but are missing some family members: 1 (NA19678).')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -134,21 +136,21 @@ class LiftProjectToHg38Test(TestCase):
         mock_get_es_samples.return_value = ['HG00731', 'HG00732', 'HG00733'], INDEX_METADATA
 
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message,
+        self.assertEqual(str(ce.exception),
             'The following families have saved variants but are missing from the callset: 1.')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
 
         mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX)
 
-    @mock.patch.object(__builtin__, 'raw_input')
+    @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_single_es_variant')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
@@ -161,13 +163,13 @@ class LiftProjectToHg38Test(TestCase):
         mock_liftover_to_38.convert_coordinate.return_value = None
         mock_input.return_value = 'n'
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message, 'Error: unable to lift over 4 variants')
+        self.assertEqual(str(ce.exception), 'Error: unable to lift over 4 variants')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
         ]
@@ -178,13 +180,13 @@ class LiftProjectToHg38Test(TestCase):
         mock_liftover_to_38.convert_coordinate.side_effect = mock_convert_coordinate
         mock_logger.reset_mock()
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message, 'Error: unable to find 3 lifted-over variants')
+        self.assertEqual(str(ce.exception), 'Error: unable to find 3 lifted-over variants')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
         ]
@@ -194,7 +196,7 @@ class LiftProjectToHg38Test(TestCase):
         self.assertSetEqual(mock_get_es_variants.call_args.args[0], families)
         self.assertSetEqual(
             set(mock_get_es_variants.call_args.args[1]),
-            {(1001627057, u'G', u'C'), (21003343400, u'GAGA', u'G'), (1248203925, u'TC', u'T'), (1046394160, u'G', u'A')}
+            {(1001627057, 'G', 'C'), (21003343400, 'GAGA', 'G'), (1248203925, 'TC', 'T'), (1046394160, 'G', 'A')}
         )
 
         # Test discontinue on missing family data while updating the saved variants
@@ -204,13 +206,13 @@ class LiftProjectToHg38Test(TestCase):
         mock_logger.reset_mock()
         mock_input.side_effect = ['y', 'n']
         with self.assertRaises(CommandError) as ce:
-            call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+            call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
-        self.assertEqual(ce.exception.message, 'Error: unable to find family data for lifted over variant')
+        self.assertEqual(str(ce.exception), 'Error: unable to find family data for lifted over variant')
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants')
@@ -221,11 +223,11 @@ class LiftProjectToHg38Test(TestCase):
         mock_logger.reset_mock()
         mock_input.reset_mock(side_effect = True)
         mock_input.return_value = 'y'
-        call_command('lift_project_to_hg38', u'--project={}'.format(PROJECT_NAME),
+        call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                      '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
         calls = [
-            mock.call(u'Updating project genome version for {}'.format(PROJECT_NAME)),
+            mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
             mock.call('Validating es index test_index'),
             mock.call('Lifting over 3 variants (skipping 1 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants'),
