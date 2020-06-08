@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
@@ -32,7 +34,7 @@ class Command(BaseCommand):
         elasticsearch_index = options['es_index']
 
         project = Project.objects.get(Q(name=project_arg) | Q(guid=project_arg))
-        logger.info(u'Updating project genome version for {}'.format(project.name))
+        logger.info('Updating project genome version for {}'.format(project.name))
 
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
@@ -52,7 +54,7 @@ class Command(BaseCommand):
         if len(unmatched_samples) > 0:
             raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
-        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
+        prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
         included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
         missing_individuals = Individual.objects.filter(
             family__in=included_families,
@@ -82,12 +84,12 @@ class Command(BaseCommand):
 
         # Lift-over saved variants
         _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index)
-        saved_variants = get_json_for_saved_variants(saved_variant_models_by_guid.values(), add_details=True)
+        saved_variants = get_json_for_saved_variants(list(saved_variant_models_by_guid.values()), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
         num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
         if num_already_lifted:
-            if raw_input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(num_already_lifted)) != 'y':
+            if input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(num_already_lifted)) != 'y':
                 raise CommandError('Error: found {} saved variants already on Hg38'.format(num_already_lifted))
         logger.info('Lifting over {} variants (skipping {} that are already lifted)'.format(
             len(saved_variants_to_lift), num_already_lifted))
@@ -104,7 +106,7 @@ class Command(BaseCommand):
                     lift_failed[v['xpos']] = v
 
         if lift_failed:
-            if raw_input(
+            if input(
                 'Unable to lift over the following {} coordinates. Continue with update (y/n)?: {} '.format(
                     len(lift_failed), ', '.join([
                         '{}:{}-{}-{} ({})'.format(v['chrom'], v['pos'], v['ref'], v['alt'], ', '.join(v['familyGuids']))
@@ -117,7 +119,7 @@ class Command(BaseCommand):
                 variant_model = saved_variant_models_by_guid[v['variantGuid']]
                 saved_variants_map[(hg37_to_hg38_xpos[v['xpos']], v['ref'], v['alt'])].append(variant_model)
 
-        es_variants = get_es_variants_for_variant_tuples(expected_families, saved_variants_map.keys())
+        es_variants = get_es_variants_for_variant_tuples(expected_families, list(saved_variants_map.keys()))
 
         missing_variants = set(saved_variants_map.keys()) - {(v['xpos'], v['ref'], v['alt']) for v in es_variants}
         if missing_variants:
@@ -132,7 +134,7 @@ class Command(BaseCommand):
                         tags=', '.join([tag.variant_tag_type.name for tag in tags])if tags else 'No Tags; {}'.format(
                             '; '.join([note.note for note in notes]))
                     ))
-            if raw_input('Unable to find the following {} variants in the index. Continue with update (y/n)?:\n{}\n'.format(
+            if input('Unable to find the following {} variants in the index. Continue with update (y/n)?:\n{}\n'.format(
                     len(missing_variants), '\n'.join(missing_variant_strings))) != 'y':
                 raise CommandError('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
 
@@ -145,7 +147,7 @@ class Command(BaseCommand):
             missing_saved_variants = [v for v in saved_variant_models if v.family.guid not in var['familyGuids']]
             if missing_saved_variants:
                 variant_id = '{}-{}-{}-{}'.format(var['chrom'], var['pos'], var['ref'], var['alt'])
-                if raw_input(('Variant {} (hg37: {}) not find for expected families {}. Continue with update (y/n)? '.format(
+                if input(('Variant {} (hg37: {}) not find for expected families {}. Continue with update (y/n)? '.format(
                     variant_id, missing_saved_variants[0].xpos,
                     ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]))
                 )) == 'y':
