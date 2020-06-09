@@ -852,7 +852,7 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
                  )).prefetch_related('variantfunctionaldata_set').filter(
         varianttag__variant_tag_type__in=tag_types,
         **variant_filter
-    )
+    ).order_by('created_date')
 
     if parse_json:
         variant_by_guid = {variant['variantGuid']: variant for variant in

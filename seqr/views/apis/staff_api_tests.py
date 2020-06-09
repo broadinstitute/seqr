@@ -16,6 +16,7 @@ from seqr.models import Individual
 PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
+COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 
 PROJECT_CATEGRORY_NAME = 'test category name'
 
@@ -263,6 +264,26 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      u'animal_model': u'N', u'non_human_cell_culture_model': u'N', u'expression': u'N',
      u'gene_name': u'RP11-206L10.5', u'breast': u'N'}
 
+EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
+    'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
+    'analysis_complete_status': 'complete', 'cardiovascular_system': 'N',
+    'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
+    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2017-02-05T06:42:55.397Z',
+    'months_since_t0': 38, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'WES',
+    'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
+        'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
+    'neoplasm': 'N', 'collaborator': 'Test Project', 'actual_inheritance_model': 'AR-comphet', 'patient_cells': 'N',
+    'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
+    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000011_11', 'immune_system': 'N',
+    'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
+    'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
+    'blood': 'N',  'row_id': 'F000011_11ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
+    'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
+    'non_patient_cell_model': 'N', 't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
+    'family_id': '11', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
+    'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N'}
+
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
     {
@@ -323,52 +344,54 @@ AIRTABLE_COLLABORATOR_RECORDS = {
 }
 
 EXPECTED_SAMPLE_METADATA_ROW = {
-    "project_guid": "R0001_1kg",
-    "num_saved_variants": 1,
-    "dbgap_submission": "Yes",
+    "project_guid": "R0003_test",
+    "num_saved_variants": 2,
+    "dbgap_submission": "No",
     "solve_state": "Tier 1",
-    "sample_id": "NA19675",
+    "sample_id": "NA20885",
     "Gene_Class-1": "Tier 1 - Candidate",
-    "sample_provider": "Hildebrandt",
-    "inheritance_description-1": "de novo",
-    "hpo_present": "HP:0001631 (Defect in the atrial septum)|HP:0002011 (Morphological abnormality of the central nervous system)|HP:0001636 (Tetralogy of Fallot)",
+    "Gene_Class-2": "Tier 1 - Candidate",
+    "sample_provider": "",
+    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
+    "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
+    "hpo_present": "",
     "novel_mendelian_gene-1": "Y",
-    "hgvsc-1": "c.375_377delTCT",
+    "novel_mendelian_gene-2": "Y",
+    "hgvsc-1": "c.3955G>A",
     "date_data_generation": "2017-02-05",
-    "dbgap_subject_id": "dbgap_subject_id_1",
     "Zygosity-1": "Heterozygous",
-    "dbgap_study_id": "dbgap_stady_id_1",
-    "Ref-1": "GAGA",
+    "Zygosity-2": "Heterozygous",
+    "Ref-1": "TC",
+    "sv_type-2": "Deletion",
+    "sv_name-2": "DEL:chr12:49045487-49045898",
     "multiple_datasets": "No",
     "ancestry_detail": "",
-    "maternal_id": "NA19679",
-    "paternal_id": "NA19678",
-    "hgvsp-1": "p.Leu126del",
-    "entity:family_id": "NA19675_1",
-    "entity:discovery_id": "NA19675_1",
-    "project_id": u"1kg project n\xe5me with uni\xe7\xf8de",
-    "Pos-1": "3343353",
+    "maternal_id": "",
+    "paternal_id": "",
+    "hgvsp-1": "c.1586-17C>G",
+    "entity:family_id": "NA20885",
+    "entity:discovery_id": "NA20885",
+    "project_id": "Test Project",
+    "Pos-1": "248367227",
     "data_type": "WES",
-    "family_guid": "F000001_1",
-    "onset_category": "Adult onset",
-    "hpo_absent": "HP:0011675 (Arrhythmia)|HP:0001674 (Complete atrioventricular canal defect)|HP:0001508 (Failure to thrive)",
-    "Transcript-1": "ENST00000258436",
-    "dbgap_sample_id": "SM-A4GQ4",
+    "family_guid": "F000011_11",
+    "onset_category": "Unknown",
+    "hpo_absent": "",
+    "Transcript-1": "ENST00000505820",
     "ancestry": "",
     "phenotype_group": "",
     "sex": "Male",
-    "entity:subject_id": "NA19675_1",
-    "entity:sample_id": "NA19675_1",
-    "Chrom-1": "21",
-    "Alt-1": "G",
-    "Gene-1": "RP11-206L10.5",
+    "entity:subject_id": "NA20885",
+    "entity:sample_id": "NA20885",
+    "Chrom-1": "1",
+    "Alt-1": "T",
+    "Gene-1": "OR4G11P",
     "pmid_id": "",
-    "consanguinity": "Present",
     "phenotype_description": "",
     "affected_status": "Affected",
-    "family_id": "1",
+    "family_id": "11",
     "MME": "Y",
-    "subject_id": "NA19675_1",
+    "subject_id": "NA20885",
     "relationship_to_proband": "",
   }
 
@@ -502,6 +525,16 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 10)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
+        # test compound het reporting
+        url = reverse(discovery_sheet, args=[COMPOUND_HET_PROJECT_GUID])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertListEqual(response_json['errors'], [])
+        self.assertEqual(len(response_json['rows']), 2)
+        self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
+
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
         self.check_staff_login(url)
@@ -590,7 +623,7 @@ class StaffAPITest(AuthenticationTestCase):
 
     @responses.activate
     def test_sample_metadata_export(self):
-        url = reverse(sample_metadata_export, args=[PROJECT_GUID])
+        url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_staff_login(url)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
