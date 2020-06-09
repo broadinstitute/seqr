@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
@@ -35,20 +37,20 @@ class Command(BaseCommand):
             try:
                 updated_saved_variant_guids = update_project_saved_variant_json(project, family_id=family_id)
                 success[project.name] = len(updated_saved_variant_guids)
-                logger.info(u'Updated {0} variants for project {1}'.format(len(updated_saved_variant_guids), project.name))
+                logger.info('Updated {0} variants for project {1}'.format(len(updated_saved_variant_guids), project.name))
             except Exception as e:
                 traceback_message = traceback.format_exc()
                 logger.error(traceback_message)
-                logger.error(u'Error in project {0}: {1}'.format(project.name, e))
+                logger.error('Error in project {0}: {1}'.format(project.name, e))
                 error[project.name] = e
 
         logger.info("Done")
         logger.info("Summary: ")
         for k, v in success.items():
             if v > 0:
-                logger.info(u"  {0}: Updated {1} variants".format(k, v))
+                logger.info("  {0}: Updated {1} variants".format(k, v))
         if len(error):
-            logger.info(u"{0} failed projects".format(len(error)))
+            logger.info("{0} failed projects".format(len(error)))
         for k, v in error.items():
-            logger.info(u"  {0}: {1}".format(k, v))
+            logger.info("  {0}: {1}".format(k, v))
 
