@@ -4,7 +4,6 @@ from builtins import str
 from io import TextIOWrapper
 
 import csv
-
 import gzip
 import hashlib
 import json
