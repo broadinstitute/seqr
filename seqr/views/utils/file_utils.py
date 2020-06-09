@@ -29,7 +29,7 @@ def save_temp_file(request):
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request)
     except Exception as e:
-        return create_json_response({'errors': [e.message]}, status=400)
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     response = {'uploadedFileId': uploaded_file_id}
     if request.GET.get('parsedData'):
@@ -94,13 +94,9 @@ def save_uploaded_file(request, process_records=None):
     stream = next(iter(request.FILES.values()))
     filename = stream._name
 
-    if filename.endswith('.csv'):
-        try:
-            unicode
-        except:
-            stream = TextIOWrapper(stream.file, encoding = 'utf-8')
-    elif not filename.endswith('.xls') and not filename.endswith('.xlsx'):
+    if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
         stream = TextIOWrapper(stream.file, encoding = 'utf-8')
+
     json_records = parse_file(filename, stream)
     if process_records:
         json_records = process_records(json_records, filename=filename)
