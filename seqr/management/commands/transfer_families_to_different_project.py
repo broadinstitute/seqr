@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
