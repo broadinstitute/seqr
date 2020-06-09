@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from builtins import str
+
 import mock
 
 from django.core.management import call_command
@@ -26,8 +29,10 @@ class ResendWelcomeEmailTest(TestCase):
     def test_command_exceptions(self):
         with self.assertRaises(CommandError) as ce:
             call_command('resend_welcome_email', '--email-address={}'.format(TEST_USER_EMAIL))
-        self.assertEqual(ce.exception.message, 'Error: argument -r/--referrer is required')
+        self.assertIn(str(ce.exception), ['Error: argument -r/--referrer is required',
+                                          'Error: the following arguments are required: -r/--referrer'])
 
         with self.assertRaises(CommandError) as ce:
             call_command('resend_welcome_email', '--referrer={}'.format(REFERRER_EMAIL))
-        self.assertEqual(ce.exception.message, 'Error: argument -e/--email-address is required')
+        self.assertIn(str(ce.exception), ['Error: argument -e/--email-address is required',
+                                          'Error: the following arguments are required: -e/--email-address'])
