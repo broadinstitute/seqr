@@ -239,7 +239,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
     {u'project_guid': u'R0001_1kg', u'pubmed_ids': u'', u'posted_publicly': u'',
      u'solved': u'TIER 1 GENE', u'head_or_neck': u'N', u'analysis_complete_status': u'complete',
      u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'NA',
-     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'NA',
+     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'615120,615123',
      u'genome_wide_linkage': u'NA 2', u'metabolism_homeostasis': u'N', u'growth': u'N',
      u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
      u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
@@ -326,6 +326,28 @@ AIRTABLE_SAMPLE_RECORDS = {
     }
 ]}
 
+PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
+    'offset': 'abc123',
+    'records': [{
+      'id': 'rec2B6OGmQpfuRW3s',
+      'fields': {
+        'CollaboratorSampleID': 'NA19675',
+        'Collaborator': ['recW24C2CJW5lT64K'],
+        'dbgap_study_id': 'dbgap_study_id_2',
+        'dbgap_subject_id': 'dbgap_subject_id_1',
+        'dbgap_sample_id': 'SM-A4GQ4',
+        'SequencingProduct': [
+          'Mendelian Rare Disease Exome'
+        ],
+        'dbgap_submission': [
+          'WES',
+          'Array'
+        ]
+      },
+      'createdTime': '2019-09-09T19:21:12.000Z'
+    }
+]}
+
 AIRTABLE_COLLABORATOR_RECORDS = {
     "records": [
         {
@@ -365,7 +387,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
     "multiple_datasets": "No",
-    "ancestry_detail": "",
+    "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
@@ -376,9 +398,9 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "data_type": "WES",
     "family_guid": "F000011_11",
     "onset_category": "Unknown",
-    "hpo_absent": "",
+    "hpo_absent": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "Transcript-1": "ENST00000505820",
-    "ancestry": "",
+    "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
     "sex": "Male",
     "entity:subject_id": "NA20885",
@@ -393,6 +415,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "MME": "Y",
     "subject_id": "NA20885",
     "relationship_to_proband": "",
+    "consanguinity": "None suspected",
   }
 
 SAMPLE_QC_DATA = [
@@ -591,7 +614,8 @@ class StaffAPITest(AuthenticationTestCase):
             '20-hpo_absent', '21-phenotype_description', '22-solve_state']))
         self.assertIn(u'\t'.join([
             'NA19675_1', 'NA19675_1', '-', u'1kg project n\xe5me with uni\xe7\xf8de', '-', 'Yes', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', '-', '-', 'Affected', 'Adult onset', '-',
+            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
+            'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
             'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
@@ -626,8 +650,34 @@ class StaffAPITest(AuthenticationTestCase):
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_staff_login(url)
 
+        # Test invalid airtable responses
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 402)
+
+        responses.reset()
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['message'], 'Unable to retrieve airtable data: No JSON object could be decoded')
+
+        responses.reset()
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
+                      json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
                       json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
+                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['message'],
+            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+        self.assertEqual(len(responses.calls), 2)
+        self.assertIsNone(responses.calls[0].request.params.get('offset'))
+        self.assertEqual(responses.calls[1].request.params.get('offset'), 'abc123')
+
+        # Test success
         responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)

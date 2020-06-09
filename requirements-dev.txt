@@ -3,5 +3,5 @@ django-compressor==2.1.1
 django-debug-toolbar==1.11                      # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history==0.0.11    # for debugging database queries on async requests.
 mock                                            # mock objects for unit tests
-responses==0.10.6                               # mock HTTP responses for unit tests
+responses==0.10.14                               # mock HTTP responses for unit tests
 Jinja2==2.10.1                                  # jinja templates are used by servctl k8s deployment scripts
