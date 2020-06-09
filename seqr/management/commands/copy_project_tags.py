@@ -1,7 +1,13 @@
+from __future__ import unicode_literals
+
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, VariantTagType
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -26,5 +32,5 @@ class Command(BaseCommand):
             tag.id = None
             tag.project = target_project
             tag.save()
-            self.stdout.write('Saved tag %s (new id = %d)' % (tag.name, tag.id))
+            logger.info('Saved tag %s (new id = %d)' % (tag.name, tag.id))
 
