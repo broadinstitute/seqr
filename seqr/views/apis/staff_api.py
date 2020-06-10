@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
 
+MAX_SAVED_VARIANTS = 10000
+
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def elasticsearch_status(request):
@@ -1223,8 +1225,7 @@ def saved_variants_page(request, tag):
     saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
     if gene:
         saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
-
-    if saved_variant_models.count() > 10000 and not gene:
+    elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'message': 'Select a gene to filter variants'}, status=400)
 
     prefetch_related_objects(saved_variant_models, 'family__project')

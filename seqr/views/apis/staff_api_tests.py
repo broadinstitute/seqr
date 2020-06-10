@@ -687,14 +687,24 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json.keys(), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
+    @mock.patch('seqr.views.apis.staff_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
         self.check_staff_login(url)
 
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['message'], 'Select a gene to filter variants')
+
+        response = self.client.get('{}?gene=ENSG00000240361'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById', 'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'])
+        self.assertSetEqual(set(response_json.keys()), {
+            'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
+            'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'})
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes'})
 
     @mock.patch('seqr.views.apis.staff_api.file_iter')
     def test_upload_qc_pipeline_output(self, mock_file_iter):
