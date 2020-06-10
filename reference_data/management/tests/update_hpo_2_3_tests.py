@@ -3,14 +3,14 @@ from builtins import str
 
 import mock
 
+import os
+import tempfile
+import shutil
+
 from django.core.management import call_command
 from django.test import TestCase
 
 from reference_data.models import HumanPhenotypeOntology
-
-import os
-import tempfile
-import shutil
 
 PHO_DATA = [
     'format-version: 1.2\n',
