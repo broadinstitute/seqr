@@ -142,7 +142,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertListEqual(
             export_content[3],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Review (None)', 'test n\xc3\xb8te (None)', '', '', '', '', ''])
+             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xc3\xb8te (None)', '', '', '', '', ''])
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 

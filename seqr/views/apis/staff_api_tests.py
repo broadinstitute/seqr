@@ -238,12 +238,12 @@ EXPECTED_MME_DETAILS_METRICS = {
 EXPECTED_DISCOVERY_SHEET_ROW = \
     {u'project_guid': u'R0001_1kg', u'pubmed_ids': u'', u'posted_publicly': u'',
      u'solved': u'TIER 1 GENE', u'head_or_neck': u'N', u'analysis_complete_status': u'complete',
-     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'NA',
+     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'2',
      u'biochemical_function': u'Y', u'omim_number_post_discovery': u'615120,615123',
      u'genome_wide_linkage': u'NA 2', u'metabolism_homeostasis': u'N', u'growth': u'N',
      u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
      u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
-     u'expected_inheritance_model': u'multiple',
+     u'expected_inheritance_model': u'Autosomal recessive inheritance',
      u'extras_variant_tag_list': [u'21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
      u'protein_interaction': u'N', u'n_kindreds': u'1', u'num_individuals_sequenced': 3,
      u'musculature': u'N', u'sequencing_approach': u'WES', u'neoplasm': u'N',
@@ -254,9 +254,9 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      u'family_guid': u'F000001_1', u'immune_system': u'N',
      u'analysis_summary': u'<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
      u'gene_count': u'NA', u'gene_id': u'ENSG00000135953', u'abdomen': u'N', u'limbs': u'N',
-     u'blood': u'N', u'phenotype_class': u'New', u'submitted_to_mme': u'Y',
-     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'1',
-     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'NA',
+     u'blood': u'N', u'phenotype_class': u'KNOWN', u'submitted_to_mme': u'Y',
+     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'3',
+     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'12345',
      u'p_value': u'NA', u'respiratory': u'N', u'nervous_system': u'Y', u'ear_defects': u'N',
      u'thoracic_cavity': u'N', u'non_patient_cell_model': u'N',
      u't0_copy': u'2017-02-05T06:42:55.397Z', u'extras_pedigree_url': u'/media/ped_1.png',
@@ -266,23 +266,23 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
 
 EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
     'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
-    'analysis_complete_status': 'complete', 'cardiovascular_system': 'N',
+    'analysis_complete_status': 'complete', 'cardiovascular_system': 'Y',
     'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
-    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2017-02-05T06:42:55.397Z',
-    'months_since_t0': 38, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
-    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'WES',
+    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2020-02-05T06:42:55.397Z',
+    'months_since_t0': 2, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'REAN',
     'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
         'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
-    'neoplasm': 'N', 'collaborator': 'Test Project', 'actual_inheritance_model': 'AR-comphet', 'patient_cells': 'N',
+    'neoplasm': 'N', 'collaborator': 'Test Reprocessed Project', 'actual_inheritance_model': 'AR-comphet',
     'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
     'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000011_11', 'immune_system': 'N',
     'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
     'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
     'blood': 'N',  'row_id': 'F000011_11ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
     'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
-    'non_patient_cell_model': 'N', 't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
+    'non_patient_cell_model': 'N', 't0_copy': '2020-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
     'family_id': '11', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
-    'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N'}
+    'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N', 'patient_cells': 'N',}
 
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
@@ -376,11 +376,11 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "sample_provider": "",
     "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
-    "hpo_present": "",
+    "hpo_absent": "",
     "novel_mendelian_gene-1": "Y",
     "novel_mendelian_gene-2": "Y",
     "hgvsc-1": "c.3955G>A",
-    "date_data_generation": "2017-02-05",
+    "date_data_generation": "2020-02-05",
     "Zygosity-1": "Heterozygous",
     "Zygosity-2": "Heterozygous",
     "Ref-1": "TC",
@@ -393,12 +393,12 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "hgvsp-1": "c.1586-17C>G",
     "entity:family_id": "NA20885",
     "entity:discovery_id": "NA20885",
-    "project_id": "Test Project",
+    "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
     "family_guid": "F000011_11",
     "onset_category": "Unknown",
-    "hpo_absent": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
+    "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "Transcript-1": "ENST00000505820",
     "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
@@ -504,7 +504,7 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['individualCount', 'familyCount', 'sampleCountByType'])
-        self.assertEqual(response_json['individualCount'], 16)
+        self.assertEqual(response_json['individualCount'], 17)
         self.assertEqual(response_json['familyCount'], 13)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
@@ -554,7 +554,7 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['rows', 'errors'])
-        self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(response_json['errors'], ['HPO category field not set for some HPO terms in 11'])
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
@@ -642,8 +642,9 @@ class StaffAPITest(AuthenticationTestCase):
             '05-inheritance_description-1', '06-Zygosity-1', '07-Chrom-1', '08-Pos-1', '09-Ref-1', '10-Alt-1',
             '11-hgvsc-1', '12-hgvsp-1', '13-Transcript-1', '14-sv_name-1', '15-sv_type-1', '16-significance-1']))
         self.assertIn('\t'.join([
-            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'de novo', 'Heterozygous', '1', '248367227',
-            'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-', '-']), discovery_file)
+            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
+            'Homozygous', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-',
+            '-']), discovery_file)
 
     @responses.activate
     def test_sample_metadata_export(self):

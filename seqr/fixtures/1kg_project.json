@@ -45,7 +45,7 @@
         "created_date": "2017-03-12T19:27:08.156Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
-        "name": "Test Project",
+        "name": "Test Reprocessed Project",
         "description": "",
 	"owners_group": 1,
 	"can_edit_group": 2,
@@ -389,12 +389,12 @@
         "paternal_ethnicity": ["African Americans"],
         "consanguinity": true,
         "affected_relatives": false,
-        "expected_inheritance": null,
+        "expected_inheritance": ["R"],
         "features": [{"id": "HP:0001631"}, {"id": "HP:0002011"}, {"id": "HP:0001636"}],
         "absent_features": [{"id": "HP:0011675"}, {"id": "HP:0001674"}, {"id": "HP:0001508"}],
         "nonstandard_features": "[]",
         "absent_nonstandard_features": null,
-        "disorders": null,
+        "disorders": ["615593"],
         "candidate_genes": [{"gene": "EHBP1L1", "comments": "comments EHBP1L1"}, {"gene": "ACY3", "comments": "comments ACY3"}],
         "rejected_genes": [{"gene": "IKBKAP", "comments": "comments IKBKAP"}, {"gene": "CCDC102B", "comments": "comments for CCDC102B"}],
         "ar_fertility_meds": null,
@@ -712,7 +712,7 @@
 	    "notes": "",
         "population": "ASJ",
         "consanguinity": false,
-        "absent_features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
+        "features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
         "case_review_status": "E",
         "case_review_status_last_modified_date": "2017-03-12T22:34:52.302Z",
         "case_review_status_last_modified_by": null,
@@ -739,6 +739,23 @@
         "case_review_status_last_modified_date": "2017-03-12T22:34:55.895Z",
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null
+    }
+},
+{
+    "model": "seqr.individual",
+    "pk": 17,
+    "fields": {
+        "guid": "I000017_na20889",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:50.270Z",
+        "family": 12,
+        "individual_id": "NA20889",
+        "mother_id": null,
+        "father_id": null,
+        "sex": "F",
+        "affected": "A",
+        "display_name": ""
     }
 },
 {
@@ -993,16 +1010,16 @@
     "pk": 143,
     "fields": {
         "guid": "S000143_na20885",
-        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_date": "2020-02-05T06:42:55.397Z",
         "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:50.247Z",
+        "last_modified_date": "2020-03-13T09:07:50.247Z",
         "elasticsearch_index": "test_index_second",
         "sample_id": "NA20885",
         "sample_type": "WES",
         "is_active": true,
         "individual": 15,
         "dataset_type": "VARIANTS",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
+        "loaded_date": "2020-02-05T06:42:55.397Z"
     }
 },
 {
@@ -1018,6 +1035,24 @@
         "sample_type": "WES",
         "is_active": false,
         "individual": 16,
+        "dataset_type": "VARIANTS",
+        "elasticsearch_index": "1kg.vcf.gz",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
+    "pk": 154,
+    "fields": {
+        "guid": "S000154_na20889",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:50.277Z",
+
+        "sample_id": "NA20889",
+        "sample_type": "WES",
+        "is_active": false,
+        "individual": 17,
         "dataset_type": "VARIANTS",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
@@ -1109,7 +1144,7 @@
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
-        "project": null,
+        "project": 1,
         "name": "Excluded",
         "category": "Collaboration",
         "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
@@ -1125,9 +1160,9 @@
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
-        "project": 1,
+        "project": null,
         "name": "Known gene for phenotype",
-        "category": "Collaboration",
+        "category": "CMG Discovery Tags",
         "description": "Variant tag type for known gene for phenotype",
         "color": "#777777",
         "order": 16.0
@@ -1296,18 +1331,7 @@
                     "gq": 99.0,
                     "dp": "71",
                     "pl": "0,213,1918",
-                    "cnvs": {
-                        "size": null,
-                        "snps": null,
-                        "cn": null,
-                        "LRR_sd": null,
-                        "array": null,
-                        "caller": null,
-                        "type": null,
-                        "freq": null,
-                        "LRR_median": null
-                    },
-                    "numAlt": 1
+                    "numAlt": 2
                 },
                 "I000005_hg00732": {
                     "sampleId": "HG00732",
@@ -1316,18 +1340,7 @@
                     "gq": 99.0,
                     "dp": "77",
                     "pl": "0,232,3036",
-                    "cnvs": {
-                        "size": null,
-                        "snps": null,
-                        "cn": null,
-                        "LRR_sd": null,
-                        "array": null,
-                        "caller": null,
-                        "type": null,
-                        "freq": null,
-                        "LRR_median": null
-                    },
-                    "numAlt": 0
+                    "numAlt": 1
                 }
             }
         },
@@ -1489,6 +1502,9 @@
                 "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "", "originalAltAlleles": ["T"],
              "mainTranscriptId": "ENST00000505820", "transcripts": {
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
+                ],
                 "ENSG00000240361": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1, "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361", "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
@@ -1525,17 +1541,10 @@
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
-            "mainTranscriptId": "ENST00000371839",
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
             "chrom": "12",
-            "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ],
-                "ENSG00000240361": [
-                    {"transcriptId": "ENST00000416121", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ]}
+            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": []}
         },
         "family": 11
     }
@@ -1576,7 +1585,7 @@
         "created_by": null,
         "last_modified_date": "2018-05-25T21:01:33.193Z",
         "saved_variants": [2],
-        "variant_tag_type": 2,
+        "variant_tag_type": 3,
         "search_hash": null
     }
 },
@@ -1643,6 +1652,34 @@
         "last_modified_date": "2018-05-24T15:34:01.365Z",
         "saved_variants": [1],
         "functional_data_tag": "Genome-wide Linkage",
+        "metadata": "2",
+        "search_hash": ""
+    }
+},
+{
+    "model": "seqr.variantfunctionaldata",
+    "pk": 25,
+    "fields": {
+        "guid": "VFD0000025_1248367227_r0390_10",
+        "created_date": "2018-05-24T15:34:01.353Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-24T15:34:01.365Z",
+        "saved_variants": [1],
+        "functional_data_tag": "Additional Unrelated Kindreds w/ Causal Variants in Gene",
+        "metadata": "2",
+        "search_hash": ""
+    }
+},
+{
+    "model": "seqr.variantfunctionaldata",
+    "pk": 26,
+    "fields": {
+        "guid": "VFD0000026_1248367227_r0390_10",
+        "created_date": "2018-05-24T15:34:01.353Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-24T15:34:01.365Z",
+        "saved_variants": [1],
+        "functional_data_tag": "Kindreds w/ Overlapping SV & Similar Phenotype",
         "metadata": "2",
         "search_hash": ""
     }

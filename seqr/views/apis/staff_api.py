@@ -318,7 +318,10 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 main_gene_ids = set()
                 for variant in comp_het_variants:
                     variant['inheritance_models'] = {'AR-comphet'}
-                    main_gene_ids.add(variant['main_transcript']['geneId'])
+                    if variant['main_transcript']:
+                        main_gene_ids.add(variant['main_transcript']['geneId'])
+                    else:
+                        main_gene_ids.update(list(variant['transcripts'].keys()))
                 if len(main_gene_ids) > 1:
                     # This occurs in compound hets where some hits have a primary transcripts in different genes
                     for gene_id in main_gene_ids:
@@ -404,7 +407,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                     'Alt': variant['alt'],
                     'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
                     'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
-                    'Transcript': variant['main_transcript']['transcriptId'],
+                    'Transcript': variant['main_transcript'].get('transcriptId'),
                 })
             parsed_variants.append((variant['genotypes'], parsed_variant))
 
@@ -907,15 +910,6 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
     if not saved_variants:
         return [row]
 
-    for variant in saved_variants:
-        if not variant.saved_variant_json:
-            errors.append("%s - variant annotation not found" % variant)
-            return [row]
-
-        if not variant.saved_variant_json.get('transcripts') and not variant.saved_variant_json.get('svName'):
-            errors.append("%s - no gene ids" % variant)
-            return [row]
-
     affected_individual_guids = set()
     unaffected_individual_guids = set()
     for sample in samples:
@@ -973,7 +967,6 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
 
     affected_indivs_with_hom_alt_variants = set()
     affected_indivs_with_het_variants = set()
-    unaffected_indivs_with_hom_alt_variants = set()
     unaffected_indivs_with_het_variants = set()
     is_x_linked = False
 
@@ -981,27 +974,36 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
     if genotypes:
         chrom = variant_json['chrom']
         is_x_linked = "X" in chrom
-        _get_variant_genotypes(
-            genotypes, affected_individual_guids, unaffected_individual_guids, affected_indivs_with_hom_alt_variants,
-            affected_indivs_with_het_variants, unaffected_indivs_with_hom_alt_variants, unaffected_indivs_with_het_variants)
+        for sample_guid, genotype in genotypes.items():
+            zygosity = _get_genotype_zygosity(genotype)
+            if zygosity == HOM_ALT and sample_guid in unaffected_individual_guids:
+                # No valid inheritance modes for hom alt unaffected individuals
+                return set(), set()
+
+            if zygosity == HOM_ALT and sample_guid in affected_individual_guids:
+                affected_indivs_with_hom_alt_variants.add(sample_guid)
+            elif zygosity == HET and sample_guid in affected_individual_guids:
+                affected_indivs_with_het_variants.add(sample_guid)
+            elif zygosity == HET and sample_guid in unaffected_individual_guids:
+                unaffected_indivs_with_het_variants.add(sample_guid)
 
     # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
-    if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
+    if affected_indivs_with_hom_alt_variants:
         if is_x_linked:
             inheritance_models.add("X-linked")
         else:
             inheritance_models.add("AR-homozygote")
 
-    if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
+    if not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
         if unaffected_individual_guids:
             inheritance_models.add("de novo")
         else:
             inheritance_models.add("AD")
 
     potential_compound_het_gene_ids = set()
-    if not unaffected_indivs_with_hom_alt_variants and (
-        len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants
-    ) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants and 'transcripts' in variant_json:
+    if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
+            and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants \
+            and 'transcripts' in variant_json:
         potential_compound_het_gene_ids.update(variant_json['transcripts'].keys())
 
     return inheritance_models, potential_compound_het_gene_ids
@@ -1021,23 +1023,6 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
             if any(t['transcriptId'] == main_transcript_id for t in transcripts):
                 variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
                 break
-    elif len(variant.saved_variant_json.get('transcripts', {})) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
-        variant.saved_variant_json['mainTranscriptGeneId'] = variant.saved_variant_json['transcripts'].keys()[0]
-
-
-def _get_variant_genotypes(genotypes, affected_individual_guids, unaffected_individual_guids,
-                           affected_indivs_with_hom_alt_variants, affected_indivs_with_het_variants,
-                           unaffected_indivs_with_hom_alt_variants, unaffected_indivs_with_het_variants):
-    for sample_guid, genotype in genotypes.items():
-        zygosity = _get_genotype_zygosity(genotype)
-        if zygosity == HOM_ALT and sample_guid in affected_individual_guids:
-            affected_indivs_with_hom_alt_variants.add(sample_guid)
-        elif zygosity == HET and sample_guid in affected_individual_guids:
-            affected_indivs_with_het_variants.add(sample_guid)
-        elif zygosity == HOM_ALT and sample_guid in unaffected_individual_guids:
-            unaffected_indivs_with_hom_alt_variants.add(sample_guid)
-        elif zygosity == HET and sample_guid in unaffected_individual_guids:
-            unaffected_indivs_with_het_variants.add(sample_guid)
 
 
 def _get_genotype_zygosity(genotype):
@@ -1064,7 +1049,7 @@ def _get_gene_to_variant_info_map(saved_variants, potential_compound_het_genes):
                 if existing_variants == variants), None)
             if existing_gene_id:
                 main_gene_ids = {
-                    variant.saved_variant_json['mainTranscriptGeneId'] for variant in variants
+                    variant.saved_variant_json.get('mainTranscriptGeneId') for variant in variants
                 }
                 if gene_id in main_gene_ids:
                     gene_ids_to_saved_variants[gene_id] = gene_ids_to_saved_variants[existing_gene_id]
@@ -1114,9 +1099,8 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
             "novel_mendelian_gene": "Y" if any("Novel gene" in name for name in variant_tag_names) else "N",
         })
 
-    if has_tier1 or has_tier2:
-        _set_discovery_details(row, variant_tag_names, variants)
-    elif has_known_gene_for_phenotype:
+    _set_discovery_details(row, variant_tag_names, variants)
+    if has_known_gene_for_phenotype:
         row["phenotype_class"] = "KNOWN"
         for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
             row[functional_field] = "KPG"
@@ -1138,21 +1122,19 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
     return row
 
 
+DISCOVERY_PHENOTYPE_CLASSES = {
+    'NEW': ['Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype'],
+    'EXPAN': ['Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion'],
+    'UE': ['Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'],
+    'KNOWN': ['Known gene for phenotype'],
+}
+
+
 def _set_discovery_phenotype_class(row, variant_tag_names):
-    if any(tag in variant_tag_names for tag in [
-        'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
-    ]):
-        row["phenotype_class"] = "NEW"
-    elif any(tag in variant_tag_names for tag in [
-        'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance', 'Tier 2 - Phenotype expansion',
-    ]):
-        row["phenotype_class"] = "EXPAN"
-    elif any(tag in variant_tag_names for tag in [
-        'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
-    ]):
-        row["phenotype_class"] = "UE"
-    elif 'Known gene for phenotype' in variant_tag_names:
-        row["phenotype_class"] = "KNOWN"
+    for phenotype_class, class_tag_names in DISCOVERY_PHENOTYPE_CLASSES.items():
+        if any(tag in variant_tag_names for tag in class_tag_names):
+            row['phenotype_class'] = phenotype_class
+            break
 
 
 def _set_discovery_details(row, variant_tag_names, variants):
@@ -1175,9 +1157,7 @@ def _set_discovery_details(row, variant_tag_names, variants):
                 if functional_field == ADDITIONAL_KINDREDS_FIELD:
                     value = str(int(value) + 1)
                 elif functional_field == OVERLAPPING_KINDREDS_FIELD:
-                    existing_val = row[functional_field]
-                    if existing_val != 'NA':
-                        value = str(max(int(existing_val), int(value)))
+                    value = str(int(value))
                 elif row[functional_field] != 'NS':
                     value = '{} {}'.format(row[functional_field], value)
             else:

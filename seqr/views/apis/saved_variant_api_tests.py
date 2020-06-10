@@ -567,7 +567,9 @@ class SavedVariantAPITest(AuthenticationTestCase):
     def test_update_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual(
-            {"Biochemical Function", "Genome-wide Linkage"}, {vt.functional_data_tag for vt in variant_functional_data})
+            {'Biochemical Function', 'Genome-wide Linkage', 'Additional Unrelated Kindreds w/ Causal Variants in Gene',
+             'Kindreds w/ Overlapping SV & Similar Phenotype'},
+            {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
 
         update_variant_tags_url = reverse(update_variant_functional_data_handler, args=[VARIANT_GUID])

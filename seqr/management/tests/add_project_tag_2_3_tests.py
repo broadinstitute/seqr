@@ -7,7 +7,7 @@ from seqr.models import Project, VariantTagType
 from django.db.models.query_utils import Q
 
 TAG_ARGUMENTS = {
-    "project": "Test Project",
+    "project": "Test Reprocessed Project",
     "name": "Test tag - Novel gene and phenotype",
     "order": 22.0,
     "category": "CMG Discovery Tags",
@@ -71,4 +71,4 @@ class AddProjectTagTest(TestCase):
                 '--category={}'.format(TAG_ARGUMENTS["category"]),
                 '--description={}'.format(TAG_ARGUMENTS["description"]),
                 '--color={}'.format(TAG_ARGUMENTS["color"]), stdout = out)
-        self.assertEqual(str(err.exception), 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Project')
+        self.assertEqual(str(err.exception), 'Tag "Tier 1 - Novel gene and phenotype" already exists for project Test Reprocessed Project')

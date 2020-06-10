@@ -16,7 +16,7 @@ class TransferFamiliesTest(TestCase):
 
         mock_loger.assert_has_calls([
             mock.call('Found 1 out of 2 families. No match for: 12.'),
-            mock.call('Updating "Known gene for phenotype" tags'),
+            mock.call('Updating "Excluded" tags'),
             mock.call('Updating families'),
             mock.call('Done.'),
         ])
@@ -24,8 +24,8 @@ class TransferFamiliesTest(TestCase):
         family = Family.objects.get(family_id='2')
         self.assertEqual(family.project.guid, 'R0003_test')
 
-        old_tag_type = VariantTagType.objects.get(name='Known gene for phenotype', project__guid='R0001_1kg')
-        new_tag_type = VariantTagType.objects.get(name='Known gene for phenotype', project__guid='R0003_test')
+        old_tag_type = VariantTagType.objects.get(name='Excluded', project__guid='R0001_1kg')
+        new_tag_type = VariantTagType.objects.get(name='Excluded', project__guid='R0003_test')
         self.assertNotEqual(old_tag_type, new_tag_type)
         self.assertEqual(old_tag_type.color, new_tag_type.color)
         self.assertEqual(old_tag_type.category, new_tag_type.category)

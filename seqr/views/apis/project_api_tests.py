@@ -97,7 +97,7 @@ class ProjectAPITest(AuthenticationTestCase):
             datetime.today().strftime('%Y-%m-%d')
         )
         discovery_tags = response_json['projectsByGuid'][PROJECT_GUID]['discoveryTags']
-        self.assertEqual(len(discovery_tags), 1)
+        self.assertEqual(len(discovery_tags), 2)
         self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
         family_fields = {'individualGuids'}
