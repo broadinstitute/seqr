@@ -60,11 +60,11 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call('Project: Empty Project'),
             mock.call('Updated 0 variants for project Empty Project'),
             mock.call('Project: Test Reprocessed Project'),
-            mock.call('Updated 1 variants for project Test Reprocessed Project'),
+            mock.call('Updated 2 variants for project Test Reprocessed Project'),
             mock.call('Done'),
             mock.call('Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
-            mock.call('  Test Reprocessed Project: Updated 1 variants')
+            mock.call('  Test Reprocessed Project: Updated 2 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
