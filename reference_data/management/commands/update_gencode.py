@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import collections
 import gzip
 import logging
@@ -94,10 +96,10 @@ def update_gencode(gencode_release, gencode_gtf_path=None, genome_version=None, 
         coding_region_size_field_name = "coding_region_size_grch{}".format(genome_version)
 
         logger.info("Loading {} (genome version: {})".format(gencode_gtf_path, genome_version))
-        with gzip.open(gencode_gtf_path) as gencode_file:
+        with gzip.open(gencode_gtf_path, 'r') as gencode_file:
 
             for i, line in enumerate(tqdm(gencode_file, unit=' gencode records')):
-                line = line.rstrip('\r\n')
+                line = line.decode('utf-8').rstrip('\r\n')
                 if not line or line.startswith('#'):
                     continue
                 fields = line.split('\t')

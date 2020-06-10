@@ -1,9 +1,14 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import mock
 
 import os
 import tempfile
 import shutil
 import responses
+import json
+import re
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -12,7 +17,7 @@ from django.core.management.base import CommandError
 from reference_data.models import Omim
 
 OMIM_DATA = [
-    '# Copyright (c) 1966-2020 Johns Hopkins University. Use of this file adheres to the terms specified at https://omim.org/help/agreement.\n',
+    '# Copyright (c) 1966-2020 Johns Hopkins University. Use of this file adheres to the terms specified at https://omim.org/help/agreement. uni\xe7\xf8de\n',
     '# Chromosome	Genomic Position Start	Genomic Position End	Cyto Location	Computed Cyto Location	MIM Number	Gene Symbols	Gene Name	Approved Symbol	Entrez Gene ID	Ensembl Gene ID	Comments	Phenotypes	Mouse Gene Symbol/ID\n',
     'chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						\n',
     'chr1	0	27600000	1p36		612367	OR4F5	Alkaline phosphatase, plasma level of, QTL 2		100196914		linkage with rs1780324	{Alkaline phosphatase, plasma level of, QTL 2}, 612367 (2)	\n',
@@ -72,8 +77,8 @@ class UpdateOmimTest(TestCase):
         # Create a temporary directory and a test data file
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'genemap2.txt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(OMIM_DATA))
+        with open(self.temp_file_path, 'wb') as f:
+            f.write(''.join(OMIM_DATA).encode('utf-8'))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -87,36 +92,37 @@ class UpdateOmimTest(TestCase):
         mock_os.environ.get.return_value = ''
         with self.assertRaises(CommandError) as ce:
             call_command('update_omim')
-        self.assertEqual(ce.exception.message, 'omim_key is required')
+        self.assertEqual(str(ce.exception), 'omim_key is required')
 
         # Test omim account expired
         temp_bad_file_path = os.path.join(self.test_dir, 'bad_response.txt')
-        with open(temp_bad_file_path, 'w') as f:
-            f.write('This account has expired')
+        with open(temp_bad_file_path, 'wb') as f:
+            f.write('This account has expired'.encode('utf-8'))
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(Exception) as err:
             call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(err.exception.message, 'This account has expired')
+        self.assertEqual(str(err.exception), 'This account has expired')
 
         # Test bad omim data header
-        with open(temp_bad_file_path, 'w') as f:
-            f.write(OMIM_DATA[2])
+        with open(temp_bad_file_path, 'wb') as f:
+            f.write(OMIM_DATA[2].encode('utf-8'))
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(ve.exception.message, 'Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
+        self.assertEqual(str(ve.exception), 'Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
         # Test empty phenotype description, not reachable
         # Test invalid phenotype map method choice, not reachable
 
         # Test bad phenotype field in the record
-        with open(temp_bad_file_path, 'w') as f:
-            f.write(u''.join(OMIM_DATA[:2]))
-            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	bad_phenotype_field	\n')
+        with open(temp_bad_file_path, 'wb') as f:
+            f.write(''.join(OMIM_DATA[:2]).encode('utf-8'))
+            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	bad_phenotype_field	\n'.encode('utf-8'))
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(ve.exception.message, 'No phenotypes found: {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "bad_phenotype_field", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"}')
+        record = json.loads(re.search(r'No phenotypes found: ({.*})', str(ve.exception)).group(1))
+        self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "bad_phenotype_field", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
@@ -138,12 +144,12 @@ class UpdateOmimTest(TestCase):
         # Omim api response error test
         with self.assertRaises(CommandError) as ce:
             call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(ce.exception.message, 'Request failed with 400: Bad Request')
+        self.assertEqual(str(ce.exception), 'Request failed with 400: Bad Request')
 
         # Bad omim api response test
         with self.assertRaises(CommandError) as ce:
             call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(ce.exception.message, 'Expected 1 omim entries but recieved 0')
+        self.assertEqual(str(ce.exception), 'Expected 1 omim entries but recieved 0')
 
         # Test without a file_path parameter
         mock_utils_logger.reset_mock()
@@ -191,11 +197,11 @@ class UpdateOmimTest(TestCase):
 
         self.assertEqual(Omim.objects.all().count(), 2)
         record = Omim.objects.get(gene__gene_symbol = 'OR4F5')
-        self.assertEqual(record.comments, u'linkage with rs1780324')
-        self.assertEqual(record.gene_description, u'Alkaline phosphatase, plasma level of, QTL 2')
+        self.assertEqual(record.comments, 'linkage with rs1780324')
+        self.assertEqual(record.gene_description, 'Alkaline phosphatase, plasma level of, QTL 2')
         self.assertEqual(record.mim_number, 612367)
-        self.assertEqual(record.phenotype_description, u'Alkaline phosphatase, plasma level of, QTL 2')
+        self.assertEqual(record.phenotype_description, 'Alkaline phosphatase, plasma level of, QTL 2')
         self.assertEqual(record.phenotype_inheritance, None)
-        self.assertEqual(record.phenotype_map_method, u'2')
+        self.assertEqual(record.phenotype_map_method, '2')
         self.assertEqual(record.phenotype_mim_number, 612367)
-        self.assertEqual(record.phenotypic_series_number, u'PS300755')
+        self.assertEqual(record.phenotypic_series_number, 'PS300755')

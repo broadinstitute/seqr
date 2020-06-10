@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 import os
 from tqdm import tqdm
@@ -34,7 +36,7 @@ def update_hpo(hpo_file_path=None):
     if not hpo_file_path or not os.path.isfile(hpo_file_path):
         hpo_file_path = download_file(url=HP_OBO_URL)
 
-    with open(hpo_file_path) as f:
+    with open(hpo_file_path, 'rb') as f:
         print("Parsing {}".format(HP_OBO_URL))
         hpo_id_to_record = parse_obo_file(f)
 
@@ -69,7 +71,7 @@ def parse_obo_file(file_iterator):
 
     hpo_id_to_record = {}
     for line in tqdm(file_iterator, unit=" lines"):
-        line = line.rstrip("\n")
+        line = line.decode('utf-8').rstrip("\n")
         value = " ".join(line.split(" ")[1:])
         if line.startswith("id: "):
             hpo_id = value

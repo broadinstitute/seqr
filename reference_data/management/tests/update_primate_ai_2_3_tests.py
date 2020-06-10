@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import mock
 
 import os
@@ -14,7 +16,7 @@ PRIMATE_AI_DATA = [
     'uc021qil.1	CREB3L1	3744	0.748042136	0.432699919	NA	NA	NA	NA	NA	NA\n',
     'uc010nxu.2	OR4F29	2038	0.593389094	0.383666202	NA	NA	NA	NA	NA	NA\n',
     'uc001aal.1	OR4F5	2019	0.569617867	0.335699245	NA	NA	NA	NA	NA	NA\n',
-    'uc002ehz.4	MMP2	4389	0.78644371	0.556205034	NA	NA	NA	2	0.842780441	0.114728231\n',
+    'uc002ehz.4	MMP2\xe2	4389	0.78644371	0.556205034	NA	NA	NA	2	0.842780441	0.114728231\n',
 ]
 
 
@@ -26,8 +28,8 @@ class UpdatePrimateAiTest(TestCase):
         # Create a temporary directory and a temp data file
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(PRIMATE_AI_DATA))
+        with open(self.temp_file_path, 'wb') as f:
+            f.write(''.join(PRIMATE_AI_DATA).encode('utf-8'))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 import gc
 import os
@@ -36,7 +38,7 @@ class ReferenceDataHandler(object):
 
     @staticmethod
     def get_file_header(f):
-        return next(f).rstrip('\n\r').split('\t')
+        return next(f).decode('utf-8').rstrip('\n\r').split('\t')
 
     def get_gene_for_record(self, record):
         gene_id = record.pop('gene_id', None)
@@ -85,11 +87,12 @@ def update_records(reference_data_handler, file_path=None):
     skip_counter = 0
     logger.info('Parsing file')
     open_file = gzip.open if file_path.endswith('.gz') else open
-    with open_file(file_path) as f:
+    open_mode = 'r' if file_path.endswith('.gz') else 'rb'
+    with open_file(file_path, open_mode) as f:
         header_fields = reference_data_handler.get_file_header(f)
 
         for line in tqdm(f, unit=" records"):
-            record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
+            record = dict(list(zip(header_fields, line.decode('utf-8').rstrip('\r\n').split('\t'))))
             for record in reference_data_handler.parse_record(record):
                 if record is None:
                     continue

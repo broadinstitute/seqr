@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import mock
 
 import os
@@ -14,7 +17,7 @@ MGI_DATA = [
     'A1BG	  1	11167	yes	A1bg	  MGI:2152878		\n',
     'A1CF	  29974	16363	yes	A1cf	  MGI:1917115	  MP:0005367 MP:0005370 MP:0005385 MP:0010768 MP:0005369 MP:0005376 MP:0005384 MP:0005378\n',
     'A2M	  2	37248	yes	A2m	  MGI:2449119\n',
-    'A3GALT2	  127550	16326	yes	A3galt2	  MGI:2685279\n',
+    'A3GALT2\xe2	  127550	16326	yes	A3galt2	  MGI:2685279\n',
 ]
 
 
@@ -26,8 +29,8 @@ class UpdateMgiTest(TestCase):
         # Create a temporary directory and a test data file
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'HMD_HumanPhenotype.rpt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(MGI_DATA))
+        with open(self.temp_file_path, 'wb') as f:
+            f.write(''.join(MGI_DATA).encode('utf-8'))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -77,4 +80,4 @@ class UpdateMgiTest(TestCase):
         dbNSFPGene.objects.all().delete()
         with self.assertRaises(CommandError) as ce:
             call_command('update_mgi')
-        self.assertEqual(ce.exception.message, 'dbNSFPGene table is empty. Run \'./manage.py update_dbnsfp_gene\' before running this command.')
+        self.assertEqual(str(ce.exception), 'dbNSFPGene table is empty. Run \'./manage.py update_dbnsfp_gene\' before running this command.')

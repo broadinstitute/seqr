@@ -1,6 +1,12 @@
+from __future__ import unicode_literals
+
 import os
 from django.core.management.base import BaseCommand
 import datetime
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -12,14 +18,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         def run(cmd):
-            self.stdout.write(cmd)
+            logger.info(cmd)
             os.system(cmd)
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
 
-        self.stdout.write("=====================================")
-        self.stdout.write("======== %s ======= " % timestamp)
-        self.stdout.write("=====================================")
+        logger.info("=====================================")
+        logger.info("======== %s ======= " % timestamp)
+        logger.info("=====================================")
 
         backup_filename = 'gene_reference_data_backup.gz'
 
