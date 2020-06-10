@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+from __future__ import  unicode_literals
+from builtins import str
+
 import mock
-import __builtin__
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -15,7 +17,7 @@ VARIANT_ID = '21-3343353-GAGA-G'
 class LiftVariantToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch.object(__builtin__, 'raw_input')
+    @mock.patch('seqr.management.commands.lift_variant_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_variant_to_hg38.logger')
     @mock.patch('seqr.management.commands.lift_variant_to_hg38.get_single_es_variant')
     def test_command(self, mock_single_es_variants, mock_logger, mock_input):
@@ -24,7 +26,7 @@ class LiftVariantToHg38Test(TestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('lift_variant_to_hg38', SAVED_VARIANT_GUID, VARIANT_ID)
 
-        self.assertEqual(ce.exception.message, 'Error: user did not confirm')
+        self.assertEqual(str(ce.exception), 'Error: user did not confirm')
 
         # Test user did confirm.
         mock_single_es_variants.return_value = PARSED_VARIANTS[0]

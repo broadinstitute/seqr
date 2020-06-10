@@ -1,11 +1,13 @@
 #-*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import mock
 
 from django.core.management import call_command
 from django.test import TestCase
 from seqr.models import Family
 
-PROJECT_NAME = u'1kg project n\u00e5me with uni\u00e7\u00f8de'
+PROJECT_NAME = '1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
 FAMILY_ID = '1'
 
@@ -30,11 +32,11 @@ class ReloadSavedVariantJsonTest(TestCase):
             set(Family.objects.filter(id=1)), {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C'})
 
         logger_info_calls = [
-            mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call(u'Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Updated 3 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Done'),
             mock.call('Summary: '),
-            mock.call(u'  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants')
+            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 3 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
@@ -53,16 +55,16 @@ class ReloadSavedVariantJsonTest(TestCase):
         ], any_order=True)
 
         logger_info_calls = [
-            mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call(u'Updated 4 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
-            mock.call(u'Project: Empty Project'),
-            mock.call(u'Updated 0 variants for project Empty Project'),
-            mock.call(u'Project: Test Reprocessed Project'),
-            mock.call(u'Updated 2 variants for project Test Reprocessed Project'),
+            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Updated 4 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Project: Empty Project'),
+            mock.call('Updated 0 variants for project Empty Project'),
+            mock.call('Project: Test Reprocessed Project'),
+            mock.call('Updated 1 variants for project Test Reprocessed Project'),
             mock.call('Done'),
             mock.call('Summary: '),
-            mock.call(u'  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
-            mock.call(u'  Test Reprocessed Project: Updated 2 variants')
+            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
+            mock.call('  Test Reprocessed Project: Updated 1 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
@@ -78,12 +80,12 @@ class ReloadSavedVariantJsonTest(TestCase):
             set(Family.objects.filter(id=1)), {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C'})
 
         logger_info_calls = [
-            mock.call(u'Project: 1kg project n\xe5me with uni\xe7\xf8de'),
+            mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Done'),
             mock.call('Summary: '),
-            mock.call(u'1 failed projects'),
-            mock.call(u'  1kg project n\xe5me with uni\xe7\xf8de: Database error.')
+            mock.call('1 failed projects'),
+            mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Database error.')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
 
-        mock_logger.error.assert_called_with(u'Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
+        mock_logger.error.assert_called_with('Error in project 1kg project n\xe5me with uni\xe7\xf8de: Database error.')
