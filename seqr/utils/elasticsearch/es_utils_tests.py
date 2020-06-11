@@ -1035,7 +1035,7 @@ MOCK_REDIS.get.side_effect = REDIS_CACHE.get
 MOCK_REDIS.set.side_effect =_set_cache
 
 MOCK_LIFTOVER = mock.MagicMock()
-MOCK_LIFTOVER.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
+MOCK_LIFTOVER.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
 
 
 def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
@@ -1111,7 +1111,7 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.elasticsearch.es_search._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
+@mock.patch('seqr.utils.elasticsearch.es_search.LiftOver', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
