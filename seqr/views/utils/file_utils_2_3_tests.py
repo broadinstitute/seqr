@@ -15,13 +15,13 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 
 TSV_DATA = b'Family ID	Individual ID	Notes\n\
 "1"	"NA19675"	"An affected individual, additional metadata"\n\
-"1"	"NA19678"	"None"'
+"1"	"NA19678"	""'
 
 CSV_DATA = b'Family ID,Individual ID,Notes\n\
 "1","NA19675","An affected individual, additional metadata"\n\
-"1","NA19678","None"'
+"1","NA19678",""'
 
-JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["1", "NA19678", "None"]]'
+JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["1", "NA19678", ""]]'
 
 EXCEL_DATA = b'excel data'
 
@@ -38,7 +38,13 @@ TEST_DATA_TYPES = {
 PARSED_DATA = [
     ['Family ID', 'Individual ID', 'Notes'],
     ['1', 'NA19675', 'An affected individual, additional metadata'],
-    ['1', 'NA19678', 'None'],
+    ['1', 'NA19678', ''],
+]
+
+XLSX_PARSED_DATA = [
+    ['Family ID', 'Individual ID', 'Notes'],
+    ['1', 'NA19675', 'An affected individual, additional metadata'],
+    ['1', 'NA19678', None],
 ]
 
 
@@ -67,15 +73,11 @@ class FileUtilsTest(AuthenticationTestCase):
         ws['A1'], ws['B1'], ws['C1'] = PARSED_DATA[0]
         ws['A2'], ws['B2'], ws['C2'] = PARSED_DATA[1]
         ws['A3'], ws['B3'], ws['C3'] = PARSED_DATA[2]
+
         with NamedTemporaryFile() as tmp:
             wb.save(tmp)
             tmp.seek(0)
-            xlsx_data = tmp.read()
-        self.upload_file_test_data_type = {
-            'tsv': TSV_DATA,
-            'csv': CSV_DATA,
-            'xlsx': xlsx_data
-        }
+            self.xlsx_data = tmp.read()
 
     def test_temp_file_upload(self):
         url = reverse(save_temp_file)
@@ -108,8 +110,10 @@ class FileUtilsTest(AuthenticationTestCase):
         with self.assertRaises(IOError):
             load_uploaded_file(uploaded_file_id)
 
-        # Test uploading with returned data and test with 'tsv', 'csv' and 'xlsx' file formats
-        for ext, data in self.upload_file_test_data_type.items():
+        # Test uploading with returned data and test with file formats other than 'xls' and 'xlsx'
+        for ext, data in TEST_DATA_TYPES.items():
+            if ext == 'xls' or ext == 'xlsx':
+                continue
             response = self.client.post(
                 '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.{}".format(ext), data)})
             self.assertEqual(response.status_code, 200)
@@ -117,6 +121,15 @@ class FileUtilsTest(AuthenticationTestCase):
                 'parsedData': PARSED_DATA,
                 'uploadedFileId': mock.ANY,
             })
+
+        # Test uploading with an 'xlsx' file format
+        response = self.client.post(
+            '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.xlsx", self.xlsx_data)})
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'parsedData': XLSX_PARSED_DATA,
+            'uploadedFileId': mock.ANY,
+        })
 
     @mock.patch('seqr.views.utils.file_utils.xl.load_workbook')
     def test_parse_file(self, mock_load_xl):
