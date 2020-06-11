@@ -2267,6 +2267,23 @@ class EsUtilsTest(TestCase):
             size=4,
         )
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
+    @mock.patch('seqr.utils.elasticsearch.es_search.hashlib.md5')
+    def test_get_es_variants_index_alias(self, mock_hashlib):
+        search_model = VariantSearch.objects.create(search={})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.all())
+
+        mock_hashlib.return_value.hexdigest.return_value = INDEX_NAME
+        self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
+            k: {'mappings': v} for k, v in INDEX_METADATA.items()}
+
+        get_es_variants(results_model, num_results=2)
+
+        self.assertExecutedSearch(index=INDEX_NAME, sort=['xpos'], size=6)
+        self.mock_es_client.indices.update_aliases.assert_called_with(body={
+            'actions': [{'add': {'indices': [SV_INDEX_NAME, SECOND_INDEX_NAME, INDEX_NAME], 'alias': INDEX_NAME}}]})
+
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
