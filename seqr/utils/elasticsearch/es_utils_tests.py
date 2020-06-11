@@ -348,7 +348,7 @@ ES_SV_VARIANT = {
           'sample_id': 'HG00731',
           'num_exon': 2,
           'start': 49045487,
-          'end': 49045898,
+          'end': 49045899,
         }
       ],
       'xpos': 1049045387,
@@ -656,7 +656,7 @@ PARSED_SV_VARIANT = {
     },
     'variantId': 'prefix_19107_DEL',
     'xpos': 1049045487,
-    'end': 49045898,
+    'end': 49045899,
     'svType': 'DEL',
     'numExon': 2,
     '_sort': [1049045387],
@@ -1364,7 +1364,6 @@ class EsUtilsTest(TestCase):
 
     def test_filtered_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678', 'rawVariantItems': 'rs9876,chr2-1234-A-C'},
             'pathogenicity': {
                 'clinvar': ['pathogenic', 'likely_pathogenic'],
                 'hgmd': ['disease_causing', 'likely_disease_causing'],
@@ -1409,6 +1408,7 @@ class EsUtilsTest(TestCase):
         )
 
         # Test successful search
+        search_model.search['locus']['excludeLocations'] = True
         results_model.families.set(self.families)
         variants, total_results = get_es_variants(results_model, sort='cadd', num_results=2)
 
@@ -1419,7 +1419,7 @@ class EsUtilsTest(TestCase):
             {'term': {'customFlag': 'flagVal'}},
             {
                 'bool': {
-                    'should': [
+                    'must_not': [
                         {'range': {'xpos': {'gte': 2000001234, 'lte': 2000005678}}},
                         {'range': {'xstop': {'gte': 2000001234, 'lte': 2000005678}}},
                         {'bool': {'must': [
@@ -1668,15 +1668,22 @@ class EsUtilsTest(TestCase):
         ], sort=['xpos'], index=SV_INDEX_NAME)
 
     def test_multi_dataset_get_es_variants(self):
-        search_model = VariantSearch.objects.create(search={})
+        search_model = VariantSearch.objects.create(search={'pathogenicity': {
+            'clinvar': ['pathogenic'],
+        }})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
+        path_filter = {'terms': {
+            'clinvar_clinical_significance': [
+                'Pathogenic', 'Pathogenic/Likely_pathogenic'
+            ]
+        }}
         self.assertExecutedSearches([
-            dict(filters=None, start_index=0, size=5, sort=['xpos'], index=SV_INDEX_NAME),
-            dict(filters=[ALL_INHERITANCE_QUERY], start_index=0, size=5, sort=['xpos'], index=INDEX_NAME),
+            dict(filters=[path_filter], start_index=0, size=5, sort=['xpos'], index=SV_INDEX_NAME),
+            dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, sort=['xpos'], index=INDEX_NAME),
         ])
 
     def test_compound_het_get_es_variants(self):
@@ -2186,6 +2193,16 @@ class EsUtilsTest(TestCase):
             start_index=3,
         )
 
+        # test skipping page fetches all consecutively
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        get_es_variants(results_model, num_results=2, page=2)
+        self.assertExecutedSearch(
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            filters=[ANNOTATION_QUERY],
+            sort=['xpos'],
+            size=8,
+        )
+
     def test_multi_project_all_samples_any_affected_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
@@ -2224,6 +2241,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
         ])
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
     def test_multi_project_get_variants_by_id(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
@@ -2241,7 +2259,6 @@ class EsUtilsTest(TestCase):
             'duplicate_doc_count': 1,
             'total_results': 4,
         })
-
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[
@@ -2249,7 +2266,7 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
             ],
             sort=['xpos'],
-            size=4,
+            size=3,
         )
 
         # Test liftover variant to hg38
@@ -2264,7 +2281,7 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
             ],
             sort=['xpos'],
-            size=4,
+            size=3,
         )
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
