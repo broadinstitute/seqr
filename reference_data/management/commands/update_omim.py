@@ -43,7 +43,6 @@ Example genemap2.txt record:
 """
 
 from __future__ import unicode_literals
-from builtins import str
 
 import json
 import logging
