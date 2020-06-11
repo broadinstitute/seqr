@@ -8,7 +8,8 @@ from elasticsearch.exceptions import ConnectionTimeout
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException
-from seqr.utils.elasticsearch.es_search import _get_family_affected_status
+from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37, \
+    _liftover_grch37_to_grch38
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -1034,8 +1035,12 @@ MOCK_REDIS = mock.MagicMock()
 MOCK_REDIS.get.side_effect = REDIS_CACHE.get
 MOCK_REDIS.set.side_effect =_set_cache
 
-MOCK_LIFTOVER = mock.MagicMock()
-MOCK_LIFTOVER.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
+MOCK_LIFTOVERS = {
+    'hg38': mock.MagicMock(),
+    'hg19': mock.MagicMock(),
+}
+MOCK_LIFTOVERS['hg38'].convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
+MOCK_LIFTOVERS['hg19'].convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos + 10]]
 
 
 def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
@@ -1111,7 +1116,6 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.elasticsearch.es_search.LiftOver', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -1136,6 +1140,18 @@ class EsUtilsTest(TestCase):
         patcher = mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch')
         patcher.start().return_value = self.mock_es_client
         self.addCleanup(patcher.stop)
+
+        self.mock_liftovers = {
+            'hg38': mock.MagicMock(),
+            'hg19': mock.MagicMock(),
+        }
+        self.mock_liftovers['hg38'].convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
+        self.mock_liftovers['hg19'].convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos + 10]]
+
+        liftover_patcher = mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')
+        self.mock_liftover = liftover_patcher.start()
+        self.mock_liftover.side_effect = lambda v1, v2: MOCK_LIFTOVERS[v1]
+        self.addCleanup(liftover_patcher.stop)
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         executed_search = self.mock_search.call_args.kwargs['body']
@@ -1241,12 +1257,18 @@ class EsUtilsTest(TestCase):
             get_single_es_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
+    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH37_TO_GRCH38', None)
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
     def test_invalid_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(family_id='no_individuals'))
+
+        self.mock_liftover.side_effect = Exception()
+        self.assertIsNone(_liftover_grch38_to_grch37())
+        self.assertIsNone(_liftover_grch37_to_grch38())
 
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
@@ -2224,6 +2246,21 @@ class EsUtilsTest(TestCase):
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[
                 {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}},
+                ANNOTATION_QUERY,
+            ],
+            sort=['xpos'],
+            size=4,
+        )
+
+        # Test liftover variant to hg38
+        search_model.search['locus']['genomeVersion'] = '37'
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        get_es_variants(results_model, num_results=2)
+        self.assertExecutedSearch(
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            filters=[
+                {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343373-GAGA-G']}},
                 ANNOTATION_QUERY,
             ],
             sort=['xpos'],
