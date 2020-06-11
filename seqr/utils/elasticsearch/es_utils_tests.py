@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, get_es_variants_for_variant_ids
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException
 from seqr.utils.elasticsearch.es_search import _get_family_affected_status
 
 INDEX_NAME = 'test_index'
@@ -1036,10 +1036,6 @@ MOCK_REDIS.set.side_effect =_set_cache
 MOCK_LIFTOVER = mock.MagicMock()
 MOCK_LIFTOVER.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
 
-MOCK_ES_CLIENT = mock.MagicMock()
-MOCK_ES_CLIENT.indices.get_mapping.side_effect = lambda index='': {
-    k: {'mappings': INDEX_METADATA[k]} for k in index.split(',')}
-
 
 class MockHit:
 
@@ -1131,7 +1127,6 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch', lambda **kwargs: MOCK_ES_CLIENT)
 @mock.patch('seqr.utils.elasticsearch.es_search._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -1156,6 +1151,14 @@ class EsUtilsTest(TestCase):
         patcher = mock.patch('seqr.utils.elasticsearch.es_search.EsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
+
+        self.mock_es_client = mock.MagicMock()
+        self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
+            k: {'mappings': INDEX_METADATA[k]} for k in index.split(',')}
+
+        es_client_patcher = mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch')
+        es_client_patcher.start().return_value = self.mock_es_client
+        self.addCleanup(es_client_patcher.stop)
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
@@ -1261,6 +1264,51 @@ class EsUtilsTest(TestCase):
         with self.assertRaises(Exception) as cm:
             get_single_es_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
+
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
+    def test_invalid_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(family_id='no_individuals'))
+
+        with self.assertRaises(InvalidIndexException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'No es index found')
+
+        results_model.families.set(self.families)
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model, page=200)
+        self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
+
+        search_model.search = {'inheritance': {'mode': 'compound_het'}}
+        search_model.save()
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'This search returned too many compound heterozygous variants. Please add stricter filters')
+
+        with self.assertRaises(Exception) as cm:
+            get_es_variant_gene_counts(results_model)
+        self.assertEqual(str(cm.exception), 'This search returned too many genes')
+
+        search_model.search = {'qualityFilter': {'min_gq': 7}}
+        search_model.save()
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Invalid gq filter 7')
+
+        _set_cache('index_metadata__test_index,test_index_sv', None)
+        self.mock_es_client.indices.get_mapping.side_effect = Exception('Connection error')
+        with self.assertRaises(InvalidIndexException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Error accessing index "test_index,test_index_sv": Connection error')
+
+        self.mock_es_client.indices.get_mapping.side_effect = lambda **kwargs: {}
+        with self.assertRaises(InvalidIndexException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
