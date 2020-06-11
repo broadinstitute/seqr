@@ -1,7 +1,4 @@
-from __future__ import unicode_literals
-from builtins import str
-
-import csv23
+import csv
 import gzip
 import hashlib
 import json
@@ -9,6 +6,7 @@ import logging
 import os
 import tempfile
 import openpyxl as xl
+
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -38,13 +36,11 @@ def save_temp_file(request):
 
 
 def parse_file(filename, stream):
-
     if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
-        return [[s.strip().strip('"') for s in line.rstrip('\n').split('\t')] for line in stream]
+        return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split('\t')) for line in stream]
 
     elif filename.endswith('.csv'):
-        stream = [line.decode('utf-8') if isinstance(line, bytes) else line for line in stream]
-        return [row for row in csv23.reader(stream)]
+        return [row for row in csv.reader(stream)]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
         wb = xl.load_workbook(stream, read_only=True)
@@ -90,7 +86,7 @@ def save_uploaded_file(request, process_records=None):
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
 
     # parse file
-    stream = next(iter(request.FILES.values()))
+    stream = request.FILES.values()[0]
     filename = stream._name
 
     json_records = parse_file(filename, stream)
@@ -98,9 +94,9 @@ def save_uploaded_file(request, process_records=None):
         json_records = process_records(json_records, filename=filename)
 
     # save json to temporary file
-    uploaded_file_id = hashlib.md5(str(json_records).encode('utf-8')).hexdigest()
+    uploaded_file_id = hashlib.md5(str(json_records)).hexdigest()
     serialized_file_path = _compute_serialized_file_path(uploaded_file_id)
-    with gzip.open(serialized_file_path, "wt") as f:
+    with gzip.open(serialized_file_path, "w") as f:
         json.dump(json_records, f)
 
     return uploaded_file_id, filename, json_records
@@ -108,7 +104,7 @@ def save_uploaded_file(request, process_records=None):
 
 def load_uploaded_file(upload_file_id):
     serialized_file_path = _compute_serialized_file_path(upload_file_id)
-    with gzip.open(serialized_file_path, "rt") as f:
+    with gzip.open(serialized_file_path) as f:
         json_records = json.load(f)
 
     os.remove(serialized_file_path)
