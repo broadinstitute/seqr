@@ -3,6 +3,7 @@ import mock
 import json
 from collections import defaultdict
 from django.test import TestCase
+from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
@@ -1037,47 +1038,33 @@ MOCK_LIFTOVER = mock.MagicMock()
 MOCK_LIFTOVER.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
 
 
-class MockHit:
-
-    def __init__(self, matched_queries=None, _source=None, increment_sort=False, no_matched_queries=False, sort=None, index=INDEX_NAME):
-        self.meta = mock.MagicMock()
-        self.meta.index = index
-        if no_matched_queries:
-            del self.meta.matched_queries
-        else:
-            self.meta.matched_queries = []
+def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
+    parsed_hits = deepcopy(hits)
+    for hit in parsed_hits:
+        hit.update({
+            '_index': index,
+            '_id': hit['_source']['variantId'],
+            '_type': 'structural_variant' if SV_INDEX_NAME in index else 'variant',
+        })
+        matched_queries = hit.pop('matched_queries')
+        if include_matched_queries:
+            hit['matched_queries'] = []
             for subindex in index.split(','):
                 if subindex in matched_queries:
-                    self.meta.index = subindex
-                    self.meta.matched_queries += matched_queries[subindex]
-        self.meta.id = _source['variantId']
-        if SV_INDEX_NAME in index:
-            self.meta.doc_type = 'structural_variant'
+                    hit['_index'] = subindex
+                    hit['matched_queries'] += matched_queries[subindex]
+
         if sort or increment_sort:
-            sort = _source['xpos']
+            sort = hit['_source']['xpos']
             if increment_sort:
                 sort += 100
-            self.meta.sort = [sort]
-        else:
-            del self.meta.sort
-        self._dict = _source
-        mock_transcripts = []
-        for transcript in self._dict['sortedTranscriptConsequences']:
-            mock_transcript = mock.MagicMock()
-            mock_transcript.to_dict.return_value = transcript
-            mock_transcripts.append(mock_transcript)
-        self._dict['sortedTranscriptConsequences'] = mock_transcripts
-
-    def __getitem__(self, key):
-        return self._dict[key]
-
-    def __iter__(self):
-        return self._dict.__iter__()
+            hit['_sort'] = [sort]
+    return parsed_hits
 
 
 def create_mock_response(search, index=INDEX_NAME):
     indices = index.split(',')
-    no_matched_queries = True
+    include_matched_queries = False
     variant_id_filters = None
     if 'query' in search:
         for search_filter in search['query']['bool']['filter']:
@@ -1085,45 +1072,42 @@ def create_mock_response(search, index=INDEX_NAME):
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
             possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
-                no_matched_queries = False
+                include_matched_queries = True
                 break
 
-    mock_response = mock.MagicMock()
-    mock_response.hits.total = 5
-    hits = []
+    response_dict = {
+        'took': 1,
+        'hits': {'total': 5, 'hits': []}
+    }
     for index_name in sorted(indices):
-        index_hits = [
-            MockHit(no_matched_queries=no_matched_queries, sort=search.get('sort'), index=index_name, **var)
-            for var in deepcopy(INDEX_ES_VARIANTS[index_name])
-        ]
+        index_hits = mock_hits(
+            INDEX_ES_VARIANTS[index_name], include_matched_queries=include_matched_queries, sort=search.get('sort'),
+            index=index_name)
         if variant_id_filters:
-            index_hits = [hit for hit in index_hits if hit.meta.id in variant_id_filters]
-        hits += index_hits
-    if hits:
-        mock_response.__iter__.return_value = hits
-        mock_response.hits.__getitem__.side_effect = hits.__getitem__
-    else:
-        mock_response.hits.__nonzero__.return_value = False
+            index_hits = [hit for hit in index_hits if hit['_id'] in variant_id_filters]
+        response_dict['hits']['hits'] += index_hits
 
     if search.get('aggs'):
         index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
-        mock_response.aggregations.genes.buckets = [{'key': gene_id, 'doc_count': 3}
-                                                    for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
+        buckets = [{'key': gene_id, 'doc_count': 3} for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
         if search['aggs']['genes']['aggs'].get('vars_by_gene'):
-            for bucket in mock_response.aggregations.genes.buckets:
-                bucket['vars_by_gene'] = [MockHit(increment_sort=True, index=index, **var)
-                                          for var in deepcopy(index_vars.get(bucket['key'], ES_VARIANTS))]
+            for bucket in buckets:
+                bucket['vars_by_gene'] = {
+                    'hits': {
+                        'hits': mock_hits(index_vars.get(bucket['key'], ES_VARIANTS), increment_sort=True, index=index)
+                    }}
         else:
-            for bucket in mock_response.aggregations.genes.buckets:
+            for bucket in buckets:
                 for sample_field in ['samples', 'samples_num_alt_1', 'samples_num_alt_2']:
                     gene_samples = defaultdict(int)
                     for var in index_vars.get(bucket['key'], ES_VARIANTS):
                         for sample in var['_source'].get(sample_field, []):
                             gene_samples[sample] += 1
                     bucket[sample_field] = {'buckets': [{'key': k, 'doc_count': v} for k, v in gene_samples.items()]}
-    else:
-        del mock_response.aggregations.genes
-    return mock_response
+
+        response_dict['aggregations'] = {'genes': {'buckets': buckets}}
+
+    return response_dict
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
@@ -1135,48 +1119,40 @@ class EsUtilsTest(TestCase):
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.executed_search = None
-        self.searched_indices = []
-
-        def mock_execute_search(search):
-            self.executed_search = deepcopy(search.to_dict())
-            self.searched_indices += search._index
-
-            if isinstance(self.executed_search, list):
-                return [create_mock_response(exec_search, index=','.join(self.executed_search[i-1]['index']))
-                        for i, exec_search in enumerate(self.executed_search) if not exec_search.get('index')]
-            else:
-                return create_mock_response(self.executed_search, index=','.join(self.searched_indices))
-
-        patcher = mock.patch('seqr.utils.elasticsearch.es_search.EsSearch._execute_search')
-        patcher.start().side_effect = mock_execute_search
-        self.addCleanup(patcher.stop)
 
         self.mock_es_client = mock.MagicMock()
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': INDEX_METADATA[k]} for k in index.split(',')}
 
-        es_client_patcher = mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch')
-        es_client_patcher.start().return_value = self.mock_es_client
-        self.addCleanup(es_client_patcher.stop)
+        self.mock_search = self.mock_es_client.search
+        self.mock_search.side_effect = lambda index=None, body=None, **kwargs: create_mock_response(
+            deepcopy(body), index=','.join(index))
+        self.mock_multi_search = self.mock_es_client.msearch
+        self.mock_multi_search.side_effect = lambda body=None, **kwargs: {
+            'responses': [
+                create_mock_response(exec_search, index=','.join(body[i-1]['index']))
+                for i, exec_search in enumerate(deepcopy(body)) if not exec_search.get('index')]}
+
+        patcher = mock.patch('seqr.utils.elasticsearch.utils.elasticsearch.Elasticsearch')
+        patcher.start().return_value = self.mock_es_client
+        self.addCleanup(patcher.stop)
 
     def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
-        self.assertIsInstance(self.executed_search, dict)
-        self.assertListEqual(sorted(self.searched_indices), sorted(index.split(',')))
+        executed_search = self.mock_search.call_args.kwargs['body']
+        searched_indices = self.mock_search.call_args.kwargs['index']
+        self.assertListEqual(sorted(searched_indices), sorted(index.split(',')))
         self.assertSameSearch(
-            self.executed_search, dict(filters=filters, start_index=start_index, size=size, sort=sort, gene_aggs=gene_aggs, gene_count_aggs=gene_count_aggs)
+            executed_search,
+            dict(filters=filters, start_index=start_index, size=size, sort=sort, gene_aggs=gene_aggs,
+                 gene_count_aggs=gene_count_aggs)
         )
-        self.executed_search = None
-        self.searched_indices = []
 
     def assertExecutedSearches(self, searches):
-        self.assertIsInstance(self.executed_search, list)
-        self.assertEqual(len(self.executed_search), len(searches)*2)
+        executed_search = self.mock_multi_search.call_args.kwargs['body']
+        self.assertEqual(len(executed_search), len(searches) * 2)
         for i, expected_search in enumerate(searches):
-            self.assertDictEqual(self.executed_search[i*2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
-            self.assertSameSearch(self.executed_search[(i*2)+1], expected_search)
-        self.executed_search = None
-        self.searched_indices = []
+            self.assertDictEqual(executed_search[i * 2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
+            self.assertSameSearch(executed_search[(i * 2) + 1], expected_search)
 
     def assertSameSearch(self, executed_search, expected_search_params):
         expected_search = {
@@ -1299,6 +1275,18 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'Invalid gq filter 7')
 
+        search_model.search = {}
+        search_model.save()
+        self.mock_multi_search.side_effect = ConnectionTimeout()
+        self.mock_es_client.tasks.list.return_value = {'tasks': {
+            123: {'running_time_in_nanos': 10},
+            456: {'running_time_in_nanos': 10 ** 12},
+        }}
+        with self.assertRaises(ConnectionTimeout):
+            get_es_variants(results_model)
+        self.assertEqual(self.mock_es_client.tasks.cancel.call_count, 1)
+        self.mock_es_client.tasks.cancel.assert_called_with(parent_task_id=456)
+
         _set_cache('index_metadata__test_index,test_index_sv', None)
         self.mock_es_client.indices.get_mapping.side_effect = Exception('Connection error')
         with self.assertRaises(InvalidIndexException) as cm:
@@ -1339,8 +1327,9 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=2, size=2)
 
         # test does not re-fetch page
+        self.mock_search.reset_mock()
         variants, total_results = get_es_variants(results_model, page=1, num_results=3)
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
         self.assertEqual(len(variants), 3)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS[:1])
         self.assertEqual(total_results, 5)
@@ -1696,8 +1685,9 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination does not fetch
+        self.mock_search.reset_mock()
         get_es_variants(results_model, page=2, num_results=2)
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
 
     def test_compound_het_get_es_variants_secondary_annotation(self):
         search_model = VariantSearch.objects.create(search={
@@ -1732,8 +1722,9 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination does not fetch
+        self.mock_search.reset_mock()
         get_es_variants(results_model, page=2, num_results=2)
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
 
         # variants require both primary and secondary annotations
         search_model.search = {
@@ -1821,8 +1812,9 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearches([dict(filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
 
+        self.mock_multi_search.reset_mock()
         get_es_variants(results_model, page=2, num_results=2)
-        self.assertIsNone(self.executed_search)
+        self.mock_multi_search.assert_not_called()
 
     def test_multi_datatype_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -2364,6 +2356,7 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         cache_key = 'search_results__{}__xpos'.format(results_model.guid)
+        self.mock_search.reset()
 
         cached_gene_counts = {
             'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
@@ -2372,7 +2365,7 @@ class EsUtilsTest(TestCase):
         _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
         gene_counts = get_es_variant_gene_counts(results_model)
         self.assertDictEqual(gene_counts, cached_gene_counts)
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
 
         _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
         gene_counts = get_es_variant_gene_counts(results_model)
@@ -2380,7 +2373,7 @@ class EsUtilsTest(TestCase):
             'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
             'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
         })
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
 
         _set_cache(cache_key, json.dumps({
             'grouped_results': [
@@ -2399,7 +2392,7 @@ class EsUtilsTest(TestCase):
             'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
             'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
         })
-        self.assertIsNone(self.executed_search)
+        self.mock_search.assert_not_called()
 
     def test_get_family_affected_status(self):
         samples_by_id = {'F000002_2': {
