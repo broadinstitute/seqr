@@ -2130,11 +2130,12 @@ class EsUtilsTest(TestCase):
         ])
 
         # test pagination
-        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
+        variants, total_results = get_es_variants(results_model, num_results=3, page=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
         self.assertEqual(total_results, 9)
 
+        import pdb; pdb.set_trace()
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
