@@ -41,12 +41,6 @@ PARSED_DATA = [
     ['1', 'NA19678', ''],
 ]
 
-XLSX_PARSED_DATA = [
-    ['Family ID', 'Individual ID', 'Notes'],
-    ['1', 'NA19675', 'An affected individual, additional metadata'],
-    ['1', 'NA19678', None],
-]
-
 
 def _mock_cell(value):
     mock_cell = mock.MagicMock()
@@ -72,7 +66,8 @@ class FileUtilsTest(AuthenticationTestCase):
         ws = wb[wb.sheetnames[0]]
         ws['A1'], ws['B1'], ws['C1'] = PARSED_DATA[0]
         ws['A2'], ws['B2'], ws['C2'] = PARSED_DATA[1]
-        ws['A3'], ws['B3'], ws['C3'] = PARSED_DATA[2]
+        ws['A3'], ws['B3'] = PARSED_DATA[2][:2]
+        ws['A4'] = '' # for testing trimming trailing empty rows
 
         with NamedTemporaryFile() as tmp:
             wb.save(tmp)
@@ -113,7 +108,7 @@ class FileUtilsTest(AuthenticationTestCase):
         # Test uploading with returned data and test with file formats other than 'xls' and 'xlsx'
         for ext, data in TEST_DATA_TYPES.items():
             if ext == 'xls' or ext == 'xlsx':
-                continue
+                data = self.xlsx_data
             response = self.client.post(
                 '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.{}".format(ext), data)})
             self.assertEqual(response.status_code, 200)
@@ -121,15 +116,6 @@ class FileUtilsTest(AuthenticationTestCase):
                 'parsedData': PARSED_DATA,
                 'uploadedFileId': mock.ANY,
             })
-
-        # Test uploading with an 'xlsx' file format
-        response = self.client.post(
-            '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.xlsx", self.xlsx_data)})
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'parsedData': XLSX_PARSED_DATA,
-            'uploadedFileId': mock.ANY,
-        })
 
     @mock.patch('seqr.views.utils.file_utils.xl.load_workbook')
     def test_parse_file(self, mock_load_xl):

@@ -55,8 +55,8 @@ def parse_file(filename, stream):
         rows = rows[:last_row_index+1]
         # all rows should have same column count
         last_col_index = max(max(i for i, val in enumerate(row) if val) for row in rows)
-        padding = [None] * last_col_index
-        rows = [(row + padding)[:last_col_index+1] for row in rows]
+        padding = [''] * last_col_index
+        rows = [(row[:max(i for i, val in enumerate(row) if val)+1] + padding)[:last_col_index+1] for row in rows]
 
         return rows
 
