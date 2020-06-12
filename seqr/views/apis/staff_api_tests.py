@@ -16,6 +16,7 @@ from seqr.models import Individual
 PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
+COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 
 PROJECT_CATEGRORY_NAME = 'test category name'
 
@@ -237,12 +238,12 @@ EXPECTED_MME_DETAILS_METRICS = {
 EXPECTED_DISCOVERY_SHEET_ROW = \
     {u'project_guid': u'R0001_1kg', u'pubmed_ids': u'', u'posted_publicly': u'',
      u'solved': u'TIER 1 GENE', u'head_or_neck': u'N', u'analysis_complete_status': u'complete',
-     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'NA',
-     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'NA',
+     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'2',
+     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'615120,615123',
      u'genome_wide_linkage': u'NA 2', u'metabolism_homeostasis': u'N', u'growth': u'N',
      u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
      u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
-     u'expected_inheritance_model': u'multiple',
+     u'expected_inheritance_model': u'Autosomal recessive inheritance',
      u'extras_variant_tag_list': [u'21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
      u'protein_interaction': u'N', u'n_kindreds': u'1', u'num_individuals_sequenced': 3,
      u'musculature': u'N', u'sequencing_approach': u'WES', u'neoplasm': u'N',
@@ -253,15 +254,35 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      u'family_guid': u'F000001_1', u'immune_system': u'N',
      u'analysis_summary': u'<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
      u'gene_count': u'NA', u'gene_id': u'ENSG00000135953', u'abdomen': u'N', u'limbs': u'N',
-     u'blood': u'N', u'phenotype_class': u'New', u'submitted_to_mme': u'Y',
-     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'1',
-     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'NA',
+     u'blood': u'N', u'phenotype_class': u'KNOWN', u'submitted_to_mme': u'Y',
+     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'3',
+     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'12345',
      u'p_value': u'NA', u'respiratory': u'N', u'nervous_system': u'Y', u'ear_defects': u'N',
      u'thoracic_cavity': u'N', u'non_patient_cell_model': u'N',
      u't0_copy': u'2017-02-05T06:42:55.397Z', u'extras_pedigree_url': u'/media/ped_1.png',
      u'family_id': u'1', u'genitourinary_system': u'N', u'coded_phenotype': u'',
      u'animal_model': u'N', u'non_human_cell_culture_model': u'N', u'expression': u'N',
      u'gene_name': u'RP11-206L10.5', u'breast': u'N'}
+
+EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
+    'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
+    'analysis_complete_status': 'complete', 'cardiovascular_system': 'Y',
+    'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
+    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2020-02-05T06:42:55.397Z',
+    'months_since_t0': 2, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'REAN',
+    'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
+        'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
+    'neoplasm': 'N', 'collaborator': 'Test Reprocessed Project', 'actual_inheritance_model': 'AR-comphet',
+    'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
+    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000011_11', 'immune_system': 'N',
+    'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
+    'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
+    'blood': 'N',  'row_id': 'F000011_11ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
+    'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
+    'non_patient_cell_model': 'N', 't0_copy': '2020-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
+    'family_id': '11', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
+    'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N', 'patient_cells': 'N',}
 
 AIRTABLE_SAMPLE_RECORDS = {
   "records": [
@@ -305,6 +326,28 @@ AIRTABLE_SAMPLE_RECORDS = {
     }
 ]}
 
+PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
+    'offset': 'abc123',
+    'records': [{
+      'id': 'rec2B6OGmQpfuRW3s',
+      'fields': {
+        'CollaboratorSampleID': 'NA19675',
+        'Collaborator': ['recW24C2CJW5lT64K'],
+        'dbgap_study_id': 'dbgap_study_id_2',
+        'dbgap_subject_id': 'dbgap_subject_id_1',
+        'dbgap_sample_id': 'SM-A4GQ4',
+        'SequencingProduct': [
+          'Mendelian Rare Disease Exome'
+        ],
+        'dbgap_submission': [
+          'WES',
+          'Array'
+        ]
+      },
+      'createdTime': '2019-09-09T19:21:12.000Z'
+    }
+]}
+
 AIRTABLE_COLLABORATOR_RECORDS = {
     "records": [
         {
@@ -323,60 +366,63 @@ AIRTABLE_COLLABORATOR_RECORDS = {
 }
 
 EXPECTED_SAMPLE_METADATA_ROW = {
-    "project_guid": "R0001_1kg",
-    "num_saved_variants": 1,
-    "dbgap_submission": "Yes",
+    "project_guid": "R0003_test",
+    "num_saved_variants": 2,
+    "dbgap_submission": "No",
     "solve_state": "Tier 1",
-    "sample_id": "NA19675",
+    "sample_id": "NA20885",
     "Gene_Class-1": "Tier 1 - Candidate",
-    "sample_provider": "Hildebrandt",
-    "inheritance_description-1": "de novo",
-    "hpo_present": "HP:0001631 (Defect in the atrial septum)|HP:0002011 (Morphological abnormality of the central nervous system)|HP:0001636 (Tetralogy of Fallot)",
+    "Gene_Class-2": "Tier 1 - Candidate",
+    "sample_provider": "",
+    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
+    "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
+    "hpo_absent": "",
     "novel_mendelian_gene-1": "Y",
-    "hgvsc-1": "c.375_377delTCT",
-    "date_data_generation": "2017-02-05",
-    "dbgap_subject_id": "dbgap_subject_id_1",
+    "novel_mendelian_gene-2": "Y",
+    "hgvsc-1": "c.3955G>A",
+    "date_data_generation": "2020-02-05",
     "Zygosity-1": "Heterozygous",
-    "dbgap_study_id": "dbgap_stady_id_1",
-    "Ref-1": "GAGA",
+    "Zygosity-2": "Heterozygous",
+    "Ref-1": "TC",
+    "sv_type-2": "Deletion",
+    "sv_name-2": "DEL:chr12:49045487-49045898",
     "multiple_datasets": "No",
-    "ancestry_detail": "",
-    "maternal_id": "NA19679",
-    "paternal_id": "NA19678",
-    "hgvsp-1": "p.Leu126del",
-    "entity:family_id": "NA19675_1",
-    "entity:discovery_id": "NA19675_1",
-    "project_id": u"1kg project n\xe5me with uni\xe7\xf8de",
-    "Pos-1": "3343353",
+    "ancestry_detail": "Ashkenazi Jewish",
+    "maternal_id": "",
+    "paternal_id": "",
+    "hgvsp-1": "c.1586-17C>G",
+    "entity:family_id": "NA20885",
+    "entity:discovery_id": "NA20885",
+    "project_id": "Test Reprocessed Project",
+    "Pos-1": "248367227",
     "data_type": "WES",
-    "family_guid": "F000001_1",
-    "onset_category": "Adult onset",
-    "hpo_absent": "HP:0011675 (Arrhythmia)|HP:0001674 (Complete atrioventricular canal defect)|HP:0001508 (Failure to thrive)",
-    "Transcript-1": "ENST00000258436",
-    "dbgap_sample_id": "SM-A4GQ4",
-    "ancestry": "",
+    "family_guid": "F000011_11",
+    "onset_category": "Unknown",
+    "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
+    "Transcript-1": "ENST00000505820",
+    "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
     "sex": "Male",
-    "entity:subject_id": "NA19675_1",
-    "entity:sample_id": "NA19675_1",
-    "Chrom-1": "21",
-    "Alt-1": "G",
-    "Gene-1": "RP11-206L10.5",
+    "entity:subject_id": "NA20885",
+    "entity:sample_id": "NA20885",
+    "Chrom-1": "1",
+    "Alt-1": "T",
+    "Gene-1": "OR4G11P",
     "pmid_id": "",
-    "consanguinity": "Present",
     "phenotype_description": "",
     "affected_status": "Affected",
-    "family_id": "1",
+    "family_id": "11",
     "MME": "Y",
-    "subject_id": "NA19675_1",
+    "subject_id": "NA20885",
     "relationship_to_proband": "",
+    "consanguinity": "None suspected",
   }
 
 SAMPLE_QC_DATA = [
     'PCT_CONTAMINATION	AL_PCT_CHIMERAS	HS_PCT_TARGET_BASES_20X	seqr_id	data_type	filter_flags	qc_platform	qc_pop	pop_PC1	pop_PC2	pop_PC3	pop_PC4	pop_PC5	pop_PC6	qc_metrics_filters	sample_qc.call_rate	sample_qc.n_called	sample_qc.n_not_called	sample_qc.n_filtered	sample_qc.n_hom_ref	sample_qc.n_het	sample_qc.n_hom_var	sample_qc.n_non_ref	sample_qc.n_singleton	sample_qc.n_snp	sample_qc.n_insertion	sample_qc.n_deletion	sample_qc.n_transition	sample_qc.n_transversion	sample_qc.n_star	sample_qc.r_ti_tv	sample_qc.r_het_hom_var	sample_qc.r_insertion_deletion	sample_qc.f_inbreeding.f_stat	sample_qc.f_inbreeding.n_called	sample_qc.f_inbreeding.expected_homs	sample_qc.f_inbreeding.observed_homs\n',
     '1.6E-01	5.567E-01	9.2619E+01	MANZ_1169_DNA	WES	[]	WES-010230 Standard Germline Exome	nfe	6.0654E-02	6.0452E-02	-6.2635E-03	-4.3252E-03	-2.1807E-02	-1.948E-02	["n_snp"]	7.1223E-01	14660344	5923237	0	14485322	114532	60490	175022	585	195114	18516	21882	133675	61439	0	2.1757E+00	1.8934E+00	8.4617E-01	5.3509E-01	14660344	1.4414E+07	14545812\n',
     'NA	NA	NA	NA	WES	[]	Unknown	nfe	4.6581E-02	5.7881E-02	-5.6011E-03	3.5992E-03	-2.9438E-02	-9.6098E-03	["r_insertion_deletion"]	6.2631E-01	12891805	7691776	0	12743977	97831	49997	147828	237	165267	15474	17084	114154	51113	0	2.2334E+00	1.9567E+00	9.0576E-01	5.4467E-01	12891805	1.2677E+07	12793974\n',
-    'NA	NA	NA	NA19675	WES	[]	Unknown	amr	2.2367E-02	-1.9772E-02	6.3769E-02	2.5774E-03	-1.6655E-02	2.0457E-03	["r_ti_tv","n_deletion","n_snp","r_insertion_deletion","n_insertion"]	1.9959E-01	4108373	16475208	0	3998257	67927	42189	110116	18572	127706	13701	10898	82568	45138	0	1.8292E+00	1.6101E+00	1.2572E+00	5.3586E-02	4108373	4.0366E+06	4040446\n',
+    'NA	NA	NA	NA19675_1	WES	[]	Unknown	amr	2.2367E-02	-1.9772E-02	6.3769E-02	2.5774E-03	-1.6655E-02	2.0457E-03	["r_ti_tv","n_deletion","n_snp","r_insertion_deletion","n_insertion"]	1.9959E-01	4108373	16475208	0	3998257	67927	42189	110116	18572	127706	13701	10898	82568	45138	0	1.8292E+00	1.6101E+00	1.2572E+00	5.3586E-02	4108373	4.0366E+06	4040446\n',
     '5.6E-01	3.273E-01	8.1446E+01	NA19678	WES	["coverage"]	Standard Exome Sequencing v4	sas	2.4039E-02	-6.9517E-02	-4.1485E-02	1.421E-01	7.5583E-02	-2.0986E-02	["n_insertion"]	4.6084E-01	9485820	11097761	0	9379951	59871	45998	105869	736	136529	6857	8481	95247	41282	0	2.3072E+00	1.3016E+00	8.0851E-01	5.2126E-01	9485820	9.3608E+06	9425949\n',
     '5.4E-01	5.0841E+00	8.7288E+01	HG00732	WES	["chimera"]	Standard Germline Exome v5	nfe	5.2785E-02	5.547E-02	-5.82E-03	2.7961E-02	-4.2259E-02	3.0271E-02	["n_insertion","r_insertion_deletion"]	6.8762E-01	14153622	6429959	0	13964844	123884	64894	188778	1719	202194	29507	21971	138470	63724	0	2.173E+00	1.909E+00	1.343E+00	4.924E-01	14153622	1.391E+07	14029738\n',
     '2.79E+00	1.8996E+01	7.352E+01	HG00733	WES	["contamination","not_real_flag"]	Standard Germline Exome v5	oth	-1.5417E-01	2.8868E-02	-1.3819E-02	4.1915E-02	-4.0001E-02	7.6392E-02	["n_insertion","r_insertion_deletion", "not_real_filter"]	6.1147E-01	12586314	7997267	0	12383958	140784	61572	202356	8751	204812	38051	21065	140282	64530	0	2.1739E+00	2.2865E+00	1.8064E+00	3.6592E-01	12586314	1.2364E+07	12445530\n',
@@ -458,7 +504,7 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['individualCount', 'familyCount', 'sampleCountByType'])
-        self.assertEqual(response_json['individualCount'], 16)
+        self.assertEqual(response_json['individualCount'], 17)
         self.assertEqual(response_json['familyCount'], 13)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
@@ -501,6 +547,16 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['errors'], [u'No data loaded for family: no_individuals. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
+
+        # test compound het reporting
+        url = reverse(discovery_sheet, args=[COMPOUND_HET_PROJECT_GUID])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertListEqual(response_json['errors'], ['HPO category field not set for some HPO terms in 11'])
+        self.assertEqual(len(response_json['rows']), 2)
+        self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
@@ -558,7 +614,8 @@ class StaffAPITest(AuthenticationTestCase):
             '20-hpo_absent', '21-phenotype_description', '22-solve_state']))
         self.assertIn(u'\t'.join([
             'NA19675_1', 'NA19675_1', '-', u'1kg project n\xe5me with uni\xe7\xf8de', '-', 'Yes', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', '-', '-', 'Affected', 'Adult onset', '-',
+            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
+            'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
             'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
@@ -585,16 +642,43 @@ class StaffAPITest(AuthenticationTestCase):
             '05-inheritance_description-1', '06-Zygosity-1', '07-Chrom-1', '08-Pos-1', '09-Ref-1', '10-Alt-1',
             '11-hgvsc-1', '12-hgvsp-1', '13-Transcript-1', '14-sv_name-1', '15-sv_type-1', '16-significance-1']))
         self.assertIn('\t'.join([
-            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'de novo', 'Heterozygous', '1', '248367227',
-            'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-', '-']), discovery_file)
+            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
+            'Homozygous', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-',
+            '-']), discovery_file)
 
     @responses.activate
     def test_sample_metadata_export(self):
-        url = reverse(sample_metadata_export, args=[PROJECT_GUID])
+        url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_staff_login(url)
 
+        # Test invalid airtable responses
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 402)
+
+        responses.reset()
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['message'], 'Unable to retrieve airtable data: No JSON object could be decoded')
+
+        responses.reset()
+        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
+                      json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
                       json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
+                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()['message'],
+            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+        self.assertEqual(len(responses.calls), 2)
+        self.assertIsNone(responses.calls[0].request.params.get('offset'))
+        self.assertEqual(responses.calls[1].request.params.get('offset'), 'abc123')
+
+        # Test success
         responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
@@ -603,45 +687,63 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json.keys(), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
+    @mock.patch('seqr.views.apis.staff_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
         self.check_staff_login(url)
 
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['message'], 'Select a gene to filter variants')
+
+        response = self.client.get('{}?gene=ENSG00000240361'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById', 'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'])
+        self.assertSetEqual(set(response_json.keys()), {
+            'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
+            'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'})
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes'})
 
     @mock.patch('seqr.views.apis.staff_api.file_iter')
     def test_upload_qc_pipeline_output(self, mock_file_iter):
         url = reverse(upload_qc_pipeline_output,)
         self.check_staff_login(url)
 
+        request_data =json.dumps({
+            'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'
+        })
+
+        # Test missing columns
+        mock_file_iter.return_value = ['', '']
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.reason_phrase,
+            'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop')
+
         # Test no dataset type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE
-        response = self.client.post(url, content_type='application/json',
-                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'No dataset type detected')
 
         # Test multiple dataset types error
         mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
-        response = self.client.post(url, content_type='application/json',
-                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Multiple dataset types detected: wes ,wgs')
 
         # Test unexpected data type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
-        response = self.client.post(url, content_type='application/json',
-                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Unexpected dataset type detected: "unknown" (should be "exome" or "genome")')
 
         # Test normal functions
         mock_file_iter.return_value = SAMPLE_QC_DATA
-        response = self.client.post(url, content_type='application/json',
-                data=json.dumps({'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'}))
+        response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings'])
@@ -650,6 +752,7 @@ class StaffAPITest(AuthenticationTestCase):
             u'Found and updated matching seqr individuals for 4 samples'
         ])
         self.assertListEqual(response_json['warnings'], [
+            'The following 1 samples were added to multiple individuals: NA19678 (2)',
             u'The following 2 samples were skipped: MANZ_1169_DNA, NA',
             u'The following filter flags have no known corresponding value and were not saved: not_real_flag',
             u'The following population platform filters have no known corresponding value and were not saved: not_real_filter'

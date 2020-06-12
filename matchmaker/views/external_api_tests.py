@@ -219,7 +219,7 @@ Thank you for using the matchbox system for the Matchmaker Exchange at the Broad
 Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
 be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         match1 = u'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
-        match2 = 'seqr ID NA20888 from project Test Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
+        match2 = 'seqr ID NA20888 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
             matches=u'{}\n{}'.format(match1, match2),

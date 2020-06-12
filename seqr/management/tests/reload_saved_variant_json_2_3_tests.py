@@ -51,7 +51,7 @@ class ReloadSavedVariantJsonTest(TestCase):
                 set(Family.objects.filter(id__in=[1, 2])),
                 {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C', '12-48367227-TC-T'},
             ),
-            mock.call(set(Family.objects.filter(id=11)), {'12-48367227-TC-T'})
+            mock.call(set(Family.objects.filter(id=11)), {'12-48367227-TC-T', 'prefix_19107_DEL'})
         ], any_order=True)
 
         logger_info_calls = [
@@ -59,12 +59,12 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call('Updated 4 variants for project 1kg project n\xe5me with uni\xe7\xf8de'),
             mock.call('Project: Empty Project'),
             mock.call('Updated 0 variants for project Empty Project'),
-            mock.call('Project: Test Project'),
-            mock.call('Updated 1 variants for project Test Project'),
+            mock.call('Project: Test Reprocessed Project'),
+            mock.call('Updated 2 variants for project Test Reprocessed Project'),
             mock.call('Done'),
             mock.call('Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
-            mock.call('  Test Project: Updated 1 variants')
+            mock.call('  Test Reprocessed Project: Updated 2 variants')
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()
