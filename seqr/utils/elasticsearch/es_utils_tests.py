@@ -1,9 +1,11 @@
 from copy import deepcopy
 import mock
+import jmespath
 import json
 from collections import defaultdict
 from django.test import TestCase
 from elasticsearch.exceptions import ConnectionTimeout
+from sys import maxsize
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
@@ -176,7 +178,7 @@ ES_VARIANTS = [
           'hgmd_accession': None,
           'g1k_AF': None,
           'gnomad_genomes_Hom': None,
-          'cadd_PHRED': 17.26,
+          'cadd_PHRED': None,
           'exac_AC_Hemi': None,
           'g1k_AC': None,
           'topmed_AN': None,
@@ -187,7 +189,7 @@ ES_VARIANTS = [
           'exac_AC_Hom': 0,
           'topmed_AC': None,
           'dbnsfp_REVEL_score': None,
-          'primate_ai_score': None,
+          'primate_ai_score': 1,
           'variantId': '2-103343353-GAGA-G',
           'sortedTranscriptConsequences': [
               {
@@ -585,7 +587,7 @@ PARSED_VARIANTS = [
         'pos': 103343353,
         'predictions': {
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
-            'dann': None, 'sift': None, 'cadd': 17.26, 'metasvm': None, 'primate_ai': None, 'gerp_rs': None,
+            'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': 1, 'gerp_rs': None,
             'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
         },
         'ref': 'GAGA',
@@ -717,9 +719,10 @@ PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
 
-PARSED_DESCENDING_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
-for var in PARSED_DESCENDING_SORT_VARIANTS:
-    var['_sort'][0] = var['_sort'][0]  * -1
+PARSED_CADD_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_CADD_VARIANTS[0]['_sort'][0] = -25.9
+PARSED_CADD_VARIANTS[1]['_sort'][0] = maxsize
+
 
 PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_MULTI_INDEX_VARIANT.update({
@@ -1060,10 +1063,18 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
                     hit['matched_queries'] += matched_queries[subindex]
 
         if sort or increment_sort:
-            sort = hit['_source']['xpos']
+            sort_key = sort[0] if sort else 'xpos'
+            if isinstance(sort_key, dict):
+                if '_script' in sort_key:
+                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos')
+                else:
+                    sort_key = next(iter(sort_key.keys()))
+            sort_value = jmespath.search(sort_key, hit['_source'])
+            if sort_value is None:
+                sort_value = 'Infinity'
             if increment_sort:
-                sort += 100
-            hit['_sort'] = [sort]
+                sort_value += 100
+            hit['_sort'] = [sort_value]
     return parsed_hits
 
 
@@ -1402,7 +1413,7 @@ class EsUtilsTest(TestCase):
 
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(Exception) as cm:
-            get_es_variants(results_model, sort='protein_consequence', num_results=2)
+            get_es_variants(results_model, num_results=2)
         self.assertEqual(
             str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
         )
@@ -1412,7 +1423,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
         variants, total_results = get_es_variants(results_model, sort='cadd', num_results=2)
 
-        self.assertListEqual(variants, PARSED_DESCENDING_SORT_VARIANTS)
+        self.assertListEqual(variants, PARSED_CADD_VARIANTS)
         self.assertEqual(total_results, 5)
 
         self.assertExecutedSearch(filters=[
@@ -2483,6 +2494,48 @@ class EsUtilsTest(TestCase):
         custom_affected_status = _get_family_affected_status(samples_by_id, {'affected': custom_multi_affected})
         self.assertDictEqual(custom_affected_status, {
             'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+
+    def test_sort(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
+
+        variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}, 'xpos'])
+        self.assertEqual(variants[0]['_sort'][0], maxsize)
+        self.assertEqual(variants[1]['_sort'][0], -1)
+
+        variants, _ = get_es_variants(results_model, sort='gnomad', num_results=2)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+            {
+                '_script': {
+                    'type': 'number',
+                    'script': {
+                        'params': {'field': 'gnomad_genomes_AF'},
+                        'source': mock.ANY,
+                    }
+                }
+            }, 'xpos'])
+        self.assertEqual(variants[0]['_sort'][0], 0.00012925741614425127)
+        self.assertEqual(variants[1]['_sort'][0], maxsize)
+
+        variants, _ = get_es_variants(results_model, sort='in_omim', num_results=2)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+            {
+                '_script': {
+                    'type': 'number',
+                    'order': 'desc',
+                    'script': {
+                        'params': {
+                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
+                        },
+                        'source': mock.ANY,
+                    }
+                }
+            }, 'xpos'])
 
     def test_genotype_inheritance_filter(self):
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}

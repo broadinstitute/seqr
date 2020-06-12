@@ -1205,7 +1205,7 @@ def _get_sort(sort_key):
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if not (isinstance(val_func, dict) or isinstance(val_func, list) or isinstance(val_func, str)):
+            if callable(val_func):
                 sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:
@@ -1237,21 +1237,11 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
 
 
 def _parse_es_sort(sort, sort_config):
-    if hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
-        if sort == 'Infinity':
-            sort = -1
-        elif sort == '-Infinity' or sort is None:
-            # None of the sorts used by seqr return negative values so -1 is fine
-            sort = maxsize
-        else:
-            sort = sort * -1
-
-    # ES returns these values for sort when a sort field is missing
-    elif sort == 'Infinity':
+    if sort in {'Infinity', '-Infinity'}:
+        # ES returns these values for sort when a sort field is missing, using the correct value for the given direction
         sort = maxsize
-    elif sort == '-Infinity':
-        # None of the sorts used by seqr return negative values so -1 is fine
-        sort = -1
+    elif hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
+        sort = sort * -1
 
     return sort
 
