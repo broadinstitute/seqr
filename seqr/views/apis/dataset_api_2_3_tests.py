@@ -200,6 +200,8 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
                             set([sv_sample_guid, existing_index_sample_guid]))
 
@@ -237,27 +239,6 @@ class DatasetAPITest(AuthenticationTestCase):
                 'I000003_na19679': 'gs://readviz/NA19679.bam',
             },
         })
-
-        # Test with tsv data formats
-        f = SimpleUploadedFile('samples.tsv', "NA19675_1\t/readviz\xe2/NA19675.cram\nNA19679\tgs://readviz\xe3/NA19679.bam".encode('utf-8'))
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['info'], ['Parsed 2 rows from samples.tsv'])
-
-        # Test with xlsx data formats
-        wb = xl.Workbook()
-        ws = wb[wb.sheetnames[0]]
-        ws['A1'], ws['B1'] = 'NA19675_1', '/readviz\xe2/NA19675.cram'
-        ws['A2'], ws['B2'] = 'NA19679', 'gs://readviz\xe3/NA19679.bam'
-        file = tempfile.TemporaryFile()
-        wb.save(file)
-        file.seek(0)
-        data = file.read()
-        file.close()
-        f = SimpleUploadedFile('samples.xlsx', data)
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['info'], ['Parsed 2 rows from samples.xlsx'])
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
