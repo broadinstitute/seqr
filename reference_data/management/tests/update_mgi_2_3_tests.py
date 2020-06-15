@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 
 import os
@@ -28,8 +26,8 @@ class UpdateMgiTest(TestCase):
         # Create a temporary directory and a test data file
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'HMD_HumanPhenotype.rpt')
-        with open(self.temp_file_path, 'wb') as f:
-            f.write(''.join(MGI_DATA).encode('utf-8'))
+        with open(self.temp_file_path, 'w') as f:
+            f.write(''.join(MGI_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test

@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 
 import os
@@ -76,8 +74,8 @@ class UpdateOmimTest(TestCase):
         # Create a temporary directory and a test data file
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'genemap2.txt')
-        with open(self.temp_file_path, 'wb') as f:
-            f.write(''.join(OMIM_DATA).encode('utf-8'))
+        with open(self.temp_file_path, 'w') as f:
+            f.write(''.join(OMIM_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -95,16 +93,16 @@ class UpdateOmimTest(TestCase):
 
         # Test omim account expired
         temp_bad_file_path = os.path.join(self.test_dir, 'bad_response.txt')
-        with open(temp_bad_file_path, 'wb') as f:
-            f.write('This account has expired'.encode('utf-8'))
+        with open(temp_bad_file_path, 'w') as f:
+            f.write('This account has expired')
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(Exception) as err:
             call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(err.exception), 'This account has expired')
 
         # Test bad omim data header
-        with open(temp_bad_file_path, 'wb') as f:
-            f.write(OMIM_DATA[2].encode('utf-8'))
+        with open(temp_bad_file_path, 'w') as f:
+            f.write(OMIM_DATA[2])
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
@@ -114,9 +112,9 @@ class UpdateOmimTest(TestCase):
         # Test invalid phenotype map method choice, not reachable
 
         # Test bad phenotype field in the record
-        with open(temp_bad_file_path, 'wb') as f:
-            f.write(''.join(OMIM_DATA[:2]).encode('utf-8'))
-            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	bad_phenotype_field	\n'.encode('utf-8'))
+        with open(temp_bad_file_path, 'w') as f:
+            f.write(''.join(OMIM_DATA[:2]))
+            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	bad_phenotype_field	\n')
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')

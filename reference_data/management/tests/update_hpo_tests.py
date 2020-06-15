@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 
 import os
@@ -140,8 +138,8 @@ class UpdateHpoTest(TestCase):
 
         # Prepare normal test data
         self.temp_file_path = os.path.join(self.test_dir, 'hp.obo')
-        with open(self.temp_file_path, 'wb') as f:
-            f.write(''.join(PHO_DATA).encode('utf-8'))
+        with open(self.temp_file_path, 'w') as f:
+            f.write(''.join(PHO_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -153,8 +151,8 @@ class UpdateHpoTest(TestCase):
         temp_bad_file_path = os.path.join(self.test_dir, 'bad_hp.obo')
         mock_download.return_value = temp_bad_file_path
         # Prepare data which causes exception (missing parent hpo id)
-        with open(temp_bad_file_path, 'wb') as f:
-            f.write(''.join(PHO_DATA[:40]).encode('utf-8'))
+        with open(temp_bad_file_path, 'w') as f:
+            f.write(''.join(PHO_DATA[:40]))
         with self.assertRaises(ValueError) as ve:
             call_command('update_human_phenotype_ontology')
         self.assertEqual(str(ve.exception), "Strange id: HP:0000003")

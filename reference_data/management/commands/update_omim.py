@@ -42,8 +42,6 @@ Example genemap2.txt record:
 
 """
 
-from __future__ import unicode_literals
-
 import json
 import logging
 import os
@@ -84,7 +82,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def get_file_header(f):
         header_fields = None
         for i, line in enumerate(f):
-            line = line.decode('utf-8').rstrip('\r\n')
+            line = line.rstrip('\r\n')
             if line.startswith("# Chrom") and header_fields is None:
                 header_fields = [c.lower().replace(' ', '_') for c in line.split('\t')]
                 break

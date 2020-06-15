@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 
 import os
@@ -27,8 +25,8 @@ class UpdateGeneConstraintTest(TestCase):
         # Create a temporary directory and a test data file in it
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'gnomad.v2.1.1.lof_metrics.by_gene.txt')
-        with open(self.temp_file_path, 'wb') as f:
-            f.write(''.join(GNOMAD_LOF_METRICS_DATA).encode('utf-8'))
+        with open(self.temp_file_path, 'w') as f:
+            f.write(''.join(GNOMAD_LOF_METRICS_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test

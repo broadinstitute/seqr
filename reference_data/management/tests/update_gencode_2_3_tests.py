@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 import os
 import tempfile
@@ -44,8 +42,8 @@ class UpdateGencodeTest(TestCase):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'gencode.v31lift37.annotation.gtf.gz')
-        with gzip.open(self.temp_file_path, 'w') as f:
-            f.write(''.join(GTF_DATA).encode('utf-8'))
+        with gzip.open(self.temp_file_path, 'wt') as f:
+            f.write(''.join(GTF_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test

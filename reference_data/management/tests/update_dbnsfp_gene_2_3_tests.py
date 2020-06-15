@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import mock
 
 import os
@@ -28,8 +26,8 @@ class UpdateDbNsfpGeneTest(TestCase):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'dbNSFP_gene')
-        with open(self.temp_file_path, 'wb') as f:
-            f.write(''.join(dbNSFP_GENE_DATA).encode('utf-8'))
+        with open(self.temp_file_path, 'w') as f:
+            f.write(''.join(dbNSFP_GENE_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
