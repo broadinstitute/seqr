@@ -111,7 +111,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     errors, warnings = validate_fam_file_records(json_records)
 
     if not errors and is_merged_pedigree_sample_manifest:
-        _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_rows=parsed_file, user=user, project=project)
+        _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, errors, warnings
 
@@ -349,7 +349,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     return pedigree_rows, sample_manifest_rows, kit_id
 
 
-def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
 
     # write out the sample manifest file
     wb = xl.Workbook()
@@ -371,11 +371,8 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
-    if user is not None and project is not None:
-        user_email_or_username = user.email or user.username
-        email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
-    else:
-        email_body = ""
+    user_email_or_username = user.email or user.username
+    email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
 
     email_body += """This email has 2 attached files:<br />
     <br />
@@ -533,20 +530,12 @@ def _get_datstat_family_notes(row):
         testing = 'Not sure'
     else:
         all_tests = []
-        if _has_test(DC.KARYOTYPE_TEST):
-            all_tests.append('Karyotype')
-        if _has_test(DC.SINGLE_GENE_TEST):
-            all_tests.append('Single gene testing')
-        if _has_test(DC.GENE_PANEL_TEST):
-            all_tests.append('Gene panel testing')
-        if _has_test(DC.MITOCHON_GENOME_TEST):
-            all_tests.append('Mitochondrial genome sequencing')
-        if _has_test(DC.MICROARRAY_TEST):
-            all_tests.append(_test_summary(DC.MICROARRAY_TEST, 'Microarray'))
-        if _has_test(DC.WES_TEST):
-            all_tests.append(_test_summary(DC.WES_TEST, 'Whole exome sequencing'))
-        if _has_test(DC.WGS_TEST):
-            all_tests.append(_test_summary(DC.WGS_TEST, 'Whole genome sequencing'))
+        for test_col, display in DC.TEST_DISPLAYS:
+            if _has_test(test_col):
+                if test_col in DC.TEST_DETAIL_COLUMNS:
+                    display = _test_summary(test_col, display)
+                all_tests.append(display)
+
         if _has_test(DC.OTHER_TEST):
             all_tests.append('Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN] or 'Unspecified'))
 
@@ -819,6 +808,16 @@ class DatstatConstants:
             RELATIVE_SPEC_KEY: 'ESTS_WGENOME_SEQUENCING_REL_S'
         },
     }
+
+    TEST_DISPLAYS = [
+        (KARYOTYPE_TEST, 'Karyotype'),
+        (SINGLE_GENE_TEST, 'Single gene testing'),
+        (GENE_PANEL_TEST, 'Gene panel testing'),
+        (MITOCHON_GENOME_TEST, 'Mitochondrial genome sequencing'),
+        (MICROARRAY_TEST, 'Microarray'),
+        (WES_TEST, 'Whole exome sequencing'),
+        (WGS_TEST, 'Whole genome sequencing'),
+    ]
 
     MOTHER = 'MOM'
     FATHER = 'DAD'

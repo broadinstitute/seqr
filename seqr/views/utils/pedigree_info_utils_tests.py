@@ -63,12 +63,13 @@ class PedigreeInfoUtilsTest(TestCase):
 
         records, errors, warnings = parse_pedigree_table(
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
-             ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mother'], ['fam2', 'ind2', 'male', 'u', '.', '', '']],
+             ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mother'],
+             ['fam2', 'ind2', 'male', 'unknown', '.', '', '']],
             FILENAME)
         self.assertListEqual(records, [
             {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': 'ind3',
              'maternalId': 'ind2', 'probandRelationship': 'M'},
-            {'familyId': 'fam2', 'individualId': 'ind2', 'sex': 'M', 'affected': 'N', 'paternalId': '',
+            {'familyId': 'fam2', 'individualId': 'ind2', 'sex': 'M', 'affected': 'U', 'paternalId': '',
              'maternalId': '', 'probandRelationship': ''},
         ])
         self.assertListEqual(errors, [
@@ -79,14 +80,17 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(warnings, ["ind3 is the father of ind1 but doesn't have a separate record in the table"])
 
         records, errors, warnings = parse_pedigree_table(
-            [['family_id', 'individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded', 'proband_relation'],
-             ['fam1', 'ind1', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345', ''],
-             ['fam1', 'ind2', ' ', '', 'female', 'u', '.', '', 'HPO:56789', 'mother']], FILENAME)
+            [['A pedigree file'], ['# Some comments'],
+             ['#family_id', '#individual_id', 'previous_individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded', 'proband_relation'],
+             ['fam1', 'ind1', 'ind1_old_id', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345', ''],
+             ['fam1', 'ind2', '', ' ', '', 'female', 'u', '.', '', 'HPO:56789', 'mother']], FILENAME)
         self.assertListEqual(records, [
             {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': '',
-             'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345', 'probandRelationship': ''},
+             'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345', 'probandRelationship': '',
+             'previousIndividualId': 'ind1_old_id'},
             {'familyId': 'fam1', 'individualId': 'ind2', 'sex': 'F', 'affected': 'N', 'paternalId': '',
-             'maternalId': '', 'notes': '', 'codedPhenotype': 'HPO:56789', 'probandRelationship': 'M'},
+             'maternalId': '', 'notes': '', 'codedPhenotype': 'HPO:56789', 'probandRelationship': 'M',
+             'previousIndividualId': ''},
         ])
         self.assertListEqual(errors, [])
         self.assertListEqual(warnings, [])
