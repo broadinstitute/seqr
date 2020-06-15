@@ -56,7 +56,7 @@ def parse_file(filename, stream):
         # all rows should have same column count
         last_col_index = max(max(i for i, val in enumerate(row) if val) for row in rows)
         padding = [''] * last_col_index
-        rows = [(row[:max(i for i, val in enumerate(row) if val)+1] + padding)[:last_col_index+1] for row in rows]
+        rows = [(row + padding)[:last_col_index+1] for row in rows]
 
         return rows
 
@@ -68,7 +68,9 @@ def parse_file(filename, stream):
 
 def _parse_excel_string_cell(cell):
     cell_value = cell.value
-    if cell_value and cell.data_type == 'n' and int(cell_value) == cell_value:
+    if not cell_value:
+        cell_value = ''
+    elif cell.data_type == 'n' and int(cell_value) == cell_value:
         cell_value = '{:.0f}'.format(cell_value)
     return cell_value
 
