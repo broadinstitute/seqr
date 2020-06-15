@@ -85,7 +85,8 @@ def update_records(reference_data_handler, file_path=None):
     skip_counter = 0
     logger.info('Parsing file')
     open_file = gzip.open if file_path.endswith('.gz') else open
-    with open_file(file_path) as f:
+    open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+    with open_file(file_path, open_mode) as f:
         header_fields = reference_data_handler.get_file_header(f)
 
         for line in tqdm(f, unit=" records"):
