@@ -851,12 +851,8 @@ class EsSearch(object):
                         existing_variant['familyGuids'] = sorted(
                             existing_variant['familyGuids'] + variant['familyGuids']
                         )
-                    if existing_compound_het_pair[0]['variantId'] == compound_het_pair[0]['variantId']:
-                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
-                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
-                    else:
-                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[1])
-                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[0])
+                    _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
+                    _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
                 else:
                     results[gene].append(compound_het_pair)
@@ -881,8 +877,6 @@ class EsSearch(object):
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = len(grouped_variants + self.previous_search_results['grouped_results'])
-
         # Get requested page of variants
         merged_variant_results = []
         num_compound_hets = 0
@@ -890,8 +884,7 @@ class EsSearch(object):
         for variants_group in grouped_variants:
             variants = variants_group.values()[0]
 
-            if loaded_result_count != self.previous_search_results['total_results']:
-                self.previous_search_results['grouped_results'].append(variants_group)
+            self.previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
                 merged_variant_results.append(variants)
                 num_compound_hets += 1
@@ -901,14 +894,8 @@ class EsSearch(object):
             if len(merged_variant_results) >= num_results:
                 break
 
-        # Only save non-returned results separately if have not loaded all results
-        if loaded_result_count == self.previous_search_results['total_results']:
-            self.previous_search_results['grouped_results'] += grouped_variants
-            self.previous_search_results['compound_het_results'] = []
-            self.previous_search_results['variant_results'] = []
-        else:
-            self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
-            self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
+        self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
+        self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
         return merged_variant_results
 
     def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
@@ -1134,26 +1121,18 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
         for (xstart, xstop) in interval_xpos_range:
             q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
 
-    if genes:
-        gene_q = Q('terms', geneIds=genes.keys())
+    filters = [
+        {'geneIds': (genes or {}).keys()},
+        {'rsid': rs_ids},
+        {'variantId': variant_ids},
+    ]
+    filters = [f for f in filters if next(iter(f.values()))]
+    if filters:
+        location_q = _build_or_filter('terms', filters)
         if q:
-            q |= gene_q
+            q |= location_q
         else:
-            q = gene_q
-
-    if rs_ids:
-        rs_id_q = Q('terms', rsid=rs_ids)
-        if q:
-            q |= rs_id_q
-        else:
-            q = rs_id_q
-
-    if variant_ids:
-        variant_id_q = Q('terms', variantId=variant_ids)
-        if q:
-            q |= variant_id_q
-        else:
-            q = variant_id_q
+            q = location_q
 
     if location_filter and location_filter.get('excludeLocations'):
         return ~q
@@ -1210,8 +1189,6 @@ def _pop_freq_filter(filter_key, value):
 
 
 def _build_or_filter(op, filters):
-    if not filters:
-        return None
     q = Q(op, **filters[0])
     for filter_kwargs in filters[1:]:
         q |= Q(op, **filter_kwargs)
@@ -1224,7 +1201,7 @@ def _get_sort(sort_key):
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if not (isinstance(val_func, dict) or isinstance(val_func, list) or isinstance(val_func, str)):
+            if callable(val_func):
                 sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:
@@ -1256,21 +1233,11 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
 
 
 def _parse_es_sort(sort, sort_config):
-    if hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
-        if sort == 'Infinity':
-            sort = -1
-        elif sort == '-Infinity' or sort is None:
-            # None of the sorts used by seqr return negative values so -1 is fine
-            sort = maxsize
-        else:
-            sort = sort * -1
-
-    # ES returns these values for sort when a sort field is missing
-    elif sort == 'Infinity':
+    if sort in {'Infinity', '-Infinity'}:
+        # ES returns these values for sort when a sort field is missing, using the correct value for the given direction
         sort = maxsize
-    elif sort == '-Infinity':
-        # None of the sorts used by seqr return negative values so -1 is fine
-        sort = -1
+    elif hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
+        sort = sort * -1
 
     return sort
 
