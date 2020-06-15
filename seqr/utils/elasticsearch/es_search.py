@@ -1126,7 +1126,7 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
         {'rsid': rs_ids},
         {'variantId': variant_ids},
     ]
-    filters = [f for f in filters if list(f.values())[0]]
+    filters = [f for f in filters if next(iter(f.values()))]
     if filters:
         location_q = _build_or_filter('terms', filters)
         if q:
