@@ -10,7 +10,7 @@ from sys import maxsize
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException
-from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37, \
+from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37, \
     _liftover_grch37_to_grch38
 
 INDEX_NAME = 'test_index'
@@ -397,7 +397,11 @@ EXTRA_FAMILY_ES_VARIANTS[2]['matched_queries'][INDEX_NAME] = ['F000005_5']
 MISSING_SAMPLE_ES_VARIANTS = deepcopy(ES_VARIANTS)
 MISSING_SAMPLE_ES_VARIANTS[1]['_source']['samples_num_alt_1'] = []
 COMPOUND_HET_INDEX_VARIANTS = {
-    INDEX_NAME: {'ENSG00000135953': EXTRA_FAMILY_ES_VARIANTS, 'ENSG00000228198': EXTRA_FAMILY_ES_VARIANTS},
+    INDEX_NAME: {
+        'ENSG00000135953': EXTRA_FAMILY_ES_VARIANTS,
+        'ENSG00000228198': EXTRA_FAMILY_ES_VARIANTS,
+        'ENSG00000228199': EXTRA_FAMILY_ES_VARIANTS,
+    },
     SECOND_INDEX_NAME: {
         'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
     },
@@ -2130,13 +2134,12 @@ class EsUtilsTest(TestCase):
         ])
 
         # test pagination
-        variants, total_results = get_es_variants(results_model, num_results=3, page=2)
+        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
         self.assertEqual(total_results, 9)
 
-        import pdb; pdb.set_trace()
-        self.assertCachedResults(results_model, {
+        cache_results = {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [
@@ -2153,12 +2156,21 @@ class EsUtilsTest(TestCase):
                 '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
             'total_results': 9,
-        })
+        }
+        self.assertCachedResults(results_model, cache_results)
 
         project_2_search['start_index'] = 1
         project_2_search['size'] = 3
         project_1_search['start_index'] = 2
         self.assertExecutedSearches([project_2_search, project_1_search])
+
+        # If one project is fully loaded, only query the second project
+        cache_results['loaded_variant_counts'][INDEX_NAME]['total'] = 4
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(cache_results))
+        get_es_variants(results_model, num_results=2, page=3)
+        project_2_search['start_index'] = 2
+        project_2_search['size'] = 4
+        self.assertExecutedSearches([project_2_search])
 
     def test_multi_project_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -2537,6 +2549,16 @@ class EsUtilsTest(TestCase):
                     }
                 }
             }, 'xpos'])
+
+    def test_deduplicate_variants(self):
+        # Test deduplication works when first variants are build 37 and when they are build 38
+        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
+            [PARSED_VARIANTS[1],  PARSED_VARIANTS[1], PARSED_MULTI_GENOME_VERSION_VARIANT]
+        ), [PARSED_MULTI_GENOME_VERSION_VARIANT])
+
+        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
+            [PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_VARIANTS[1]]
+        ), [PARSED_MULTI_GENOME_VERSION_VARIANT])
 
     def test_genotype_inheritance_filter(self):
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}

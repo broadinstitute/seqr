@@ -851,12 +851,8 @@ class EsSearch(object):
                         existing_variant['familyGuids'] = sorted(
                             existing_variant['familyGuids'] + variant['familyGuids']
                         )
-                    if existing_compound_het_pair[0]['variantId'] == compound_het_pair[0]['variantId']:
-                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
-                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
-                    else:
-                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[1])
-                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[0])
+                    _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
+                    _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
                 else:
                     results[gene].append(compound_het_pair)
