@@ -12,7 +12,7 @@ from reference_data.models import HumanPhenotypeOntology
 PHO_DATA = [
     'format-version: 1.2\n',
     'data-version: hp/releases/2020-03-27\n',
-    'saved-by: Peter Robinson uni\xe7\xf8de\n, Sebastian Koehler, Sandra Doelken, Chris Mungall, Melissa Haendel, Nicole Vasilevsky, Monarch Initiative, et al.\n',
+    'saved-by: Peter Robinson uni\xe7\xf8de, Sebastian Koehler, Sandra Doelken, Chris Mungall, Melissa Haendel, Nicole Vasilevsky, Monarch Initiative, et al.\n',
     'subsetdef: hposlim_core "Core clinical terminology"\n',
     'subsetdef: secondary_consequence "Consequence of a disorder in another organ system."\n',
     'synonymtypedef: abbreviation "abbreviation"\n',

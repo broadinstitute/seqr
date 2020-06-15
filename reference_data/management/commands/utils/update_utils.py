@@ -90,7 +90,7 @@ def update_records(reference_data_handler, file_path=None):
         header_fields = reference_data_handler.get_file_header(f)
 
         for line in tqdm(f, unit=" records"):
-            record = dict(list(zip(header_fields, line.rstrip('\r\n').split('\t'))))
+            record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
             for record in reference_data_handler.parse_record(record):
                 if record is None:
                     continue
