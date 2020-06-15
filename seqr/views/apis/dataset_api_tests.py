@@ -32,7 +32,7 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(existing_index_sample.elasticsearch_index, INDEX_NAME)
         self.assertTrue(existing_index_sample.is_active)
         existing_index_sample_guid = existing_index_sample.guid
-        existing_old_index_sample = Sample.objects.get(sample_id='NA19678')
+        existing_old_index_sample = Sample.objects.get(guid='S000130_na19678')
         self.assertNotEqual(existing_old_index_sample.elasticsearch_index, INDEX_NAME)
         self.assertTrue(existing_old_index_sample.is_active)
         existing_old_index_sample_guid = existing_old_index_sample.guid
