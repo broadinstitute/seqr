@@ -9,9 +9,6 @@ from django.urls.base import reverse
 
 from io import StringIO
 
-import openpyxl as xl
-import tempfile
-
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
 from seqr.views.utils.test_utils import AuthenticationTestCase
