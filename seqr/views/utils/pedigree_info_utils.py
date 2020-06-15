@@ -64,7 +64,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
             if expected == actual:
                 expected = expected_header_columns[4:6]
                 actual = headers[1][4:6]
-            unexpected_header_columns = "\t".join(difflib.unified_diff(expected, actual)).split("\n")[3:]
+            unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
             if unexpected_header_columns:
                 raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
 
@@ -302,19 +302,6 @@ def _is_header_row(row):
     """
     row = row.lower()
     if "family" in row and ("indiv" in row or "datstat" in row):
-        return True
-    else:
-        return False
-
-
-def _is_merged_pedigree_sample_manifest_header_row(header_row):
-    """Checks whether these rows are from a file that contains columns from the Broad's sample manifest + pedigree table.
-    See #_parse_merged_pedigree_sample_manifest_format docs for format details.
-
-    Args:
-        row (string): The 1st row in the file
-    """
-    if "kit id" in header_row.lower() and "sample id" in header_row.lower():
         return True
     else:
         return False

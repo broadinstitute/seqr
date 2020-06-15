@@ -1,12 +1,18 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
+import mock
+from openpyxl import load_workbook
+from StringIO import StringIO
 
+from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 
 
 FILENAME = 'test.csv'
 
 
-class JSONUtilsTest(TestCase):
+class PedigreeInfoUtilsTest(TestCase):
+    fixtures = ['users', '1kg_project']
 
     def test_parse_pedigree_table(self):
         records, errors, warnings = parse_pedigree_table(
@@ -85,7 +91,104 @@ class JSONUtilsTest(TestCase):
         self.assertListEqual(errors, [])
         self.assertListEqual(warnings, [])
 
-    # TODO test sample manifest upload
+    @mock.patch('seqr.views.utils.pedigree_info_utils.UPLOADED_PEDIGREE_FILE_RECIPIENTS', ['recipient@test.com'])
+    @mock.patch('seqr.views.utils.pedigree_info_utils.EmailMultiAlternatives')
+    def test_parse_sample_manifest(self, mock_email):
+        header_1 = [
+            'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
+            '', '']
+        header_2 = [
+            'Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Alias', 'Paternal Sample ID', 'Maternal Sample ID',
+            'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Data Use Restrictions']
+        header_3 = [
+            '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', 'ul',
+            'ng/ul', '', '', 'indicate study/protocol number']
+
+        records, errors, warnings = parse_pedigree_table([
+            header_1,
+            ['Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Maternal Sample ID',
+             'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype',
+             'Data Use Restrictions'],
+            header_3,
+        ], FILENAME)
+        self.assertListEqual(errors, [
+            'Error while parsing file: {}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status'.format(
+                FILENAME)])
+        self.assertListEqual(warnings, [])
+        self.assertListEqual(records, [])
+
+        records, errors, warnings = parse_pedigree_table([
+            header_1, header_2, ['', 'Position', '', '', 'Collaborator Sample ID', '', '', '', '', 'ul', 'ng/ul', '',
+                                 '', 'indicate study/protocol number']], FILENAME)
+        self.assertListEqual(errors, [
+            'Error while parsing file: {}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+'.format(
+                FILENAME)])
+        self.assertListEqual(warnings, [])
+        self.assertListEqual(records, [])
+
+        original_data = [
+            header_1, header_2, header_3,
+            ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
+             'unaffected', '20', '94.8', 'probably dad', '', '1234'],
+            ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
+             'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', '20', '98', '', 'Perinatal death', ''
+             ]]
+
+        records, errors, warnings = parse_pedigree_table(
+            original_data, FILENAME, user=User.objects.get(id=10), project=Project.objects.get(id=1))
+        self.assertListEqual(records, [
+            {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': ''},
+            {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': '', 'individualId': 'SCO_PED073C_GA0340_1',
+             'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death'
+             }])
+        self.assertListEqual(
+            warnings,
+            ["SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but doesn't have a separate record in the table"])
+        self.assertListEqual(errors, [])
+
+        mock_email.assert_called_with(
+            subject='SK-3QVD Merged Sample Pedigree File',
+            body=mock.ANY,
+            to=['recipient@test.com'],
+            attachments=[
+                ('SK-3QVD.xlsx', mock.ANY,
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ('test.xlsx', mock.ANY,
+                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            ])
+        self.assertEqual(
+            mock_email.call_args.kwargs['body'],
+            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
+    
+    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.
+    
+    test.csv is the original merged pedigree-sample-manifest file that the user uploaded.
+    """)
+        mock_email.return_value.attach_alternative.assert_called_with(
+            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
+    <br />
+    <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>test.csv</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    """, 'text/html')
+        mock_email.return_value.send.assert_called()
+
+        # Test sent sample manifest is correct
+        sample_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][0][1]))
+        sample_ws = sample_wb.active
+        sample_ws.title = 'Sample Info'
+        self.assertListEqual(
+            [[cell.value or '' for cell in row] for row in sample_ws],
+            [['Well', 'Sample ID', 'Alias', 'Alias', 'Gender', 'Volume', 'Concentration'],
+             ['Position', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', 'ul', 'ng/ul'],
+             ['A02', 'SM-IRW6C', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', 'male', '20', '94.8'],
+             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98']])
+
+        # Test original file copy is correct
+        original_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][1][1]))
+        original_ws = original_wb.active
+        self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], original_data)
 
     def test_parse_datstat_pedigree_table(self):
         records, errors, warnings = parse_pedigree_table(
