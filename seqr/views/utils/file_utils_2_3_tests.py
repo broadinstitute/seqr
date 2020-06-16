@@ -56,6 +56,13 @@ def _mock_cell(value):
 MOCK_EXCEL_SHEET = mock.MagicMock()
 MOCK_EXCEL_SHEET.iter_rows.return_value = [[_mock_cell(cell) for cell in row] for row in PARSED_DATA]
 
+def _convert_int(s):
+    try:
+        ret_value = int(s)
+    except Exception:
+        return s
+    return ret_value
+
 
 class FileUtilsTest(AuthenticationTestCase):
     fixtures = ['users']
@@ -64,9 +71,9 @@ class FileUtilsTest(AuthenticationTestCase):
         # Test uploading with xlsx data
         wb = xl.Workbook()
         ws = wb[wb.sheetnames[0]]
-        ws['A1'], ws['B1'], ws['C1'] = PARSED_DATA[0]
-        ws['A2'], ws['B2'], ws['C2'] = PARSED_DATA[1]
-        ws['A3'], ws['B3'] = PARSED_DATA[2][:2]
+        ws['A1'], ws['B1'], ws['C1'] = map(_convert_int, PARSED_DATA[0])
+        ws['A2'], ws['B2'], ws['C2'] = map(_convert_int, PARSED_DATA[1])
+        ws['A3'], ws['B3'] = map(_convert_int, PARSED_DATA[2][:2])
         ws['A4'] = '' # for testing trimming trailing empty rows
 
         with NamedTemporaryFile() as tmp:
