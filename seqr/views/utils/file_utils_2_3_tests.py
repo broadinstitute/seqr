@@ -15,13 +15,13 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 
 TSV_DATA = b'Family ID	Individual ID	Notes\n\
 "1"	"NA19675"	"An affected individual, additional metadata"\n\
-"1"	"NA19678"	""'
+"0"	"NA19678"	""'
 
 CSV_DATA = b'Family ID,Individual ID,Notes\n\
 "1","NA19675","An affected individual, additional metadata"\n\
-"1","NA19678",""'
+"0","NA19678",""'
 
-JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["1", "NA19678", ""]]'
+JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["0", "NA19678", ""]]'
 
 EXCEL_DATA = b'excel data'
 
@@ -38,7 +38,7 @@ TEST_DATA_TYPES = {
 PARSED_DATA = [
     ['Family ID', 'Individual ID', 'Notes'],
     ['1', 'NA19675', 'An affected individual, additional metadata'],
-    ['1', 'NA19678', ''],
+    ['0', 'NA19678', ''],
 ]
 
 
