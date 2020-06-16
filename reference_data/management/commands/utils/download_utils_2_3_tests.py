@@ -29,7 +29,7 @@ class DownloadUtilsTest(TestCase):
         # Test bad url
         with self.assertRaises(ValueError) as ve:
             download_file("bad_url")
-        self.assertEqual(ve.exception.message, "Invalid url: bad_url")
+        self.assertEqual(str(ve.exception), "Invalid url: bad_url")
 
         # Test already downloaded
         responses.add(responses.HEAD, 'https://mock_url/test_file.gz',

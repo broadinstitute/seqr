@@ -34,7 +34,7 @@ class UpdateAllReferenceDataTest(TestCase):
         # Test missing required arguments
         with self.assertRaises(CommandError) as err:
             call_command('update_all_reference_data')
-        self.assertEqual(err.exception.message, u'Error: one of the arguments --omim-key --skip-omim is required')
+        self.assertEqual(str(err.exception), 'Error: one of the arguments --omim-key --skip-omim is required')
 
         # Test update all gencode, no skips, fail primate_ai and mgi
         mock_omim.return_value = 'omim'

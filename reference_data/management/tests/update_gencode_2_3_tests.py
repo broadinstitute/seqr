@@ -42,8 +42,8 @@ class UpdateGencodeTest(TestCase):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'gencode.v31lift37.annotation.gtf.gz')
-        with gzip.open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(GTF_DATA))
+        with gzip.open(self.temp_file_path, 'wt') as f:
+            f.write(''.join(GTF_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -54,29 +54,31 @@ class UpdateGencodeTest(TestCase):
         # Test missing test required argument
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode')
-        self.assertEqual(ce.exception.message, 'Error: argument --gencode-release is required')
+        self.assertIn(str(ce.exception), ['Error: argument --gencode-release is required',
+                                          'Error: the following arguments are required: --gencode-release'])
 
         # Test required argument out-of-range
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=18')
-        self.assertEqual(ce.exception.message, 'Error: argument --gencode-release: invalid choice: 18 (choose from 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31)')
+        self.assertEqual(str(ce.exception), 'Error: argument --gencode-release: invalid choice: 18 (choose from 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31)')
 
         # Test genome_version out-of-range
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp', '39')
-        self.assertEqual(ce.exception.message, "Error: argument genome_version: invalid choice: u'39' (choose from '37', '38')")
+        self.assertIn(str(ce.exception), ["Error: argument genome_version: invalid choice: '39' (choose from '37', '38')",
+                                        "Error: argument genome_version: invalid choice: u'39' (choose from '37', '38')"])
 
         # Test missing genome_version when a GTF file is provided
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp')
-        self.assertEqual(ce.exception.message, "The genome version must also be specified after the gencode GTF file path")
+        self.assertEqual(str(ce.exception), "The genome version must also be specified after the gencode GTF file path")
 
         # Test gencode_release and genome_version mis-matched case 1
         mock_isfile.return_value = True
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=19', 'mock_path/tmp.gz', '38')
         mock_isfile.assert_called_with('mock_path/tmp.gz')
-        self.assertEqual(ce.exception.message, "Invalid genome_version: 38. gencode v19 only has a GRCh37 version")
+        self.assertEqual(str(ce.exception), "Invalid genome_version: 38. gencode v19 only has a GRCh37 version")
 
         # Test gencode_release and genome_version mis-matched case 2
         mock_isfile.reset_mock()
@@ -84,7 +86,7 @@ class UpdateGencodeTest(TestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=20', 'mock_path/tmp1.gz', '37')
         mock_isfile.assert_called_with('mock_path/tmp1.gz')
-        self.assertEqual(ce.exception.message, "Invalid genome_version: 37. gencode v20, v21, v22 only have a GRCh38 version")
+        self.assertEqual(str(ce.exception), "Invalid genome_version: 37. gencode v20, v21, v22 only have a GRCh38 version")
 
         # Test genome_version != 38 requires lifted data
         mock_isfile.reset_mock()
@@ -92,17 +94,18 @@ class UpdateGencodeTest(TestCase):
         with self.assertRaises(CommandError) as ce:
             call_command('update_gencode', '--gencode-release=23', 'mock_path/tmp2.gz', '37')
         mock_isfile.assert_called_with('mock_path/tmp2.gz')
-        self.assertEqual(ce.exception.message, "Invalid genome_version for file: mock_path/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
+        self.assertEqual(str(ce.exception), "Invalid genome_version for file: mock_path/tmp2.gz. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38")
 
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     def test_update_gencode_command_bad_gtf_data(self, mock_logger):
         # Test wrong number data feilds in a line
         temp_bad_file_path = os.path.join(self.test_dir, 'bad.gencode.v23lift37.annotation.gtf.gz')
-        with gzip.open(temp_bad_file_path, 'w') as f:
-            f.write(u''.join(BAD_FIELDS_GTF_DATA))
+        with gzip.open(temp_bad_file_path, 'wt') as f:
+            f.write(''.join(BAD_FIELDS_GTF_DATA))
         with self.assertRaises(ValueError) as ve:
             call_command('update_gencode', '--gencode-release=23', temp_bad_file_path, '37')
-        self.assertEqual(ve.exception.message, 'Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']')
+        self.assertIn(str(ve.exception), ['Unexpected number of fields on line #0: [\'gene\', \'11869\', \'14412\', \'.\', \'+\', \'.\', \'gene_id "ENSG00000223972.4";\']',
+                                          'Unexpected number of fields on line #0: [u\'gene\', u\'11869\', u\'14412\', u\'.\', u\'+\', u\'.\', u\'gene_id "ENSG00000223972.4";\']'])
         mock_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(temp_bad_file_path))
 
     @mock.patch('reference_data.management.commands.update_gencode.logger')
@@ -151,21 +154,21 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.gencode_release, 27)
         gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000284662')
         self.assertEqual(gene_info.start_grch37, 621059)
-        self.assertEqual(gene_info.chrom_grch37, u'1')
+        self.assertEqual(gene_info.chrom_grch37, '1')
         self.assertEqual(gene_info.coding_region_size_grch37, 936)
         self.assertEqual(gene_info.gencode_release, 31)
-        self.assertEqual(gene_info.gencode_gene_type, u'protein_coding')
-        self.assertEqual(gene_info.gene_symbol, u'OR4F16')
+        self.assertEqual(gene_info.gencode_gene_type, 'protein_coding')
+        self.assertEqual(gene_info.gene_symbol, 'OR4F16')
 
         self.assertEqual(TranscriptInfo.objects.all().count(), 2)
         trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000456328')
-        self.assertEqual(trans_info.gene.gene_id, u'ENSG00000223972')
+        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
         trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000332831')
         self.assertEqual(trans_info.start_grch37, 621059)
         self.assertEqual(trans_info.end_grch37, 622053)
-        self.assertEqual(trans_info.strand_grch37, u'-')
-        self.assertEqual(trans_info.chrom_grch37, u'1')
-        self.assertEqual(trans_info.gene.gene_id, u'ENSG00000284662')
+        self.assertEqual(trans_info.strand_grch37, '-')
+        self.assertEqual(trans_info.chrom_grch37, '1')
+        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
 
         # Test normal command function with a --reset option
         mock_logger.reset_mock()
@@ -189,11 +192,11 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.gencode_release, 31)
         gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000284662')
         self.assertEqual(gene_info.start_grch37, 621059)
-        self.assertEqual(gene_info.chrom_grch37, u'1')
+        self.assertEqual(gene_info.chrom_grch37, '1')
         self.assertEqual(gene_info.coding_region_size_grch37, 936)
         self.assertEqual(gene_info.gencode_release, 31)
-        self.assertEqual(gene_info.gencode_gene_type, u'protein_coding')
-        self.assertEqual(gene_info.gene_id, u'ENSG00000284662')
-        self.assertEqual(gene_info.gene_symbol, u'OR4F16')
+        self.assertEqual(gene_info.gencode_gene_type, 'protein_coding')
+        self.assertEqual(gene_info.gene_id, 'ENSG00000284662')
+        self.assertEqual(gene_info.gene_symbol, 'OR4F16')
         self.assertEqual(gene_info.end_grch37, 622053)
-        self.assertEqual(gene_info.strand_grch37, u'-')
+        self.assertEqual(gene_info.strand_grch37, '-')
