@@ -68,11 +68,9 @@ def parse_file(filename, stream):
 
 def _parse_excel_string_cell(cell):
     cell_value = cell.value
-    if cell_value is None:
-        cell_value = ''
-    elif cell.data_type == 'n' and int(cell_value) == cell_value:
+    if cell_value and cell.data_type == 'n' and int(cell_value) == cell_value:
         cell_value = '{:.0f}'.format(cell_value)
-    return cell_value
+    return cell_value or ''
 
 
 def _compute_serialized_file_path(uploaded_file_id):
