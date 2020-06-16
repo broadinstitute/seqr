@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase
