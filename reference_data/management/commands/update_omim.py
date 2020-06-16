@@ -143,7 +143,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def post_process_models(self, models):
         logger.info('Adding phenotypic series information')
         mim_numbers = {omim_record.mim_number for omim_record in models if omim_record.phenotype_mim_number}
-        mim_numbers = map(str, list(mim_numbers))
+        mim_numbers = list(map(str, list(mim_numbers)))
         mim_number_to_phenotypic_series = {}
         for i in range(0, len(mim_numbers), 20):
             logger.debug('Fetching entries {}-{}'.format(i, i + 20))

@@ -27,7 +27,7 @@ class UpdatePrimateAiTest(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt')
         with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(PRIMATE_AI_DATA))
+            f.write(''.join(PRIMATE_AI_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test

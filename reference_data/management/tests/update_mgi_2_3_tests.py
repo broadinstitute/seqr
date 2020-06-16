@@ -27,7 +27,7 @@ class UpdateMgiTest(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'HMD_HumanPhenotype.rpt')
         with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(MGI_DATA))
+            f.write(''.join(MGI_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -77,4 +77,4 @@ class UpdateMgiTest(TestCase):
         dbNSFPGene.objects.all().delete()
         with self.assertRaises(CommandError) as ce:
             call_command('update_mgi')
-        self.assertEqual(ce.exception.message, 'dbNSFPGene table is empty. Run \'./manage.py update_dbnsfp_gene\' before running this command.')
+        self.assertEqual(str(ce.exception), 'dbNSFPGene table is empty. Run \'./manage.py update_dbnsfp_gene\' before running this command.')

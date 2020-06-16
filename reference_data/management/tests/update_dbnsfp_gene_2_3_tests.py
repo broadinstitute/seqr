@@ -14,7 +14,7 @@ dbNSFP_HEADER = "Gene_name	Ensembl_gene	chr	Gene_old_names	Gene_other_names	Unip
 dbNSFP_GENE_DATA = [ dbNSFP_HEADER,
     "OR4F5	ENSG00000186092	1	.	.	Q8NH21	OR4F5_HUMAN	79501	CCDS30547	NM_001005484	uc001aal.1	.	618355	olfactory receptor family 4 subfamily F member 5	.	.	.	Olfactory transduction - Homo sapiens (human);Olfactory receptor activity;Signaling by GPCR;Signal Transduction;Olfactory Signaling Pathway;G alpha (s) signalling events;GPCR downstream signalling	hsa04740	Olfactory transduction	FUNCTION: Odorant receptor. {ECO:0000305}.; 	.	.	.	.	.	.	.	G protein-coupled receptor signaling pathway;detection of chemical stimulus involved in sensory perception of smell	plasma membrane;integral component of membrane	G protein-coupled receptor activity;olfactory receptor activity	.	.	.	1	1	1	0.06092	0.186891868710518	N	.	0.07159	.	.	.	0.9905209	.	.	0.176329298172162	0.644086264144236	0.179584437683602	0.550302420215064	0.39663970580189	0.0530578739830465	0.179613130021276	0.623408532464667	0.196978337514057	3.0650e-02	6.1116e-01	3.5819e-01	.	.	.	.	113.16669	2.31572	Medium	Medium	Medium	Medium	Medium	Medium	Medium	Medium	Medium	Medium	.	3.9936102236421724E-4	0.0	3.9936102236421724E-4	0.0	0.022763578274760384	0.00439297124600639	0.008386581469648562	0.001996805111821086	.	.	.	N	0.114371359811310	N	.	.	.	.	.	.\n",
     "INVALID-GENE-NO-ID	.	.	.	.	.	107985730	.	XR_001737835	.	.	618355	MIR1302-2 host gene	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	1	1	1	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	.	.	.	.	.	.	.	.	.	.	.	.\n",
-    "INVALID_GENE-UNKNOWN	ENSG00000268895	19	NCRNA00181;A1BGAS;A1BG-AS	FLJ23569	.	.	503538	.	NR_015380	uc002qse.3	.	.	A1BG antisense RNA 1	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	1	1	1	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	7.987220447284345E-4	0.0	7.987220447284345E-4	0.0	0.02875399361022364	0.0	0.017172523961661343	0.0	.	.	.	.	.	.	.	.	.	.	.	.\n"
+    "INVALID_GENE-UNKNOWN\xe2	ENSG00000268895	19	NCRNA00181;A1BGAS;A1BG-AS	FLJ23569	.	.	503538	.	NR_015380	uc002qse.3	.	.	A1BG antisense RNA 1	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	1	1	1	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	.	7.987220447284345E-4	0.0	7.987220447284345E-4	0.0	0.02875399361022364	0.0	0.017172523961661343	0.0	.	.	.	.	.	.	.	.	.	.	.	.\n"
 ]
 
 
@@ -27,14 +27,14 @@ class UpdateDbNsfpGeneTest(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.temp_file_path = os.path.join(self.test_dir, 'dbNSFP_gene')
         with open(self.temp_file_path, 'w') as f:
-            f.write(u''.join(dbNSFP_GENE_DATA))
+            f.write(''.join(dbNSFP_GENE_DATA))
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
         shutil.rmtree(self.test_dir)
 
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.download_file')
+    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
     def test_update_dbnsfp_gene_command(self, mock_download, mock_logger):
 
         mock_download.return_value = self.temp_file_path
