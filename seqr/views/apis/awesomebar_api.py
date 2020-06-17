@@ -1,4 +1,5 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
+from __future__ import unicode_literals
 
 import logging
 
@@ -51,7 +52,7 @@ def _get_matching_objects(query, projects, object_cls, filter_fields, object_fie
     results = [{
         'key': obj.guid,
         'title': get_title(obj)[:MAX_STRING_LENGTH],
-        'description': u'({})'.format(get_description(obj)) if get_description else '',
+        'description': '({})'.format(get_description(obj)) if get_description else '',
         'href': get_href(obj),
     } for obj in matching_objects[:MAX_RESULTS_PER_CATEGORY]]
 
@@ -102,7 +103,7 @@ def _get_matching_individuals(query, projects):
         ],
         get_title=lambda i: i.display_name or i.individual_id,
         get_href=lambda i: '/project/{}/family_page/{}'.format(i.family.project.guid, i.family.guid),
-        get_description=lambda i: u'{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
+        get_description=lambda i: '{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
         project_field='family__project')
 
 
