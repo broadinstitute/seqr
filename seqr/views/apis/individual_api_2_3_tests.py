@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 
 import json
 import mock
@@ -69,7 +70,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         individual = Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertEqual(individual.display_name, '')
@@ -86,7 +87,7 @@ class IndividualAPITest(AuthenticationTestCase):
                                     data=json.dumps({'caseReviewStatus': 'A'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatus'], 'A')
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedDate'], '2020-01-01T00:00:00')
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedBy'], 'test_user@test.com')
@@ -100,7 +101,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertListEqual(response_json[INDIVIDUAL_UPDATE_GUID]['features'], [
             {
@@ -172,7 +173,7 @@ class IndividualAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
 
     def test_individuals_table_handler(self):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
@@ -202,12 +203,12 @@ class IndividualAPITest(AuthenticationTestCase):
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
 "21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family"'
 
-        f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data)
+        f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
         response = self.client.post(individuals_url, {'f': f})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings', 'uploadedFileId'])
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
@@ -254,13 +255,18 @@ class IndividualAPITest(AuthenticationTestCase):
 
         # Send invalid requests
         header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', header)
+        rows = [
+            '1,NA19678,,',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
+        ]
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
 
         header = 'family_id,individual_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', header)
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
@@ -286,9 +292,22 @@ class IndividualAPITest(AuthenticationTestCase):
 
         # send valid request
         rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
-        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_hpo_upload(response)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'uploadedFileId': mock.ANY,
+            'errors': [],
+            'warnings': [
+                # The first warning has a different individual order in Python 2 and 3.
+                # "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
+                mock.ANY,
+                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
+                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
+            ],
+            'info': ['1 individuals will be updated'],
+        })
 
     def test_hpo_json_table_handler(self):
         url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])

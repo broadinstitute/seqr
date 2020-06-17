@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import mock
 from django.utils.dateparse import parse_datetime
 import pytz
@@ -21,27 +23,27 @@ COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
 
 ES_CAT_ALLOCATION=[{
-    u'node': u'node-1',
-    u'disk.used': u'67.2gb',
-    u'disk.avail': u'188.6gb',
-    u'disk.percent': u'26'
+    'node': 'node-1',
+    'disk.used': '67.2gb',
+    'disk.avail': '188.6gb',
+    'disk.percent': '26'
 },
-    {u'node': u'UNASSIGNED',
-     u'disk.used': None,
-     u'disk.avail': None,
-     u'disk.percent': None
+    {'node': 'UNASSIGNED',
+     'disk.used': None,
+     'disk.avail': None,
+     'disk.percent': None
      }]
 
 EXPECTED_DISK_ALLOCATION = [{
-    u'node': u'node-1',
-    u'diskUsed': u'67.2gb',
-    u'diskAvail': u'188.6gb',
-    u'diskPercent': u'26'
+    'node': 'node-1',
+    'diskUsed': '67.2gb',
+    'diskAvail': '188.6gb',
+    'diskPercent': '26'
 },
-    {u'node': u'UNASSIGNED',
-     u'diskUsed': None,
-     u'diskAvail': None,
-     u'diskPercent': None
+    {'node': 'UNASSIGNED',
+     'diskUsed': None,
+     'diskAvail': None,
+     'diskPercent': None
      }]
 
 ES_CAT_INDICES = [{
@@ -165,7 +167,7 @@ ES_INDEX_MAPPING = {
     },
 }
 
-EXPECTED_SUCCESS_STORY = {u'project_guid': u'R0001_1kg', u'family_guid': u'F000013_13', u'success_story_types': [u'A'], u'family_id': u'no_individuals', u'success_story': u'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', u'row_id': u'F000013_13'}
+EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_13', 'success_story_types': ['A'], 'family_id': 'no_individuals', 'success_story': 'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', 'row_id': 'F000013_13'}
 
 TEST_INDEX_EXPECTED_DICT = {
     "index": "test_index",
@@ -177,7 +179,7 @@ TEST_INDEX_EXPECTED_DICT = {
     "creationDateString": "2019-11-04T19:33:47.522Z",
     "gencodeVersion": "25",
     "docType": "variant",
-    "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
+    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
 }
 
 TEST_SV_INDEX_EXPECTED_DICT = {
@@ -191,7 +193,7 @@ TEST_SV_INDEX_EXPECTED_DICT = {
     "gencodeVersion": "29",
     "docType": "structural_variant",
     "datasetType": "SV",
-    "projects": [{u'projectName': u'1kg project n\xe5me with uni\xe7\xf8de', u'projectGuid': u'R0001_1kg'}]
+    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
 }
 
 TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
@@ -223,7 +225,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 }
 
 EXPECTED_ERRORS = [
-    u'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
+    'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
@@ -236,33 +238,33 @@ EXPECTED_MME_DETAILS_METRICS = {
 }
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
-    {u'project_guid': u'R0001_1kg', u'pubmed_ids': u'', u'posted_publicly': u'',
-     u'solved': u'TIER 1 GENE', u'head_or_neck': u'N', u'analysis_complete_status': u'complete',
-     u'cardiovascular_system': u'Y', u'n_kindreds_overlapping_sv_similar_phenotype': u'2',
-     u'biochemical_function': u'Y', u'omim_number_post_discovery': u'615120,615123',
-     u'genome_wide_linkage': u'NA 2', u'metabolism_homeostasis': u'N', u'growth': u'N',
-     u't0': u'2017-02-05T06:42:55.397Z', u'months_since_t0': 38, u'sample_source': u'CMG',
-     u'integument': u'N', u'voice': u'N', u'skeletal_system': u'N',
-     u'expected_inheritance_model': u'Autosomal recessive inheritance',
-     u'extras_variant_tag_list': [u'21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
-     u'protein_interaction': u'N', u'n_kindreds': u'1', u'num_individuals_sequenced': 3,
-     u'musculature': u'N', u'sequencing_approach': u'WES', u'neoplasm': u'N',
-     u'collaborator': u'1kg project n\xe5me with uni\xe7\xf8de',
-     u'actual_inheritance_model': u'de novo', u'novel_mendelian_gene': u'Y',
-     u'endocrine_system': u'N', u'patient_cells': u'N', u'komp_early_release': u'N',
-     u'connective_tissue': u'N', u'prenatal_development_or_birth': u'N', u'rescue': u'N',
-     u'family_guid': u'F000001_1', u'immune_system': u'N',
-     u'analysis_summary': u'<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
-     u'gene_count': u'NA', u'gene_id': u'ENSG00000135953', u'abdomen': u'N', u'limbs': u'N',
-     u'blood': u'N', u'phenotype_class': u'KNOWN', u'submitted_to_mme': u'Y',
-     u'n_unrelated_kindreds_with_causal_variants_in_gene': u'3',
-     u'row_id': u'F000001_1ENSG00000135953', u'eye_defects': u'N', u'omim_number_initial': u'12345',
-     u'p_value': u'NA', u'respiratory': u'N', u'nervous_system': u'Y', u'ear_defects': u'N',
-     u'thoracic_cavity': u'N', u'non_patient_cell_model': u'N',
-     u't0_copy': u'2017-02-05T06:42:55.397Z', u'extras_pedigree_url': u'/media/ped_1.png',
-     u'family_id': u'1', u'genitourinary_system': u'N', u'coded_phenotype': u'',
-     u'animal_model': u'N', u'non_human_cell_culture_model': u'N', u'expression': u'N',
-     u'gene_name': u'RP11-206L10.5', u'breast': u'N'}
+    {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
+     'solved': 'TIER 1 GENE', 'head_or_neck': 'N', 'analysis_complete_status': 'complete',
+     'cardiovascular_system': 'Y', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
+     'biochemical_function': 'Y', 'omim_number_post_discovery': '615120,615123',
+     'genome_wide_linkage': 'NA 2', 'metabolism_homeostasis': 'N', 'growth': 'N',
+     't0': '2017-02-05T06:42:55.397Z', 'months_since_t0': 38, 'sample_source': 'CMG',
+     'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+     'expected_inheritance_model': 'Autosomal recessive inheritance',
+     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
+     'protein_interaction': 'N', 'n_kindreds': '1', 'num_individuals_sequenced': 3,
+     'musculature': 'N', 'sequencing_approach': 'WES', 'neoplasm': 'N',
+     'collaborator': '1kg project n\xe5me with uni\xe7\xf8de',
+     'actual_inheritance_model': 'de novo', 'novel_mendelian_gene': 'Y',
+     'endocrine_system': 'N', 'patient_cells': 'N', 'komp_early_release': 'N',
+     'connective_tissue': 'N', 'prenatal_development_or_birth': 'N', 'rescue': 'N',
+     'family_guid': 'F000001_1', 'immune_system': 'N',
+     'analysis_summary': '<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
+     'gene_count': 'NA', 'gene_id': 'ENSG00000135953', 'abdomen': 'N', 'limbs': 'N',
+     'blood': 'N', 'phenotype_class': 'KNOWN', 'submitted_to_mme': 'Y',
+     'n_unrelated_kindreds_with_causal_variants_in_gene': '3',
+     'row_id': 'F000001_1ENSG00000135953', 'eye_defects': 'N', 'omim_number_initial': '12345',
+     'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'Y', 'ear_defects': 'N',
+     'thoracic_cavity': 'N', 'non_patient_cell_model': 'N',
+     't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped_1.png',
+     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': '',
+     'animal_model': 'N', 'non_human_cell_culture_model': 'N', 'expression': 'N',
+     'gene_name': 'RP11-206L10.5', 'breast': 'N'}
 
 EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
     'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
@@ -464,7 +466,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['indices', 'errors', 'diskStats', 'elasticsearchHost'])
+        self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'elasticsearchHost'})
 
         self.assertEqual(len(response_json['indices']), 5)
         self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
@@ -490,10 +492,10 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['metrics', 'genesById', 'submissions'])
+        self.assertSetEqual(set(response_json.keys()), {'metrics', 'genesById', 'submissions'})
         self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
         self.assertEqual(len(response_json['genesById']), 4)
-        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'])
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
     def test_seqr_stats(self):
@@ -503,7 +505,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualCount', 'familyCount', 'sampleCountByType'])
+        self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
         self.assertEqual(response_json['individualCount'], 17)
         self.assertEqual(response_json['familyCount'], 13)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
@@ -515,7 +517,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['projectGuids'])
+        self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
 
     @mock.patch('seqr.views.apis.staff_api.timezone')
@@ -535,7 +537,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
         self.assertListEqual(response_json['rows'], [])
         self.assertListEqual(response_json['errors'], ["No data loaded for project: Empty Project"])
 
@@ -543,8 +545,8 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
-        self.assertListEqual(response_json['errors'], [u'No data loaded for family: no_individuals. Skipping...'])
+        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
+        self.assertListEqual(response_json['errors'], ['No data loaded for family: no_individuals. Skipping...'])
         self.assertEqual(len(response_json['rows']), 10)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
@@ -553,7 +555,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows', 'errors'])
+        self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
         self.assertListEqual(response_json['errors'], ['HPO category field not set for some HPO terms in 11'])
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
@@ -565,7 +567,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows'])
+        self.assertListEqual(list(response_json.keys()), ['rows'])
 
         self.assertEqual(len(response_json['rows']), 2)
         self.assertDictEqual(response_json['rows'][1], EXPECTED_SUCCESS_STORY)
@@ -575,7 +577,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows'])
+        self.assertListEqual(list(response_json.keys()), ['rows'])
 
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
@@ -684,7 +686,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['rows'])
+        self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
     @mock.patch('seqr.views.apis.staff_api.MAX_SAVED_VARIANTS', 1)
@@ -746,36 +748,36 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings'])
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
         self.assertListEqual(response_json['info'], [
-            u'Parsed 6 exome samples',
-            u'Found and updated matching seqr individuals for 4 samples'
+            'Parsed 6 exome samples',
+            'Found and updated matching seqr individuals for 4 samples'
         ])
         self.assertListEqual(response_json['warnings'], [
             'The following 1 samples were added to multiple individuals: NA19678 (2)',
-            u'The following 2 samples were skipped: MANZ_1169_DNA, NA',
-            u'The following filter flags have no known corresponding value and were not saved: not_real_flag',
-            u'The following population platform filters have no known corresponding value and were not saved: not_real_filter'
+            'The following 2 samples were skipped: MANZ_1169_DNA, NA',
+            'The following filter flags have no known corresponding value and were not saved: not_real_flag',
+            'The following population platform filters have no known corresponding value and were not saved: not_real_filter'
         ])
 
         indiv = Individual.objects.get(id = 1)
         self.assertIsNone(indiv.filter_flags)
-        self.assertDictEqual(indiv.pop_platform_filters, {u'n_deletion': '10898', u'n_snp': '127706', u'r_insertion_deletion': '1.2572E+00', u'r_ti_tv': '1.8292E+00', u'n_insertion': '13701'})
+        self.assertDictEqual(indiv.pop_platform_filters, {'n_deletion': '10898', 'n_snp': '127706', 'r_insertion_deletion': '1.2572E+00', 'r_ti_tv': '1.8292E+00', 'n_insertion': '13701'})
         self.assertEqual(indiv.population, 'AMR')
 
         indiv = Individual.objects.get(id = 2)
         self.assertDictEqual(indiv.filter_flags, {'coverage_exome': '8.1446E+01'})
-        self.assertDictEqual(indiv.pop_platform_filters, {u'n_insertion': '6857'})
+        self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '6857'})
         self.assertEqual(indiv.population, 'SAS')
 
         indiv = Individual.objects.get(id = 5)
-        self.assertDictEqual(indiv.filter_flags, {u'chimera': '5.0841E+00'})
-        self.assertDictEqual(indiv.pop_platform_filters, {u'n_insertion': '29507', u'r_insertion_deletion': '1.343E+00'})
+        self.assertDictEqual(indiv.filter_flags, {'chimera': '5.0841E+00'})
+        self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '29507', 'r_insertion_deletion': '1.343E+00'})
         self.assertEqual(indiv.population, 'NFE')
 
         indiv = Individual.objects.get(id = 6)
-        self.assertDictEqual(indiv.filter_flags, {u'contamination': u'2.79E+00'})
-        self.assertDictEqual(indiv.pop_platform_filters, {u'n_insertion': '38051', u'r_insertion_deletion': '1.8064E+00'})
+        self.assertDictEqual(indiv.filter_flags, {'contamination': '2.79E+00'})
+        self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
         self.assertEqual(indiv.population, 'OTH')
 
     @responses.activate
