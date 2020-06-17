@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import json
 import logging
 import traceback
@@ -87,7 +90,7 @@ def add_variants_dataset_handler(request, project_guid):
                 'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
                     ", ".join(unmatched_samples)))
 
-        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
+        prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
         included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
 
         missing_individuals = Individual.objects.filter(
@@ -112,7 +115,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [e.message or str(e)]}, status=400)
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     if not matched_sample_id_to_sample_record:
         return create_json_response({'samplesByGuid': {}})
@@ -164,7 +167,7 @@ def receive_igv_table_handler(request, project_guid):
 
     except Exception as e:
         traceback.print_exc()
-        return create_json_response({'errors': [e.message or str(e)]}, status=400)
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     response = {
         'updatesByIndividualGuid': updates_by_individual_guid,
@@ -209,7 +212,7 @@ def update_individual_igv_sample(request, individual_guid):
             }
         return create_json_response(response)
     except Exception as e:
-        error = e.message or str(e)
+        error = str(e)
         return create_json_response({'error': error}, status=400, reason=error)
 
 
@@ -242,7 +245,7 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
 
 
 def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):
-    updated_sample_json = get_json_for_samples(matched_sample_id_to_sample_record.values(), project_guid=project_guid)
+    updated_sample_json = get_json_for_samples(list(matched_sample_id_to_sample_record.values()), project_guid=project_guid)
     sample_response = {sample_guid: {'isActive': False} for sample_guid in inactivate_sample_guids}
     sample_response.update({s['sampleGuid']: s for s in updated_sample_json})
     response = {
