@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 
-from io import BytesIO
+from io import StringIO
 import mock
+
+import openpyxl as xl
+from tempfile import NamedTemporaryFile
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -11,13 +15,13 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 
 TSV_DATA = b'Family ID	Individual ID	Notes\n\
 "1"	"NA19675"	"An affected individual, additional metadata"\n\
-"1"	"NA19678"	""'
+"0"	"NA19678"	""'
 
 CSV_DATA = b'Family ID,Individual ID,Notes\n\
 "1","NA19675","An affected individual, additional metadata"\n\
-"1","NA19678",""'
+"0","NA19678",""'
 
-JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["1", "NA19678", ""]]'
+JSON_DATA = b'[["Family ID", "Individual ID", "Notes"], ["1", "NA19675", "An affected individual, additional metadata"], ["0", "NA19678", ""]]'
 
 EXCEL_DATA = b'excel data'
 
@@ -34,7 +38,7 @@ TEST_DATA_TYPES = {
 PARSED_DATA = [
     ['Family ID', 'Individual ID', 'Notes'],
     ['1', 'NA19675', 'An affected individual, additional metadata'],
-    ['1', 'NA19678', ''],
+    ['0', 'NA19678', ''],
 ]
 
 
@@ -55,6 +59,20 @@ MOCK_EXCEL_SHEET.iter_rows.return_value = [[_mock_cell(cell) for cell in row] fo
 
 class FileUtilsTest(AuthenticationTestCase):
     fixtures = ['users']
+
+    def setUp(self):
+        # Test uploading with xlsx data
+        wb = xl.Workbook()
+        ws = wb[wb.sheetnames[0]]
+        ws['A1'], ws['B1'], ws['C1'] = ['Family ID', 'Individual ID', 'Notes']
+        ws['A2'], ws['B2'], ws['C2'] = [1, 'NA19675', 'An affected individual, additional metadata']
+        ws['A3'], ws['B3']           = [0, 'NA19678']
+        ws['A4']                     = '' # for testing trimming trailing empty rows
+
+        with NamedTemporaryFile() as tmp:
+            wb.save(tmp)
+            tmp.seek(0)
+            self.xlsx_data = tmp.read()
 
     def test_temp_file_upload(self):
         url = reverse(save_temp_file)
@@ -87,15 +105,17 @@ class FileUtilsTest(AuthenticationTestCase):
         with self.assertRaises(IOError):
             load_uploaded_file(uploaded_file_id)
 
-        # Test uploading with returned data
-        response = self.client.post(
-            '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.tsv", TSV_DATA)})
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json, {
-            'parsedData': PARSED_DATA,
-            'uploadedFileId': mock.ANY,
-        })
+        # Test uploading with returned data and test with file formats other than 'xls' and 'xlsx'
+        for ext, data in TEST_DATA_TYPES.items():
+            if ext == 'xls' or ext == 'xlsx':
+                data = self.xlsx_data
+            response = self.client.post(
+                '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.{}".format(ext), data)})
+            self.assertEqual(response.status_code, 200)
+            self.assertDictEqual(response.json(), {
+                'parsedData': PARSED_DATA,
+                'uploadedFileId': mock.ANY,
+            })
 
     @mock.patch('seqr.views.utils.file_utils.xl.load_workbook')
     def test_parse_file(self, mock_load_xl):
@@ -103,8 +123,8 @@ class FileUtilsTest(AuthenticationTestCase):
         mock_load_xl.return_value.__getitem__.return_value = MOCK_EXCEL_SHEET
 
         for ext, data in TEST_DATA_TYPES.items():
-            self.assertListEqual(parse_file('test.{}'.format(ext), BytesIO(data)), PARSED_DATA)
+            self.assertListEqual(parse_file('test.{}'.format(ext), StringIO(data.decode('utf-8'))), PARSED_DATA)
 
         for call_args in mock_load_xl.call_args_list:
-            self.assertEqual(call_args.args[0].read().decode(), EXCEL_DATA)
+            self.assertEqual(call_args.args[0].read().encode('utf-8'), EXCEL_DATA)
             self.assertDictEqual(call_args.kwargs, {'read_only': True})

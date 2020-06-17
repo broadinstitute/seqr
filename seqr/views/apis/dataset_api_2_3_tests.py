@@ -1,9 +1,13 @@
+from __future__ import unicode_literals
+
 import json
 import mock
 import subprocess
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
+
+from io import StringIO
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
@@ -126,7 +130,7 @@ class DatasetAPITest(AuthenticationTestCase):
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
             {'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'},
         ]
-        mock_file_iter.return_value = ['NA19678_1,NA19678']
+        mock_file_iter.return_value = StringIO('NA19678_1,NA19678\n')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
@@ -190,12 +194,14 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
         sv_sample_guid = 'S1234567_NA19675_1'
         self.assertDictEqual(response_json['familiesByGuid'], {})
-        self.assertListEqual(response_json['samplesByGuid'].keys(), [sv_sample_guid])
+        self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
-        self.assertDictEqual(response_json['individualsByGuid'], {
-            'I000001_na19675': {'sampleGuids': [sv_sample_guid, existing_index_sample_guid]},
-        })
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
+                            set([sv_sample_guid, existing_index_sample_guid]))
+
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
         self.assertEqual(len(sample_models), 2)
@@ -226,7 +232,9 @@ class DatasetAPITest(AuthenticationTestCase):
             'uploadedFileId': mock.ANY,
             'errors': [],
             'info': ['Parsed 2 rows from samples.csv', 'No change detected for 1 individuals'],
-            'updatesByIndividualGuid': {'I000003_na19679': 'gs://readviz/NA19679.bam'},
+            'updatesByIndividualGuid': {
+                'I000003_na19679': 'gs://readviz/NA19679.bam',
+            },
         })
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -281,11 +289,11 @@ class DatasetAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        sample_guid = response_json['igvSamplesByGuid'].keys()[0]
+        sample_guid = next(iter(response_json['igvSamplesByGuid']))
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
             'filePath': 'gs://readviz/NA19679.bam'})
-        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000003_na19679'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
             {sample_guid}
