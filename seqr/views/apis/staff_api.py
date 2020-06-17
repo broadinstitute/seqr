@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from collections import defaultdict
 from elasticsearch_dsl import Index
 import json
@@ -91,11 +93,11 @@ def elasticsearch_status(request):
         projects_for_index = []
         for index_prefix in seqr_index_projects.keys():
             if index_name.startswith(index_prefix):
-                projects_for_index += seqr_index_projects.pop(index_prefix).keys()
+                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
-    errors = [u'{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join([u'{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    errors = ['{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
     ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
     return create_json_response({
@@ -126,7 +128,7 @@ def mme_details(request):
 
     return create_json_response({
         'metrics': get_mme_metrics(),
-        'submissions': submissions_by_guid.values(),
+        'submissions': list(submissions_by_guid.values()),
         'genesById': genes_by_id,
     })
 
@@ -235,11 +237,11 @@ def anvil_export(request, project_guid):
         variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
 
     return export_multiple_files([
-        [u'{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
-        [u'{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
-        [u'{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        [u'{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], u'{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
+        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
+    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -259,7 +261,7 @@ def sample_metadata_export(request, project_guid):
         for row in rows:
             rows_by_subject_id[row['subject_id']].update(row)
 
-    rows = rows_by_subject_id.values()
+    rows = list(rows_by_subject_id.values())
     all_features = set()
     for row in rows:
         row['MME'] = 'Y' if row['family_guid'] in mme_family_guids else 'N'
@@ -272,9 +274,7 @@ def sample_metadata_export(request, project_guid):
     for row in rows:
         for hpo_key in ['hpo_present', 'hpo_absent']:
             if row[hpo_key]:
-                row[hpo_key] = '|'.join(map(
-                    lambda feature_id: '{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')),
-                    row[hpo_key].split('|')))
+                row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
 
     return create_json_response({'rows': rows})
 
@@ -297,7 +297,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
-    saved_variants_by_family = get_saved_variants_by_family(samples_by_family.keys())
+    saved_variants_by_family = get_saved_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -777,7 +777,7 @@ def discovery_sheet(request, project_guid):
     if "external" in project.name.lower() or "reprocessed" in project.name.lower():
         sequencing_approach = "REAN"
     else:
-        sequencing_approach = loaded_samples_by_family.values()[0][-1].sample_type
+        sequencing_approach = next(iter(loaded_samples_by_family.values()))[-1].sample_type
     initial_row = {
         "project_guid": project.guid,
         "collaborator": project.name,
@@ -1006,7 +1006,7 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
     if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
             and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants \
             and 'transcripts' in variant_json:
-        potential_compound_het_gene_ids.update(variant_json['transcripts'].keys())
+        potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
 
     return inheritance_models, potential_compound_het_gene_ids
 
@@ -1235,11 +1235,11 @@ def saved_variants_page(request, tag):
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)
 
-    saved_variants = response_json['savedVariantsByGuid'].values()
+    saved_variants = list(response_json['savedVariantsByGuid'].values())
     genes = _saved_variant_genes(saved_variants)
-    locus_lists_by_guid = _add_locus_lists(project_models_by_guid.values(), genes, include_all_lists=True)
+    locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
 
-    projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
+    projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
     functional_tag_types = get_json_for_variant_functional_data_tag_types()
 
     variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))
@@ -1252,7 +1252,7 @@ def saved_variants_page(request, tag):
         project_variant_tags = [
             vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
         project_json.update({
-            'locusListGuids': locus_lists_by_guid.keys(),
+            'locusListGuids': list(locus_lists_by_guid.keys()),
             'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
             'variantFunctionalTagTypes': functional_tag_types,
         })
@@ -1470,13 +1470,13 @@ def proxy_to_kibana(request):
             charset=response.encoding
         )
 
-        for key, value in response.headers.iteritems():
+        for key, value in response.headers.items():
             if key.lower() not in EXCLUDE_HTTP_RESPONSE_HEADERS:
                 proxy_response[key.title()] = value
 
         return proxy_response
     except ConnectionError as e:
-        logger.error(e)
+        logger.error(str(e))
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
 
