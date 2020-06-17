@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 import json
 from collections import defaultdict
@@ -46,7 +48,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
-    variants = response['savedVariantsByGuid'].values()
+    variants = list(response['savedVariantsByGuid'].values())
     genes = _saved_variant_genes(variants)
     response['locusListsByGuid'] = _add_locus_lists([project], genes)
     discovery_tags = response.pop('discoveryTags', None)
@@ -350,9 +352,9 @@ def _saved_variant_genes(variants):
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:
-                gene_ids.update(compound_het.get('transcripts', {}).keys())
+                gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
         else:
-            gene_ids.update(variant.get('transcripts', {}).keys())
+            gene_ids.update(list(variant.get('transcripts', {}).keys()))
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:

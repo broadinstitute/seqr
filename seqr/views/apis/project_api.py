@@ -2,6 +2,8 @@
 APIs for updating project metadata, as well as creating or deleting projects
 """
 
+from __future__ import unicode_literals
+
 import json
 import logging
 from django.contrib.auth.decorators import login_required
@@ -142,13 +144,13 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
-    project_json['locusListGuids'] = response['locusListsByGuid'].keys()
+    project_json['locusListGuids'] = list(response['locusListsByGuid'].keys())
     project_json['detailsLoaded'] = True
     project_json.update(_get_json_for_variant_tag_types(project))
 
     gene_ids = set()
     for tag in project_json['discoveryTags']:
-        gene_ids.update(tag.get('transcripts', {}).keys())
+        gene_ids.update(list(tag.get('transcripts', {}).keys()))
 
     response.update({
         'projectsByGuid': {project_guid: project_json},

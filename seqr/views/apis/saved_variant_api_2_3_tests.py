@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import mock
 
@@ -190,7 +192,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
-        variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
+        variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json.update({'xpos': 2061413835})
@@ -243,7 +245,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
-        variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
+        variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json.update({'xpos': 2061413835})
@@ -358,7 +360,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
             {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        new_variant_note_response = response.json()['variantNotesByGuid'].values()[0]
+        new_variant_note_response = next(iter(response.json()['variantNotesByGuid'].values()))
         self.assertEqual(new_variant_note_response['note'], 'new user-selected gene note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][1]
         self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
@@ -404,7 +406,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 2)
-        compound_het_guids = response.json()['savedVariantsByGuid'].keys()
+        compound_het_guids = list(response.json()['savedVariantsByGuid'].keys())
         compound_het_guids.remove(VARIANT_GUID)
         compound_het_5_guid = compound_het_guids[0]
 
@@ -541,7 +543,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         tags = response.json()['variantTagsByGuid']
         self.assertEqual(len(tags), 2)
         self.assertIsNone(tags.pop('VT1726961_2103343353_r0390_100'))
-        excluded_guid = tags.keys()[0]
+        excluded_guid = next(iter(tags))
         self.assertEqual('Excluded', tags[excluded_guid]['name'])
         self.assertSetEqual(
             {excluded_guid, 'VT1708633_2103343353_r0390_100'},

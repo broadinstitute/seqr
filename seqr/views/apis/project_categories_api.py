@@ -1,5 +1,6 @@
 """APIs for setting Project categories"""
 
+from __future__ import unicode_literals
 
 import json
 from django.contrib.auth.decorators import login_required

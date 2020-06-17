@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 from datetime import datetime
 from django.urls.base import reverse
@@ -101,22 +103,22 @@ class ProjectAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             {tag['variantGuid'] for tag in discovery_tags},
             {'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100'})
-        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
+        self.assertListEqual(list(response_json['genesById'].keys()), ['ENSG00000135953'])
         family_fields = {'individualGuids'}
         family_fields.update(FAMILY_FIELDS)
-        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), family_fields)
+        self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
         individual_fields.update(INDIVIDUAL_FIELDS)
-        self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
-        self.assertSetEqual(set(response_json['samplesByGuid'].values()[0].keys()), SAMPLE_FIELDS)
-        self.assertSetEqual(set(response_json['igvSamplesByGuid'].values()[0].keys()), IGV_SAMPLE_FIELDS)
-        self.assertSetEqual(set(response_json['locusListsByGuid'].values()[0].keys()), LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['locusListsByGuid'].values())).keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(
-            set(response_json['analysisGroupsByGuid'].values()[0].keys()),
+            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()),
             {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
         self.assertSetEqual(
-            set(response_json['mmeSubmissionsByGuid'].values()[0].keys()),
+            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()),
             {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate'}
         )
         self.assertSetEqual(
@@ -135,9 +137,9 @@ class ProjectAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         family_fields.update(INTERNAL_FAMILY_FIELDS)
-        self.assertSetEqual(set(response_json['familiesByGuid'].values()[0].keys()), family_fields)
+        self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
-        self.assertSetEqual(set(response_json['individualsByGuid'].values()[0].keys()), individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
 
         # Test invalid project guid
         invalid_url = reverse(project_page_data, args=['FAKE_GUID'])
@@ -158,7 +160,7 @@ class ProjectAPITest(AuthenticationTestCase):
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
              'analysisGroupsByGuid', 'genesById', 'mmeSubmissionsByGuid', 'igvSamplesByGuid'}
         )
-        self.assertListEqual(response_json['projectsByGuid'].keys(), [EMPTY_PROJECT_GUID])
+        self.assertListEqual(list(response_json['projectsByGuid'].keys()), [EMPTY_PROJECT_GUID])
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertDictEqual(response_json['individualsByGuid'], {})
         self.assertDictEqual(response_json['samplesByGuid'], {})
