@@ -1,10 +1,5 @@
-from __future__ import unicode_literals
-from future.standard_library import install_aliases
-install_aliases()
-
-import urllib.parse as urlparse
-
 import json
+import urllib
 from anymail.exceptions import AnymailError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
@@ -67,7 +62,7 @@ def forgot_password(request):
         """.format(
         full_name=user.get_full_name(),
         base_url=BASE_URL,
-        password_token=urlparse.quote_plus(user.password),
+        password_token=urllib.quote_plus(user.password),
     )
 
     try:
@@ -103,7 +98,7 @@ def create_staff_user(request):
     try:
         _create_user(request, is_staff=True)
     except CreateUserException as e:
-        return create_json_response({'error': str(e)}, status=e.status_code, reason=str(e))
+        return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
 
     return create_json_response({'success': True})
 
@@ -119,7 +114,7 @@ def create_project_collaborator(request, project_guid):
         if e.existing_user:
             return _update_existing_user(e.existing_user, project, json.loads(request.body))
         else:
-            return create_json_response({'error': str(e)}, status=e.status_code, reason=str(e))
+            return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
 
     project.can_view_group.user_set.add(user)
 
