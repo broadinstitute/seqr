@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 import json
 import mock
 from copy import deepcopy
@@ -140,7 +143,8 @@ class VariantSearchAPITest(AuthenticationTestCase):
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 200)
-        export_content = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
+        content = str(response.content, 'utf-8')
+        export_content = [row.split('\t') for row in content.rstrip('\n').split('\n')]
         self.assertEqual(len(export_content), 4)
         self.assertListEqual(
             export_content[0],
@@ -156,7 +160,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertListEqual(
             export_content[3],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xc3\xb8te (None)', '', '', '', '', ''])
+             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '', ''])
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 
@@ -336,7 +340,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID, 'R0003_test'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
-        self.assertListEqual(response_json['projectCategoriesByGuid'].keys(), ['PC000003_test_category_name'])
+        self.assertListEqual(list(response_json['projectCategoriesByGuid'].keys()), ['PC000003_test_category_name'])
 
         # Test search hash context
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
@@ -424,7 +428,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         saved_searches = response.json()['savedSearchesByGuid']
         self.assertEqual(len(saved_searches), 1)
-        search_guid = saved_searches.keys()[0]
+        search_guid = next(iter(saved_searches))
         self.assertDictEqual(saved_searches[search_guid], {
             'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 13,
         })
@@ -462,7 +466,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['savedSearchesByGuid']), 3)
 
-        global_saved_search_guid = response.json()['savedSearchesByGuid'].keys()[0]
+        global_saved_search_guid = next(iter(response.json()['savedSearchesByGuid']))
 
         update_saved_search_url = reverse(update_saved_search_handler, args=[global_saved_search_guid])
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))

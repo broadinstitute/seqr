@@ -2,6 +2,8 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 
+from __future__ import unicode_literals
+
 import json
 import logging
 import re
@@ -268,7 +270,7 @@ def receive_individuals_table_handler(request, project_guid):
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+        return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     # send back some stats
     individual_ids_by_family = defaultdict(list)
@@ -467,7 +469,7 @@ def receive_hpo_table_handler(request, project_guid):
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+        return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     response = {
         'uploadedFileId': uploaded_file_id,
@@ -652,7 +654,7 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
     return create_json_response({
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            individuals_by_guid.values(), user=request.user, add_hpo_details=True,
+            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True,
         )},
     })
 
