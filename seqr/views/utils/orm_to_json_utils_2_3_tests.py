@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from reference_data.models import GeneInfo
@@ -73,7 +75,7 @@ class JSONUtilsTest(TestCase):
 
         fields = set()
         fields.update(SAVED_VARIANT_FIELDS)
-        fields.update(variant.saved_variant_json.keys())
+        fields.update(list(variant.saved_variant_json.keys()))
         json = get_json_for_saved_variant(variant, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
         self.assertListEqual(json['familyGuids'], ["F000001_1"])
@@ -110,18 +112,18 @@ class JSONUtilsTest(TestCase):
         self.assertListEqual(var_2['noteGuids'], v2_note_guids)
 
         self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
-        self.assertSetEqual(set(json['variantTagsByGuid'].values()[0].keys()), TAG_FIELDS)
+        self.assertSetEqual(set(next(iter(json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
         for tag_guid in v1_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
         for tag_guid in v2_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_2])
 
-        self.assertListEqual(json['variantNotesByGuid'].keys(), v2_note_guids)
+        self.assertListEqual(list(json['variantNotesByGuid'].keys()), v2_note_guids)
         self.assertSetEqual(set(json['variantNotesByGuid'][v2_note_guids[0]].keys()), VARIANT_NOTE_FIELDS)
         self.assertListEqual(json['variantNotesByGuid'][v2_note_guids[0]]['variantGuids'], [variant_guid_2])
 
         self.assertSetEqual(set(json['variantFunctionalDataByGuid'].keys()), v1_functional_guids)
-        self.assertSetEqual(set(json['variantFunctionalDataByGuid'].values()[0].keys()), FUNCTIONAL_FIELDS)
+        self.assertSetEqual(set(next(iter(json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
         for tag_guid in v1_functional_guids:
             self.assertListEqual(json['variantFunctionalDataByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
 

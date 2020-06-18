@@ -2,6 +2,8 @@
 Utility functions for converting Django ORM object to JSON
 """
 
+from __future__ import unicode_literals
+
 import itertools
 import json
 import logging
@@ -676,7 +678,7 @@ def get_json_for_locus_list(locus_list, user):
 
 def get_json_for_project_collaborator_list(project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = get_project_collaborators_by_username(project).values()
+    collaborator_list = list(get_project_collaborators_by_username(project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
