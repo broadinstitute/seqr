@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
 from openpyxl import load_workbook
-from io import StringIO
+from io import BytesIO
 
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
@@ -28,16 +28,18 @@ class PedigreeInfoUtilsTest(TestCase):
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['', '', 'male', 'u', '.', 'ind2']], FILENAME)
         self.assertListEqual(records, [])
-        self.assertListEqual(
-            errors, ["Error while converting {} rows to json: Family Id not specified in row #1:\n{{'affected': 'u', 'maternalId': 'ind2', 'individualId': '', 'sex': 'male', 'familyId': '', 'paternalId': ''}}".format(FILENAME)])
+        self.assertIn(
+            errors[0], ["Error while converting {} rows to json: Family Id not specified in row #1:\n{{'familyId': '', 'individualId': '', 'sex': 'male', 'affected': 'u', 'paternalId': '', 'maternalId': 'ind2'}}".format(FILENAME),
+                        "Error while converting {} rows to json: Family Id not specified in row #1:\n{{u'affected': u'u', u'maternalId': u'ind2', u'individualId': u'', u'sex': u'male', u'familyId': u'', u'paternalId': u''}}".format(FILENAME)])
         self.assertListEqual(warnings, [])
 
         records, errors, warnings = parse_pedigree_table(
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME)
         self.assertListEqual(records, [])
-        self.assertListEqual(
-            errors, ["Error while converting {} rows to json: Individual Id not specified in row #1:\n{{'affected': 'u', 'maternalId': 'ind2', 'individualId': '', 'sex': 'male', 'familyId': 'fam1', 'paternalId': ''}}".format(FILENAME)])
+        self.assertIn(
+            errors[0], ["Error while converting {} rows to json: Individual Id not specified in row #1:\n{{'familyId': 'fam1', 'individualId': '', 'sex': 'male', 'affected': 'u', 'paternalId': '', 'maternalId': 'ind2'}}".format(FILENAME),
+                     "Error while converting {} rows to json: Individual Id not specified in row #1:\n{{u'affected': u'u', u'maternalId': u'ind2', u'individualId': u'', u'sex': u'male', u'familyId': u'fam1', u'paternalId': u''}}".format(FILENAME)])
         self.assertListEqual(warnings, [])
 
         records, errors, warnings = parse_pedigree_table(
@@ -181,7 +183,7 @@ class PedigreeInfoUtilsTest(TestCase):
         mock_email.return_value.send.assert_called()
 
         # Test sent sample manifest is correct
-        sample_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][0][1]))
+        sample_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][0][1]))
         sample_ws = sample_wb.active
         sample_ws.title = 'Sample Info'
         self.assertListEqual(
@@ -192,7 +194,7 @@ class PedigreeInfoUtilsTest(TestCase):
              ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98']])
 
         # Test original file copy is correct
-        original_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][1][1]))
+        original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
         original_ws = original_wb.active
         self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], original_data)
 
@@ -207,21 +209,21 @@ class PedigreeInfoUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Current Age:__ Patient is deceased, age 33, due to heart attack, sample not available
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Age of Onset:__ 21
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Race/Ethnicity:__ White, Asian, Pacific; Not Hispanic
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ I have a really debilitating probably genetic condition. Ive seen many specialists.
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Yes; SMAs
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ Yes; Dwarfism
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ I have a really debilitating probably genetic condition. I\xe2ve seen many specialists.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Yes; SMA\xe2s
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ Yes; Dwarfism\xe2
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Website/Blog:__ Yes
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ patients uncle (dads brother) died from Fahrs disease at 70
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ patient\xe2s uncle (dads brother) died from Fahrs disease at 70
 #### Prior Testing
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Referring Physician:__ Dr John Smith
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Doctors Seen:__ Clinical geneticist, Neurologist, Cardiologist, Other: Pediatrician
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Previous Testing:__ Yes;
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Single gene testing
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gene panel testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole exome sequencing. Year: 2018, Lab: UDNs lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole exome sequencing. Year: 2018, Lab: UDN\xe2s lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole genome sequencing. Year: unspecified, Lab: unspecified, Relatives: not specified
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Other tests: Blood work
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bones
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bone\xe2s
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Other Research Studies:__ Yes, Name of studies: Undiagnosed Diseases Network, Expecting results: No
 #### Family Information
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Mother:__ affected, onset age 19, available
