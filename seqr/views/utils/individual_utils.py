@@ -2,6 +2,8 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 
+from __future__ import unicode_literals
+
 import logging
 
 from seqr.models import Sample, IgvSample, Individual
