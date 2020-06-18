@@ -40,8 +40,6 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         self.assertIn(project_categories[1].guid, updated_guid_set)
         new_guid = project_categories[1].guid
 
-        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID3])
-
         self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 2)
         self.assertListEqual([PROJECT_CAT_GUID2, new_guid], response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids'])
 

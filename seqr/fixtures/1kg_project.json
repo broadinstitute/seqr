@@ -80,7 +80,21 @@
         "last_modified_date": "2017-03-12T23:52:55.846Z",
         "name": "test category name",
         "projects": [
-            1
+            1, 3
+        ]
+    }
+},
+{
+    "model": "seqr.projectcategory",
+    "pk": 4,
+    "fields": {
+        "guid": "PC000004_demo",
+        "created_date": "2017-03-12T23:52:55.846Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-12T23:52:55.846Z",
+        "name": "Demo",
+        "projects": [
+            3
         ]
     }
 },
