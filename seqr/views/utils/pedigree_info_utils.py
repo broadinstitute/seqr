@@ -152,7 +152,7 @@ def _convert_fam_file_rows_to_json(rows):
         for key, value in row_dict.items():
             key = key.lower()
             value = (value or '').strip()
-            if key.lower() == JsonConstants.FAMILY_NOTES_COLUMN.lower():
+            if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
                 json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
             elif "family" in key:
                 json_record[JsonConstants.FAMILY_ID_COLUMN] = value

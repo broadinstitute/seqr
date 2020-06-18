@@ -127,6 +127,10 @@ class IndividualAPITest(AuthenticationTestCase):
         self.check_staff_login(edit_individuals_url)
 
         # send invalid requests
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, "'individuals' not specified")
+
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
@@ -174,10 +178,29 @@ class IndividualAPITest(AuthenticationTestCase):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
         self.check_staff_login(individuals_url)
 
-        data = 'Family ID	Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes\n\
-"1"	"NA19675"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"\n\
-"1"	"NA19678"	""	""	"Male"	"Unaffected"	"a individual note"\n\
-"2"	"HG00733"	""	""	"Female"	"Unaffected"	""'
+        # send invalid requests
+        response = self.client.get(individuals_url)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Received 0 files instead of 1'], 'warnings': []})
+
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    ')})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': [
+            "Error while converting test.tsv rows to json: Individual Id not specified in row #1:\n{'familyId': u'1'}"
+        ], 'warnings': []})
+
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
+            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"')})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['Could not find individuals with the following previous IDs: NA19675'], 'warnings': []
+        })
+
+        # send valid requests
+        data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
+"1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
+"1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family"'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data)
 
@@ -193,46 +216,7 @@ class IndividualAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
 
-    def test_hpo_table_handler(self):
-        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
-        self.check_collaborator_login(url)
-
-        # Send invalid requests
-        header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
-        rows = [
-            '1,NA19678,,',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
-        ]
-        f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
-
-        header = 'family_id,individual_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
-
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent'
-        f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {
-            'errors': [
-                'Unable to find individuals to update for any of the 3 parsed individuals. No matching ids found for 1 individuals. No changes detected for 2 individuals.'
-            ],
-            'warnings': [
-                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0100258 (NA19679)",
-                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
-                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
-            ]})
-
-        # send valid request
-        rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
-        f = SimpleUploadedFile('updates.csv', b"{}\n{}".format(header, '\n'.join(rows)))
-        response = self.client.post(url, data={'f': f})
+    def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -263,6 +247,83 @@ class IndividualAPITest(AuthenticationTestCase):
             response_json['individualsByGuid']['I000001_na19675']['absentFeatures'],
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
+
+    def test_hpo_table_handler(self):
+        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+        self.check_collaborator_login(url)
+
+        # Send invalid requests
+        header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
+        f = SimpleUploadedFile('updates.csv', header)
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
+
+        header = 'family_id,individual_id,hpo_term_yes,hpo_term_no'
+        f = SimpleUploadedFile('updates.csv', header)
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
+
+        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent'
+        rows = [
+            '1,NA19678,,',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
+        ]
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': [
+                'Unable to find individuals to update for any of the 3 parsed individuals. No matching ids found for 1 individuals. No changes detected for 2 individuals.'
+            ],
+            'warnings': [
+                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0100258 (NA19679)",
+                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
+                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
+            ]})
+
+        # send valid request
+        rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        response = self.client.post(url, data={'f': f})
+        self._is_expected_hpo_upload(response)
+
+    def test_hpo_json_table_handler(self):
+        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+        self.check_collaborator_login(url)
+
+        f = SimpleUploadedFile('updates.json', json.dumps([
+            {'family_id': '1', 'external_id': 'NA19675_1', 'features': [
+                {'id': 'HP:0002017', 'observed': 'yes'},
+                {'id': 'HP:0012469', 'observed': 'no'},
+                {'id': 'HP:0004322', 'observed': 'no'}]},
+            {'family_id': '1', 'external_id': 'NA19678', 'features': []},
+            {'family_id': '1', 'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
+            {'family_id': '1', 'external_id': 'HG00731', 'features': [
+                {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
+        ]))
+        response = self.client.post(url, data={'f': f})
+        self._is_expected_hpo_upload(response)
+
+    def test_hpo_term_number_table_handler(self):
+        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+        self.check_collaborator_login(url)
+
+        header = 'family_id,individual_id,affected,hpo_number,hpo_number'
+        rows = [
+            '1,NA19675_1,yes,HP:0002017,',
+            '1,NA19675_1,no,HP:0012469,',
+            '1,NA19675_1,no,,HP:0004322',
+            '1,NA19678,,,',
+            '1,NA19679,yes,HP:0100258,',
+            '1,HG00731,yes,HP:0002017,',
+            '1,HG00731,no,HP:0012469,HP:0011675',
+        ]
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        response = self.client.post(url, data={'f': f})
+        self._is_expected_hpo_upload(response)
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])

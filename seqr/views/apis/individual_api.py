@@ -161,12 +161,9 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    try:
-        updated_families, updated_individuals = _add_or_update_individuals_and_families(
-            project, modified_individuals_list, user=request.user
-        )
-    except Exception as e:
-        return create_json_response({'errors': [e.message]}, status=400, reason='Invalid updates')
+    updated_families, updated_individuals = _add_or_update_individuals_and_families(
+        project, modified_individuals_list, user=request.user
+    )
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -373,13 +370,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
     parent_updates = []
     for i, record in enumerate(individual_records):
         # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
-        family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {}).get('familyId')
-        if not family_id:
-            raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
-
-        if JsonConstants.INDIVIDUAL_ID_COLUMN not in record and 'individualGuid' not in record:
-            raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
-
+        family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {})['familyId']
         family = families.get(family_id)
         if family:
             created = False
@@ -490,6 +481,7 @@ def receive_hpo_table_handler(request, project_guid):
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
         row_dicts = records
+        column_map = set(row_dicts[0].keys())
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
@@ -508,8 +500,6 @@ def _process_hpo_records(records, filename, project):
                 column_map[HPO_TERM_NUMBER_COLUMN].append(i)
             elif 'affected' in key:
                 column_map[AFFECTED_COLUMN] = i
-            elif 'feature' in key:
-                column_map[FEATURES_COLUMN] = i
         if INDIVIDUAL_ID_COLUMN not in column_map:
             raise ValueError('Invalid header, missing individual id column')
 
@@ -535,14 +525,13 @@ def _process_hpo_records(records, filename, project):
     if HPO_TERM_NUMBER_COLUMN in column_map:
         aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COLUMN: [], HPO_TERMS_ABSENT_COLUMN: []})
         for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COLUMN] = []
-            row[HPO_TERMS_ABSENT_COLUMN] = []
+            column = HPO_TERMS_ABSENT_COLUMN if row.get(AFFECTED_COLUMN) == 'no' else HPO_TERMS_PRESENT_COLUMN
+            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))]
             if row.get(HPO_TERM_NUMBER_COLUMN):
-                column = HPO_TERMS_ABSENT_COLUMN if row.get(AFFECTED_COLUMN) == 'no' else HPO_TERMS_PRESENT_COLUMN
-                aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))][column].append(
-                    row[HPO_TERM_NUMBER_COLUMN].strip()
-                )
-        _parse_individual_hpo_terms([{
+                aggregate_entry[column].append(row[HPO_TERM_NUMBER_COLUMN].strip())
+            else:
+                aggregate_entry[column] = []
+        return _parse_individual_hpo_terms([{
             FAMILY_ID_COLUMN: family_id,
             INDIVIDUAL_ID_COLUMN: individual_id,
             HPO_TERMS_PRESENT_COLUMN: features[HPO_TERMS_PRESENT_COLUMN],
@@ -633,7 +622,7 @@ def _parse_individual_hpo_terms(json_records, project):
     if unchanged_individuals:
         warnings.append(
             'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
-                len(unchanged_individuals), ', '.join(unchanged_individuals)
+                len(unchanged_individuals), ', '.join(sorted(unchanged_individuals))
             ))
 
     return parsed_records, errors, warnings
