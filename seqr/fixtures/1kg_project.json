@@ -1908,20 +1908,13 @@
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
         "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
-        "features": [
-            {
-                "observed": "yes",
-                "id": "HP:0012469"
-            },
-            {
-                "observed": "no",
-                "id": "HP:0003273"
-            }
-        ],
         "genomic_features": [
             {
                 "gene": {
                     "id": "ENSG00000186092"
+                }, "variant": {
+                    "referenceName": "14",
+                    "start": 77027630
                 }
             },
             {
@@ -1932,6 +1925,11 @@
             {
                 "gene": {
                     "id": "ENSG00000223972"
+                }
+            },
+            {
+                "gene": {
+                    "id": "ABC"
                 }
             }
         ]
