@@ -593,16 +593,16 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.get('content-disposition'),
-            'attachment; filename="1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_AnVIL_Metadata.zip"'
+            'attachment; filename="1kg project n\xe5me with uni\xe7\xf8de_AnVIL_Metadata.zip"'
         )
 
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
         self.assertEqual(mock_write_zip.call_count, 4)
         mock_write_zip.assert_has_calls([
-            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Subject.tsv', mock.ANY),
-            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Sample.tsv', mock.ANY),
-            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Family.tsv', mock.ANY),
-            mock.call('1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_PI_Discovery.tsv', mock.ANY),
+            mock.call(u'1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv', mock.ANY),
+            mock.call(u'1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv', mock.ANY),
+            mock.call(u'1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv', mock.ANY),
+            mock.call(u'1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv', mock.ANY),
         ])
 
         subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
