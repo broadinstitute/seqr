@@ -1,8 +1,10 @@
+from __future__ import unicode_literals
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
 from openpyxl import load_workbook
-from StringIO import StringIO
+from io import StringIO
 
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
@@ -163,14 +165,14 @@ class PedigreeInfoUtilsTest(TestCase):
             ])
         self.assertEqual(
             mock_email.call_args.kwargs['body'],
-            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
+            """User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
     
     SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.
     
     test.csv is the original merged pedigree-sample-manifest file that the user uploaded.
     """)
         mock_email.return_value.attach_alternative.assert_called_with(
-            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
+            """User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
     <br />
     <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
     <br />
@@ -254,6 +256,7 @@ class PedigreeInfoUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Children:__ 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Son, age 12, unaffected, unspecified availability
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Relatives:__ None"""
+        self.maxDiff = None
         self.assertListEqual(records, [
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N'},
