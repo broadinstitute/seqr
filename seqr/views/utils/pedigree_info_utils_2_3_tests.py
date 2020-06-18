@@ -9,7 +9,6 @@ from io import BytesIO
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 
-
 FILENAME = 'test.csv'
 
 
@@ -258,6 +257,7 @@ class PedigreeInfoUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Children:__ 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Son, age 12, unaffected, unspecified availability
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Relatives:__ None"""
+        self.maxDiff = None
         self.assertListEqual(records, [
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N'},
