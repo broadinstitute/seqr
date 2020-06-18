@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from slacker import Slacker
 from settings import SLACK_TOKEN, BASE_URL
