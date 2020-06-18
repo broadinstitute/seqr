@@ -3,8 +3,9 @@ import mock
 from copy import deepcopy
 
 from django.urls.base import reverse
+from elasticsearch.exceptions import ConnectionTimeout
 
-from seqr.models import VariantSearchResults, LocusList, Project
+from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.elasticsearch.utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
@@ -74,6 +75,13 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid index')
 
+        mock_get_variants.side_effect = ConnectionTimeout()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 504)
+        self.assertEqual(response.reason_phrase, 'Query Time Out')
+
         mock_get_variants.side_effect = _get_es_variants
 
         # Test new search
@@ -118,9 +126,9 @@ class VariantSearchAPITest(AuthenticationTestCase):
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100)
 
         # Test sort
-        response = self.client.get('{}?sort=consequence'.format(url))
+        response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='consequence', page=1, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100)
 
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
@@ -163,7 +171,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
         # Test cross-project discovery for staff users
         self.login_staff_user()
-        response = self.client.get(url)
+        response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
@@ -172,6 +180,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100)
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants
@@ -187,6 +196,58 @@ class VariantSearchAPITest(AuthenticationTestCase):
                 'projectFamilies': PROJECT_FAMILIES,
                 'totalResults': 0,
             }
+        })
+
+    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    def test_query_all_projects_variants(self, mock_get_variants):
+        url = reverse(query_variants_handler, args=[SEARCH_HASH])
+        self.check_require_login(url)
+
+        mock_get_variants.side_effect = _get_es_variants
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['search'], {
+            'search': SEARCH,
+            'projectFamilies': [],
+            'totalResults': 3,
+        })
+
+        VariantSearchResults.objects.get(search_hash=SEARCH_HASH).delete()
+        self.login_collaborator()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['search'], {
+            'search': SEARCH,
+            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': [
+                'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+                'F000009_9', 'F000010_10', 'F000013_13']}],
+            'totalResults': 3,
+        })
+
+    @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
+    def test_query_all_project_families_variants(self, mock_get_variants):
+        url = reverse(query_variants_handler, args=['abc'])
+        self.check_collaborator_login(url, request_data={'projectGuids': ['R0003_test']})
+        url = reverse(query_variants_handler, args=[SEARCH_HASH])
+
+        mock_get_variants.side_effect = _get_es_variants
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectGuids': ['R0003_test'], 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['search'], {
+            'search': SEARCH,
+            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11', 'F000012_12']}],
+            'totalResults': 3,
         })
 
     def test_search_context(self):
@@ -245,7 +306,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
              'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'projectCategoriesByGuid'}
         )
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
-        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID, 'R0003_test'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
         self.assertListEqual(response_json['projectCategoriesByGuid'].keys(), ['PC000003_test_category_name'])
@@ -341,11 +402,23 @@ class VariantSearchAPITest(AuthenticationTestCase):
             'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 13,
         })
 
+        # Test no errors if duplicate searches get created
+        dup_search_guid = VariantSearch.objects.create(search=SEARCH, created_by=self.no_access_user).guid
+        response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json()['savedSearchesByGuid'].keys()), [search_guid])
+        self.assertIsNone(VariantSearch.objects.filter(guid=dup_search_guid).first())
+
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
 
         update_saved_search_url = reverse(update_saved_search_handler, args=[search_guid])
+        body['name'] = None
+        response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, '"Name" is required')
+
         body['name'] = 'Updated Test Search'
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)

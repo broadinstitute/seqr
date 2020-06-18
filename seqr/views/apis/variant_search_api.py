@@ -112,16 +112,9 @@ def _get_or_create_results_model(search_hash, search_context, user):
         if not search_model:
             search_model = VariantSearch.objects.create(created_by=user, search=search_dict)
 
-        try:
-            results_model = VariantSearchResults.objects.create(search_hash=search_hash, variant_search=search_model)
-        except IntegrityError:
-            # This can happen if a search_context request and results request are dispatched at the same time,
-            results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-            try:
-                results_model.families.set(families)
-            except IntegrityError:
-                pass
-            return results_model
+        # If a search_context request and results request are dispatched at the same time, its possible the other
+        # request already created the model
+        results_model, _ = VariantSearchResults.objects.get_or_create(search_hash=search_hash, variant_search=search_model)
 
         results_model.families.set(families)
     return results_model
@@ -462,7 +455,7 @@ def create_saved_search_handler(request):
         dup_searches = VariantSearch.objects.filter(
             search=request_json,
             created_by=request.user,
-        )
+        ).order_by('created_date')
         saved_search = dup_searches[0]
         for search in dup_searches:
             search.delete()
@@ -540,9 +533,6 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variants(variants, families, include_discovery_tags=False):
-    if not variants:
-        return {}, {}
-
     variants = _flatten_variants(variants)
 
     prefetch_related_objects(families, 'project')
