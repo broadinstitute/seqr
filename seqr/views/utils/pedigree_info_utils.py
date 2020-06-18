@@ -373,8 +373,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
-    user_email_or_username = user.email or user.username
-    email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
+    email_body = "User {} just uploaded pedigree info to {}.<br />".format(user.email or user.username, project.name)
 
     email_body += """This email has 2 attached files:<br />
     <br />

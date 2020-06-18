@@ -1,4 +1,6 @@
 # Utilities used for unit and integration tests.
+from __future__ import unicode_literals
+
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
