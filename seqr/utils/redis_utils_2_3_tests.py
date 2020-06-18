@@ -29,7 +29,10 @@ class RedisUtilsTest(TestCase):
         mock_redis.return_value.get.side_effect = lambda key: key
         self.assertIsNone(safe_redis_get_json('test_key'))
         mock_logger.info.assert_called_with('Loaded test_key from redis')
-        mock_logger.warn.assert_called_with('Unable to fetch "test_key" from redis: No JSON object could be decoded')
+        warn_args = str(mock_logger.warn.call_args.args[0])
+        # Python 2 and 3 return different warning when encountering JSON decoding error
+        self.assertIn(warn_args, ['Unable to fetch "test_key" from redis: No JSON object could be decoded',
+                                  'Unable to fetch "test_key" from redis: Expecting value: line 1 column 1 (char 0)'])
 
         # test with redis connection error
         mock_logger.reset_mock()
