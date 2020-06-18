@@ -18,7 +18,7 @@ NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 
-PROJECT_CATEGRORY_NAME = 'test category name'
+PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
 
 ES_CAT_ALLOCATION=[{
     u'node': u'node-1',
