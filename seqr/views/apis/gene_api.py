@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def genes_info(request):
     gene_ids = request.GET.get('geneIds', '').split(',')
-    return create_json_response({'genesById': get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)})
+    return create_json_response({'genesById': get_genes(
+        gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_mgi=True)})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
