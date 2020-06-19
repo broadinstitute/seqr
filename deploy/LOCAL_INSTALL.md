@@ -125,7 +125,7 @@ mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
 cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
 gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - & 
 
-# download full reference data set for GRCh37 and GRCh38 (requires ~500 Gb per reference genome)
+# download full reference data set for GRCh37 and GRCh38 (requires ~200 Gb per reference genome)
 mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
