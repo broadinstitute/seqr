@@ -45,7 +45,7 @@ class ExternalAPITest(TestCase):
                 'numberOfCases': 3,
                 'numberOfSubmitters': 2,
                 'numberOfUniqueGenes': 4,
-                'numberOfUniqueFeatures': 5,
+                'numberOfUniqueFeatures': 4,
                 'numberOfRequestsReceived': 3,
                 'numberOfPotentialMatchesSent': 1,
                 'dateGenerated': datetime.today().strftime('%Y-%m-%d'),
@@ -60,7 +60,11 @@ class ExternalAPITest(TestCase):
             'patient': {
                 'id': '12345',
                 'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'OR4F29'}}],
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {
+                    'gene': {'id': 'OR4F29'},
+                    'zygosity': 1,
+                    'variant': {'start': 77027549, 'end': 77027550, 'referenceName': '14'},
+                }],
                 'features': [{'id': 'HP:0003273'}, {'id': 'HP:0001252'}]
             }}
 
@@ -146,11 +150,11 @@ class ExternalAPITest(TestCase):
                 ],
             },
             'score': {
-                '_genotypeScore': 0.35,
+                '_genotypeScore': 0.5,
                 '_phenotypeScore': 0.5,
-                'patient': 0.175,
+                'patient': 0.25,
             }
-        }),
+        })
         self.assertDictEqual(results[1], {
             'patient': {
                 'id': 'P0004515',
@@ -162,21 +166,15 @@ class ExternalAPITest(TestCase):
                 },
                 'species': 'NCBITaxon:9606',
                 'sex': 'MALE',
-                'features': [
-                    {
-                        'observed': 'yes',
-                        'id': 'HP:0012469'
-                    },
-                    {
-                        'observed': 'no',
-                        'id': 'HP:0003273'
-                    }
-                ],
+                'features': None,
                 'genomicFeatures': [
                     {
                         'gene': {
                             'id': 'ENSG00000186092'
-                        }
+                        }, 'variant': {
+                            'referenceName': '14',
+                            'start': 77027630
+                        },
                     },
                     {
                         'gene': {
@@ -187,13 +185,18 @@ class ExternalAPITest(TestCase):
                         'gene': {
                             'id': 'ENSG00000223972'
                         }
+                    },
+                    {
+                        'gene': {
+                            'id': 'ABC'
+                        }
                     }
                 ],
             },
             'score': {
                 '_genotypeScore': 0.35,
-                '_phenotypeScore': 0.1,
-                'patient': 0.035,
+                '_phenotypeScore': 0.5,
+                'patient': 0.175,
             }
         })
 
@@ -256,5 +259,45 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
         )
         mock_email.assert_not_called()
+
+    @mock.patch('matchmaker.views.external_api.EmailMessage')
+    @mock.patch('matchmaker.views.external_api.post_to_slack')
+    def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email):
+        url = '/api/matchmaker/v1/match'
+        request_body = {
+            'patient': {
+                'id': '12345',
+                'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
+                'genomicFeatures': [{'gene': {'id': 'ABCD'}}],
+                'features': []
+            }}
+
+        self._check_mme_authenticated(url)
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        results = response.json()['results']
+
+        self.assertEqual(len(results), 0)
+
+        incoming_query_q = MatchmakerIncomingQuery.objects.filter(institution='Test Institute')
+        self.assertEqual(incoming_query_q.count(), 1)
+        self.assertIsNone(incoming_query_q.first().patient_id)
+
+        mock_post_to_slack.assert_called_with(
+            'matchmaker_matches',
+            """A match request for 12345 came in from Test Institute today.
+        The contact information given was: test@test.com.
+        We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
+        )
+        mock_email.assert_not_called()
+
+        # Test receive same request again and notification exception
+        mock_post_to_slack.reset_mock()
+        mock_post_to_slack.side_effect = Exception('Slack connection error')
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['results'], [])
+        self.assertEqual(MatchmakerIncomingQuery.objects.filter(institution='Test Institute').count(), 2)
 
 

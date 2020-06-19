@@ -75,12 +75,6 @@ def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, inclu
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def _get_legacy_gene_name_query(gene_name):
-    return Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_name)) | \
-           Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_name)) | \
-           Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_name))
-
-
 def parse_mme_features(features, hpo_terms_by_id):
     phenotypes = [feature for feature in (features or [])]
     for feature in phenotypes:
@@ -244,7 +238,7 @@ def _get_genotype_score(genomic_features, match):
             feature_gene_matches += match_features_by_gene_id[gene_id]
         if feature_gene_matches:
             score += 0.7
-            if feature.get('zygosty') and any(
+            if feature.get('zygosity') and any(
                     match_feature.get('zygosity') == feature['zygosity'] for match_feature in feature_gene_matches
             ):
                 score += 0.15
