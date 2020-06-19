@@ -105,7 +105,10 @@ The steps below describe how to annotate a callset and then load it into your on
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
 To annotate a callset on-prem, first download VEP and other reference data. 
-If all your data is on GRCh38 (or GRCh37), then download the data only for that genome build.
+If all your data is on GRCh38 (or GRCh37), then download the data only for that genome version. 
+
+The total download size is ~180Gb per genome version.
+
 ```
 # authenticate to your gcloud account so you can download public reference data
 gcloud auth application-default login  
@@ -125,7 +128,7 @@ mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
 cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
 gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - & 
 
-# download full reference data set for GRCh37 and GRCh38 (requires ~200 Gb per reference genome)
+# download full reference data set for GRCh37 and GRCh38
 mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
