@@ -83,6 +83,7 @@ services:
   pipeline-runner:
     image: gcr.io/seqr-project/pipeline-runner:gcloud-prod
     volumes:
+      - ./data/seqr-reference-data:/seqr-reference-data
       - ./data/vep_data:/vep_data
       - ./data/input_vcfs:/input_vcfs
       - ~/.config:/root/.config
