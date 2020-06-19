@@ -118,7 +118,7 @@ def _update_pedigree_image(family, project_guid=None):
         # columns: family, individual id, paternal id, maternal id, sex, affected
         for i in individual_records.values():
             row = [family_id] + [i[key] for key in ['individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
-            fam_file.write("\t".join(row).encode('UTF-8'))
+            fam_file.write("\t".join(row))
             fam_file.write("\n")
         fam_file.flush()
 
