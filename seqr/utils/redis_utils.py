@@ -17,7 +17,7 @@ def safe_redis_get_json(cache_key):
             logger.info('Loaded {} from redis'.format(cache_key))
             return json.loads(value)
     except ValueError as e:
-        logger.warn('Unable to fetch "{}" from redis: {}'.format(cache_key, str(e)))
+        logger.warn('Unable to fetch "{}" from redis:\t{}'.format(cache_key, str(e)))
     except Exception as e:
         logger.warn('Unable to connect to redis host {}: {}'.format(REDIS_SERVICE_HOSTNAME, str(e)))
     return None
