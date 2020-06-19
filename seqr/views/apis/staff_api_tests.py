@@ -231,7 +231,7 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfCases': 3,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
-    u'numberOfUniqueFeatures': 5,
+    u'numberOfUniqueFeatures': 4,
     u'dateGenerated': '2020-04-27'
 }
 

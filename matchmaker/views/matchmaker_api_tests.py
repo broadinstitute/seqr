@@ -94,10 +94,13 @@ MOCK_SLACK_TOKEN = 'xoxp-123'
 
 class EmailException(Exception):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, json=None):
         self.response = mock.MagicMock()
         self.response.content = 'email error'
-        self.response.json.return_value = {}
+        if json:
+            self.response.json.return_value = json
+        else:
+            self.response.json.side_effect = Exception
         self.status_code = 402
 
 
@@ -378,6 +381,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'comments': 'Some additional data about this institution',
             }})
 
+    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage', Exception('Email error'))
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
     def test_update_mme_submission(self, mock_mme_nodes):
@@ -755,7 +759,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             from_email='matchmaker@broadinstitute.org')
         mock_email.return_value.send.assert_called()
 
-        mock_email.return_value.send.side_effect = EmailException
+        mock_email.return_value.send.side_effect = EmailException()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'to': 'test@test.com , other_test@gmail.com',
             'body': 'some email content',
@@ -764,6 +768,18 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 402)
         self.assertEqual(response.reason_phrase, 'email error')
+        self.assertDictEqual(response.json(), {'message': 'email error'})
+
+        mock_email.return_value.send.side_effect = EmailException(json={'error': 'no connection'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'to': 'test@test.com , other_test@gmail.com',
+            'body': 'some email content',
+            'subject': 'some email subject'
+        }))
+
+        self.assertEqual(response.status_code, 402)
+        self.assertEqual(response.reason_phrase, 'email error')
+        self.assertDictEqual(response.json(), {'error': 'no connection'})
 
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
