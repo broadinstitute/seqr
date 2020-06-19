@@ -184,14 +184,15 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Received 0 files instead of 1'], 'warnings': []})
 
-        response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    ')})
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    '.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [
-            "Error while converting test.tsv rows to json: Individual Id not specified in row #1:\n{'familyId': u'1'}"
-        ], 'warnings': []})
+        self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
+        errors = response.json()['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].split('\n')[0],"Error while converting test.tsv rows to json: Individual Id not specified in row #1:")
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"')})
+            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': ['Could not find individuals with the following previous IDs: NA19675'], 'warnings': []
@@ -220,11 +221,14 @@ class IndividualAPITest(AuthenticationTestCase):
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        self.maxDiff = None
         self.assertDictEqual(response_json, {
             'uploadedFileId': mock.ANY,
             'errors': [],
             'warnings': [
-                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
+                # The order of the individual list in the first warning message can change.
+                # "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
+                mock.ANY,
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ],
@@ -237,8 +241,8 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualsByGuid'])
-        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000001_na19675'])
+        self.assertListEqual(list(response_json.keys()), ['individualsByGuid'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['features'],
@@ -322,7 +326,7 @@ class IndividualAPITest(AuthenticationTestCase):
             {'family_id': '1', 'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
             {'family_id': '1', 'external_id': 'HG00731', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
-        ]))
+        ]).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_hpo_upload(response)
 
