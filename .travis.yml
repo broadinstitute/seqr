@@ -5,7 +5,7 @@ jobs:
   - python: '2.7'
     env: TEST_PATTERN='*_tests.py' COVERAGE_THRESHHOLD=95
   - python: '3.7'
-    env: TEST_PATTERN='*_2_3_tests.py' COVERAGE_THRESHHOLD=23
+    env: TEST_PATTERN='*_2_3_tests.py' COVERAGE_THRESHHOLD=50
 
 node_js:
 - '11.8.0'
