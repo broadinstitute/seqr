@@ -29,7 +29,7 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
         Django HttpResponse object with the table data as an attachment.
     """
     def _to_str(s):
-        return str(s, 'utf-8', errors = 'ignore') if not isinstance(s, str) else s
+        return str(s) if not isinstance(s, str) else s
 
     for i, row in enumerate(rows):
         if len(header) != len(row):
