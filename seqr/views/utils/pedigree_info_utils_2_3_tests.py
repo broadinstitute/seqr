@@ -209,21 +209,21 @@ class PedigreeInfoUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Current Age:__ Patient is deceased, age 33, due to heart attack, sample not available
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Age of Onset:__ 21
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Race/Ethnicity:__ White, Asian, Pacific; Not Hispanic
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ I have a really debilitating probably genetic condition. I\xe2ve seen many specialists.
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Yes; SMA\xe2s
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ Yes; Dwarfism\xe2
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ I have a really debilitating probably genetic condition. Ive seen many specialists.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Yes; SMAs
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ Yes; Dwarfism
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Website/Blog:__ Yes
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ patient\xe2s uncle (dads brother) died from Fahrs disease at 70
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ patients uncle (dads brother) died from Fahrs disease at 70
 #### Prior Testing
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Referring Physician:__ Dr John Smith
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Doctors Seen:__ Clinical geneticist, Neurologist, Cardiologist, Other: Pediatrician
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Previous Testing:__ Yes;
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Single gene testing
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gene panel testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole exome sequencing. Year: 2018, Lab: UDN\xe2s lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole exome sequencing. Year: 2018, Lab: UDNs lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole genome sequencing. Year: unspecified, Lab: unspecified, Relatives: not specified
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Other tests: Blood work
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bone\xe2s
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bones
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Other Research Studies:__ Yes, Name of studies: Undiagnosed Diseases Network, Expecting results: No
 #### Family Information
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Mother:__ affected, onset age 19, available
@@ -258,7 +258,6 @@ class PedigreeInfoUtilsTest(TestCase):
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Children:__ 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Son, age 12, unaffected, unspecified availability
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Relatives:__ None"""
-        self.maxDiff = None
         self.assertListEqual(records, [
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N'},
