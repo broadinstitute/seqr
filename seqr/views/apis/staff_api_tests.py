@@ -613,7 +613,7 @@ class StaffAPITest(AuthenticationTestCase):
             '15-disease_description', '16-affected_status', '17-onset_category', '18-age_of_onset', '19-hpo_present',
             '20-hpo_absent', '21-phenotype_description', '22-solve_state']))
         self.assertIn(u'\t'.join([
-            'NA19675_1', 'NA19675_1', '-', u'1kg project n\xe5me with uni\xe7\xf8de', '-', 'Yes', 'dbgap_stady_id_1',
+            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
             'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
             'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
             'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
