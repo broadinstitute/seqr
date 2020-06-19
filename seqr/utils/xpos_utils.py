@@ -7,6 +7,8 @@ chr1, position 12345 is xpos  1000012345
 chrX, position 23552 is xpos 23000023552
 """
 
+from __future__ import unicode_literals
+
 CHROMOSOMES = [
     '1',
     '2',

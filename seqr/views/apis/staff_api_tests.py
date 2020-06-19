@@ -486,7 +486,7 @@ class StaffAPITest(AuthenticationTestCase):
         url = reverse(mme_details)
         self.check_staff_login(url)
 
-        mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 01)
+        mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 1)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
