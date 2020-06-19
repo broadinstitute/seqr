@@ -221,7 +221,6 @@ class IndividualAPITest(AuthenticationTestCase):
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.maxDiff = None
         self.assertDictEqual(response_json, {
             'uploadedFileId': mock.ANY,
             'errors': [],
@@ -293,20 +292,7 @@ class IndividualAPITest(AuthenticationTestCase):
         rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json, {
-            'uploadedFileId': mock.ANY,
-            'errors': [],
-            'warnings': [
-                # The first warning has a different individual order in Python 2 and 3.
-                # "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
-                mock.ANY,
-                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
-                'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
-            ],
-            'info': ['1 individuals will be updated'],
-        })
+        self._is_expected_hpo_upload(response)
 
     def test_hpo_json_table_handler(self):
         url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
