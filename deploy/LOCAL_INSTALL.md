@@ -129,10 +129,12 @@ gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - 
 mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
 gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh37.ht .
 
 mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh38
 cd ${SEQR_DIR}/data/seqr-reference-data/GRCh38
 gsutil -m cp -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-02.ht .
 ```
 
 Then run the following commands to annotate your callset and load it into elasticsearch:
@@ -150,8 +152,8 @@ docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeli
 
 # for GRCh38 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
-    --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.ht \
+    --reference-ht-path /seqr_reference_data/combined_reference_data_grch38.ht \
+    --clinvar-ht-path /seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-02.ht \
     --vep-config-json-path /vep85-GRCh38-loftee-gcloud.json \
     --es-host elasticsearch \
     --es-index-min-num-shards 3 \
@@ -159,12 +161,12 @@ python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
     --es-index your-dataset-name \
     --genome-version 38 \
     --source-paths gs://your-bucket/GRCh38/your-callset.vcf.gz \   # this can also be a path inside /input_vcfs/
-    --dest-path gs://your-bucket/GRCh38/your-callset.mt      # this can be a local or gs:// path where you have write access
+    --dest-path gs://your-bucket/GRCh38/your-callset.mt      # this can be a local path or gs:// path where you have write access
 
 # for GRCh37 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht \
-    --clinvar-ht-path gs://seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.ht \
+    --reference-ht-path /seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht \
+    --clinvar-ht-path /seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.ht \
     --vep-config-json-path /vep85-GRCh37-loftee-gcloud.json \
     --es-host elasticsearch \
     --es-index-min-num-shards 3 \
@@ -172,7 +174,7 @@ python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
     --es-index your-dataset-name \
     --genome-version 37 \
     --source-paths gs://your-bucket/GRCh37/your-callset.vcf.gz \   # this can also be a path inside /input_vcfs/
-    --dest-path gs://your-bucket/GRCh37/your-callset.mt      # this can be a local or gs:// path where you have write access
+    --dest-path gs://your-bucket/GRCh37/your-callset.mt      # this can be a local path or gs:// path where you have write access
 
 ```
 
