@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusList, LocusListInterval, LocusListGene, Family, GeneNote
-from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -17,7 +16,8 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
-from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, get_variant_key
+from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
+    get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -49,7 +49,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
     variants = list(response['savedVariantsByGuid'].values())
-    genes = _saved_variant_genes(variants)
+    genes = saved_variant_genes(variants)
     response['locusListsByGuid'] = _add_locus_lists([project], genes)
     discovery_tags = response.pop('discoveryTags', None)
     if discovery_tags:
@@ -345,21 +345,6 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant.save()
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
-
-
-def _saved_variant_genes(variants):
-    gene_ids = set()
-    for variant in variants:
-        if isinstance(variant, list):
-            for compound_het in variant:
-                gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
-        else:
-            gene_ids.update(list(variant.get('transcripts', {}).keys()))
-    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
-    for gene in genes.values():
-        if gene:
-            gene['locusListGuids'] = []
-    return genes
 
 
 def _add_locus_lists(projects, genes, include_all_lists=False):
