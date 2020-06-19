@@ -71,6 +71,7 @@ The steps below describe how to annotate a callset and then load it into your on
    # create dataproc cluster
    hailctl dataproc start \
        --pkgs luigi,google-api-python-client \
+       --zone us-central1-b \
        --vep GRCh38 \
        --max-idle 30m \
        --num-workers 2 \
