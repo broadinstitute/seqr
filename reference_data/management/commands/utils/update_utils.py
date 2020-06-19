@@ -69,8 +69,6 @@ def update_records(reference_data_handler, file_path=None):
     """
 
     if not file_path or not os.path.isfile(file_path):
-        if not reference_data_handler.url:
-            raise CommandError('Either file path or url is required')
         file_path = download_file(reference_data_handler.url)
 
     model_cls = reference_data_handler.model_cls
@@ -103,14 +101,6 @@ def update_records(reference_data_handler, file_path=None):
                     continue
 
                 models.append(model_cls(**record))
-
-            if reference_data_handler.batch_size and reference_data_handler.batch_size < len(models):
-                logger.info("Creating {} {} records".format(len(models), model_name))
-                model_objects.bulk_create(models)
-                models = []
-                # For large data like genexpression, need to explicitly garbage collect or the job will use
-                # too much memory and it will get killed
-                gc.collect()
 
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)

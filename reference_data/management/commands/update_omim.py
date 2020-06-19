@@ -124,14 +124,6 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
                 record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
                 record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
 
-                # basic checks
-                if len(record_with_phenotype["phenotype_description"].strip()) == 0:
-                    raise ValueError("Empty phenotype description: {}".format(json.dumps(record)))
-
-                if int(record_with_phenotype["phenotype_map_method"]) not in OMIM_PHENOTYPE_MAP_METHOD_CHOICES:
-                    raise ValueError("Unexpected value (%s) for phenotype_map_method: %s" % (
-                        record_with_phenotype["phenotype_map_method"], phenotype_field))
-
                 yield record_with_phenotype
 
             if record_with_phenotype is None:

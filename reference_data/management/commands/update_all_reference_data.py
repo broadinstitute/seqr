@@ -53,8 +53,6 @@ class Command(BaseCommand):
             updated.append('gencode')
 
         if not options["skip_omim"]:
-            if not options["omim_key"]:
-                raise CommandError("Please provide --omim-key or use --skip-omim")
             try:
                 update_records(OmimReferenceDataHandler(options["omim_key"]))
                 updated.append('omim')
