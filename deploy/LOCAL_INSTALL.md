@@ -104,7 +104,8 @@ The steps below describe how to annotate a callset and then load it into your on
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
-To annotate a callset on-prem, first download VEP reference data:
+To annotate a callset on-prem, first download VEP and other reference data. 
+If all your data is on GRCh38 (or GRCh37), then download the data only for that genome build.
 ```
 # authenticate to your gcloud account so you can download public reference data
 gcloud auth application-default login  
@@ -115,10 +116,23 @@ cd ${SEQR_DIR}/data/vep_data
 curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz | tar xzf - &   # for the VEP GRCh37 cache
 curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz | tar xzf - &   # for the VEP GRCh38 cache (can have both the GRCh37 and GRCh38 caches at the same time)
 
-#  - TODO share reference data in non-requestor-pays buckets
+#  download loftee reference data
 mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
 cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
-gsutil -u your-gcloud-project-name cat gs://hail-us-vep/loftee-beta/GRCh37.tar  | tar xf  - & 
+gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh37.tar | tar xf  - & 
+
+mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
+cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
+gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - & 
+
+# download full reference data set for GRCh37 and GRCh38 (requires ~500 Gb per reference genome)
+mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
+cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
+gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
+
+mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh38
+cd ${SEQR_DIR}/data/seqr-reference-data/GRCh38
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
 ```
 
 Then run the following commands to annotate your callset and load it into elasticsearch:
