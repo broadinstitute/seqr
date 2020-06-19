@@ -186,9 +186,10 @@ class IndividualAPITest(AuthenticationTestCase):
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    '.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [
-            "Error while converting test.tsv rows to json: Individual Id not specified in row #1:\n{u'familyId': u'1'}"
-        ], 'warnings': []})
+        self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
+        errors = response.json()['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].split('\n')[0],"Error while converting test.tsv rows to json: Individual Id not specified in row #1:")
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})
@@ -220,6 +221,7 @@ class IndividualAPITest(AuthenticationTestCase):
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        self.maxDiff = None
         self.assertDictEqual(response_json, {
             'uploadedFileId': mock.ANY,
             'errors': [],
