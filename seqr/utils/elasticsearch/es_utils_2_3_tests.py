@@ -1221,6 +1221,7 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
+        self.maxDiff = None
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):

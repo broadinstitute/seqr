@@ -216,7 +216,7 @@ class EsSearch(object):
 
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
-        if inheritance_mode in [RECESSIVE, COMPOUND_HET] and not has_previous_compound_hets:
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
             if secondary_dataset_type:
                 self.update_dataset_type(secondary_dataset_type, keep_previous=True)
             self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search)
