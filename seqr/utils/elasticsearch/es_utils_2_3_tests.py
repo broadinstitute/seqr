@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from copy import deepcopy
 import mock
 import jmespath
@@ -1192,6 +1194,9 @@ class EsUtilsTest(TestCase):
         }
 
         if expected_search_params['filters']:
+            for i in range(len(expected_search_params['filters'])):
+                if 'bool' in expected_search_params['filters'][i] and 'must' in expected_search_params['filters'][i]['bool']:
+                    expected_search_params['filters'][i]['bool']['must'] = mock.ANY
             expected_search['query'] = {
                 'bool': {
                     'filter': expected_search_params['filters']
@@ -1333,7 +1338,7 @@ class EsUtilsTest(TestCase):
         self.mock_es_client.indices.get_mapping.side_effect = lambda **kwargs: {}
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
+        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index, test_index_sv')
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
@@ -1527,14 +1532,14 @@ class EsUtilsTest(TestCase):
                         {'terms': {
                             'transcriptConsequenceTerms': [
                                 '5_prime_UTR_variant',
-                                'intergenic_variant',
-                                'inframe_insertion',
                                 'inframe_deletion',
+                                'inframe_insertion',
+                                'intergenic_variant',
                             ]
                         }},
                         {'terms': {
                             'clinvar_clinical_significance': [
-                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
+                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic'
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
@@ -1755,7 +1760,7 @@ class EsUtilsTest(TestCase):
 
         annotation_query = {'bool': {'should': [
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-            {'terms': {'transcriptConsequenceTerms': ['intron', 'frameshift_variant']}}]}}
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}]}}
 
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
@@ -2066,7 +2071,6 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
         self.assertEqual(total_results, 11)
-
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
@@ -2583,7 +2587,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, num_results=2)
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
-            annotation_query = {'terms': {'transcriptConsequenceTerms': [annotations.values()[0][0]]}}
+            annotation_query = {'terms': {'transcriptConsequenceTerms': [next(iter(annotations.values()))[0]]}}
             if expected_comp_het_filter:
                 self.assertExecutedSearches([
                     dict(sort=['xpos'], gene_aggs=True, start_index=0, size=1, index=index, filters=[

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from collections import defaultdict
 import logging
 
@@ -12,9 +14,11 @@ class EsGeneAggSearch(EsSearch):
     CACHED_COUNTS_KEY = None
 
     def aggregate_by_gene(self):
-        searches = {self._search}
+        searches = [self._search]
         for index_searches in self._index_searches.values():
-            searches.update(index_searches)
+            for index_search in index_searches:
+                if index_search not in searches:
+                    searches.append(index_search)
 
         for search in searches:
             agg = search.aggs.bucket(
@@ -88,8 +92,8 @@ class EsGeneAggSearch(EsSearch):
         loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
                                self.previous_search_results.get('compound_het_results', [])
         for group in loaded_compound_hets:
-            variants = group.values()[0]
-            gene_id = group.keys()[0]
+            variants = next(iter(group.values()))
+            gene_id = next(iter(group))
             if gene_id and gene_id != 'null':
                 gene_counts[gene_id]['total'] += len(variants)
                 for family_guid in variants[0]['familyGuids']:
@@ -119,8 +123,8 @@ class EsGeneAggSearch(EsSearch):
                 loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
                 if loaded == total_results:
                     for group in previous_search_results['grouped_results']:
-                        variants = group.values()[0]
-                        gene_id = group.keys()[0]
+                        variants = next(iter(group.values()))
+                        gene_id = next(iter(group))
                         if not gene_id or gene_id == 'null':
                             gene_id = next((
                                 gene_id for gene_id, transcripts in variants[0]['transcripts'].items()

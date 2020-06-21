@@ -7,7 +7,7 @@ import mock
 from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
-from seqr.utils.elasticsearch.es_utils_tests import PARSED_VARIANTS
+from seqr.utils.elasticsearch.es_utils_2_3_tests import PARSED_VARIANTS
 from seqr.models import SavedVariant
 
 SAVED_VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
