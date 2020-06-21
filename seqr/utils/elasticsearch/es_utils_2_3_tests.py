@@ -1197,6 +1197,8 @@ class EsUtilsTest(TestCase):
             for i in range(len(expected_search_params['filters'])):
                 if 'bool' in expected_search_params['filters'][i] and 'must' in expected_search_params['filters'][i]['bool']:
                     expected_search_params['filters'][i]['bool']['must'] = mock.ANY
+                if 'bool' in expected_search_params['filters'][i] and 'should' in expected_search_params['filters'][i]['bool']:
+                    expected_search_params['filters'][i]['bool']['should'] = mock.ANY
             expected_search['query'] = {
                 'bool': {
                     'filter': expected_search_params['filters']
@@ -1221,7 +1223,6 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        self.maxDiff = None
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
