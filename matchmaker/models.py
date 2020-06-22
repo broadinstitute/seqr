@@ -28,6 +28,7 @@ class MatchmakerSubmission(ModelWithGUID):
         return '{}_submission_{}'.format(str(self.individual), self.id)
 
     def __str__(self):
+        """str()/%s magic function"""
         return '{}_submission_{}'.format(str(self.individual), self.id)
 
     def _compute_guid(self):
@@ -47,6 +48,7 @@ class MatchmakerIncomingQuery(ModelWithGUID):
         return '{}_{}_query'.format(self.patient_id or self.id, self.institution)
 
     def __str__(self):
+        """str()/%s magic function"""
         return '{}_{}_query'.format(self.patient_id or self.id, self.institution)
 
     def _compute_guid(self):
@@ -74,6 +76,7 @@ class MatchmakerResult(ModelWithGUID):
         return '{}_{}_result'.format(self.id, str(self.submission))
 
     def __str__(self):
+        """str()/%s magic function"""
         return '{}_{}_result'.format(self.id, str(self.submission))
 
     def _compute_guid(self):
@@ -94,6 +97,7 @@ class MatchmakerContactNotes(ModelWithGUID):
         return '{}_{}_contact'.format(self.id, self.institution)
 
     def __str__(self):
+        """str()/%s magic function"""
         return '{}_{}_contact'.format(self.id, self.institution)
 
     def _compute_guid(self):
