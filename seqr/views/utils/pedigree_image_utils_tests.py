@@ -17,7 +17,7 @@ class PedigreeImageTest(TestCase):
     @mock.patch('seqr.views.utils.pedigree_image_utils.os.system')
     @mock.patch('seqr.views.utils.pedigree_image_utils.tempfile')
     def test_update_pedigree_images(self, mock_tempfile, mock_os_system, mock_randint):
-        mock_tempfile.gettempdir.return_value = '/test'
+        mock_tempfile.gettempdir.return_value = '/tmp'
         mock_tempfile_file = mock_tempfile.NamedTemporaryFile.return_value.__enter__.return_value
         mock_tempfile_file.name = 'temp.fam'
         mock_randint.return_value = 123456
@@ -35,7 +35,7 @@ class PedigreeImageTest(TestCase):
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
         os.remove(pedigree_image.path)
         mock_os_system.assert_called_with(
-            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /test/pedigree_image_123456.png'
+            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /tmp/pedigree_image_123456.png'
         )
 
         mock_tempfile_file.write.assert_has_calls([
@@ -59,7 +59,7 @@ class PedigreeImageTest(TestCase):
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
         os.remove(pedigree_image.path)
         mock_os_system.assert_called_with(
-            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /test/pedigree_image_123456.png'
+            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /tmp/pedigree_image_123456.png'
         )
         mock_tempfile_file.write.assert_has_calls([
             mock.call('\t'.join(['1', 'NA19675_1', 'placeholder_123456', 'NA19679', '1', '2'])),
