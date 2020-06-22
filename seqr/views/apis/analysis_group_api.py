@@ -43,14 +43,13 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
         analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
         update_model_from_json(analysis_group, request_json, allow_unknown_keys=True)
     else:
-        try:
-            analysis_group = AnalysisGroup.objects.create(
-                project=project,
-                name=request_json['name'],
-                description=request_json.get('description'),
-                created_by=request.user,
-            )
-        except IntegrityError:
+        analysis_group, created = AnalysisGroup.objects.get_or_create(
+            project=project,
+            name=request_json['name'],
+            description=request_json.get('description'),
+            created_by=request.user,
+        )
+        if not created:
             return create_json_response(
                 {}, status=400, reason='An analysis group named "{name}" already exists for project "{project}"'.format(
                     name=request_json['name'], project=project.name
