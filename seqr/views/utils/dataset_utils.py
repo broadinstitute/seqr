@@ -64,11 +64,6 @@ def load_mapping_file(mapping_file_path):
     return _load_mapping_file(file_content)
 
 
-def load_uploaded_mapping_file(mapping_file_id):
-    file_content = load_uploaded_file(mapping_file_id)
-    return _load_mapping_file(file_content)
-
-
 def _load_mapping_file(file_content):
     id_mapping = {}
     for line in file_content:
@@ -177,9 +172,6 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
     """
-
-    if len(sample_ids) == 0:
-        return {}
 
     sample_id_to_sample_record = {}
     sample_query = Sample.objects.select_related('individual').filter(

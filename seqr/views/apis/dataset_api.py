@@ -117,9 +117,6 @@ def add_variants_dataset_handler(request, project_guid):
         traceback.print_exc()
         return create_json_response({'errors': [str(e)]}, status=400)
 
-    if not matched_sample_id_to_sample_record:
-        return create_json_response({'samplesByGuid': {}})
-
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
     ]
