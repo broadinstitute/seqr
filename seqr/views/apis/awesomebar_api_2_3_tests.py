@@ -13,6 +13,10 @@ class AwesomebarAPITest(AuthenticationTestCase):
         url = reverse(awesomebar_autocomplete_handler)
         self.check_require_login(url)
 
+        response = self.client.get(url + "?q=")
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'matches': {}})
+
         response = self.client.get(url+"?q=1")
         self.assertEqual(response.status_code, 200)
         # No objects returned as user has no access

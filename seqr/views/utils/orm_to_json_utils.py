@@ -56,10 +56,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
             if not field_value:
                 field_value = model
                 for field in nested_field['fields']:
-                    try:
-                        field_value = getattr(field_value, field) if field_value else None
-                    except ObjectDoesNotExist:
-                        field_value = None
+                    field_value = getattr(field_value, field) if field_value else None
 
             result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
 

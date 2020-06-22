@@ -1032,6 +1032,19 @@
     }
 },
     {
+    "model": "reference_data.geneconstraint",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "mis_z": -0.7773,
+        "mis_z_rank": 1,
+        "louef": 1.606,
+        "louef_rank": 0,
+        "pLI": 0.00090576,
+        "pLI_rank": 1
+    }
+},
+    {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,
     "fields": {
