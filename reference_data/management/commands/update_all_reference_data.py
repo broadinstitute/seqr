@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo

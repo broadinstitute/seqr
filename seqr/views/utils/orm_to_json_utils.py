@@ -8,7 +8,6 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 

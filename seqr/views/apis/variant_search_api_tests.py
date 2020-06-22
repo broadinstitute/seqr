@@ -10,7 +10,7 @@ from seqr.utils.elasticsearch.utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
-from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, SINGLE_VARIANT
+from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'

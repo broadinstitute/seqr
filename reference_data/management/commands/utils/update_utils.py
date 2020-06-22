@@ -1,5 +1,4 @@
 import logging
-import gc
 import os
 import gzip
 from tqdm import tqdm

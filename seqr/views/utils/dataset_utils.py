@@ -6,7 +6,7 @@ import random
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
-from seqr.views.utils.file_utils import load_uploaded_file, parse_file
+from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
 
