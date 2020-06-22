@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import mock
 import json
 
@@ -73,11 +75,17 @@ class ExternalAPITest(TestCase):
 
         response = self._make_mme_request(url, 'post')
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': 'No JSON object could be decoded'})
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['message'])
+        self.assertIn(response_json['message'], ['No JSON object could be decoded',
+                                                 'Expecting value: line 1 column 1 (char 0)'])
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data='Invalid body')
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': 'No JSON object could be decoded'})
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['message'])
+        self.assertIn(response_json['message'], ['No JSON object could be decoded',
+                                                 'Expecting value: line 1 column 1 (char 0)'])
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -202,7 +210,7 @@ class ExternalAPITest(TestCase):
 
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 1)
 
-        message_template = u"""Dear collaborators,
+        message_template = """Dear collaborators,
 
     matchbox found a match between a patient from Test Institute and the following 2 case(s) 
     in matchbox. The following information was included with the query,
@@ -221,11 +229,11 @@ class ExternalAPITest(TestCase):
 Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
 Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
 be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
-        match1 = u'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
+        match1 = 'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
         match2 = 'seqr ID NA20888 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
-            matches=u'{}\n{}'.format(match1, match2),
+            matches='{}\n{}'.format(match1, match2),
             emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org, test_user@broadinstitute.org'
         ))
 

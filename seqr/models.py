@@ -459,6 +459,9 @@ class Individual(ModelWithGUID):
     def __unicode__(self):
         return self.individual_id.strip()
 
+    def __str__(self):
+        return self.individual_id.strip()
+
     def _compute_guid(self):
         return 'I%07d_%s' % (self.id, _slugify(str(self)))
 
