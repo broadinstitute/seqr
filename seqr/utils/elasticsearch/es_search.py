@@ -70,7 +70,7 @@ class EsSearch(object):
 
         if len(self.samples_by_family_index) != len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
-                ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys())))
+                ', '.join(set(self._indices) - set(self.index_metadata.keys()))
             ))
 
         self.indices_by_dataset_type = defaultdict(list)
@@ -208,11 +208,7 @@ class EsSearch(object):
             for index in self._indices:
                 family_samples_by_id = self.samples_by_family_index[index]
                 affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                for family_guid in affected_status:
-                    if family_guid in self._family_individual_affected_status:
-                        self._family_individual_affected_status[family_guid].update(affected_status[family_guid])
-                    else:
-                        self._family_individual_affected_status[family_guid] = affected_status[family_guid]
+                self._family_individual_affected_status.update(affected_status)
 
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
@@ -298,7 +294,7 @@ class EsSearch(object):
                 self._index_searches[index].append(self._search)
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
-        indices = self._indices
+        indices = sorted(set(self._indices), reverse = True)
 
         paired_index_families = defaultdict(dict)
         if len(indices) > 1:

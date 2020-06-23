@@ -16,9 +16,7 @@ class EsGeneAggSearch(EsSearch):
     def aggregate_by_gene(self):
         searches = [self._search]
         for index_searches in self._index_searches.values():
-            for index_search in index_searches:
-                if index_search not in searches:
-                    searches.append(index_search)
+            searches = searches + [index_search for index_search in index_searches if index_search not in searches]
 
         for search in searches:
             agg = search.aggs.bucket(
