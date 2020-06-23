@@ -39,6 +39,9 @@ class AuthenticationTestCase(TestCase):
     def check_staff_login(self, url):
         self._check_login(url, self.STAFF)
 
+    def login_base_user(self):
+        self.client.force_login(self.no_access_user)
+
     def login_collaborator(self):
         self.client.force_login(self.collaborator_user)
 

@@ -22,7 +22,7 @@ from seqr.utils.xpos_utils import get_chrom_pos
 
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
-from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -30,6 +30,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_js
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
     get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions, \
     get_json_for_saved_variants_with_tags
+from seqr.views.utils.variant_utils import saved_variant_genes
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
@@ -1236,7 +1237,7 @@ def saved_variants_page(request, tag):
     individuals = Individual.objects.filter(family__in=families)
 
     saved_variants = response_json['savedVariantsByGuid'].values()
-    genes = _saved_variant_genes(saved_variants)
+    genes = saved_variant_genes(saved_variants)
     locus_lists_by_guid = _add_locus_lists(project_models_by_guid.values(), genes, include_all_lists=True)
 
     projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)

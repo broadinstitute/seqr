@@ -25,6 +25,11 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
         self.check_staff_login(url)
 
+        # send invalid request
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, "'families' not specified")
+
         # send request with a "families" attribute
         req_values = {
             'families': [
@@ -155,14 +160,31 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
         self.check_staff_login(url)
 
-        # send request with a "families" attribute
-        data = b'Family ID	Display Name	Description	Coded Phenotype\n\
-"1"	"1"	"family one description"	""\n\
-"2"	"2"	"family two description"	""'
+        # send invalid request
+        data = b'Description	Coded Phenotype\n\
+        "family one description"	""\n\
+        "family two description"	""'
+        response = self.client.post(url, {'f': SimpleUploadedFile("1000_genomes demo_families.tsv", data)})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid header, missing family id column')
+        self.assertDictEqual(response.json(), {
+            'errors': ['Invalid header, missing family id column'], 'warnings': []})
 
-        f = SimpleUploadedFile("1000_genomes demo_families.tsv", data)
+        data = b'Family ID	Previous Family ID	Display Name	Description	Coded Phenotype\n\
+        "1_renamed"	"1_old"	"1"	"family one description"	""\n\
+        "2"	""	"2"	"family two description"	""'
+        response = self.client.post(url, {'f': SimpleUploadedFile("1000_genomes demo_families.tsv", data)})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid input')
+        self.assertDictEqual(response.json(), {
+            'errors': ['Could not find families with the following previous IDs: 1_old'], 'warnings': []})
 
-        response = self.client.post(url, {'f': f})
+        # send valid request
+        data = b'Family ID	Previous Family ID	Display Name	Description	Coded Phenotype\n\
+"1_renamed"	"1"	"1"	"family one description"	""\n\
+"2"	""	"2"	"family two description"	""'
+
+        response = self.client.post(url, {'f': SimpleUploadedFile("1000_genomes demo_families.tsv", data)})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
@@ -177,5 +199,9 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertListEqual(response_json.keys(), ['familiesByGuid'])
         self.assertListEqual(response_json['familiesByGuid'].keys(), [FAMILY_GUID2, FAMILY_GUID])
-        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'family one description')
-        self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID2]['description'], 'family two description')
+        family_1 = response_json['familiesByGuid'][FAMILY_GUID]
+        self.assertEqual(family_1['description'], 'family one description')
+        self.assertEqual(family_1['familyId'], '1_renamed')
+        family_2 = response_json['familiesByGuid'][FAMILY_GUID2]
+        self.assertEqual(family_2['description'], 'family two description')
+        self.assertEqual(family_2['familyId'], '2')

@@ -27,7 +27,8 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
     """
     for i, row in enumerate(rows):
         if len(header) != len(row):
-            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
+            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (
+                len(header), len(row), ','.join(header), ','.join(row)))
         rows[i] = ['' if value is None else value for value in row]
 
     if file_format == "tsv":

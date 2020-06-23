@@ -1402,10 +1402,10 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
 
         # Test invalid locations
-        search_model.search['locus'] = {'rawItems': 'chr27:1234-5678', 'rawVariantItems': 'chr2-A-C'}
+        search_model.search['locus'] = {'rawItems': 'chr27:1234-5678, ENSG00012345', 'rawVariantItems': 'chr2-A-C'}
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678')
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, ENSG00012345')
 
         search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678'
         with self.assertRaises(Exception) as cm:

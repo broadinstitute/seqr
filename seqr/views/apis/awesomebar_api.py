@@ -210,8 +210,6 @@ def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
 
     query = request.GET.get('q')
-    if query is None:
-        raise ValueError("missing ?q=<prefix> url arg")
     if not query:
         return create_json_response({'matches': {}})
 

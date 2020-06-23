@@ -339,9 +339,6 @@ def _create_project(name, description=None, genome_version=None, user=None):
         description (string): optional description
         user (object): Django user that is creating this project
     """
-    if not name:
-        raise ValueError("Name not specified: %s" % (name,))
-
     project_args = {
         'name': name,
         'description': description,
