@@ -460,7 +460,7 @@ class Individual(ModelWithGUID):
         return self.individual_id.strip()
 
     def __str__(self):
-        """str()/%s magic function"""
+        """Magic function for 'str()' and '%s'."""
         return self.individual_id.strip()
 
     def _compute_guid(self):
