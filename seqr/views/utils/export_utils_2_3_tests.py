@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from builtins import str
 
 from django.test import TestCase
 
@@ -43,7 +44,7 @@ class ExportTableUtilsTest(TestCase):
 
         with self.assertRaises(ValueError) as cm:
             export_table('test_file', ['column1'], rows)
-        self.assertEqual(str(cm.exception), 'len(header) != len(row): 1 != 2\ncolumn1\nrow1_v1,row1_v2')
+        self.assertEqual(str(cm.exception), 'len(header) != len(row): 1 != 2\ncolumn1\nrow1_v1\xe2,row1_v2')
 
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     def test_export_multiple_files(self, mock_zip):

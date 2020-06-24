@@ -36,9 +36,8 @@ class PedigreeInfoUtilsTest(TestCase):
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME)
         self.assertListEqual(records, [])
-        self.assertIn(
-            errors[0], ["Error while converting {} rows to json: Individual Id not specified in row #1:\n{{'familyId': 'fam1', 'individualId': '', 'sex': 'male', 'affected': 'u', 'paternalId': '', 'maternalId': 'ind2'}}".format(FILENAME),
-                     "Error while converting {} rows to json: Individual Id not specified in row #1:\n{{u'affected': u'u', u'maternalId': u'ind2', u'individualId': u'', u'sex': u'male', u'familyId': u'fam1', u'paternalId': u''}}".format(FILENAME)])
+        self.assertEqual(
+            errors[0].split('\n')[0], "Error while converting {} rows to json: Individual Id not specified in row #1:".format(FILENAME))
         self.assertListEqual(warnings, [])
 
         records, errors, warnings = parse_pedigree_table(
