@@ -199,8 +199,8 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), ['familiesByGuid'])
-        self.assertListEqual(response_json['familiesByGuid'].keys(), [FAMILY_GUID2, FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), ['familiesByGuid'])
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {FAMILY_GUID2, FAMILY_GUID})
         family_1 = response_json['familiesByGuid'][FAMILY_GUID]
         self.assertEqual(family_1['description'], 'family one description')
         self.assertEqual(family_1['familyId'], '1_renamed')
