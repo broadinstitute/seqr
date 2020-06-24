@@ -613,7 +613,7 @@ def _parse_individual_hpo_terms(json_records, project):
     if invalid_hpo_term_individuals:
         warnings.append(
             "The following HPO terms were not found in seqr's HPO data and will not be added: {}".format(
-                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in invalid_hpo_term_individuals.items()])
+                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in sorted(invalid_hpo_term_individuals.items())])
             )
         )
     if missing_individuals:

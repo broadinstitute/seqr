@@ -225,9 +225,7 @@ class IndividualAPITest(AuthenticationTestCase):
             'uploadedFileId': mock.ANY,
             'errors': [],
             'warnings': [
-                # The order of the individual list in the first warning message can change.
-                # "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
-                mock.ANY,
+                "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0004322 (NA19675_1); HP:0100258 (NA19679)",
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ],
