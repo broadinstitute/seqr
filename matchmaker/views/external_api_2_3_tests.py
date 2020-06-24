@@ -77,15 +77,13 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['message'])
-        self.assertIn(response_json['message'], ['No JSON object could be decoded',
-                                                 'Expecting value: line 1 column 1 (char 0)'])
+        self.assertEqual(response_json['message'], 'JSON object could not be decoded')
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data='Invalid body')
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['message'])
-        self.assertIn(response_json['message'], ['No JSON object could be decoded',
-                                                 'Expecting value: line 1 column 1 (char 0)'])
+        self.assertEqual(response_json['message'], 'JSON object could not be decoded')
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)

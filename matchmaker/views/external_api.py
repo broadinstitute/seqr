@@ -72,6 +72,9 @@ def mme_match_proxy(request, originating_node_name):
 
     try:
         query_patient_data = json.loads(request.body)
+    except Exception:
+        return create_json_response({'message': 'JSON object could not be decoded'}, status = 400)
+    try:
         _validate_patient_data(query_patient_data)
     except Exception as e:
         return create_json_response({'message': str(e)}, status=400)
