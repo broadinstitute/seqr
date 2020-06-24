@@ -11,7 +11,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
-from reference_data.models import Omim
+from reference_data.models import Omim, GeneInfo
 
 OMIM_DATA = [
     '# Copyright (c) 1966-2020 Johns Hopkins University. Use of this file adheres to the terms specified at https://omim.org/help/agreement.\n',
@@ -108,18 +108,21 @@ class UpdateOmimTest(TestCase):
             call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(ve.exception), 'Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
-        # Test empty phenotype description, not reachable
-        # Test invalid phenotype map method choice, not reachable
-
         # Test bad phenotype field in the record
         with open(temp_bad_file_path, 'w') as f:
             f.write(''.join(OMIM_DATA[:2]))
-            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	bad_phenotype_field	\n')
+            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
         mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
         record = json.loads(re.search(r'No phenotypes found: ({.*})', str(ve.exception)).group(1))
-        self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "bad_phenotype_field", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
+        self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
+
+        GeneInfo.objects.all().delete()
+        with self.assertRaises(CommandError) as ve:
+            call_command('update_omim', '--omim-key=test_key', self.temp_file_path)
+        self.assertEqual(str(ve.exception), "GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
+
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')

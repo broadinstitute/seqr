@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
@@ -53,8 +53,6 @@ class Command(BaseCommand):
             updated.append('gencode')
 
         if not options["skip_omim"]:
-            if not options["omim_key"]:
-                raise CommandError("Please provide --omim-key or use --skip-omim")
             try:
                 update_records(OmimReferenceDataHandler(options["omim_key"]))
                 updated.append('omim')

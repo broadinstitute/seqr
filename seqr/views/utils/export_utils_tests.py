@@ -34,10 +34,14 @@ class ExportTableUtilsTest(TestCase):
         self.assertListEqual([cell.value for cell in worksheet['B']], ['Column2', 'row1_v2', 'row2_v2'])
         self.assertEqual([cell.value for cell in worksheet['C']], [None, None, None])
 
-        # test unknown format
-        self.assertRaisesRegexp(ValueError, '.*format.*',
-            lambda: export_table('test_file', header, rows, file_format='unknown_format')
-        )
+        # test invalid input
+        with self.assertRaises(ValueError) as cm:
+            export_table('test_file', header, rows, file_format='unknown_format')
+        self.assertEqual(str(cm.exception), 'Invalid file_format: unknown_format')
+
+        with self.assertRaises(ValueError) as cm:
+            export_table('test_file', ['column1'], rows)
+        self.assertEqual(str(cm.exception), 'len(header) != len(row): 1 != 2\ncolumn1\nrow1_v1,row1_v2')
 
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     def test_export_multiple_files(self, mock_zip):

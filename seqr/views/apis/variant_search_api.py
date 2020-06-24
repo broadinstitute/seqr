@@ -4,7 +4,6 @@ from collections import defaultdict
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
-from django.db import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
@@ -17,7 +16,7 @@ from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_varian
     InvalidIndexException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -34,7 +33,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
-from seqr.views.utils.variant_utils import get_variant_key
+from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -140,7 +139,7 @@ def _process_variants(variants, families, user):
         return {'searchedVariants': variants}
 
     prefetch_related_objects(families, 'project')
-    genes = _saved_variant_genes(variants)
+    genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
     response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)

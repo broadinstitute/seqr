@@ -43,7 +43,7 @@ class UpdateGeneConstraintTest(TestCase):
         mock_download.assert_called_with('http://storage.googleapis.com/seqr-reference-data/gene_constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
         calls = [
-            mock.call('Deleting 0 existing GeneConstraint records'),
+            mock.call('Deleting 1 existing GeneConstraint records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 GeneConstraint records'),
             mock.call('Done'),

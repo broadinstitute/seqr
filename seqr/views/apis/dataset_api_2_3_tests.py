@@ -126,6 +126,27 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1, NA19678).']})
 
+        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
+            {'key': 'NA19673'}
+        ]
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': INDEX_NAME,
+            'datasetType': 'VARIANTS',
+            'ignoreExtraSamplesInCallset': True,
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': [
+            'None of the individuals or samples in the project matched the 1 expected sample id(s)']})
+
+        mock_file_iter.return_value = StringIO('NA19678_1,NA19678,metadata\n')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': INDEX_NAME,
+            'mappingFilePath': 'mapping.csv',
+            'datasetType': 'VARIANTS',
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
+
         # Send valid request
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
             {'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'},

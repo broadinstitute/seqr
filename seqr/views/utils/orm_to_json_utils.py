@@ -8,7 +8,6 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
@@ -56,10 +55,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
             if not field_value:
                 field_value = model
                 for field in nested_field['fields']:
-                    try:
-                        field_value = getattr(field_value, field) if field_value else None
-                    except ObjectDoesNotExist:
-                        field_value = None
+                    field_value = getattr(field_value, field) if field_value else None
 
             result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
 

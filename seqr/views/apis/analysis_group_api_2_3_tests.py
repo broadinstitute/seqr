@@ -48,6 +48,13 @@ class AnalysisGroupAPITest(AuthenticationTestCase):
         self.assertEqual(new_analysis_group_model.families.count(), 2)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {family.guid for family in new_analysis_group_model.families.all()})
 
+        # re-creating the analysis group fails
+        response = self.client.post(create_analysis_group_url, content_type='application/json', data=json.dumps({
+            'name': 'new_analysis_group', 'familyGuids': ['F000001_1', 'F000002_2']
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'An analysis group named "new_analysis_group" already exists for project "1kg project n\xe5me with uni\xe7\xf8de"')
+
         # update the analysis_group
         update_analysis_group_url = reverse(update_analysis_group_handler, args=[PROJECT_GUID, guid])
         response = self.client.post(update_analysis_group_url, content_type='application/json',  data=json.dumps(

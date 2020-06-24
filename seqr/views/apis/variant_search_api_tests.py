@@ -45,6 +45,12 @@ def _get_empty_es_variants(results_model, **kwargs):
     return [], 0
 
 
+COMP_HET_VARAINTS = [[VARIANTS[2], VARIANTS[1]]]
+def _get_compound_het_es_variants(results_model, **kwargs):
+    results_model.save()
+    return deepcopy(COMP_HET_VARAINTS), 1
+
+
 class VariantSearchAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
     multi_db = True
@@ -169,8 +175,29 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
 
+        # Test compound hets
+        mock_get_variants.side_effect = _get_compound_het_es_variants
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+            'variantFunctionalDataByGuid', 'locusListsByGuid'})
+        self.assertListEqual(response_json['searchedVariants'], COMP_HET_VARAINTS)
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000002_1248367227_r0390_100'}
+        )
+        self.assertSetEqual(
+            set(response_json['genesById'].keys()),
+            {'ENSG00000233653'}
+        )
+
         # Test cross-project discovery for staff users
         self.login_staff_user()
+        mock_get_variants.side_effect = _get_es_variants
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

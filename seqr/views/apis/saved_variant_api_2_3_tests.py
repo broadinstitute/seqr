@@ -433,10 +433,18 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
-        create_compound_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
-        self.check_collaborator_login(create_compound_hets_variant_note_url, request_data={'familyGuid': 'F000001_1'})
+        create_comp_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
+        self.check_collaborator_login(create_comp_hets_variant_note_url, request_data={'familyGuid': 'F000001_1'})
+        
+        invalid_comp_hets_variant_note_url = reverse(
+            create_variant_note_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
+        response = self.client.post(invalid_comp_hets_variant_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'new_compound_hets_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
+        ))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
-        response = self.client.post(create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps(
+        response = self.client.post(create_comp_hets_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'new_compound_hets_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
         ))
 
@@ -475,7 +483,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
         # save variant_note as gene_note for both compound hets
         response = self.client.post(
-            create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps({
+            create_comp_hets_variant_note_url, content_type='application/json', data=json.dumps({
                 'note': 'new_compound_hets_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'
             }))
         self.assertEqual(response.status_code, 200)
@@ -493,7 +501,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         )
         new_gene_note_response = response.json()['genesById'][GENE_GUID_2]['notes'][0]
         self.assertEqual(new_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
-        
+
         # delete the variant_note for both compound hets
         delete_variant_note_url = reverse(delete_variant_note_handler,
                                           args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
@@ -636,6 +644,14 @@ class SavedVariantAPITest(AuthenticationTestCase):
             {vt.variant_tag_type.name for vt in VariantTag.objects.filter(
                 saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
 
+        invalid_url = reverse(update_variant_tags_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
+        response = self.client.post(invalid_url, content_type='application/json', data=json.dumps({
+            'tags': [{'name': 'Review'}, {'name': 'Excluded'}],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
+
     def test_update_compound_hets_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(
             saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
@@ -672,6 +688,14 @@ class SavedVariantAPITest(AuthenticationTestCase):
             {"Biochemical Function", "Bonferroni corrected p-value"},
             {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
+
+        invalid_url = reverse(update_variant_functional_data_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
+        response = self.client.post(invalid_url, content_type='application/json', data=json.dumps({
+            'functionalData': [],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
     @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
     def test_update_saved_variant_json(self, mock_get_variants):

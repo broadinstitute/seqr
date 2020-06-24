@@ -3,6 +3,7 @@ import mock
 from django.utils.dateparse import parse_datetime
 import pytz
 from datetime import datetime
+from requests import HTTPError
 import responses
 from settings import AIRTABLE_URL
 import json
@@ -792,6 +793,7 @@ class StaffAPITest(AuthenticationTestCase):
         proxy_url = 'http://localhost:5601{}'.format(url)
         responses.add(responses.GET, proxy_url, status=200, **response_args)
         responses.add(responses.POST, proxy_url, status=201, **response_args)
+        responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
 
         response = self.client.get(url, HTTP_TEST_HEADER='some/value')
         self.assertEqual(response.status_code, 200)
@@ -815,6 +817,10 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '24')
         self.assertEqual(post_request.body, data)
+
+        # Test with error response
+        response = self.client.get('{}/bad_response'.format(url))
+        self.assertEqual(response.status_code, 500)
 
         # Test with connection error
         response = self.client.get('{}/bad_path'.format(url))

@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import json
 import mock
 
+from anymail.exceptions import AnymailError
 from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls.base import reverse
@@ -33,6 +34,27 @@ class UsersAPITest(AuthenticationTestCase):
             {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id'}
         )
         self.assertTrue(first_staff_user['isStaff'])
+
+    def test_get_all_collaborators(self):
+        url = reverse(get_all_collaborators)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json().keys()), [])
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json().keys()), {'test_user_manager', 'test_user_non_staff'})
+
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json().keys()), {
+            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user'})
+
+
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
@@ -168,6 +190,13 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'This user already exists')
 
+        # Test email failure
+        mock_send_mail.side_effect = AnymailError('Connection err')
+        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
+            'email': 'test_staff_new@test.com'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Connection err')
+
     def test_set_password(self):
         username = 'test_new_user'
         user = User.objects.create_user(username)
@@ -225,4 +254,12 @@ class UsersAPITest(AuthenticationTestCase):
             ['test_user@test.com'],
             fail_silently=False,
         )
+
+        # Test email failure
+        mock_send_mail.side_effect = AnymailError('Connection err')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_user@test.com'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Connection err')
 
