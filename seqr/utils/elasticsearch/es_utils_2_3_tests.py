@@ -799,17 +799,16 @@ MOCK_LIFTOVERS['hg19'].convert_coordinate.side_effect = lambda chrom, pos: [[chr
 
 
 def sort_array(a):
-    sd={str(d):d for d in a}
-    return [sd[i] for i in sorted(sd.keys())]
+    sd={str(d): d for d in a}
+    return [sd[key] for key in sorted(sd.keys())]
 
-def sort_search(filter):
-    if isinstance(filter, dict):
-        new_filter={str(key): sort_search(filter[key]) for key in sorted(filter.keys())}
-    elif isinstance(filter, list):
-        new_filter= sort_array([sort_search(filter[i]) for i in range(len(filter))])
+def sort_filter(obj):
+    if isinstance(obj, dict):
+        return {str(key): sort_filter(obj[key]) for key in sorted(obj.keys())}
+    elif isinstance(obj, list):
+        return sort_array([sort_filter(obj[i]) for i in range(len(obj))])
     else:
-        new_filter = filter
-    return new_filter
+        return obj
 
 def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
     parsed_hits = deepcopy(hits)
@@ -955,13 +954,11 @@ class EsUtilsTest(TestCase):
         if expected_search_params['filters']:
             expected_search['query'] = {
                 'bool': {
-                    'filter': sort_search(expected_search_params['filters'])
+                    'filter': sort_filter(expected_search_params['filters'])
                 }
             }
-            if 'query' in executed_search and 'bool' in executed_search['query'] and \
-                'filter' in executed_search['query']['bool'] and \
-                isinstance(executed_search['query']['bool']['filter'], list):
-                executed_search ['query']['bool']['filter'] = sort_search(executed_search ['query']['bool']['filter'])
+            if 'query' in executed_search and 'bool' in executed_search['query'] and 'filter' in executed_search['query']['bool'] :
+                executed_search['query']['bool']['filter'] = sort_filter(executed_search['query']['bool']['filter'])
 
         if expected_search_params.get('sort'):
             expected_search['sort'] = expected_search_params['sort']
