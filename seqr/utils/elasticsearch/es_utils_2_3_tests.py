@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+from builtins import str
 
 from copy import deepcopy
 import mock
@@ -723,24 +724,6 @@ RECESSIVE_INHERITANCE_QUERY = {
     'bool': {
         'should': [
             {'bool': {
-                '_name': 'F000003_3',
-                'must': [
-                    {'bool': {
-                        'should': [
-                            {'bool': {'must': [
-                                {'match': {'contig': 'X'}},
-                                {'term': {'samples_num_alt_2': 'NA20870'}}
-                            ]}},
-                            {'term': {'samples_num_alt_2': 'NA20870'}},
-                        ]
-                    }},
-                    {'bool': {'must_not': [
-                        {'term': {'samples_gq_0_to_5': 'NA20870'}},
-                        {'term': {'samples_gq_5_to_10': 'NA20870'}}
-                    ]}}
-                ]
-            }},
-            {'bool': {
                 '_name': 'F000002_2',
                 'must': [
                     {'bool': {
@@ -776,6 +759,24 @@ RECESSIVE_INHERITANCE_QUERY = {
                     ]}},
                 ]
             }},
+            {'bool': {
+                '_name': 'F000003_3',
+                'must': [
+                    {'bool': {
+                        'should': [
+                            {'bool': {'must': [
+                                {'match': {'contig': 'X'}},
+                                {'term': {'samples_num_alt_2': 'NA20870'}}
+                            ]}},
+                            {'term': {'samples_num_alt_2': 'NA20870'}},
+                        ]
+                    }},
+                    {'bool': {'must_not': [
+                        {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                        {'term': {'samples_gq_5_to_10': 'NA20870'}}
+                    ]}}
+                ]
+            }},
         ]
     }
 }
@@ -800,6 +801,15 @@ MOCK_LIFTOVERS['hg19'].convert_coordinate.side_effect = lambda chrom, pos: [[chr
 def sort_array(a):
     sd={str(d):d for d in a}
     return [sd[i] for i in sorted(sd.keys())]
+
+def sort_search(filter):
+    if isinstance(filter, dict):
+        new_filter={str(key): sort_search(filter[key]) for key in sorted(filter.keys())}
+    elif isinstance(filter, list):
+        new_filter= sort_array([sort_search(filter[i]) for i in range(len(filter))])
+    else:
+        new_filter = filter
+    return new_filter
 
 def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
     parsed_hits = deepcopy(hits)
@@ -945,20 +955,13 @@ class EsUtilsTest(TestCase):
         if expected_search_params['filters']:
             expected_search['query'] = {
                 'bool': {
-                    'filter': expected_search_params['filters']
+                    'filter': sort_search(expected_search_params['filters'])
                 }
             }
             if 'query' in executed_search and 'bool' in executed_search['query'] and \
                 'filter' in executed_search['query']['bool'] and \
                 isinstance(executed_search['query']['bool']['filter'], list):
-                for i in range(len(executed_search['query']['bool']['filter'])):
-                    item = executed_search['query']['bool']['filter'][i]
-                    if 'bool' in item and 'must' in item['bool']:
-                        executed_search['query']['bool']['filter'][i]['bool']['must'] = \
-                            sort_array(item['bool']['must'])
-                    if 'bool' in item and 'should' in item['bool']:
-                        executed_search['query']['bool']['filter'][i]['bool']['should'] = \
-                            sort_array(item['bool']['should'])
+                executed_search ['query']['bool']['filter'] = sort_search(executed_search ['query']['bool']['filter'])
 
         if expected_search_params.get('sort'):
             expected_search['sort'] = expected_search_params['sort']
@@ -1095,7 +1098,9 @@ class EsUtilsTest(TestCase):
         self.mock_es_client.indices.get_mapping.side_effect = lambda **kwargs: {}
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
+        message = str(cm.exception).split(': ')
+        self.assertEqual(message[0], 'Could not find expected indices')
+        self.assertSetEqual(set(message[1].split(', ')), {'test_index_sv', 'test_index'})
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
@@ -1219,13 +1224,6 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'exac_AC_Adj'}}]}},
-                                {'range': {'exac_AC_Adj': {'lte': 2}}}
-                            ]
-                        }},
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
                                 {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
                                 {'range': {'g1k_POPMAX_AF': {'lte': 0.001}}}
                             ]
@@ -1233,29 +1231,15 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
-                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_FAF_AF'}}]}},
+                                {'range': {'gnomad_genomes_FAF_AF': {'lte': 0.01}}}
                             ]
                         }},
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hemi'}}]}},
-                                {'range': {'gnomad_exomes_Hemi': {'lte': 3}}}
-                            ]}
-                        },
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hom'}}]}},
-                                {'range': {'gnomad_exomes_Hom': {'lte': 3}}}
-                            ]}
-                        },
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_FAF_AF'}}]}},
-                                {'range': {'gnomad_genomes_FAF_AF': {'lte': 0.01}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_Hom'}}]}},
+                                {'range': {'gnomad_genomes_Hom': {'lte': 3}}}
                             ]
                         }},
                         {'bool': {
@@ -1268,10 +1252,31 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_Hom'}}]}},
-                                {'range': {'gnomad_genomes_Hom': {'lte': 3}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
                         }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hom'}}]}},
+                                {'range': {'gnomad_exomes_Hom': {'lte': 3}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hemi'}}]}},
+                                {'range': {'gnomad_exomes_Hemi': {'lte': 3}}}
+                            ]}
+                        },
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'exac_AC_Adj'}}]}},
+                                {'range': {'exac_AC_Adj': {'lte': 2}}}
+                            ]}
+                        },
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
@@ -1287,12 +1292,6 @@ class EsUtilsTest(TestCase):
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
                         {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic'
-                            ]
-                        }},
-                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
-                        {'terms': {
                             'transcriptConsequenceTerms': [
                                 '5_prime_UTR_variant',
                                 'inframe_deletion',
@@ -1300,12 +1299,19 @@ class EsUtilsTest(TestCase):
                                 'intergenic_variant',
                             ]
                         }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic'
+                            ]
+                        }},
+                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
                     ]
                 }
             },
             {'bool': {
                 'should': [
                     {'bool': {
+                        '_name': 'F000002_2',
                         'must': [
                             {'bool': {
                                 'minimum_should_match': 1,
@@ -1324,26 +1330,6 @@ class EsUtilsTest(TestCase):
                             }},
                             {'bool': {
                                 'minimum_should_match': 1,
-                                'should': [
-                                    {'bool': {
-                                        'must_not': [
-                                            {'term': {'samples_ab_0_to_5': 'HG00731'}},
-                                            {'term': {'samples_ab_5_to_10': 'HG00731'}},
-                                        ]
-                                    }},
-                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00731'}}]}}
-                                ],
-                                'must_not': [
-                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00731'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
-                                ],
                                 'must': [
                                     {'bool': {
                                         'minimum_should_match': 1,
@@ -1369,10 +1355,29 @@ class EsUtilsTest(TestCase):
                                             {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00733'}}]}}
                                         ]
                                     }},
-                                ]
+                                ],
+                                'must_not': [
+                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00731'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
+                                ],
+                                'should': [
+                                    {'bool': {
+                                        'must_not': [
+                                            {'term': {'samples_ab_0_to_5': 'HG00731'}},
+                                            {'term': {'samples_ab_5_to_10': 'HG00731'}},
+                                        ]
+                                    }},
+                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00731'}}]}}
+                                ],
                             }}
                         ],
-                        '_name': 'F000002_2'
                     }},
                     {'bool': {
                         'must': [
@@ -1516,9 +1521,8 @@ class EsUtilsTest(TestCase):
         })
 
         annotation_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-        ]}}
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}]}}
 
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
@@ -1728,20 +1732,6 @@ class EsUtilsTest(TestCase):
                         'bool': {
                             'should': [
                                 {'bool': {
-                                    '_name': 'F000003_3',
-                                    'must': [
-                                        {'bool': {
-                                            'should': [
-                                                {'bool': {'must': [
-                                                    {'match': {'contig': 'X'}},
-                                                    {'term': {'samples_num_alt_2': 'NA20870'}}
-                                                ]}},
-                                                {'term': {'samples_num_alt_2': 'NA20870'}},
-                                            ]
-                                        }}
-                                    ]
-                                }},
-                                {'bool': {
                                     '_name': 'F000002_2',
                                     'must': [
                                         {'bool': {
@@ -1770,6 +1760,20 @@ class EsUtilsTest(TestCase):
                                                 }}
                                             ]
                                         }},
+                                    ]
+                                }},
+                                {'bool': {
+                                    '_name': 'F000003_3',
+                                    'must': [
+                                        {'bool': {
+                                            'should': [
+                                                {'bool': {'must': [
+                                                    {'match': {'contig': 'X'}},
+                                                    {'term': {'samples_num_alt_2': 'NA20870'}}
+                                                ]}},
+                                                {'term': {'samples_num_alt_2': 'NA20870'}},
+                                            ]
+                                        }}
                                     ]
                                 }},
                             ]
@@ -1807,9 +1811,9 @@ class EsUtilsTest(TestCase):
             ANNOTATION_QUERY,
             {'bool': {
                 'should': [
-                    {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                     {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
                     {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
+                    {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
         ], sort=['xpos'])
@@ -1829,6 +1833,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
         self.assertEqual(total_results, 11)
+
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
@@ -1848,12 +1853,6 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
                 {'bool': {
                     'must': [
-                        {'bool': {
-                            'must_not': [
-                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
-                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
-                            ]
-                        }},
                         {'bool': {'should': [
                             {'bool': {'must': [
                                 {'match': {'contig': 'X'}},
@@ -1861,6 +1860,12 @@ class EsUtilsTest(TestCase):
                             ]}},
                             {'term': {'samples_num_alt_2': 'NA20885'}},
                         ]}},
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                            ]
+                        }}
                     ],
                     '_name': 'F000011_11'
                 }}
@@ -1877,11 +1882,11 @@ class EsUtilsTest(TestCase):
                     {'bool': {
                         '_name': 'F000011_11',
                         'must': [
+                            {'term': {'samples_num_alt_1': 'NA20885'}},
                             {'bool': {'must_not': [
                                 {'term': {'samples_gq_0_to_5': 'NA20885'}},
                                 {'term': {'samples_gq_5_to_10': 'NA20885'}}
-                            ]}},
-                            {'term': {'samples_num_alt_1': 'NA20885'}},
+                            ]}}
                         ]
                     }}
                 ],
@@ -2008,9 +2013,9 @@ class EsUtilsTest(TestCase):
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
-                            {'terms': {'samples': ['NA20885']}},
                             {'terms': {'samples_num_alt_1': ['NA20885']}},
                             {'terms': {'samples_num_alt_2': ['NA20885']}},
+                            {'terms': {'samples': ['NA20885']}},
                         ]
                     }}
                 ], start_index=0, size=2, sort=['xpos'], index=SECOND_INDEX_NAME),
@@ -2019,9 +2024,9 @@ class EsUtilsTest(TestCase):
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
-                            {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                             {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
                             {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
+                            {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                         ]
                     }},
                 ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
@@ -2158,12 +2163,6 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
                 {'bool': {
                     'must': [
-                        {'bool': {
-                            'must_not': [
-                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
-                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
-                            ]
-                        }},
                         {'bool': {'should': [
                             {'bool': {'must': [
                                 {'match': {'contig': 'X'}},
@@ -2171,9 +2170,15 @@ class EsUtilsTest(TestCase):
                             ]}},
                             {'term': {'samples_num_alt_2': 'NA20885'}},
                         ]}},
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                            ]
+                        }}
                     ],
                     '_name': 'F000011_11'
-                }},
+                }}
             ], index=SECOND_INDEX_NAME, **expected_search),
             dict(filters=[ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], index=INDEX_NAME, **expected_search),
         ])
