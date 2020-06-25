@@ -64,6 +64,9 @@ class ModelWithGUID(models.Model):
     def __unicode__(self):
         return self.guid
 
+    def __str__(self):
+        return self.__unicode__()
+
     def json(self):
         """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
@@ -457,10 +460,6 @@ class Individual(ModelWithGUID):
     population = models.CharField(max_length=5, null=True)
 
     def __unicode__(self):
-        return self.individual_id.strip()
-
-    def __str__(self):
-        """Magic function for 'str()' and '%s'."""
         return self.individual_id.strip()
 
     def _compute_guid(self):

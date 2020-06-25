@@ -1,6 +1,11 @@
 from __future__ import unicode_literals
 
 import json
+try:
+    from json import JSONDecodeError
+except Exception:
+    JSONDecodeError = Exception
+
 import logging
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
@@ -72,8 +77,10 @@ def mme_match_proxy(request, originating_node_name):
 
     try:
         query_patient_data = json.loads(request.body)
-    except Exception:
+    except JSONDecodeError:
         return create_json_response({'message': 'JSON object could not be decoded'}, status = 400)
+    except Exception as e:
+        return create_json_response({'message': str(e)}, status = 400)
     try:
         _validate_patient_data(query_patient_data)
     except Exception as e:
