@@ -143,24 +143,20 @@ class VariantSearchAPITest(AuthenticationTestCase):
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 200)
-        content = str(response.content, 'utf-8')
-        export_content = [row.split('\t') for row in content.rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 4)
-        self.assertListEqual(
-            export_content[0],
+        expected_content = [
             ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', '1kg_freq', 'exac_freq', 'gnomad_genomes_freq',
-            'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'polyphen', 'sift', 'muttaster', 'fathmm',
+             'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'polyphen', 'sift', 'muttaster', 'fathmm',
              'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
-             'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_1:num_alt_alleles:gq:ab', 'sample_2:num_alt_alleles:gq:ab'])
-        self.assertListEqual(
-            export_content[1],
+             'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_1:num_alt_alleles:gq:ab',
+             'sample_2:num_alt_alleles:gq:ab'],
             ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
              '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
-             'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675:1:46.0:0.702127659574', 'NA19679:0:99.0:0.0'])
-        self.assertListEqual(
-            export_content[3],
+             'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675:1:46.0:0.702127659574', 'NA19679:0:99.0:0.0'],
+            ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+             '1', '', '', '', '', '', 'NA19679:0:99.0:0.0', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '', ''])
+             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '', '']]
+        self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 
