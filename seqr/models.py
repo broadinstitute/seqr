@@ -65,6 +65,7 @@ class ModelWithGUID(models.Model):
         return self.guid
 
     def __str__(self):
+        """Magix function for str() and %s."""
         return self.__unicode__()
 
     def json(self):
