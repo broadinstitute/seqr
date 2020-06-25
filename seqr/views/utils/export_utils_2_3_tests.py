@@ -23,8 +23,7 @@ class ExportTableUtilsTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('content-disposition'), 'attachment; filename="test_file.tsv"')
-        self.assertEqual(response.content.decode('utf-8', errors = 'ignore'),
-                         '\n'.join(['\t'.join(row) for row in [header]+rows]) + '\n')
+        self.assertEqual(response.content, 'column1\tcolumn2\nrow1_v1\xe2\trow1_v2\nrow2_v1\trow2_v2\n'.encode('utf-8'))
 
         # test Excel format
         response = export_table('test_file', header, rows, file_format='xls')
