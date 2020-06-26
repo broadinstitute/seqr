@@ -697,15 +697,21 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['message'], 'Select a gene to filter variants')
 
-        response = self.client.get('{}?gene=ENSG00000240361'.format(url))
+        response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
             'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
             'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'})
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes'})
+        expected_variant_guids = {
+            'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes'}
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
+
+        all_tag_url = reverse(saved_variants_page, args=['ALL'])
+        response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
+        self.assertEqual(response.status_code, 200)
+        expected_variant_guids.add('SV0000002_1248367227_r0390_100')
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
     @mock.patch('seqr.views.apis.staff_api.file_iter')
     def test_upload_qc_pipeline_output(self, mock_file_iter):
