@@ -209,7 +209,7 @@ export const getPairedSelectedSavedVariants = createSelector(
     if (tag) {
       if (tag === NOTE_TAG_NAME) {
         pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ noteGuids }) => noteGuids.length))
-      } else {
+      } else if (tag !== SHOW_ALL) {
         pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag)))
       }
     }

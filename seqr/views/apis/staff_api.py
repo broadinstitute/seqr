@@ -1222,8 +1222,13 @@ def _update_initial_omim_numbers(rows):
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def saved_variants_page(request, tag):
     gene = request.GET.get('gene')
-    tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
-    saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+
+    if tag == 'ALL':
+        saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
+    else:
+        tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
+        saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+
     if gene:
         saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:

@@ -190,7 +190,7 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
       if (getState().savedVariantTags[tag]) {
         return
       }
-    } else {
+    } else if (!gene) {
       return
     }
 

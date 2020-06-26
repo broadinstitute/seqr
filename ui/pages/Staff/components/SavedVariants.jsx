@@ -10,6 +10,7 @@ import {
   VARIANT_SORT_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
+  SHOW_ALL,
 } from 'shared/utils/constants'
 import { StyledForm } from 'shared/components/form/ReduxFormWrapper'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -54,19 +55,20 @@ const TAG_OPTIONS = [
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 }))
 
-const getUpdateTagUrl = tag => `/staff/saved_variants/${tag}`
+TAG_OPTIONS.push({
+  value: SHOW_ALL,
+  text: 'All',
+  key: 'all',
+  label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
+})
 
 const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, ...props }) => {
   const { params } = props.match
   const { tag, gene } = params
 
-  const getGeneHref = (selectedGene) => {
-    if (!tag) {
-      return props.match.url
-    }
+  const getUpdateTagUrl = selectedTag => `/staff/saved_variants/${selectedTag}${gene ? `/${gene}` : ''}`
 
-    return `/staff/saved_variants${tag ? `/${tag}` : ''}/gene/${selectedGene.key}`
-  }
+  const getGeneHref = selectedGene => `/staff/saved_variants/${tag || SHOW_ALL}/${selectedGene.key}`
 
   const loadVariants = (newParams) => {
     const isInitialLoad = params === newParams
@@ -120,8 +122,7 @@ const StaffSavedVariants = connect(null, mapDispatchToProps)(BaseStaffSavedVaria
 
 const RoutedSavedVariants = ({ match }) =>
   <Switch>
-    <Route path={`${match.url}/:tag/gene/:gene`} component={StaffSavedVariants} />
-    <Route path={`${match.url}/:tag?`} component={StaffSavedVariants} />
+    <Route path={`${match.url}/:tag?/:gene?`} component={StaffSavedVariants} />
   </Switch>
 
 RoutedSavedVariants.propTypes = {
