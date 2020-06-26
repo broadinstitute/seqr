@@ -190,7 +190,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertSetEqual(set(list(response_json.keys())), {'info', 'errors', 'warnings', 'uploadedFileId'})
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
 
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
 
