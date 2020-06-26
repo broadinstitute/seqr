@@ -2,8 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
-import { Form } from 'semantic-ui-react'
+import { Form, Label } from 'semantic-ui-react'
 
+import { getGenesById } from 'redux/selectors'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -62,13 +63,15 @@ TAG_OPTIONS.push({
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 })
 
-const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, ...props }) => {
+const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, geneDetail, ...props }) => {
   const { params } = props.match
   const { tag, gene } = params
 
   const getUpdateTagUrl = selectedTag => `/staff/saved_variants/${selectedTag}${gene ? `/${gene}` : ''}`
 
   const getGeneHref = selectedGene => `/staff/saved_variants/${tag || SHOW_ALL}/${selectedGene.key}`
+
+  const removeGene = () => props.history.push(`/staff/saved_variants/${tag || SHOW_ALL}`)
 
   const loadVariants = (newParams) => {
     const isInitialLoad = params === newParams
@@ -99,12 +102,24 @@ const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, ...props })
             getResultHref={getGeneHref}
             inline
           />
+          {gene && <HorizontalSpacer width={10} />}
+          {gene && <Form.Field
+            control={Label}
+            content={(geneDetail || {}).geneSymbol || gene}
+            inline
+            color="grey"
+            onRemove={removeGene}
+          />}
           <HorizontalSpacer width={10} />
         </StyledForm>
       }
       {...props}
     />
   )
+})
+
+const mapStateToProps = (state, ownProps) => ({
+  geneDetail: getGenesById(state)[ownProps.match.params.gene],
 })
 
 const mapDispatchToProps = {
@@ -114,11 +129,13 @@ const mapDispatchToProps = {
 
 BaseStaffSavedVariants.propTypes = {
   match: PropTypes.object,
+  history: PropTypes.object,
+  geneDetail: PropTypes.object,
   updateTable: PropTypes.func,
   loadStaffSavedVariants: PropTypes.func,
 }
 
-const StaffSavedVariants = connect(null, mapDispatchToProps)(BaseStaffSavedVariants)
+const StaffSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseStaffSavedVariants)
 
 const RoutedSavedVariants = ({ match }) =>
   <Switch>

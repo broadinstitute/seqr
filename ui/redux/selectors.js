@@ -167,7 +167,7 @@ export const getPairedSelectedSavedVariants = createSelector(
   getProjectGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid, notesByGuid) => {
+  (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid, notesByGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
       variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
@@ -214,6 +214,11 @@ export const getPairedSelectedSavedVariants = createSelector(
       }
     }
 
+    if (gene) {
+      pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(
+        ({ transcripts }) => gene in (transcripts || {})))
+    }
+
     return pairedVariants
   },
 )
@@ -223,7 +228,7 @@ export const getPairedFilteredSavedVariants = createSelector(
   getSavedVariantTableState,
   getVariantTagsByGuid,
   (state, props) => props.match.params,
-  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, { tag, gene, variantGuid }) => {
+  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, { tag, variantGuid }) => {
     if (variantGuid) {
       return savedVariants
     }
@@ -247,17 +252,11 @@ export const getPairedFilteredSavedVariants = createSelector(
         variantsToShow = variantsToShow.filter(variants => variants.some(
           variant => variant.tagGuids.some(t => tagsByGuid[t].category === categoryFilter)))
       }
-    } else {
-      if (gene) {
-        variantsToShow = variantsToShow.filter(variants => variants.some(variant => gene in variant.transcripts))
-      }
-
-      if (taggedAfter) {
-        const taggedAfterDate = new Date(taggedAfter)
-        variantsToShow = variantsToShow.filter(variants => variants.some(variant =>
-          variant.tagGuids.find(
-            t => tagsByGuid[t].name === tag && new Date(tagsByGuid[t].lastModifiedDate) > taggedAfterDate)))
-      }
+    } else if (taggedAfter) {
+      const taggedAfterDate = new Date(taggedAfter)
+      variantsToShow = variantsToShow.filter(variants => variants.some(variant =>
+        variant.tagGuids.find(
+          t => tagsByGuid[t].name === tag && new Date(tagsByGuid[t].lastModifiedDate) > taggedAfterDate)))
     }
     return variantsToShow.map(variants => (variants.length === 1 ? variants[0] : variants))
   },
