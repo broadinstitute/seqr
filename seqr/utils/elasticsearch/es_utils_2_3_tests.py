@@ -957,8 +957,7 @@ class EsUtilsTest(TestCase):
                     'filter': sort_filter(expected_search_params['filters'])
                 }
             }
-            if 'query' in executed_search and 'bool' in executed_search['query'] and 'filter' in executed_search['query']['bool'] :
-                executed_search['query']['bool']['filter'] = sort_filter(executed_search['query']['bool']['filter'])
+            executed_search['query']['bool']['filter'] = sort_filter(executed_search['query']['bool']['filter'])
 
         if expected_search_params.get('sort'):
             expected_search['sort'] = expected_search_params['sort']
@@ -977,7 +976,7 @@ class EsUtilsTest(TestCase):
             }}
         else:
             expected_search['_source'] = mock.ANY
-        self.maxDiff = None
+
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):

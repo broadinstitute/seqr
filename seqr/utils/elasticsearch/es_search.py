@@ -250,7 +250,7 @@ class EsSearch(object):
                         continue
 
             if not genotypes_q:
-                for family_guid in sorted(family_samples_by_id.keys()):
+                for family_guid in family_samples_by_id.keys():
                     samples_by_id = family_samples_by_id[family_guid]
                     affected_status = self._family_individual_affected_status.get(family_guid)
 
@@ -324,7 +324,7 @@ class EsSearch(object):
             for pair_index, families in paired_index_families[index].items():
                 paired_families.update({family: pair_index for family in families})
 
-            for family_guid in sorted(family_samples_by_id.keys()):
+            for family_guid in family_samples_by_id.keys():
                 paired_index = paired_families.get(family_guid)
                 if paired_index and paired_index in seen_paired_indices:
                     continue
@@ -1022,10 +1022,10 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices)
     if any(quality_filter[field] for field in quality_field_configs.keys()):
         for index in indices:
             family_samples_by_id = samples_by_family_index[index]
-            for family_guid, samples_by_id in family_samples_by_id.items():
+            for family_guid, samples_by_id in sorted(family_samples_by_id.items()):
                 quality_q = Q()
-                for sample_id in samples_by_id.keys():
-                    for field, config in quality_field_configs.items():
+                for sample_id in sorted(samples_by_id.keys()):
+                    for field, config in sorted(quality_field_configs.items()):
                         if quality_filter[field]:
                             q = _build_or_filter('term', [
                                 {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
@@ -1060,7 +1060,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
                 individual_genotype_filter[individual.guid] = REF_REF
 
     is_sv_comp_het = inheritance_mode == COMPOUND_HET and 'samples' in index_fields
-    for sample_id, sample in samples_by_id.items():
+    for sample_id, sample in sorted(samples_by_id.items()):
 
         individual_guid = sample.individual.guid
         affected = individual_affected_status[individual_guid]
