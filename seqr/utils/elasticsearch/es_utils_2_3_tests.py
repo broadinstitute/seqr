@@ -798,18 +798,6 @@ MOCK_LIFTOVERS['hg38'].convert_coordinate.side_effect = lambda chrom, pos: [[chr
 MOCK_LIFTOVERS['hg19'].convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos + 10]]
 
 
-def sort_array(a):
-    sd={str(d): d for d in a}
-    return [sd[key] for key in sorted(sd.keys())]
-
-def sort_filter(obj):
-    if isinstance(obj, dict):
-        return {str(key): sort_filter(obj[key]) for key in sorted(obj.keys())}
-    elif isinstance(obj, list):
-        return sort_array([sort_filter(obj[i]) for i in range(len(obj))])
-    else:
-        return obj
-
 def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=None, index=INDEX_NAME):
     parsed_hits = deepcopy(hits)
     for hit in parsed_hits:
@@ -954,10 +942,9 @@ class EsUtilsTest(TestCase):
         if expected_search_params['filters']:
             expected_search['query'] = {
                 'bool': {
-                    'filter': sort_filter(expected_search_params['filters'])
+                    'filter': expected_search_params['filters']
                 }
             }
-            executed_search['query']['bool']['filter'] = sort_filter(executed_search['query']['bool']['filter'])
 
         if expected_search_params.get('sort'):
             expected_search['sort'] = expected_search_params['sort']
@@ -1220,8 +1207,36 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'exac_AC_Adj'}}]}},
+                                {'range': {'exac_AC_Adj': {'lte': 2}}}
+                            ]}
+                        },
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
                                 {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
                                 {'range': {'g1k_POPMAX_AF': {'lte': 0.001}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hom'}}]}},
+                                {'range': {'gnomad_exomes_Hom': {'lte': 3}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hemi'}}]}},
+                                {'range': {'gnomad_exomes_Hemi': {'lte': 3}}}
                             ]
                         }},
                         {'bool': {
@@ -1243,34 +1258,6 @@ class EsUtilsTest(TestCase):
                             'should': [
                                 {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_Hemi'}}]}},
                                 {'range': {'gnomad_genomes_Hemi': {'lte': 3}}}
-                            ]}
-                        },
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
-                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
-                            ]
-                        }},
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hom'}}]}},
-                                {'range': {'gnomad_exomes_Hom': {'lte': 3}}}
-                            ]
-                        }},
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hemi'}}]}},
-                                {'range': {'gnomad_exomes_Hemi': {'lte': 3}}}
-                            ]}
-                        },
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'exac_AC_Adj'}}]}},
-                                {'range': {'exac_AC_Adj': {'lte': 2}}}
                             ]}
                         },
                         {'bool': {
@@ -1326,6 +1313,26 @@ class EsUtilsTest(TestCase):
                             }},
                             {'bool': {
                                 'minimum_should_match': 1,
+                                'should': [
+                                    {'bool': {
+                                        'must_not': [
+                                            {'term': {'samples_ab_0_to_5': 'HG00731'}},
+                                            {'term': {'samples_ab_5_to_10': 'HG00731'}},
+                                        ]
+                                    }},
+                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00731'}}]}}
+                                ],
+                                'must_not': [
+                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00731'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
+                                ],
                                 'must': [
                                     {'bool': {
                                         'minimum_should_match': 1,
@@ -1351,29 +1358,10 @@ class EsUtilsTest(TestCase):
                                             {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00733'}}]}}
                                         ]
                                     }},
-                                ],
-                                'must_not': [
-                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00731'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
-                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
-                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
-                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
-                                ],
-                                'should': [
-                                    {'bool': {
-                                        'must_not': [
-                                            {'term': {'samples_ab_0_to_5': 'HG00731'}},
-                                            {'term': {'samples_ab_5_to_10': 'HG00731'}},
-                                        ]
-                                    }},
-                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00731'}}]}}
-                                ],
+                                ]
                             }}
                         ],
+                        '_name': 'F000002_2'
                     }},
                     {'bool': {
                         'must': [

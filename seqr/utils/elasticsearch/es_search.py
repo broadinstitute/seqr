@@ -129,7 +129,7 @@ class EsSearch(object):
 
     def filter_by_frequency(self, frequencies):
         q = Q()
-        for pop, freqs in frequencies.items():
+        for pop, freqs in sorted(frequencies.items()):
             if freqs.get('af') is not None:
                 filter_field = next(
                     (field_key for field_key in POPULATIONS[pop]['filter_AF']
@@ -227,6 +227,7 @@ class EsSearch(object):
         no_filter_indices = set()
         for index in self._indices:
             family_samples_by_id = self.samples_by_family_index[index]
+            family_samples_by_id = {key: family_samples_by_id[key] for key in sorted(family_samples_by_id.keys())}
             index_fields = self.index_metadata[index]['fields']
 
             genotypes_q = None
@@ -294,7 +295,7 @@ class EsSearch(object):
                 self._index_searches[index].append(self._search)
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
-        indices = sorted(set(self._indices), reverse = True)
+        indices = set(self._indices)
 
         paired_index_families = defaultdict(dict)
         if len(indices) > 1:
@@ -315,7 +316,7 @@ class EsSearch(object):
 
         seen_paired_indices = set()
         comp_het_q_by_index = {}
-        for index in indices:
+        for index in sorted(indices, reverse = True):
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
             seen_paired_indices.add(index)
@@ -436,7 +437,7 @@ class EsSearch(object):
         return variant_results[:num_results]
 
     def _execute_multi_search(self, **kwargs):
-        indices = sorted(list(self._index_searches.keys()) or self._indices, reverse = True)
+        indices = sorted(self._index_searches.keys(), reverse = True) or self._indices
 
         if self.CACHED_COUNTS_KEY and not self.previous_search_results.get(self.CACHED_COUNTS_KEY):
             self.previous_search_results[self.CACHED_COUNTS_KEY] = {}
