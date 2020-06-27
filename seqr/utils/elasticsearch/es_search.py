@@ -227,7 +227,6 @@ class EsSearch(object):
         no_filter_indices = set()
         for index in self._indices:
             family_samples_by_id = self.samples_by_family_index[index]
-            family_samples_by_id = {key: family_samples_by_id[key] for key in sorted(family_samples_by_id.keys())}
             index_fields = self.index_metadata[index]['fields']
 
             genotypes_q = None
@@ -251,7 +250,7 @@ class EsSearch(object):
                         continue
 
             if not genotypes_q:
-                for family_guid in family_samples_by_id.keys():
+                for family_guid in sorted(family_samples_by_id.keys()):
                     samples_by_id = family_samples_by_id[family_guid]
                     affected_status = self._family_individual_affected_status.get(family_guid)
 
@@ -325,7 +324,7 @@ class EsSearch(object):
             for pair_index, families in paired_index_families[index].items():
                 paired_families.update({family: pair_index for family in families})
 
-            for family_guid in family_samples_by_id.keys():
+            for family_guid in sorted(family_samples_by_id.keys()):
                 paired_index = paired_families.get(family_guid)
                 if paired_index and paired_index in seen_paired_indices:
                     continue
