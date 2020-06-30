@@ -70,7 +70,7 @@ class EsSearch(object):
 
         if len(self.samples_by_family_index) != len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
-                ', '.join(set(self._indices) - set(self.index_metadata.keys()))
+                ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
             ))
 
         self.indices_by_dataset_type = defaultdict(list)

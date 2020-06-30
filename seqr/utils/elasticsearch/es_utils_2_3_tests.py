@@ -1081,9 +1081,7 @@ class EsUtilsTest(TestCase):
         self.mock_es_client.indices.get_mapping.side_effect = lambda **kwargs: {}
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        message = str(cm.exception).split(': ')
-        self.assertEqual(message[0], 'Could not find expected indices')
-        self.assertSetEqual(set(message[1].split(', ')), {'test_index_sv', 'test_index'})
+        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
 
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
