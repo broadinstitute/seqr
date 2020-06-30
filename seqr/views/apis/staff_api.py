@@ -92,7 +92,7 @@ def elasticsearch_status(request):
         index['docType'] = doc_type
 
         projects_for_index = []
-        for index_prefix in seqr_index_projects.keys():
+        for index_prefix in list(seqr_index_projects.keys()):
             if index_name.startswith(index_prefix):
                 projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
@@ -327,7 +327,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                         main_gene_ids.update(list(variant['transcripts'].keys()))
                 if len(main_gene_ids) > 1:
                     # This occurs in compound hets where some hits have a primary transcripts in different genes
-                    for gene_id in main_gene_ids:
+                    for gene_id in sorted(main_gene_ids):
                         if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
                             compound_het_gene_id_by_family[family_guid] = gene_id
                             gene_ids.add(gene_id)
@@ -1031,9 +1031,9 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
 def _get_genotype_zygosity(genotype):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
-    if num_alt == 2 or cn == 0 or cn > 3:
+    if (num_alt != None and num_alt == 2) or (cn != None and (cn == 0 or cn > 3)):
         return HOM_ALT
-    if num_alt == 1 or cn == 1 or cn == 3:
+    if (num_alt != None and num_alt == 1) or (cn != None and (cn == 1 or cn == 3)):
         return HET
     return None
 

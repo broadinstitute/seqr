@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from builtins import str
 
 import mock
 from django.utils.dateparse import parse_datetime
 import pytz
 from datetime import datetime
-from requests import HTTPError
+from requests import HTTPError, utils
 import responses
 from settings import AIRTABLE_URL
 import json
@@ -594,6 +595,7 @@ class StaffAPITest(AuthenticationTestCase):
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        content = response.get('content-disposition')
         self.assertEqual(
             response.get('content-disposition'),
             'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
@@ -679,8 +681,10 @@ class StaffAPITest(AuthenticationTestCase):
             response.json()['message'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 2)
-        self.assertIsNone(responses.calls[0].request.params.get('offset'))
-        self.assertEqual(responses.calls[1].request.params.get('offset'), 'abc123')
+        queries = {item[0]: item[1] for item in [query.split('=') for query in utils.urlparse(responses.calls[0].request.url).query.split('&')]}
+        self.assertIsNone(queries.get('offset'))
+        queries = {item[0]: item[1] for item in [query.split('=') for query in utils.urlparse(responses.calls[1].request.url).query.split('&')]}
+        self.assertEqual(queries.get('offset'), 'abc123')
 
         # Test success
         responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
@@ -743,7 +747,9 @@ class StaffAPITest(AuthenticationTestCase):
         mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Multiple dataset types detected: wes ,wgs')
+        reason_phrase = response.reason_phrase.split(': ')
+        self.assertEqual(reason_phrase[0], 'Multiple dataset types detected')
+        self.assertSetEqual(set(reason_phrase[1].split(' ,')), {'wes', 'wgs'})
 
         # Test unexpected data type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
