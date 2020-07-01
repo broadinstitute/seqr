@@ -594,7 +594,7 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.get('content-disposition'),
-            u'attachment; filename="1kg project n\xe5me with uni\xe7\xf8de_AnVIL_Metadata.zip"'.encode('utf-8')
+            'attachment; filename="1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de_AnVIL_Metadata.zip"'
         )
 
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr

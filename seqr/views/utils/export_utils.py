@@ -6,11 +6,6 @@ import json
 import openpyxl as xl
 from tempfile import NamedTemporaryFile
 import zipfile
-import urllib
-if hasattr(urllib, 'parse'):
-    from urllib.parse import quote
-else:
-    from urllib import quote
 
 from django.http.response import HttpResponse
 
@@ -92,10 +87,5 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
                 zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')
-        try:
-            zip_filename.encode('ascii')
-            response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename)
-        except UnicodeEncodeError:
-            response['Content-Disposition'] = "attachment; filename*=utf-8''{}".format(
-                quote('{}.zip'.format(zip_filename).encode('utf-8')))
+        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename).encode('utf-8')
         return response
