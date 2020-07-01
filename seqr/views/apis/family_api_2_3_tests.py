@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import json
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -43,7 +45,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), ['familiesByGuid'])
+        self.assertListEqual(list(response_json.keys()), ['familiesByGuid'])
         self.assertEqual(response_json['familiesByGuid'][FAMILY_GUID]['description'], 'Test description 1')
         self.assertEqual(response_json['familiesByGuid']['F000002_2'][FAMILY_ID_FIELD], '22')
         self.assertEqual(response_json['familiesByGuid']['F000002_2']['description'], 'Test description 2')
@@ -66,7 +68,7 @@ class FamilyAPITest(AuthenticationTestCase):
                                     data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID])
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID2])
 
@@ -83,7 +85,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Non Staff User')
 
     def test_update_family_pedigree_image(self):
@@ -102,7 +104,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertRegex(response_json[FAMILY_GUID]['pedigreeImage'], '/media/pedigree_images/new_ped_image_.+\.png')
 
         # send valid delete request
@@ -110,7 +112,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['pedigreeImage'])
 
     def test_update_family_assigned_analyst(self):
@@ -129,7 +131,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['email'], 'test_user@test.com')
         self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['fullName'], 'Test User')
 
@@ -137,7 +139,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['assignedAnalyst'])
 
     def test_update_success_story_types(self):
@@ -188,7 +190,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings', 'uploadedFileId'])
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
 
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
 
@@ -197,8 +199,8 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
-        self.assertListEqual(response_json.keys(), ['familiesByGuid'])
-        self.assertListEqual(response_json['familiesByGuid'].keys(), [FAMILY_GUID2, FAMILY_GUID])
+        self.assertListEqual(list(response_json.keys()), ['familiesByGuid'])
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {FAMILY_GUID2, FAMILY_GUID})
         family_1 = response_json['familiesByGuid'][FAMILY_GUID]
         self.assertEqual(family_1['description'], 'family one description')
         self.assertEqual(family_1['familyId'], '1_renamed')

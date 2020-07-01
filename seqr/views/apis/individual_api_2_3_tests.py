@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 
 import json
 import mock
@@ -69,7 +70,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         individual = Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertEqual(individual.display_name, '')
@@ -86,7 +87,7 @@ class IndividualAPITest(AuthenticationTestCase):
                                     data=json.dumps({'caseReviewStatus': 'A'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatus'], 'A')
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedDate'], '2020-01-01T00:00:00')
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedBy'], 'test_user@test.com')
@@ -100,7 +101,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [INDIVIDUAL_UPDATE_GUID])
+        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertListEqual(response_json[INDIVIDUAL_UPDATE_GUID]['features'], [
             {
@@ -172,7 +173,7 @@ class IndividualAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualsByGuid', 'familiesByGuid'])
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
 
     def test_individuals_table_handler(self):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
@@ -183,14 +184,15 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Received 0 files instead of 1'], 'warnings': []})
 
-        response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    ')})
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile('test.tsv', 'family   indiv\n1    '.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': [
-            "Error while converting test.tsv rows to json: Individual Id not specified in row #1:\n{u'familyId': u'1'}"
-        ], 'warnings': []})
+        self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
+        errors = response.json()['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].split('\n')[0],"Error while converting test.tsv rows to json: Individual Id not specified in row #1:")
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
-            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"')})
+            'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'errors': ['Could not find individuals with the following previous IDs: NA19675'], 'warnings': []
@@ -202,12 +204,12 @@ class IndividualAPITest(AuthenticationTestCase):
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
 "21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family"'
 
-        f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data)
+        f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
         response = self.client.post(individuals_url, {'f': f})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['info', 'errors', 'warnings', 'uploadedFileId'])
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
@@ -236,8 +238,8 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), ['individualsByGuid'])
-        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000001_na19675'])
+        self.assertListEqual(list(response_json.keys()), ['individualsByGuid'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
             response_json['individualsByGuid']['I000001_na19675']['features'],
@@ -254,13 +256,13 @@ class IndividualAPITest(AuthenticationTestCase):
 
         # Send invalid requests
         header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', header)
+        f = SimpleUploadedFile('updates.csv', header.encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
 
         header = 'family_id,individual_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', header)
+        f = SimpleUploadedFile('updates.csv', header.encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
@@ -271,7 +273,7 @@ class IndividualAPITest(AuthenticationTestCase):
             '1,NA19679,HP:0100258 (Preaxial polydactyly),',
             '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
         ]
-        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -286,7 +288,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         # send valid request
         rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
-        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_hpo_upload(response)
 
@@ -303,7 +305,7 @@ class IndividualAPITest(AuthenticationTestCase):
             {'family_id': '1', 'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
             {'family_id': '1', 'external_id': 'HG00731', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
-        ]))
+        ]).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_hpo_upload(response)
 
@@ -321,7 +323,7 @@ class IndividualAPITest(AuthenticationTestCase):
             '1,HG00731,yes,HP:0002017,',
             '1,HG00731,no,HP:0012469,HP:0011675',
         ]
-        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)))
+        f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_hpo_upload(response)
 

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import jmespath
 from collections import defaultdict
@@ -65,7 +67,7 @@ def query_variants_handler(request, search_hash):
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
         logger.error(e)
-        return create_json_response({'error': e.message}, status=400, reason=e.message)
+        return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
     _check_results_permission(results_model, request.user)
 
@@ -73,7 +75,7 @@ def query_variants_handler(request, search_hash):
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
         logger.error('InvalidIndexException: {}'.format(e))
-        return create_json_response({'error': e.message}, status=400, reason=e.message)
+        return create_json_response({'error': str(e)}, status=400, reason=str(e))
     except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
@@ -217,7 +219,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
         sorted(tags or [], key=lambda tag: tag['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
     {'header': 'notes', 'process': lambda notes: '|'.join([
-        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in
+        '{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in
         sorted(notes or [], key=lambda note: note['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
 ]
@@ -232,7 +234,7 @@ def get_variant_gene_breakdown(request, search_hash):
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes(gene_counts.keys(), add_omim=True, add_constraints=True),
+        'genesById': get_genes(list(gene_counts.keys()), add_omim=True, add_constraints=True),
     })
 
 
@@ -266,7 +268,7 @@ def export_variants_handler(request, search_hash):
                 'notes': [note for note in json['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
-        genotypes = variant['genotypes'].values()
+        genotypes = list(variant['genotypes'].values())
         for i in range(max_samples_per_variant):
             if i < len(genotypes):
                 row.append('{sampleId}:{numAlt}:{gq}:{ab}'.format(**genotypes[i]))
@@ -311,7 +313,7 @@ def search_context_handler(request):
         try:
             results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
         except Exception as e:
-            return create_json_response({'error': e.message}, status=400, reason=e.message)
+            return create_json_response({'error': str(e)}, status=400, reason=str(e))
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
     else:
         error = 'Invalid context params: {}'.format(json.dumps(context))
@@ -339,7 +341,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
         vtt.guid: vtt for vtt in
         VariantTagType.objects.filter(Q(project__in=projects) | Q(project__isnull=True)).prefetch_related('project')
     }
-    variant_tag_types = _get_json_for_models(variant_tag_types_by_guid.values())
+    variant_tag_types = _get_json_for_models(list(variant_tag_types_by_guid.values()))
     for project_json in projects_json:
         project = project_models_by_guid[project_json['projectGuid']]
 
