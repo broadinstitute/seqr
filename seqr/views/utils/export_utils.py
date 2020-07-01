@@ -37,13 +37,13 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
 
     if file_format == "tsv":
         response = HttpResponse(content_type='text/tsv')
-        response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix)
+        response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix).encode('utf-8')
         response.writelines(['\t'.join(header)+'\n'])
         response.writelines(('\t'.join(map(str, row))+'\n' for row in rows))
         return response
     elif file_format == "json":
         response = HttpResponse(content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix)
+        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix).encode('utf-8')
         for row in rows:
             json_keys = [s.replace(" ", "_").lower() for s in header]
             json_values = list(map(str, row))
@@ -61,7 +61,7 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
             wb.save(temporary_file.name)
             temporary_file.seek(0)
             response = HttpResponse(temporary_file.read(), content_type="application/ms-excel")
-            response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
+            response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix).encode('utf-8')
             return response
     else:
         raise ValueError("Invalid file_format: %s" % file_format)
