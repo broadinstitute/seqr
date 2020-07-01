@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import logging
 import requests
@@ -47,7 +49,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     gene_ids = set()
     for variant in response_json['savedVariantsByGuid'].values():
-        gene_ids.update(variant['transcripts'].keys())
+        gene_ids.update(list(variant['transcripts'].keys()))
 
     return _parse_mme_results(
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
@@ -126,7 +128,7 @@ def _search_matches(submission, user):
     if removed_count:
         logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id))
 
-    return _parse_mme_results(submission, saved_results.values(), user)
+    return _parse_mme_results(submission, list(saved_results.values()), user)
 
 
 def _search_external_matches(nodes_to_query, patient_data):
@@ -150,7 +152,7 @@ def _search_external_matches(nodes_to_query, patient_data):
                 try:
                     message = external_result.json().get('message')
                 except Exception:
-                    message = external_result.content
+                    message = external_result.content.decode('utf-8')
                 error_message = '{} ({})'.format(message or 'Error', external_result.status_code)
                 raise Exception(error_message)
 
@@ -170,7 +172,7 @@ def _search_external_matches(nodes_to_query, patient_data):
                     logger.error(error_message)
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
-                node['name'], e.message, json.dumps(patient_data))
+                node['name'], str(e), json.dumps(patient_data))
             logger.error(error_message)
             post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
@@ -308,13 +310,13 @@ def send_mme_contact_email(request, matchmaker_result_guid):
     email_message = EmailMessage(
         subject=request_json['subject'],
         body=request_json['body'],
-        to=map(lambda s: s.strip(), request_json['to'].split(',')),
+        to=[s.strip() for s in request_json['to'].split(',')],
         from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     try:
         email_message.send()
     except Exception as e:
-        message = e.message
+        message = str(e)
         json_body = {}
         if hasattr(e, 'response'):
             message = e.response.content
@@ -382,7 +384,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         additional_model_fields=['contact_name', 'contact_href', 'submission_id']
     )
     submission_json.update({
-        'mmeResultGuids': parsed_results_gy_guid.keys(),
+        'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
         'geneVariants': parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids),
     })
@@ -442,7 +444,7 @@ def _generate_notification_for_seqr_match(submission, results):
 
     individual = submission.individual
     project = individual.family.project
-    message = u"""
+    message = """
     A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
     
     {matches}
@@ -454,9 +456,9 @@ def _generate_notification_for_seqr_match(submission, results):
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    emails = map(lambda s: s.strip().split('mailto:')[-1], submission.contact_href.split(','))
+    emails = [s.strip().split('mailto:')[-1] for s in submission.contact_href.split(',')]
     email_message = EmailMessage(
-        subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
+        subject='New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
         body=message,
         to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
         from_email=MME_DEFAULT_CONTACT_EMAIL,

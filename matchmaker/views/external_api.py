@@ -1,4 +1,12 @@
+from __future__ import unicode_literals
+
 import json
+if hasattr(json, 'JSONDecodeError'):
+    from json import JSONDecodeError
+else:
+    class JSONDecodeError(ValueError):
+        pass
+
 import logging
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
@@ -71,8 +79,10 @@ def mme_match_proxy(request, originating_node_name):
     try:
         query_patient_data = json.loads(request.body)
         _validate_patient_data(query_patient_data)
+    except JSONDecodeError:
+        return create_json_response({'message': 'No JSON object could be decoded'}, status = 400)
     except Exception as e:
-        return create_json_response({'message': e.message}, status=400)
+        return create_json_response({'message': str(e)}, status=400)
 
     results, incoming_query = get_mme_matches(
         patient_data=query_patient_data, origin_request_host=originating_node_name,
@@ -81,7 +91,7 @@ def mme_match_proxy(request, originating_node_name):
     try:
         _generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
     except Exception as e:
-        logger.error('Unable to create notification for incoming MME match request: {}'.format(e.message))
+        logger.error('Unable to create notification for incoming MME match request: {}'.format(str(e)))
 
     return create_json_response({
         'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
@@ -149,7 +159,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         individual = submission.individual
         project = individual.family.project
 
-        result_text = u"""seqr ID {individual_id} from project {project_name} in family {family_id} inserted into
+        result_text = """seqr ID {individual_id} from project {project_name} in family {family_id} inserted into
 matchbox on {insertion_date}, with seqr link
 {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange""".replace('\n', ' ').format(
             individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
@@ -162,7 +172,7 @@ matchbox on {insertion_date}, with seqr link
         match_results.append((result_text, emails))
     match_results = sorted(match_results, key=lambda result_tuple: result_tuple[0])
 
-    base_message = u"""Dear collaborators,
+    base_message = """Dear collaborators,
 
     matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
     in matchbox. The following information was included with the query,
@@ -183,7 +193,7 @@ matchbox on {insertion_date}, with seqr link
         incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
     )
 
-    message_template = u"""{base_message}{match_results}
+    message_template = """{base_message}{match_results}
 
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 

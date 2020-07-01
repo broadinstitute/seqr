@@ -1,4 +1,6 @@
 # Utilities used for unit and integration tests.
+from __future__ import unicode_literals
+
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -225,7 +227,7 @@ VARIANTS = [
         'genotypes': {
             'NA19675': {
                 'sampleId': 'NA19675',
-                'ab': 0.7021276595744681,
+                'ab': 0.702127659574,
                 'gq': 46.0,
                 'numAlt': 1,
                 'dp': '50',

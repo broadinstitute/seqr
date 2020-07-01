@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -161,7 +163,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
         for feature in genomic_features:
             feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
-            'query_ids': genes_by_id.keys(),
+            'query_ids': list(genes_by_id.keys()),
             'filter_key': 'genomic_features',
             'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
         }
@@ -187,7 +189,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
     if not scored_matches:
         return [], incoming_query
 
-    prefetch_related_objects(scored_matches.keys(), 'matchmakerresult_set')
+    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
             MatchmakerResult.objects.create(

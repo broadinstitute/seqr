@@ -1,4 +1,6 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
+from __future__ import unicode_literals
+from builtins import str
 
 import difflib
 import os
@@ -371,8 +373,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
-    user_email_or_username = user.email or user.username
-    email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
+    email_body = "User {} just uploaded pedigree info to {}.<br />".format(user.email or user.username, project.name)
 
     email_body += """This email has 2 attached files:<br />
     <br />
@@ -437,7 +438,8 @@ def _parse_datstat_export_format(rows):
 
 
 def _get_datstat_family_notes(row):
-    row = {k: unicode(v, errors='ignore') for k, v in row.items()}
+    row = {k: v.encode('ascii', errors='ignore').decode() if isinstance(v, str) else str(v, 'ascii', errors='ignore')
+           for k, v in row.items()}
 
     DC = DatstatConstants
 
@@ -463,7 +465,7 @@ def _get_datstat_family_notes(row):
             year=row[col_config[DC.YEAR_KEY]] or 'unspecified',
             lab=row[col_config[DC.LAB_KEY]] or 'unspecified',
             relatives=', '.join(relatives).replace('AuntUncle', 'Aunt or Uncle').replace('NieceNephew', 'Niece or Nephew') if relatives else 'not specified',
-            other_relatives=u': {}'.format(row[col_config[DC.RELATIVE_SPEC_KEY]] or 'not specified') if 'Other' in (relatives or []) else '',
+            other_relatives=': {}'.format(row[col_config[DC.RELATIVE_SPEC_KEY]] or 'not specified') if 'Other' in (relatives or []) else '',
         )
 
     def _parent_summary(parent):
