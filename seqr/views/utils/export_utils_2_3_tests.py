@@ -92,7 +92,9 @@ class ExportTableUtilsTest(TestCase):
         response = export_multiple_files(
             [['file1', header1, rows], ['file2', header2, rows]], 'zipfilen\xe2me', file_format='tsv')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get('content-disposition'), "attachment; filename*=utf-8''zipfilen%C3%A2me.zip")
+        filename = response.get('content-disposition')
+        self.assertEqual(filename, 'attachment; filename="zipfilen\xc3\xa2me.zip"' if isinstance(filename, str)
+        else b'attachment; filename="zipfilen\xc3\xa2me.zip"')
         self.assertDictEqual(mock_zip_content, {
             'file1.tsv': 'col1\tcol2\nrow1_v1\trow1_v2\nrow2_v1\t',
             'file2.tsv': 'col1\nrow1_v1\nrow2_v1',
