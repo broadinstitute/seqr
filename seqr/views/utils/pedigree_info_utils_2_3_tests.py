@@ -1,12 +1,13 @@
+from __future__ import unicode_literals
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
 from openpyxl import load_workbook
-from StringIO import StringIO
+from io import BytesIO
 
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-
 
 FILENAME = 'test.csv'
 
@@ -26,16 +27,18 @@ class PedigreeInfoUtilsTest(TestCase):
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['', '', 'male', 'u', '.', 'ind2']], FILENAME)
         self.assertListEqual(records, [])
-        self.assertListEqual(
-            errors, ["Error while converting {} rows to json: Family Id not specified in row #1:\n{{'affected': 'u', 'maternalId': 'ind2', 'individualId': '', 'sex': 'male', 'familyId': '', 'paternalId': ''}}".format(FILENAME)])
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].split('\n')[0],
+                         "Error while converting {} rows to json: Family Id not specified in row #1:".format(FILENAME))
         self.assertListEqual(warnings, [])
 
         records, errors, warnings = parse_pedigree_table(
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME)
         self.assertListEqual(records, [])
-        self.assertListEqual(
-            errors, ["Error while converting {} rows to json: Individual Id not specified in row #1:\n{{'affected': 'u', 'maternalId': 'ind2', 'individualId': '', 'sex': 'male', 'familyId': 'fam1', 'paternalId': ''}}".format(FILENAME)])
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].split('\n')[0],
+                         "Error while converting {} rows to json: Individual Id not specified in row #1:".format(FILENAME))
         self.assertListEqual(warnings, [])
 
         records, errors, warnings = parse_pedigree_table(
@@ -163,14 +166,14 @@ class PedigreeInfoUtilsTest(TestCase):
             ])
         self.assertEqual(
             mock_email.call_args.kwargs['body'],
-            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
+            """User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
     
     SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.
     
     test.csv is the original merged pedigree-sample-manifest file that the user uploaded.
     """)
         mock_email.return_value.attach_alternative.assert_called_with(
-            u"""User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
+            """User test_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
     <br />
     <b>SK-3QVD.xlsx</b> is the sample manifest file in a format that can be sent to GP.<br />
     <br />
@@ -179,7 +182,7 @@ class PedigreeInfoUtilsTest(TestCase):
         mock_email.return_value.send.assert_called()
 
         # Test sent sample manifest is correct
-        sample_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][0][1]))
+        sample_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][0][1]))
         sample_ws = sample_wb.active
         sample_ws.title = 'Sample Info'
         self.assertListEqual(
@@ -190,7 +193,7 @@ class PedigreeInfoUtilsTest(TestCase):
              ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98']])
 
         # Test original file copy is correct
-        original_wb = load_workbook(StringIO(mock_email.call_args.kwargs['attachments'][1][1]))
+        original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
         original_ws = original_wb.active
         self.assertListEqual([[cell.value or '' for cell in row] for row in original_ws], original_data)
 
