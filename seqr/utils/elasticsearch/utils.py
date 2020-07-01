@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging
@@ -32,12 +34,12 @@ def get_index_metadata(index_name, client):
         mappings = client.indices.get_mapping(index=index_name)
     except Exception as e:
         raise InvalidIndexException('Error accessing index "{}": {}'.format(
-            index_name, e.error if hasattr(e, 'error') else e.message))
+            index_name, e.error if hasattr(e, 'error') else str(e)))
     index_metadata = {}
     for index_name, mapping in mappings.items():
         variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE) or mapping['mappings'].get(SV_DOC_TYPE, {})
         index_metadata[index_name] = variant_mapping.get('_meta', {})
-        index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
+        index_metadata[index_name]['fields'] = list(variant_mapping['properties'].keys())
     safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 
