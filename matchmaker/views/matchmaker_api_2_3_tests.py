@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import responses
 import mock
@@ -342,7 +344,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             self.assertEqual(call.request.body, expected_body)
 
         # Test notification
-        message = u"""
+        message = """
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
      - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
@@ -360,7 +362,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                       as_user=False, icon_emoji=':beaker:', username='Beaker (engineering-minion)'),
         ])
         mock_email.assert_called_with(
-            subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
+            subject='New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
             body=message,
             to=['test_user@broadinstitute.org'],
             from_email='matchmaker@broadinstitute.org')
@@ -417,9 +419,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         })
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
-        new_submission_guid = response_json['mmeSubmissionsByGuid'].keys()[0]
+        new_submission_guid = next(iter(response_json['mmeSubmissionsByGuid']))
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
+            'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -452,11 +454,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'mmeSubmissionGuid': new_submission_guid,
         }})
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        new_match_result_guid = response_json['mmeResultsByGuid'].keys()[0]
+        new_match_result_guid = next(iter(response_json['mmeResultsByGuid']))
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
-        self.assertEqual(response_json['mmeResultsByGuid'].values()[0]['submissionGuid'], new_submission_guid)
+        self.assertEqual(next(iter(response_json['mmeResultsByGuid'].values()))['submissionGuid'], new_submission_guid)
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249'})
-        self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
+        self.assertListEqual(list(response_json['mmeContactNotes'].keys()), ['st georges, university of london'])
 
         # Test proxy calls
         expected_body = {
@@ -590,7 +592,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         })
 
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
+            'mmeResultGuids': sorted(list(response_json['mmeResultsByGuid'].keys()), reverse = True),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -621,7 +623,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'mmeSubmissionGuid': new_submission_guid,
         }})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249', 'ENSG00000227232'})
-        self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
+        self.assertListEqual(list(response_json['mmeContactNotes'].keys()), ['st georges, university of london'])
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)

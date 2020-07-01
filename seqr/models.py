@@ -64,6 +64,10 @@ class ModelWithGUID(models.Model):
     def __unicode__(self):
         return self.guid
 
+    def __str__(self):
+        """Magix function for str() and %s."""
+        return self.__unicode__()
+
     def json(self):
         """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
