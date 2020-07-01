@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 from abc import abstractmethod
 import uuid
 import json
