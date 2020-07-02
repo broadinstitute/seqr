@@ -745,9 +745,7 @@ class StaffAPITest(AuthenticationTestCase):
         mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
-        reason_phrase = response.reason_phrase.split(': ')
-        self.assertEqual(reason_phrase[0], 'Multiple dataset types detected')
-        self.assertSetEqual(set(reason_phrase[1].split(' ,')), {'wes', 'wgs'})
+        self.assertEqual(response.reason_phrase, 'Multiple dataset types detected: wes ,wgs')
 
         # Test unexpected data type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE

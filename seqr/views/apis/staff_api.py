@@ -1031,9 +1031,9 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
 def _get_genotype_zygosity(genotype):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
-    if (num_alt != None and num_alt == 2) or (cn != None and (cn == 0 or cn > 3)):
+    if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
         return HOM_ALT
-    if (num_alt != None and num_alt == 1) or (cn != None and (cn == 1 or cn == 3)):
+    if num_alt == 1 or cn == 1 or cn == 3:
         return HET
     return None
 
@@ -1297,7 +1297,7 @@ def upload_qc_pipeline_output(request):
         message = 'No dataset type detected'
         return create_json_response({'errors': [message]}, status=400, reason=message)
     elif len(dataset_types) > 1:
-        message = 'Multiple dataset types detected: {}'.format(' ,'.join(dataset_types))
+        message = 'Multiple dataset types detected: {}'.format(' ,'.join(sorted(dataset_types)))
         return create_json_response({'errors': [message]}, status=400, reason=message)
     elif list(dataset_types)[0] not in DATASET_TYPE_MAP:
         message = 'Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0])
