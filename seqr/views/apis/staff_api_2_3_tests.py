@@ -5,7 +5,7 @@ import mock
 from django.utils.dateparse import parse_datetime
 import pytz
 from datetime import datetime
-from requests import HTTPError, utils
+from requests import HTTPError
 import responses
 from settings import AIRTABLE_URL
 import json
@@ -679,10 +679,8 @@ class StaffAPITest(AuthenticationTestCase):
             response.json()['message'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 2)
-        queries = {item[0]: item[1] for item in [query.split('=') for query in utils.urlparse(responses.calls[0].request.url).query.split('&')]}
-        self.assertIsNone(queries.get('offset'))
-        queries = {item[0]: item[1] for item in [query.split('=') for query in utils.urlparse(responses.calls[1].request.url).query.split('&')]}
-        self.assertEqual(queries.get('offset'), 'abc123')
+        self.assertIsNone(responses.calls[0].request.params.get('offset'))
+        self.assertEqual(responses.calls[1].request.params.get('offset'), 'abc123')
 
         # Test success
         responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
