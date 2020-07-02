@@ -768,8 +768,8 @@ def discovery_sheet(request, project_guid):
     mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
-        errors.append("No data loaded for project: {}".format(project.name))
-        logger.info("No data loaded for project: {}".format(project.name))
+        errors.append("No data loaded for project: {}".format(project))
+        logger.info("No data loaded for project: {}".format(project))
         return create_json_response({
             'rows': [],
             'errors': errors,

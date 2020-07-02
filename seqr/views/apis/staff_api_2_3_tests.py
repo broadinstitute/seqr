@@ -595,7 +595,6 @@ class StaffAPITest(AuthenticationTestCase):
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        content = response.get('content-disposition')
         self.assertEqual(
             response.get('content-disposition'),
             'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
@@ -812,7 +811,7 @@ class StaffAPITest(AuthenticationTestCase):
 
         response = self.client.get(url, HTTP_TEST_HEADER='some/value')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content.decode('utf-8'), 'Test response')
+        self.assertEqual(response.content, b'Test response')
         self.assertEqual(response.get('content-type'), 'text/custom')
         self.assertEqual(response.get('x-test-header'), 'test')
         self.assertIsNone(response.get('keep-alive'))
@@ -831,7 +830,7 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(post_request.headers['Host'], 'localhost:5601')
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '24')
-        self.assertEqual(post_request.body.decode('utf-8'), data)
+        self.assertEqual(post_request.body, data.encode('utf-8'))
 
         # Test with error response
         response = self.client.get('{}/bad_response'.format(url))
