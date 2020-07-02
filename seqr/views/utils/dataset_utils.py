@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 import elasticsearch_dsl
 from django.utils import timezone
@@ -6,7 +8,7 @@ import random
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
-from seqr.views.utils.file_utils import load_uploaded_file, parse_file
+from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
 
@@ -61,11 +63,6 @@ def validate_alignment_dataset_path(dataset_path):
 
 def load_mapping_file(mapping_file_path):
     file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
-    return _load_mapping_file(file_content)
-
-
-def load_uploaded_mapping_file(mapping_file_id):
-    file_content = load_uploaded_file(mapping_file_id)
     return _load_mapping_file(file_content)
 
 
@@ -177,9 +174,6 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
     """
-
-    if len(sample_ids) == 0:
-        return {}
 
     sample_id_to_sample_record = {}
     sample_query = Sample.objects.select_related('individual').filter(

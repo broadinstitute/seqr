@@ -2,6 +2,8 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 
+from __future__ import unicode_literals
+
 import json
 import logging
 import re
@@ -161,12 +163,9 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    try:
-        updated_families, updated_individuals = _add_or_update_individuals_and_families(
-            project, modified_individuals_list, user=request.user
-        )
-    except Exception as e:
-        return create_json_response({'errors': [e.message]}, status=400, reason='Invalid updates')
+    updated_families, updated_individuals = _add_or_update_individuals_and_families(
+        project, modified_individuals_list, user=request.user
+    )
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -271,7 +270,7 @@ def receive_individuals_table_handler(request, project_guid):
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+        return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     # send back some stats
     individual_ids_by_family = defaultdict(list)
@@ -368,47 +367,56 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
     Return:
         2-tuple: updated_families, updated_individuals containing Django ORM models
     """
-    families = {}
+    updated_families = set()
     updated_individuals = set()
     parent_updates = []
-    for i, record in enumerate(individual_records):
-        # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
-        family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {}).get('familyId')
-        if not family_id:
-            raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
 
-        if JsonConstants.INDIVIDUAL_ID_COLUMN not in record and 'individualGuid' not in record:
-            raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
+    family_ids = {_get_record_family_id(record) for record in individual_records}
+    families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
 
-        family = families.get(family_id)
-        if family:
-            created = False
+    missing_family_ids = family_ids - set(families_by_id.keys())
+    for family_id in missing_family_ids:
+        family = Family.objects.create(project=project, family_id=family_id)
+        families_by_id[family_id] = family
+        updated_families.add(family)
+        logger.info('Created family: {}'.format(family))
+
+    individual_models = Individual.objects.filter(family__project=project).prefetch_related(
+        'family', 'mother', 'father')
+    has_individual_guid = any(record.get('individualGuid') for record in individual_records)
+    if has_individual_guid:
+        individual_lookup = {
+            i.guid: i for i in individual_models.filter(
+            guid__in=[record['individualGuid'] for record in individual_records])
+        }
+    else:
+        individual_lookup = defaultdict(dict)
+        for i in individual_models.filter(
+                individual_id__in=[_get_record_individual_id(record) for record in individual_records]):
+            individual_lookup[i.individual_id][i.family] = i
+
+    for record in individual_records:
+        family_id = _get_record_family_id(record)
+        family = families_by_id.get(family_id)
+
+        if has_individual_guid:
+            individual = individual_lookup[record.pop('individualGuid')]
         else:
-            family, created = Family.objects.get_or_create(project=project, family_id=family_id)
-
-        if created:
-            logger.info("Created family: %s", family)
-
-        # uploaded files do not have unique guid's so fall back to a combination of family and individualId
-        if record.get('individualGuid'):
-            individual_filters = {'guid': record['individualGuid']}
-        else:
-            individual_id = record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
-            individual_filters = {'family': family, 'individual_id': individual_id}
-
-        individual, created = Individual.objects.get_or_create(**individual_filters)
-
-        if created:
-            record.update({
-                'caseReviewStatus': 'I',
-            })
+            # uploaded files do not have unique guid's so fall back to a combination of family and individualId
+            individual_id = _get_record_individual_id(record)
+            individual = individual_lookup[individual_id].get(family)
+            if not individual:
+                individual = Individual.objects.create(
+                    family=family, individual_id=individual_id, case_review_status='I')
 
         record['family'] = family
         record.pop('familyId', None)
         if individual.family != family:
-            families[individual.family.family_id] = individual.family
+            family = individual.family
+            updated_families.add(family)
 
-        if record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+        previous_id = record.pop(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN, None)
+        if previous_id:
             updated_individuals.update(individual.maternal_children.all())
             updated_individuals.update(individual.paternal_children.all())
             record['displayName'] = ''
@@ -421,24 +429,33 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
                 'paternalId': record.pop('paternalId', None),
             })
 
-        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
+        family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
+        if family_notes:
+            update_family_from_json(family, {'analysis_notes': family_notes})
+            updated_families.add(family)
 
-        if record.get(JsonConstants.FAMILY_NOTES_COLUMN):
-            update_family_from_json(family, {'analysis_notes': record[JsonConstants.FAMILY_NOTES_COLUMN]})
-
-        updated_individuals.add(individual)
-        families[family.family_id] = family
+        is_updated = update_individual_from_json(individual, record, user=user)
+        if is_updated:
+            updated_individuals.add(individual)
+            updated_families.add(family)
 
     for update in parent_updates:
         individual = update.pop('individual')
         update_individual_from_json(individual, update, user=user)
 
-    updated_families = list(families.values())
-
     # update pedigree images
     update_pedigree_images(updated_families, project_guid=project.guid)
 
-    return updated_families, list(updated_individuals)
+    return list(updated_families), list(updated_individuals)
+
+
+def _get_record_family_id(record):
+    # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
+    return record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {})['familyId']
+
+
+def _get_record_individual_id(record):
+    return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
 # Use column keys that align with phenotips fields to support phenotips json export format
@@ -476,7 +493,7 @@ def receive_hpo_table_handler(request, project_guid):
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+        return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     response = {
         'uploadedFileId': uploaded_file_id,
@@ -490,6 +507,7 @@ def receive_hpo_table_handler(request, project_guid):
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
         row_dicts = records
+        column_map = set(row_dicts[0].keys())
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
@@ -508,8 +526,6 @@ def _process_hpo_records(records, filename, project):
                 column_map[HPO_TERM_NUMBER_COLUMN].append(i)
             elif 'affected' in key:
                 column_map[AFFECTED_COLUMN] = i
-            elif 'feature' in key:
-                column_map[FEATURES_COLUMN] = i
         if INDIVIDUAL_ID_COLUMN not in column_map:
             raise ValueError('Invalid header, missing individual id column')
 
@@ -535,14 +551,13 @@ def _process_hpo_records(records, filename, project):
     if HPO_TERM_NUMBER_COLUMN in column_map:
         aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COLUMN: [], HPO_TERMS_ABSENT_COLUMN: []})
         for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COLUMN] = []
-            row[HPO_TERMS_ABSENT_COLUMN] = []
+            column = HPO_TERMS_ABSENT_COLUMN if row.get(AFFECTED_COLUMN) == 'no' else HPO_TERMS_PRESENT_COLUMN
+            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))]
             if row.get(HPO_TERM_NUMBER_COLUMN):
-                column = HPO_TERMS_ABSENT_COLUMN if row.get(AFFECTED_COLUMN) == 'no' else HPO_TERMS_PRESENT_COLUMN
-                aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))][column].append(
-                    row[HPO_TERM_NUMBER_COLUMN].strip()
-                )
-        _parse_individual_hpo_terms([{
+                aggregate_entry[column].append(row[HPO_TERM_NUMBER_COLUMN].strip())
+            else:
+                aggregate_entry[column] = []
+        return _parse_individual_hpo_terms([{
             FAMILY_ID_COLUMN: family_id,
             INDIVIDUAL_ID_COLUMN: individual_id,
             HPO_TERMS_PRESENT_COLUMN: features[HPO_TERMS_PRESENT_COLUMN],
@@ -622,7 +637,7 @@ def _parse_individual_hpo_terms(json_records, project):
     if invalid_hpo_term_individuals:
         warnings.append(
             "The following HPO terms were not found in seqr's HPO data and will not be added: {}".format(
-                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in invalid_hpo_term_individuals.items()])
+                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in sorted(invalid_hpo_term_individuals.items())])
             )
         )
     if missing_individuals:
@@ -633,7 +648,7 @@ def _parse_individual_hpo_terms(json_records, project):
     if unchanged_individuals:
         warnings.append(
             'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
-                len(unchanged_individuals), ', '.join(unchanged_individuals)
+                len(unchanged_individuals), ', '.join(sorted(unchanged_individuals))
             ))
 
     return parsed_records, errors, warnings
@@ -663,7 +678,7 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
     return create_json_response({
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            individuals_by_guid.values(), user=request.user, add_hpo_details=True,
+            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True,
         )},
     })
 

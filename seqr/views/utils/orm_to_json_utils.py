@@ -2,13 +2,14 @@
 Utility functions for converting Django ORM object to JSON
 """
 
+from __future__ import unicode_literals
+
 import itertools
 import json
 import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
@@ -56,10 +57,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
             if not field_value:
                 field_value = model
                 for field in nested_field['fields']:
-                    try:
-                        field_value = getattr(field_value, field) if field_value else None
-                    except ObjectDoesNotExist:
-                        field_value = None
+                    field_value = getattr(field_value, field) if field_value else None
 
             result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
 
@@ -676,7 +674,7 @@ def get_json_for_locus_list(locus_list, user):
 
 def get_json_for_project_collaborator_list(project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = get_project_collaborators_by_username(project).values()
+    collaborator_list = list(get_project_collaborators_by_username(project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 

@@ -1017,6 +1017,7 @@
         "comments": "mutation identified in 1 IMD16 family",
         "phenotype_inheritance": "Autosomal recessive",
         "phenotype_mim_number": 615593,
+        "phenotypic_series_number": 12345,
         "phenotype_description": "?Immunodeficiency 16",
         "phenotype_map_method": "3"
     }
@@ -1028,6 +1029,19 @@
         "gene": 1,
         "percentile_75": 0.821286439896,
         "percentile_25": 0.587214291096
+    }
+},
+    {
+    "model": "reference_data.geneconstraint",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "mis_z": -0.7773,
+        "mis_z_rank": 1,
+        "louef": 1.606,
+        "louef_rank": 0,
+        "pLI": 0.00090576,
+        "pLI_rank": 1
     }
 },
     {

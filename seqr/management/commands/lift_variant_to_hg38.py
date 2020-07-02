@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from django.core.management.base import BaseCommand, CommandError
 
@@ -21,7 +23,7 @@ class Command(BaseCommand):
 
         saved_variant = SavedVariant.objects.get(guid=saved_variant_guid)
 
-        if raw_input('Are you sure you want to update {}-{}-{} to {} (y/n)? '.format(
+        if input('Are you sure you want to update {}-{}-{} to {} (y/n)? '.format(
                 saved_variant.xpos_start, saved_variant.ref, saved_variant.alt, variant_id)) != 'y':
             raise CommandError('Error: user did not confirm')
 

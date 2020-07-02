@@ -29,7 +29,7 @@ class RedisUtilsTest(TestCase):
         mock_redis.return_value.get.side_effect = lambda key: key
         self.assertIsNone(safe_redis_get_json('test_key'))
         mock_logger.info.assert_called_with('Loaded test_key from redis')
-        mock_logger.warn.assert_called_with('Unable to fetch "test_key" from redis: No JSON object could be decoded')
+        self.assertEqual(mock_logger.warn.call_args.args[0].split('\t')[0], 'Unable to fetch "test_key" from redis:')
 
         # test with redis connection error
         mock_logger.reset_mock()

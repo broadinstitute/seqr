@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
@@ -37,7 +39,7 @@ def update_individual_from_json(individual, json, user=None, allow_unknown_keys=
     if json.get('displayName') and json['displayName'] == individual.individual_id:
         json['displayName'] = ''
 
-    update_model_from_json(
+    return update_model_from_json(
         individual, json, user=user, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=[
             'filter_flags', 'pop_platform_filters', 'population',
@@ -58,6 +60,7 @@ def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False,
     immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
+    has_updates = False
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
         if orm_key in immutable_keys:
@@ -69,6 +72,9 @@ def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False,
         if getattr(model_obj, orm_key) != value:
             if orm_key in internal_fields and not (user and user.is_staff):
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
+            has_updates = True
             setattr(model_obj, orm_key, value)
 
-    model_obj.save()
+    if has_updates:
+        model_obj.save()
+    return has_updates

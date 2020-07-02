@@ -1,3 +1,6 @@
+from __future__ import unicode_literals
+from builtins import str
+
 from collections import OrderedDict
 import json
 import openpyxl as xl
@@ -25,30 +28,32 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
+
     for i, row in enumerate(rows):
         if len(header) != len(row):
-            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
+            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (
+                len(header), len(row), ','.join(header), ','.join(row)))
         rows[i] = ['' if value is None else value for value in row]
 
     if file_format == "tsv":
         response = HttpResponse(content_type='text/tsv')
-        response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix)
+        response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix).encode('ascii', 'ignore')
         response.writelines(['\t'.join(header)+'\n'])
-        response.writelines(('\t'.join(map(unicode, row))+'\n' for row in rows))
+        response.writelines(('\t'.join(map(str, row))+'\n' for row in rows))
         return response
     elif file_format == "json":
         response = HttpResponse(content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix)
+        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix).encode('ascii', 'ignore')
         for row in rows:
-            json_keys = map(lambda s: s.replace(" ", "_").lower(), header)
-            json_values = map(unicode, row)
+            json_keys = [s.replace(" ", "_").lower() for s in header]
+            json_values = list(map(str, row))
             response.write(json.dumps(OrderedDict(zip(json_keys, json_values)))+'\n')
         return response
     elif file_format == "xls":
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()
         if titlecase_header:
-            header = map(_to_title_case, header)
+            header = list(map(_to_title_case, header))
         ws.append(header)
         for row in rows:
             ws.append(row)
@@ -56,7 +61,7 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
             wb.save(temporary_file.name)
             temporary_file.seek(0)
             response = HttpResponse(temporary_file.read(), content_type="application/ms-excel")
-            response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
+            response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix).encode('ascii', 'ignore')
             return response
     else:
         raise ValueError("Invalid file_format: %s" % file_format)
@@ -76,10 +81,11 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
                 content += '\n'.join([
                     DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
                 ])
-                if not isinstance(content, unicode):
-                    content = unicode(content, errors='ignore')
-                zip_file.writestr('{}.{}'.format(filename.encode('utf-8'), file_format), content)
+                if isinstance(content, str):
+                    content = content.encode('utf-8')
+                content = str(content, 'ascii', errors='ignore') # Strip unicode chars in the content
+                zip_file.writestr('{}.{}'.format(filename, file_format), content)
         temp_file.seek(0)
         response = HttpResponse(temp_file, content_type='application/zip')
-        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename.encode('utf-8'))
+        response['Content-Disposition'] = 'attachment; filename="{}.zip"'.format(zip_filename).encode('ascii', 'ignore')
         return response

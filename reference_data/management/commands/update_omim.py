@@ -88,7 +88,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
                 break
             elif not line or line.startswith("#"):
                 continue
-            elif line.startswith('This account is inactive') or line.startswith('This account has expired'):
+            elif 'account is inactive' in line or 'account has expired' in line:
                 raise Exception(line)
             elif header_fields is None:
                 raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
@@ -124,14 +124,6 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
                 record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
                 record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
 
-                # basic checks
-                if len(record_with_phenotype["phenotype_description"].strip()) == 0:
-                    raise ValueError("Empty phenotype description: {}".format(json.dumps(record)))
-
-                if int(record_with_phenotype["phenotype_map_method"]) not in OMIM_PHENOTYPE_MAP_METHOD_CHOICES:
-                    raise ValueError("Unexpected value (%s) for phenotype_map_method: %s" % (
-                        record_with_phenotype["phenotype_map_method"], phenotype_field))
-
                 yield record_with_phenotype
 
             if record_with_phenotype is None:
@@ -143,7 +135,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def post_process_models(self, models):
         logger.info('Adding phenotypic series information')
         mim_numbers = {omim_record.mim_number for omim_record in models if omim_record.phenotype_mim_number}
-        mim_numbers = map(str, list(mim_numbers))
+        mim_numbers = list(map(str, list(mim_numbers)))
         mim_number_to_phenotypic_series = {}
         for i in range(0, len(mim_numbers), 20):
             logger.debug('Fetching entries {}-{}'.format(i, i + 20))

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -73,12 +75,6 @@ def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, inclu
     hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
 
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
-
-
-def _get_legacy_gene_name_query(gene_name):
-    return Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_name)) | \
-           Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_name)) | \
-           Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_name))
 
 
 def parse_mme_features(features, hpo_terms_by_id):
@@ -167,7 +163,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
         for feature in genomic_features:
             feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
-            'query_ids': genes_by_id.keys(),
+            'query_ids': list(genes_by_id.keys()),
             'filter_key': 'genomic_features',
             'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
         }
@@ -193,7 +189,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
     if not scored_matches:
         return [], incoming_query
 
-    prefetch_related_objects(scored_matches.keys(), 'matchmakerresult_set')
+    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
             MatchmakerResult.objects.create(
@@ -244,7 +240,7 @@ def _get_genotype_score(genomic_features, match):
             feature_gene_matches += match_features_by_gene_id[gene_id]
         if feature_gene_matches:
             score += 0.7
-            if feature.get('zygosty') and any(
+            if feature.get('zygosity') and any(
                     match_feature.get('zygosity') == feature['zygosity'] for match_feature in feature_gene_matches
             ):
                 score += 0.15

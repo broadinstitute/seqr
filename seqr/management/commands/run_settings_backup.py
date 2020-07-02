@@ -1,6 +1,12 @@
+from __future__ import unicode_literals
+
 import os
 import datetime
 from django.core.management.base import BaseCommand
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -12,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         def run(cmd):
-            self.stdout.write(cmd)
+            logger.info(cmd)
             os.system(cmd)
 
         os.chdir('/')

@@ -1,8 +1,11 @@
+from __future__ import unicode_literals
+
 import logging
 import redis
 
 from seqr.models import SavedVariant, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
+from seqr.utils.gene_utils import get_genes
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
@@ -58,6 +61,21 @@ def reset_cached_search_results(project):
 
 def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
+
+
+def saved_variant_genes(variants):
+    gene_ids = set()
+    for variant in variants:
+        if isinstance(variant, list):
+            for compound_het in variant:
+                gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
+        else:
+            gene_ids.update(list(variant.get('transcripts', {}).keys()))
+    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
+    for gene in genes.values():
+        if gene:
+            gene['locusListGuids'] = []
+    return genes
 
 
 def _update_saved_variant_json(saved_variant, saved_variant_json):
