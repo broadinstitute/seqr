@@ -210,6 +210,13 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings', 'uploadedFileId'})
+        self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(response_json['warnings'], [])
+        self.assertListEqual(response_json['info'], [
+            '2 families, 3 individuals parsed from 1000_genomes demo_individuals.tsv',
+            '1 new families, 1 new individuals will be added to the project',
+            '2 existing individuals will be updated',
+        ])
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
@@ -217,6 +224,24 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
+
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1')
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], '21')
+        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['analysisNotes'], 'a new family')
+
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        self.assertTrue('I000001_na19675' in response_json['individualsByGuid'])
+        self.assertTrue('I000002_na19678' in response_json['individualsByGuid'])
+        new_indiv_guid = next(guid for guid in response_json['individualsByGuid'].keys()
+                              if guid not in {'I000001_na19675', 'I000002_na19678'})
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['individualId'], 'NA19675')
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'F')
+        self.assertEqual(
+            response_json['individualsByGuid']['I000001_na19675']['notes'], 'A affected individual, test1-zsf')
+        self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['individualId'], 'HG00735')
+        self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
 
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)
