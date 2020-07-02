@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
 import json
@@ -13,8 +15,9 @@ class DashboardPageTest(AuthenticationTestCase):
     fixtures = ['users']
 
     def get_initial_page_json(self, response):
-        self.assertRegex(response.content, INITIAL_JSON_REGEX)
-        m = re.search(INITIAL_JSON_REGEX, response.content)
+        content = response.content.decode('utf-8')
+        self.assertRegex(content, INITIAL_JSON_REGEX)
+        m = re.search(INITIAL_JSON_REGEX, content)
         return json.loads(m.group('initial_json'))
 
     def test_react_page(self):
@@ -29,17 +32,19 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
 
         # test static assets are correctly loaded
-        self.assertRegex(response.content, r'static/app(-.*)js')
-        self.assertRegex(response.content, r'<link\s+href="/static/app.*css"[^>]*>')
+        content = response.content.decode('utf-8')
+        self.assertRegex(content, r'static/app(-.*)js')
+        self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
         response = self.client.get(url, HTTP_HOST='localhost:3000')
         self.assertEqual(response.status_code, 200)
 
-        self.assertNotRegex(response.content, r'static/app(-.*)js')
+        content = response.content.decode('utf-8')
+        self.assertNotRegex(content, r'static/app(-.*)js')
         self.assertContains(response, 'app.js')
-        self.assertNotRegex(response.content, r'<link\s+href="/static/app.*css"[^>]*>')
+        self.assertNotRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
 
     def test_no_login_react_page(self):
         url = reverse(no_login_main_app)
@@ -47,7 +52,7 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
-        self.assertListEqual(initial_json.keys(), ['meta'])
+        self.assertListEqual(list(initial_json.keys()), ['meta'])
 
         # test set password page correctly includes user from token
         response = self.client.get(
