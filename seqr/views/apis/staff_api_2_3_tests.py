@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from builtins import str
 
 import mock
 from django.utils.dateparse import parse_datetime
