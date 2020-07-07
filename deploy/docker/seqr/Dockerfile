@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM debian:stretch
 
 MAINTAINER MacArthur Lab
 
@@ -17,16 +17,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+#  install the packages necessary to build Python source:
+RUN apt update && apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
+    libnss3-dev libssl-dev libreadline-dev libffi-dev libbz2-dev \
+    libncursesw5-dev libsqlite3-dev tk-dev libc6-dev ca-certificates
 
-# install python
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python-dev \
-    ca-certificates \
-    && wget https://bootstrap.pypa.io/get-pip.py \
-    && python get-pip.py \
-    && pip install --upgrade pip setuptools \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# downland Python soruce code
+RUN curl -O https://www.python.org/ftp/python/3.7.8/Python-3.7.8.tar.xz \
+    && tar -xf Python-3.7.8.tar.xz \
+    && rm -f Python-3.7.8.tar.xz
+
+# build and install Python
+RUN cd Python-3.7.8 \
+    && ./configure --enable-optimizations \
+    && make -j `nproc` \
+    && make install \
+    && cd .. \
+    && rm -rf Python-3.7.8 \
+    && ln -s /usr/local/bin/pip3.7 /usr/local/bin/pip \
+    && ln -s /usr/local/bin/python3.7 /usr/local/bin/python
 
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -55,9 +64,9 @@ RUN apt-get update \
     && apt-get install -y \
         nodejs
 
-# install database clients for debugging
-RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
-    && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
+# install database clients for debugging (https://www.postgresql.org/download/linux/debian/)
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get update && apt-get install -y \
         postgresql \
         postgresql-client \
@@ -71,10 +80,6 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get update && apt-get install -y \
         gcc \
-        python-dev \
-        python-setuptools \
-        libffi-dev \
-        libssl-dev \
         libpq-dev \
     && pip install gsutil
 
