@@ -32,24 +32,24 @@ spec:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/component: controller
 ---
-# docs on config options: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/
-#kind: Ingress
-#apiVersion: extensions/v1beta1
-#metadata:
-#  name: ingress-nginx
-#  namespace: {{ NAMESPACE }}
-#  annotations:
-#    nginx.ingress.kubernetes.io/proxy-body-size: 8m
-#spec:
-#  tls:
-#    - hosts:
-#      - {{ CLUSTER_HOSTNAME }}
-#      secretName: nginx-secrets
-#  rules:
-#    - host: {{ CLUSTER_HOSTNAME }}
-#      http:
-#        paths:
-#        - path: /
-#          backend:
-#            serviceName: seqr
-#            servicePort: {{ SEQR_SERVICE_PORT }}
+# docs @ https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: ingress-nginx
+  namespace: {{ NAMESPACE }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+    - hosts:
+      - {{ CLUSTER_HOSTNAME }}
+      secretName: nginx-secrets
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: seqr
+            servicePort: {{ SEQR_SERVICE_PORT }}
