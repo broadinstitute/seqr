@@ -71,6 +71,7 @@ The steps below describe how to annotate a callset and then load it into your on
    # create dataproc cluster
    hailctl dataproc start \
        --pkgs luigi,google-api-python-client \
+       --zone us-central1-b \
        --vep GRCh38 \
        --max-idle 30m \
        --num-workers 2 \
@@ -86,7 +87,7 @@ The steps below describe how to annotate a callset and then load it into your on
             --genome-version 38 \
             --sample-type WES \
             --reference-ht-path  gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
-            --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.ht
+            --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht
    
    gcloud dataproc jobs list    # run this to get the dataproc job id
    gcloud dataproc jobs wait ce9fcc69a5034522b3ea2cb8e83c444d   # view jobs logs and wait for the job to complete
@@ -104,7 +105,11 @@ The steps below describe how to annotate a callset and then load it into your on
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
-To annotate a callset on-prem, first download VEP reference data:
+To annotate a callset on-prem, first download VEP and other reference data. 
+If all your data is on GRCh38 (or GRCh37), then download the data only for that genome version. 
+
+The total download size is ~180Gb per genome version.
+
 ```
 # authenticate to your gcloud account so you can download public reference data
 gcloud auth application-default login  
@@ -115,10 +120,25 @@ cd ${SEQR_DIR}/data/vep_data
 curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz | tar xzf - &   # for the VEP GRCh37 cache
 curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz | tar xzf - &   # for the VEP GRCh38 cache (can have both the GRCh37 and GRCh38 caches at the same time)
 
-#  - TODO share reference data in non-requestor-pays buckets
+#  download loftee reference data
 mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
 cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
-gsutil -u your-gcloud-project-name cat gs://hail-us-vep/loftee-beta/GRCh37.tar  | tar xf  - & 
+gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh37.tar | tar xf  - & 
+
+mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
+cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
+gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - & 
+
+# download full reference data set for GRCh37 and GRCh38
+mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
+cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
+gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh37.2020-06-15.ht .
+
+mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh38
+cd ${SEQR_DIR}/data/seqr-reference-data/GRCh38
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
+gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht .
 ```
 
 Then run the following commands to annotate your callset and load it into elasticsearch:
@@ -136,8 +156,8 @@ docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeli
 
 # for GRCh38 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
-    --clinvar-ht-path gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.ht \
+    --reference-ht-path /seqr_reference_data/combined_reference_data_grch38.ht \
+    --clinvar-ht-path /seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht \
     --vep-config-json-path /vep85-GRCh38-loftee-gcloud.json \
     --es-host elasticsearch \
     --es-index-min-num-shards 3 \
@@ -145,12 +165,12 @@ python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
     --es-index your-dataset-name \
     --genome-version 38 \
     --source-paths gs://your-bucket/GRCh38/your-callset.vcf.gz \   # this can also be a path inside /input_vcfs/
-    --dest-path gs://your-bucket/GRCh38/your-callset.mt      # this can be a local or gs:// path where you have write access
+    --dest-path gs://your-bucket/GRCh38/your-callset.mt      # this can be a local path or gs:// path where you have write access
 
 # for GRCh37 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht \
-    --clinvar-ht-path gs://seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.ht \
+    --reference-ht-path /seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht \
+    --clinvar-ht-path /seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.2020-06-15.ht \
     --vep-config-json-path /vep85-GRCh37-loftee-gcloud.json \
     --es-host elasticsearch \
     --es-index-min-num-shards 3 \
@@ -158,7 +178,7 @@ python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
     --es-index your-dataset-name \
     --genome-version 37 \
     --source-paths gs://your-bucket/GRCh37/your-callset.vcf.gz \   # this can also be a path inside /input_vcfs/
-    --dest-path gs://your-bucket/GRCh37/your-callset.mt      # this can be a local or gs:// path where you have write access
+    --dest-path gs://your-bucket/GRCh37/your-callset.mt      # this can be a local path or gs:// path where you have write access
 
 ```
 
