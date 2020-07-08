@@ -461,6 +461,7 @@ class Individual(ModelWithGUID):
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
+    sv_flags = JSONField(null=True)
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -473,7 +474,7 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population',
+            'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
             'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
