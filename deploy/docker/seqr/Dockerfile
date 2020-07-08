@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 #  install the packages necessary to build Python source:
-RUN apt update && apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
+RUN apt update && apt install -y --no-install-recommends build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
     libnss3-dev libssl-dev libreadline-dev libffi-dev libbz2-dev \
     libncursesw5-dev libsqlite3-dev tk-dev libc6-dev ca-certificates \
     && apt-get clean \
@@ -35,7 +35,7 @@ RUN curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VER
 
 WORKDIR /Python-$PYTHON_VERSION
 RUN ./configure --enable-optimizations \
-    && make -j $(nproc) \
+    && make -j "$(nproc)" \
     && make install
 
 WORKDIR /
@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
+RUN curl -L0 https://raw.github.com/miyagawa/cpanminus/master/cpanm -o /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
     && cpanm --notest \
         Cairo \
@@ -67,15 +67,15 @@ RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpan
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get install -y \
+    && apt-get install -y --no-install-recommends \
         nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # install database clients for debugging (https://www.postgresql.org/download/linux/debian/)
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-    && apt-get update && apt-get install -y \
+    && curl -L0 -o - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    && apt-get update && apt-get install -y --no-install-recommends \
         postgresql \
         postgresql-client \
         libpq-dev \
