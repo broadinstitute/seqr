@@ -21,11 +21,16 @@ UPDATED_ID = "NA19678_1"
 UPDATED_MATERNAL_ID = "NA20870"
 
 INDIVIDUAL_IDS_UPDATE_DATA = {
-    "individualGuid": ID_UPDATE_GUID,
-    "familyId": "1",
-    "individualId": UPDATED_ID,
-    "maternalId": UPDATED_MATERNAL_ID,
-    "paternalId": "",
+    'individualGuid': ID_UPDATE_GUID,
+    'familyId': '1',
+    'individualId': UPDATED_ID,
+    'maternalId': UPDATED_MATERNAL_ID,
+    'paternalId': '',
+    'sex': 'M',
+    'notes': '',
+    'population': None,
+    'filterFlags': None,
+    'projectGuid': PROJECT_GUID,
 }
 
 INDIVIDUAL_UPDATE_GUID = "I000007_na20870"
