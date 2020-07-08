@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM debian:jessie
 
 MAINTAINER MacArthur Lab
 
@@ -17,26 +17,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-#  install the packages necessary to build Python source:
-RUN apt update && apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
-    libnss3-dev libssl-dev libreadline-dev libffi-dev libbz2-dev \
-    libncursesw5-dev libsqlite3-dev tk-dev libc6-dev ca-certificates \
+
+# install python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python-dev \
+    ca-certificates \
+    && wget https://bootstrap.pypa.io/get-pip.py \
+    && python get-pip.py \
+    && pip install --upgrade pip setuptools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# downland and install Python from soruce code
-RUN PYTHON_VERSION="3.7.8" \
-    && curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tar.xz \
-    && tar -xf Python-$PYTHON_VERSION.tar.xz \
-    && rm -f Python-$PYTHON_VERSION.tar.xz \
-    && cd ./Python-$PYTHON_VERSION \
-    && ./configure --enable-optimizations \
-    && make -j $(nproc) \
-    && make install \
-    && cd .. \
-    && rm -rf ./Python-$PYTHON_VERSION \
-    && ln -s /usr/local/bin/pip3.7 /usr/local/bin/pip \
-    && ln -s /usr/local/bin/python3.7 /usr/local/bin/python
 
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,33 +53,29 @@ RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpan
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y \
-        nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        nodejs
 
-# install database clients for debugging (https://www.postgresql.org/download/linux/debian/)
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+# install database clients for debugging
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
+    && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
     && apt-get update && apt-get install -y \
         postgresql \
         postgresql-client \
-        libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        libpq-dev
 
 RUN apt-get update && apt-get install -y \
-    redis-tools \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    redis-tools
 
 # install gcloud tools
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get update && apt-get install -y \
         gcc \
+        python-dev \
+        python-setuptools \
+        libffi-dev \
+        libssl-dev \
         libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
     && pip install gsutil
 
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
@@ -97,9 +83,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update && apt-get install -y \
-        google-cloud-sdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        google-cloud-sdk
 
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
     && chmod +x ./kubectl \
