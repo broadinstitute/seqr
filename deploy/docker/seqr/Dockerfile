@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop \
     less \
     nano \
-    wget \
     xterm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -24,19 +23,25 @@ RUN apt update && apt install -y build-essential zlib1g-dev libncurses5-dev libg
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+ARG PYTHON_MAIN_VER="3.7"
+ARG PYTHON_MINOR_VER="8"
+ARG PYTHON_VERSION=$PYTHON_MAIN_VER.$PYTHON_MINOR_VER
+
 # downland and install Python from soruce code
-RUN PYTHON_VERSION="3.7.8" \
-    && curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tar.xz \
+WORKDIR /
+RUN curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tar.xz \
     && tar -xf Python-$PYTHON_VERSION.tar.xz \
-    && rm -f Python-$PYTHON_VERSION.tar.xz \
-    && cd ./Python-$PYTHON_VERSION \
-    && ./configure --enable-optimizations \
+    && rm -f Python-$PYTHON_VERSION.tar.xz
+
+WORKDIR /Python-$PYTHON_VERSION
+RUN ./configure --enable-optimizations \
     && make -j $(nproc) \
-    && make install \
-    && cd .. \
-    && rm -rf ./Python-$PYTHON_VERSION \
-    && ln -s /usr/local/bin/pip3.7 /usr/local/bin/pip \
-    && ln -s /usr/local/bin/python3.7 /usr/local/bin/python
+    && make install
+
+WORKDIR /
+RUN rm -rf ./Python-$PYTHON_VERSION \
+    && ln -s /usr/local/bin/pip$PYTHON_MAIN_VER /usr/local/bin/pip \
+    && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
 
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
 RUN apt-get update && apt-get install -y --no-install-recommends \
