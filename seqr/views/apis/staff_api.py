@@ -4,6 +4,7 @@ from collections import defaultdict
 from elasticsearch_dsl import Index
 import json
 import logging
+import re
 import requests
 import urllib3
 
@@ -1286,34 +1287,18 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
-                       if field not in json_records[0]]
-    if missing_columns:
-        message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+    dataset_type, data_type, records_by_sample_id = _parse_raw_qc_records(json_records)
 
-    dataset_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
-    if len(dataset_types) == 0:
-        message = 'No dataset type detected'
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-    elif len(dataset_types) > 1:
-        message = 'Multiple dataset types detected: {}'.format(' ,'.join(sorted(dataset_types)))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-    elif list(dataset_types)[0] not in DATASET_TYPE_MAP:
-        message = 'Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0])
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-
-    dataset_type = DATASET_TYPE_MAP[list(dataset_types)[0]]
-
-    info_message = 'Parsed {} {} samples'.format(len(json_records), dataset_type)
+    info_message = 'Parsed {} {} samples'.format(
+        len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
     logger.info(info_message)
     info = [info_message]
     warnings = []
 
-    sample_ids = {record['seqr_id'] for record in json_records}
     samples = Sample.objects.filter(
-        sample_id__in=sample_ids,
-        sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+        sample_id__in=list(records_by_sample_id.keys()),
+        sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+        dataset_type=dataset_type,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
     ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
@@ -1332,28 +1317,29 @@ def upload_qc_pipeline_output(request):
         if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
     }
 
-    for record in json_records:
+    for sample_id, record in records_by_sample_id.items():
         record['individual_ids'] = list({
-            individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
-            if individual_latest_sample_id[individual_id] == record['seqr_id']
+            individual_id for individual_id in sample_individuals.get(sample_id, [])
+            if individual_latest_sample_id[individual_id] == sample_id
         })
 
-    missing_sample_ids = {record['seqr_id'] for record in json_records if not record['individual_ids']}
+    missing_sample_ids = {sample_id for sample_id, record in records_by_sample_id.items() if not record['individual_ids']}
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).exclude(
-            sample__sample_type=Sample.SAMPLE_TYPE_WGS if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WES)
+            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).filter(
+            sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
         individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
             individual_db_ids_by_id[individual.individual_id].append(individual.id)
-        for record in json_records:
-            if not record['individual_ids'] and len(individual_db_ids_by_id[record['seqr_id']]) == 1:
-                record['individual_ids'] = individual_db_ids_by_id[record['seqr_id']]
-                missing_sample_ids.remove(record['seqr_id'])
+        for sample_id, record in records_by_sample_id.items():
+            if not record['individual_ids'] and len(individual_db_ids_by_id[sample_id]) >= 1:
+                record['individual_ids'] = individual_db_ids_by_id[sample_id]
+                missing_sample_ids.remove(sample_id)
 
-    multi_individual_samples = {record['seqr_id']: len(record['individual_ids'])
-                                for record in json_records if len(record['individual_ids']) > 1}
+    multi_individual_samples = {
+        sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
+        if len(record['individual_ids']) > 1}
     if multi_individual_samples:
         logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)))
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
@@ -1365,6 +1351,59 @@ def upload_qc_pipeline_output(request):
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
+    records_with_individuals = [
+        record for sample_id, record in records_by_sample_id.items() if sample_id not in missing_sample_ids
+    ]
+
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        _update_individuals_sv_qc(records_with_individuals)
+    else:
+        _update_individuals_variant_qc(records_with_individuals, data_type, warnings)
+
+    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
+    info.append(message)
+    logger.info(message)
+
+    return create_json_response({
+        'errors': [],
+        'warnings': warnings,
+        'info': info,
+    })
+
+
+def _parse_raw_qc_records(json_records):
+    # Parse SV QC
+    if all(field in json_records[0] for field in ['sample', 'lt100_raw_calls', 'lt10_highQS_rare_calls']):
+        records_by_sample_id = {
+            re.search('(\d+)_(?P<sample_id>.+)_v\d_Exome_GCP', record['sample']).group('sample_id'): record
+            for record in json_records}
+        return Sample.DATASET_TYPE_SV_CALLS, 'exome', records_by_sample_id
+
+    # Parse regular variant QC
+    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
+                       if field not in json_records[0]]
+    if missing_columns:
+        message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
+        return create_json_response({'errors': [message]}, status=400, reason=message)
+
+    data_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
+    if len(data_types) == 0:
+        message = 'No data type detected'
+        return create_json_response({'errors': [message]}, status=400, reason=message)
+    elif len(data_types) > 1:
+        message = 'Multiple data types detected: {}'.format(' ,'.join(sorted(data_types)))
+        return create_json_response({'errors': [message]}, status=400, reason=message)
+    elif list(data_types)[0] not in DATA_TYPE_MAP:
+        message = 'Unexpected data type detected: "{}" (should be "exome" or "genome")'.format(list(data_types)[0])
+        return create_json_response({'errors': [message]}, status=400, reason=message)
+
+    data_type = DATA_TYPE_MAP[list(data_types)[0]]
+    records_by_sample_id = {record['seqr_id']: record for record in json_records}
+
+    return Sample.DATASET_TYPE_VARIANT_CALLS, data_type, records_by_sample_id
+
+
+def _update_individuals_variant_qc(json_records, data_type, warnings):
     unknown_filter_flags = set()
     unknown_pop_filter_flags = set()
 
@@ -1372,7 +1411,7 @@ def upload_qc_pipeline_output(request):
     for record in json_records:
         filter_flags = {}
         for flag in json.loads(record['filter_flags']):
-            flag = '{}_{}'.format(flag, dataset_type) if flag == 'coverage' else flag
+            flag = '{}_{}'.format(flag, data_type) if flag == 'coverage' else flag
             flag_col = FILTER_FLAG_COL_MAP.get(flag, flag)
             if flag_col in record:
                 filter_flags[flag] = record[flag_col]
@@ -1408,15 +1447,20 @@ def upload_qc_pipeline_output(request):
         logger.info(message)
         warnings.append(message)
 
-    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
-    info.append(message)
-    logger.info(message)
 
-    return create_json_response({
-        'errors': [],
-        'warnings': warnings,
-        'info': info,
-    })
+def _update_individuals_sv_qc(json_records):
+    inidividuals_by_qc = defaultdict(list)
+    for record in json_records:
+        inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
+
+    for raw_flags, indiv_ids in inidividuals_by_qc.items():
+        lt100_raw_calls, lt10_highQS_rare_calls = raw_flags
+        sv_flags = []
+        if lt100_raw_calls == 'FALSE':
+            sv_flags.append('raw_calls:_>100')
+        if lt10_highQS_rare_calls == 'FALSE':
+            sv_flags.append('high_QS_rare_calls:_>10')
+        Individual.objects.filter(id__in=indiv_ids).update(sv_flags=sv_flags or None)
 
 
 FILTER_FLAG_COL_MAP = {
@@ -1427,7 +1471,7 @@ FILTER_FLAG_COL_MAP = {
     'coverage_genome': 'WGS_MEAN_COVERAGE'
 }
 
-DATASET_TYPE_MAP = {
+DATA_TYPE_MAP = {
     'exome': 'exome',
     'genome': 'genome',
     'wes': 'exome',
@@ -1436,7 +1480,7 @@ DATASET_TYPE_MAP = {
 
 EXCLUDE_PROJECTS = [
     '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
-    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes',
+    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 EXCLUDE_PROJECT_CATEGORY = 'Demo'
 
