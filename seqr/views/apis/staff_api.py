@@ -1287,7 +1287,10 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    dataset_type, data_type, records_by_sample_id = _parse_raw_qc_records(json_records)
+    try:
+        dataset_type, data_type, records_by_sample_id = _parse_raw_qc_records(json_records)
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400, reason=str(e))
 
     info_message = 'Parsed {} {} samples'.format(
         len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
@@ -1383,19 +1386,16 @@ def _parse_raw_qc_records(json_records):
     missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
                        if field not in json_records[0]]
     if missing_columns:
-        message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+        raise ValueError('The following required columns are missing: {}'.format(', '.join(missing_columns)))
 
     data_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
     if len(data_types) == 0:
-        message = 'No data type detected'
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+        raise ValueError('No data type detected')
     elif len(data_types) > 1:
-        message = 'Multiple data types detected: {}'.format(' ,'.join(sorted(data_types)))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+        raise ValueError('Multiple data types detected: {}'.format(' ,'.join(sorted(data_types))))
     elif list(data_types)[0] not in DATA_TYPE_MAP:
         message = 'Unexpected data type detected: "{}" (should be "exome" or "genome")'.format(list(data_types)[0])
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+        raise ValueError(message)
 
     data_type = DATA_TYPE_MAP[list(data_types)[0]]
     records_by_sample_id = {record['seqr_id']: record for record in json_records}
