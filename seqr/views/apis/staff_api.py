@@ -1299,7 +1299,7 @@ def upload_qc_pipeline_output(request):
     warnings = []
 
     samples = Sample.objects.filter(
-        sample_id__in=list(records_by_sample_id.keys()),
+        sample_id__in=records_by_sample_id.keys(),
         sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
         dataset_type=dataset_type,
     ).exclude(
