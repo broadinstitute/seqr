@@ -688,6 +688,19 @@ const INDIVIDUAL_FIELDS = [
     ),
   },
   {
+    fieldName: 'SV QC Flags',
+    field: 'svFlags',
+    fieldDisplay: filterFlags => filterFlags.map(flag =>
+      <Label
+        key={flag}
+        basic
+        horizontal
+        color="orange"
+        content={snakecaseToTitlecase(flag)}
+      />,
+    ),
+  },
+  {
     field: 'features',
     fieldName: 'Features',
     isEditable: true,

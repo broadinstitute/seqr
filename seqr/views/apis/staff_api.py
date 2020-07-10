@@ -1,7 +1,10 @@
+from __future__ import unicode_literals
+
 from collections import defaultdict
 from elasticsearch_dsl import Index
 import json
 import logging
+import re
 import requests
 import urllib3
 
@@ -90,13 +93,13 @@ def elasticsearch_status(request):
         index['docType'] = doc_type
 
         projects_for_index = []
-        for index_prefix in seqr_index_projects.keys():
+        for index_prefix in list(seqr_index_projects.keys()):
             if index_name.startswith(index_prefix):
-                projects_for_index += seqr_index_projects.pop(index_prefix).keys()
+                projects_for_index += list(seqr_index_projects.pop(index_prefix).keys())
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
-    errors = [u'{} does not exist and is used by project(s) {}'.format(
-        index, ', '.join([u'{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    errors = ['{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
     ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
     return create_json_response({
@@ -127,7 +130,7 @@ def mme_details(request):
 
     return create_json_response({
         'metrics': get_mme_metrics(),
-        'submissions': submissions_by_guid.values(),
+        'submissions': list(submissions_by_guid.values()),
         'genesById': genes_by_id,
     })
 
@@ -236,11 +239,11 @@ def anvil_export(request, project_guid):
         variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
 
     return export_multiple_files([
-        [u'{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
-        [u'{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
-        [u'{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        [u'{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
-    ], u'{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
+        ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
+        ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
+        ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
+        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
+    ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -260,7 +263,7 @@ def sample_metadata_export(request, project_guid):
         for row in rows:
             rows_by_subject_id[row['subject_id']].update(row)
 
-    rows = rows_by_subject_id.values()
+    rows = list(rows_by_subject_id.values())
     all_features = set()
     for row in rows:
         row['MME'] = 'Y' if row['family_guid'] in mme_family_guids else 'N'
@@ -273,9 +276,7 @@ def sample_metadata_export(request, project_guid):
     for row in rows:
         for hpo_key in ['hpo_present', 'hpo_absent']:
             if row[hpo_key]:
-                row[hpo_key] = '|'.join(map(
-                    lambda feature_id: '{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')),
-                    row[hpo_key].split('|')))
+                row[hpo_key] = '|'.join(['{} ({})'.format(feature_id, hpo_name_map.get(feature_id, '')) for feature_id in row[hpo_key].split('|')])
 
     return create_json_response({'rows': rows})
 
@@ -298,7 +299,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
 
-    saved_variants_by_family = get_saved_variants_by_family(samples_by_family.keys())
+    saved_variants_by_family = get_saved_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family = {}
     gene_ids = set()
     max_saved_variants = 1
@@ -327,7 +328,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                         main_gene_ids.update(list(variant['transcripts'].keys()))
                 if len(main_gene_ids) > 1:
                     # This occurs in compound hets where some hits have a primary transcripts in different genes
-                    for gene_id in main_gene_ids:
+                    for gene_id in sorted(main_gene_ids):
                         if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
                             compound_het_gene_id_by_family[family_guid] = gene_id
                             gene_ids.add(gene_id)
@@ -768,8 +769,8 @@ def discovery_sheet(request, project_guid):
     mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
-        errors.append("No data loaded for project: %s" % project)
-        logger.info("No data loaded for project: %s" % project)
+        errors.append("No data loaded for project: {}".format(project))
+        logger.info("No data loaded for project: {}".format(project))
         return create_json_response({
             'rows': [],
             'errors': errors,
@@ -778,7 +779,7 @@ def discovery_sheet(request, project_guid):
     if "external" in project.name.lower() or "reprocessed" in project.name.lower():
         sequencing_approach = "REAN"
     else:
-        sequencing_approach = loaded_samples_by_family.values()[0][-1].sample_type
+        sequencing_approach = next(iter(loaded_samples_by_family.values()))[-1].sample_type
     initial_row = {
         "project_guid": project.guid,
         "collaborator": project.name,
@@ -1007,7 +1008,7 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
     if (len(unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) \
             and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants \
             and 'transcripts' in variant_json:
-        potential_compound_het_gene_ids.update(variant_json['transcripts'].keys())
+        potential_compound_het_gene_ids.update(list(variant_json['transcripts'].keys()))
 
     return inheritance_models, potential_compound_het_gene_ids
 
@@ -1031,7 +1032,7 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
 def _get_genotype_zygosity(genotype):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
-    if num_alt == 2 or cn == 0 or cn > 3:
+    if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
         return HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
         return HET
@@ -1241,11 +1242,11 @@ def saved_variants_page(request, tag):
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)
 
-    saved_variants = response_json['savedVariantsByGuid'].values()
+    saved_variants = list(response_json['savedVariantsByGuid'].values())
     genes = saved_variant_genes(saved_variants)
-    locus_lists_by_guid = _add_locus_lists(project_models_by_guid.values(), genes, include_all_lists=True)
+    locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
 
-    projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
+    projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
     functional_tag_types = get_json_for_variant_functional_data_tag_types()
 
     variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))
@@ -1258,7 +1259,7 @@ def saved_variants_page(request, tag):
         project_variant_tags = [
             vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
         project_json.update({
-            'locusListGuids': locus_lists_by_guid.keys(),
+            'locusListGuids': list(locus_lists_by_guid.keys()),
             'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
             'variantFunctionalTagTypes': functional_tag_types,
         })
@@ -1286,34 +1287,21 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
-                       if field not in json_records[0]]
-    if missing_columns:
-        message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
+    try:
+        dataset_type, data_type, records_by_sample_id = _parse_raw_qc_records(json_records)
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400, reason=str(e))
 
-    dataset_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
-    if len(dataset_types) == 0:
-        message = 'No dataset type detected'
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-    elif len(dataset_types) > 1:
-        message = 'Multiple dataset types detected: {}'.format(' ,'.join(dataset_types))
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-    elif list(dataset_types)[0] not in DATASET_TYPE_MAP:
-        message = 'Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0])
-        return create_json_response({'errors': [message]}, status=400, reason=message)
-
-    dataset_type = DATASET_TYPE_MAP[list(dataset_types)[0]]
-
-    info_message = 'Parsed {} {} samples'.format(len(json_records), dataset_type)
+    info_message = 'Parsed {} {} samples'.format(
+        len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
     logger.info(info_message)
     info = [info_message]
     warnings = []
 
-    sample_ids = {record['seqr_id'] for record in json_records}
     samples = Sample.objects.filter(
-        sample_id__in=sample_ids,
-        sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+        sample_id__in=records_by_sample_id.keys(),
+        sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+        dataset_type=dataset_type,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
     ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
@@ -1332,28 +1320,29 @@ def upload_qc_pipeline_output(request):
         if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
     }
 
-    for record in json_records:
+    for sample_id, record in records_by_sample_id.items():
         record['individual_ids'] = list({
-            individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
-            if individual_latest_sample_id[individual_id] == record['seqr_id']
+            individual_id for individual_id in sample_individuals.get(sample_id, [])
+            if individual_latest_sample_id[individual_id] == sample_id
         })
 
-    missing_sample_ids = {record['seqr_id'] for record in json_records if not record['individual_ids']}
+    missing_sample_ids = {sample_id for sample_id, record in records_by_sample_id.items() if not record['individual_ids']}
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).exclude(
-            sample__sample_type=Sample.SAMPLE_TYPE_WGS if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WES)
+            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).filter(
+            sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
         individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
             individual_db_ids_by_id[individual.individual_id].append(individual.id)
-        for record in json_records:
-            if not record['individual_ids'] and len(individual_db_ids_by_id[record['seqr_id']]) == 1:
-                record['individual_ids'] = individual_db_ids_by_id[record['seqr_id']]
-                missing_sample_ids.remove(record['seqr_id'])
+        for sample_id, record in records_by_sample_id.items():
+            if not record['individual_ids'] and len(individual_db_ids_by_id[sample_id]) >= 1:
+                record['individual_ids'] = individual_db_ids_by_id[sample_id]
+                missing_sample_ids.remove(sample_id)
 
-    multi_individual_samples = {record['seqr_id']: len(record['individual_ids'])
-                                for record in json_records if len(record['individual_ids']) > 1}
+    multi_individual_samples = {
+        sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
+        if len(record['individual_ids']) > 1}
     if multi_individual_samples:
         logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)))
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
@@ -1365,6 +1354,56 @@ def upload_qc_pipeline_output(request):
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
+    records_with_individuals = [
+        record for sample_id, record in records_by_sample_id.items() if sample_id not in missing_sample_ids
+    ]
+
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
+        _update_individuals_sv_qc(records_with_individuals)
+    else:
+        _update_individuals_variant_qc(records_with_individuals, data_type, warnings)
+
+    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
+    info.append(message)
+    logger.info(message)
+
+    return create_json_response({
+        'errors': [],
+        'warnings': warnings,
+        'info': info,
+    })
+
+
+def _parse_raw_qc_records(json_records):
+    # Parse SV QC
+    if all(field in json_records[0] for field in ['sample', 'lt100_raw_calls', 'lt10_highQS_rare_calls']):
+        records_by_sample_id = {
+            re.search('(\d+)_(?P<sample_id>.+)_v\d_Exome_GCP', record['sample']).group('sample_id'): record
+            for record in json_records}
+        return Sample.DATASET_TYPE_SV_CALLS, 'exome', records_by_sample_id
+
+    # Parse regular variant QC
+    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
+                       if field not in json_records[0]]
+    if missing_columns:
+        raise ValueError('The following required columns are missing: {}'.format(', '.join(missing_columns)))
+
+    data_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
+    if len(data_types) == 0:
+        raise ValueError('No data type detected')
+    elif len(data_types) > 1:
+        raise ValueError('Multiple data types detected: {}'.format(' ,'.join(sorted(data_types))))
+    elif list(data_types)[0] not in DATA_TYPE_MAP:
+        message = 'Unexpected data type detected: "{}" (should be "exome" or "genome")'.format(list(data_types)[0])
+        raise ValueError(message)
+
+    data_type = DATA_TYPE_MAP[list(data_types)[0]]
+    records_by_sample_id = {record['seqr_id']: record for record in json_records}
+
+    return Sample.DATASET_TYPE_VARIANT_CALLS, data_type, records_by_sample_id
+
+
+def _update_individuals_variant_qc(json_records, data_type, warnings):
     unknown_filter_flags = set()
     unknown_pop_filter_flags = set()
 
@@ -1372,7 +1411,7 @@ def upload_qc_pipeline_output(request):
     for record in json_records:
         filter_flags = {}
         for flag in json.loads(record['filter_flags']):
-            flag = '{}_{}'.format(flag, dataset_type) if flag == 'coverage' else flag
+            flag = '{}_{}'.format(flag, data_type) if flag == 'coverage' else flag
             flag_col = FILTER_FLAG_COL_MAP.get(flag, flag)
             if flag_col in record:
                 filter_flags[flag] = record[flag_col]
@@ -1408,15 +1447,20 @@ def upload_qc_pipeline_output(request):
         logger.info(message)
         warnings.append(message)
 
-    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
-    info.append(message)
-    logger.info(message)
 
-    return create_json_response({
-        'errors': [],
-        'warnings': warnings,
-        'info': info,
-    })
+def _update_individuals_sv_qc(json_records):
+    inidividuals_by_qc = defaultdict(list)
+    for record in json_records:
+        inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
+
+    for raw_flags, indiv_ids in inidividuals_by_qc.items():
+        lt100_raw_calls, lt10_highQS_rare_calls = raw_flags
+        sv_flags = []
+        if lt100_raw_calls == 'FALSE':
+            sv_flags.append('raw_calls:_>100')
+        if lt10_highQS_rare_calls == 'FALSE':
+            sv_flags.append('high_QS_rare_calls:_>10')
+        Individual.objects.filter(id__in=indiv_ids).update(sv_flags=sv_flags or None)
 
 
 FILTER_FLAG_COL_MAP = {
@@ -1427,7 +1471,7 @@ FILTER_FLAG_COL_MAP = {
     'coverage_genome': 'WGS_MEAN_COVERAGE'
 }
 
-DATASET_TYPE_MAP = {
+DATA_TYPE_MAP = {
     'exome': 'exome',
     'genome': 'genome',
     'wes': 'exome',
@@ -1436,7 +1480,7 @@ DATASET_TYPE_MAP = {
 
 EXCLUDE_PROJECTS = [
     '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
-    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes',
+    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 EXCLUDE_PROJECT_CATEGORY = 'Demo'
 
@@ -1476,13 +1520,13 @@ def proxy_to_kibana(request):
             charset=response.encoding
         )
 
-        for key, value in response.headers.iteritems():
+        for key, value in response.headers.items():
             if key.lower() not in EXCLUDE_HTTP_RESPONSE_HEADERS:
                 proxy_response[key.title()] = value
 
         return proxy_response
     except ConnectionError as e:
-        logger.error(e)
+        logger.error(str(e))
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
 
