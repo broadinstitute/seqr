@@ -118,7 +118,7 @@ INDIVIDUAL_FIELDS_NO_FEATURES = {
     'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
     'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',
     'disorders', 'candidateGenes', 'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy',
-    'arDonoregg', 'arDonorsperm',
+    'arDonoregg', 'arDonorsperm', 'svFlags',
 }
 
 INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}

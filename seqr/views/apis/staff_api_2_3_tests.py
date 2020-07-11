@@ -448,6 +448,16 @@ SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE = [
     '03133B_2	UNKNOWN	[]	Standard Germline Exome v5	nfe	[]\n',
 ]
 
+SAMPLE_SV_QC_DATA = [
+    'sample	lt100_raw_calls	lt10_highQS_rare_calls\n',
+    'RP-123_MANZ_1169_DNA_v1_Exome_GCP	FALSE	TRUE\n',
+    'RP-123_NA_v1_Exome_GCP	TRUE	FALSE\n',
+    'RP-123_NA19675_1_v1_Exome_GCP	TRUE	TRUE\n',
+    'RP-123_NA19678_v1_Exome_GCP	TRUE	FALSE\n',
+    'RP-123_HG00732_v1_Exome_GCP	FALSE	TRUE\n',
+    'RP-123_HG00733_v1_Exome_GCP	FALSE	FALSE\n',
+]
+
 
 class StaffAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -733,23 +743,23 @@ class StaffAPITest(AuthenticationTestCase):
             response.reason_phrase,
             'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop')
 
-        # Test no dataset type error
+        # Test no data type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'No dataset type detected')
+        self.assertEqual(response.reason_phrase, 'No data type detected')
 
-        # Test multiple dataset types error
+        # Test multiple data types error
         mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Multiple dataset types detected: wes ,wgs')
+        self.assertEqual(response.reason_phrase, 'Multiple data types detected: wes ,wgs')
 
         # Test unexpected data type error
         mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Unexpected dataset type detected: "unknown" (should be "exome" or "genome")')
+        self.assertEqual(response.reason_phrase, 'Unexpected data type detected: "unknown" (should be "exome" or "genome")')
 
         # Test normal functions
         mock_file_iter.return_value = SAMPLE_QC_DATA
@@ -778,6 +788,11 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '6857'})
         self.assertEqual(indiv.population, 'SAS')
 
+        indiv = Individual.objects.get(id=12)
+        self.assertDictEqual(indiv.filter_flags, {'coverage_exome': '8.1446E+01'})
+        self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '6857'})
+        self.assertEqual(indiv.population, 'SAS')
+
         indiv = Individual.objects.get(id = 5)
         self.assertDictEqual(indiv.filter_flags, {'chimera': '5.0841E+00'})
         self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '29507', 'r_insertion_deletion': '1.343E+00'})
@@ -787,6 +802,33 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertDictEqual(indiv.filter_flags, {'contamination': '2.79E+00'})
         self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
         self.assertEqual(indiv.population, 'OTH')
+
+    @mock.patch('seqr.views.apis.staff_api.file_iter')
+    def test_upload_sv_qc(self, mock_file_iter):
+        url = reverse(upload_qc_pipeline_output, )
+        self.check_staff_login(url)
+
+        request_data = json.dumps({
+            'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
+        })
+
+        mock_file_iter.return_value = SAMPLE_SV_QC_DATA
+        response = self.client.post(url, content_type='application/json', data=request_data)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+        self.assertListEqual(response_json['info'], [
+            'Parsed 6 SV samples',
+            'Found and updated matching seqr individuals for 4 samples'
+        ])
+        self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
+
+        self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
+        self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
+        self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
+        self.assertListEqual(
+            Individual.objects.get(individual_id='HG00733').sv_flags,
+            ['raw_calls:_>100', 'high_QS_rare_calls:_>10'])
 
     @responses.activate
     def test_kibana_proxy(self):

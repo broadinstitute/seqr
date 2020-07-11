@@ -434,7 +434,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
             update_family_from_json(family, {'analysis_notes': family_notes})
             updated_families.add(family)
 
-        is_updated = update_individual_from_json(individual, record, user=user)
+        is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
             updated_individuals.add(individual)
             updated_families.add(family)
