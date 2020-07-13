@@ -306,7 +306,8 @@ def _get_json_for_variant_tag_types(project):
         })
 
     project_variant_tags.append(note_tag_type)
-    project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
+    if project_variant_tags is None:
+        project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 
     discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
                                 if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0]
