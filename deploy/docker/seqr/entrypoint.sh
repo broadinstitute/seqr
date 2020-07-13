@@ -39,6 +39,10 @@ fi
 
 pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 
+# allow pg_dump and other postgres command-line tools to run without having to enter a password
+echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
+chmod 600 ~/.pgpass
+
 # init seqrdb unless it already exists
 if ! psql --host postgres -U postgres -l | grep seqrdb; then
 
@@ -57,10 +61,6 @@ fi
 
 # launch django server in background
 /usr/local/bin/start_server.sh
-
-# allow pg_dump and other postgres command-line tools to run without having to enter a password
-echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
-chmod 600 ~/.pgpass
 
 if [ $ENABLE_DATABASE_BACKUPS ]; then
     # set up cron database backups
