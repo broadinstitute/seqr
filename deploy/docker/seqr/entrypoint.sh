@@ -42,6 +42,7 @@ pip install --upgrade -r requirements.txt  # doublecheck that requirements are u
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
+cat ~/.pgpass
 
 # init seqrdb unless it already exists
 if ! psql --host postgres -U postgres -l | grep seqrdb; then
