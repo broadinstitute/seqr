@@ -2072,7 +2072,7 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(index=INDEX_NAME, sort=['xpos'], size=6)
         self.mock_es_client.indices.update_aliases.assert_called_with(body={
-            'actions': [{'add': {'indices': [SV_INDEX_NAME, SECOND_INDEX_NAME, INDEX_NAME], 'alias': INDEX_NAME}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_NAME}}]})
 
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
