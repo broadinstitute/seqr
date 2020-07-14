@@ -26,8 +26,7 @@ GENOTYPE_QUERY_MAP = {
     ALT_ALT: {'allowed_num_alt': ['samples_num_alt_2', 'samples_cn_0', 'samples_cn_2', 'samples_cn_gte_4']},
     HAS_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples_num_alt_2', 'samples']},
     HAS_REF: {
-        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2'],
-        'allowed_num_alt': ['samples_cn_1', 'samples_cn_3'],
+        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2', 'samples_cn_0', 'samples_cn_gte_4'],
     },
 }
 
