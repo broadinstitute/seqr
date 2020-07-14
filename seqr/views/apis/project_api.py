@@ -306,6 +306,8 @@ def _get_json_for_variant_tag_types(project):
         })
 
     project_variant_tags.append(note_tag_type)
+    for tag in project_variant_tags:
+        logger.info(tag['order'])
     project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: 0 if variant_tag_type['order'] is None else variant_tag_type['order'])
 
     discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
