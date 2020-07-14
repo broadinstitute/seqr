@@ -325,7 +325,7 @@ def _get_json_for_variant_tag_types(project):
         } for name, tag_json in tags]
 
     return {
-        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: 0 if variant_tag_type['order'] is None else variant_tag_type['order']),
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }
