@@ -754,6 +754,16 @@ const getGeneConstraintSortScore = ({ constraints }) => {
   return constraints.louef - missenseOffset
 }
 
+const populationComparator = population => (a, b) =>
+  ((a.populations || {})[population] || {}).af - ((b.populations || {})[population] || {}).af
+
+const predictionComparator = prediction => (a, b) =>
+  ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
+
+const getConsequenceRank = ({ transcripts, svType }) => (
+  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(({ majorConsequence }) =>
+    VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
+)
 
 const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
@@ -761,38 +771,34 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_PROTEIN_CONSQ,
     text: 'Protein Consequence',
-    comparator: (a, b) =>
-      Math.min(...Object.values(a.transcripts).flat().map(
-        ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)) -
-      Math.min(...Object.values(b.transcripts).flat().map(
-        ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)),
+    comparator: (a, b) => getConsequenceRank(a) - getConsequenceRank(b),
   },
-  { value: SORT_BY_GNOMAD, text: 'gnomAD Genomes Frequency', comparator: (a, b) => a.populations.gnomad_genomes.af - b.populations.gnomad_genomes.af },
-  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
-  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
-  { value: SORT_BY_CADD, text: 'Cadd', comparator: (a, b) => b.predictions.cadd - a.predictions.cadd },
-  { value: SORT_BY_REVEL, text: 'Revel', comparator: (a, b) => b.predictions.revel - a.predictions.revel },
-  { value: SORT_BY_EIGEN, text: 'Eigen', comparator: (a, b) => b.predictions.eigen - a.predictions.eigen },
-  { value: SORT_BY_MPC, text: 'MPC', comparator: (a, b) => b.predictions.mpc - a.predictions.mpc },
-  { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: (a, b) => b.predictions.splice_ai - a.predictions.splice_ai },
-  { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: (a, b) => b.predictions.primate_ai - a.predictions.primate_ai },
+  { value: SORT_BY_GNOMAD, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
+  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: populationComparator('exac') },
+  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: populationComparator('g1k') },
+  { value: SORT_BY_CADD, text: 'Cadd', comparator: predictionComparator('cadd') },
+  { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },
+  { value: SORT_BY_EIGEN, text: 'Eigen', comparator: predictionComparator('eigen') },
+  { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
+  { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: predictionComparator('splice_ai') },
+  { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: predictionComparator('primate_ai') },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b, geneId, user) => clinsigSeverity(b, user) - clinsigSeverity(a, user) },
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
     comparator: (a, b, genesById) =>
-      Math.min(...Object.keys(a.transcripts).reduce((acc, geneId) =>
+      Math.min(...Object.keys(a.transcripts || {}).reduce((acc, geneId) =>
         [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])) -
-      Math.min(...Object.keys(b.transcripts).reduce((acc, geneId) =>
+      Math.min(...Object.keys(b.transcripts || {}).reduce((acc, geneId) =>
         [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])),
   },
   {
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
     comparator: (a, b, genesById) =>
-      Object.keys(b.transcripts).reduce(
+      Object.keys(b.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0) -
-      Object.keys(a.transcripts).reduce(
+      Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0),
   },
 ]
