@@ -94,7 +94,7 @@ class EsSearch(object):
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
-            alias = hashlib.md5(self.index_name).hexdigest()
+            alias = hashlib.md5(self.index_name.encode('utf-8')).hexdigest()
             cache_key = 'index_alias__{}'.format(alias)
             if safe_redis_get_json(cache_key) != self.index_name:
                 self._client.indices.update_aliases(body={'actions': [

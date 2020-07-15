@@ -1260,7 +1260,7 @@ def saved_variants_page(request, tag):
             vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
         project_json.update({
             'locusListGuids': list(locus_lists_by_guid.keys()),
-            'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+            'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
             'variantFunctionalTagTypes': functional_tag_types,
         })
 
