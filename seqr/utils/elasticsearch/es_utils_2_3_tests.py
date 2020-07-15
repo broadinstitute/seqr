@@ -1645,14 +1645,10 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must': [{
-                                            'bool': {
-                                                'minimum_should_match': 1,
-                                                'should': [
-                                                    {'term': {'samples_cn_1': 'HG00732'}},
-                                                    {'term': {'samples_cn_3': 'HG00732'}},
-                                                ]}
-                                        }]
+                                        'must_not': [
+                                            {'term': {'samples_cn_0': 'HG00732'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                        ]
                                     }},
                                     {'bool': {
                                         'minimum_should_match': 1,
@@ -2448,14 +2444,10 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_2': 'HG00731'}},
                     {'term': {'samples_cn_gte_4': 'HG00731'}},
                 ],
-                'must': [{
-                    'bool': {
-                        'minimum_should_match': 1,
-                        'should': [
-                            {'term': {'samples_cn_1': 'HG00732'}},
-                            {'term': {'samples_cn_3': 'HG00732'}},
-                    ]}
-                }]
+                'must_not': [
+                    {'term': {'samples_cn_0': 'HG00732'}},
+                    {'term': {'samples_cn_gte_4': 'HG00732'}},
+                ]
             }
         }
         custom_affected_recessive_filter = {
