@@ -104,9 +104,11 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS)
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
-            'projectFamilies': PROJECT_FAMILIES,
+            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
             'totalResults': 3,
         })
+        self.assertSetEqual(
+            set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100'}
@@ -251,11 +253,14 @@ class VariantSearchAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
-            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': [
-                'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
-                'F000009_9', 'F000010_10', 'F000013_13']}],
+            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
             'totalResults': 3,
         })
+        self.assertSetEqual(
+            set(response_json['search']['projectFamilies'][0]['familyGuids']),
+            {'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+             'F000009_9', 'F000010_10', 'F000013_13'}
+        )
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):

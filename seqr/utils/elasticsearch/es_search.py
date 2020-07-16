@@ -68,7 +68,7 @@ class EsSearch(object):
         self._indices = sorted(list(self.samples_by_family_index.keys()), reverse = True)
         self._set_index_metadata()
 
-        if len(self.samples_by_family_index) != len(self.index_metadata):
+        if len(self.samples_by_family_index) > len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
                 ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
             ))
@@ -115,6 +115,11 @@ class EsSearch(object):
             indices.update(new_indices)
             self._indices = list(indices)
         else:
+            if not new_indices:
+                error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
+                    dataset_type
+                )
+                raise Exception(error)
             self._indices = new_indices
         self._set_index_name()
         return self

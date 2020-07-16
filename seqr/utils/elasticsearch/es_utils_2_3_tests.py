@@ -1037,6 +1037,23 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'No es index found')
 
+        search_model.search = {'inheritance': {'mode': 'recessive'}}
+        search_model.save()
+        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
+        )
+
+        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.save()
+        results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+        self.assertEqual(str(cm.exception), error)
+
         results_model.families.set(self.families)
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, page=200)
@@ -1160,15 +1177,6 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
         search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-
-        # Test edge case where searching by inheritance with no affected individuals
-
-        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
-        with self.assertRaises(Exception) as cm:
-            get_es_variants(results_model, num_results=2)
-        self.assertEqual(
-            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
-        )
 
         # Test successful search
         search_model.search['locus']['excludeLocations'] = True
@@ -1645,14 +1653,10 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must': [{
-                                            'bool': {
-                                                'minimum_should_match': 1,
-                                                'should': [
-                                                    {'term': {'samples_cn_1': 'HG00732'}},
-                                                    {'term': {'samples_cn_3': 'HG00732'}},
-                                                ]}
-                                        }]
+                                        'must_not': [
+                                            {'term': {'samples_cn_0': 'HG00732'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                        ]
                                     }},
                                     {'bool': {
                                         'minimum_should_match': 1,
@@ -2448,14 +2452,10 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_2': 'HG00731'}},
                     {'term': {'samples_cn_gte_4': 'HG00731'}},
                 ],
-                'must': [{
-                    'bool': {
-                        'minimum_should_match': 1,
-                        'should': [
-                            {'term': {'samples_cn_1': 'HG00732'}},
-                            {'term': {'samples_cn_3': 'HG00732'}},
-                    ]}
-                }]
+                'must_not': [
+                    {'term': {'samples_cn_0': 'HG00732'}},
+                    {'term': {'samples_cn_gte_4': 'HG00732'}},
+                ]
             }
         }
         custom_affected_recessive_filter = {
