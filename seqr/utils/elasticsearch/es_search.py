@@ -65,7 +65,7 @@ class EsSearch(object):
             if len(self.samples_by_family_index) < 1:
                 raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()), reverse = True)
+        self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
 
         if len(self.samples_by_family_index) > len(self.index_metadata):
@@ -213,7 +213,10 @@ class EsSearch(object):
             for index in self._indices:
                 family_samples_by_id = self.samples_by_family_index[index]
                 affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                self._family_individual_affected_status.update(affected_status)
+                for family_guid, family_affected_status in affected_status.items():
+                    if family_guid not in self._family_individual_affected_status:
+                        self._family_individual_affected_status[family_guid] = {}
+                    self._family_individual_affected_status[family_guid].update(family_affected_status)
 
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
