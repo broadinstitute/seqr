@@ -16,6 +16,7 @@ from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, g
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37, \
     _liftover_grch37_to_grch38
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, TRANSCRIPT_2
+from seqr.utils.redis_utils import safe_redis_get_json
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -831,6 +832,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
 
 
 def create_mock_response(search, index=INDEX_NAME):
+    index = safe_redis_get_json('index_alias__{}'.format(index)) or index
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
@@ -2058,21 +2060,20 @@ class EsUtilsTest(TestCase):
         )
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
-    @mock.patch('seqr.utils.elasticsearch.es_search.hashlib.md5')
-    def test_get_es_variants_index_alias(self, mock_hashlib):
+    def test_get_es_variants_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        mock_hashlib.return_value.hexdigest.return_value = INDEX_NAME
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': v} for k, v in INDEX_METADATA.items()}
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_NAME, sort=['xpos'], size=6)
+        index_name_alias = '236a15db29fc23707a0ec5817ca78b5e'
+        self.assertExecutedSearch(index=index_name_alias, sort=['xpos'], size=6)
         self.mock_es_client.indices.update_aliases.assert_called_with(body={
-            'actions': [{'add': {'indices': [SV_INDEX_NAME, SECOND_INDEX_NAME, INDEX_NAME], 'alias': INDEX_NAME}}]})
+            'actions': [{'add': {'indices': [SV_INDEX_NAME, SECOND_INDEX_NAME, INDEX_NAME], 'alias': index_name_alias}}]})
 
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={

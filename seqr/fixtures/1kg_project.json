@@ -1130,8 +1130,7 @@
         "name": "Tier 1 - Novel gene and phenotype",
         "category": "CMG Discovery Tags",
         "description": "Gene not previously associated with a Mendelian condition",
-        "color": "#03441E",
-        "order": 1.0
+        "color": "#03441E"
     }
 },
 {
