@@ -4,7 +4,7 @@ seqr
 [![Build Status](https://travis-ci.org/macarthur-lab/seqr.svg?branch=master)](https://travis-ci.org/macarthur-lab/seqr)
 
 seqr is a web-based tool for rare disease genomics.
-This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments.
+This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments. To check for any active incidents occuring on the Broad seqr instance, check [here](/INCIDENTS.md)
 
 ## Technical Overview
 
