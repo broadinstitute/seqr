@@ -21,6 +21,7 @@ from seqr.utils.redis_utils import safe_redis_get_json
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 SV_INDEX_NAME = 'test_index_sv'
+INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 
 ES_VARIANTS = [
     {
@@ -832,7 +833,6 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
 
 
 def create_mock_response(search, index=INDEX_NAME):
-    index = safe_redis_get_json('index_alias__{}'.format(index)) or index
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
@@ -2071,13 +2071,14 @@ class EsUtilsTest(TestCase):
 
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': v} for k, v in INDEX_METADATA.items()}
+        self.mock_search.side_effect = lambda index=None, body=None, **kwargs: create_mock_response(
+            deepcopy(body), index=','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME]))
 
         get_es_variants(results_model, num_results=2)
 
-        index_name_alias = '236a15db29fc23707a0ec5817ca78b5e'
-        self.assertExecutedSearch(index=index_name_alias, sort=['xpos'], size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, sort=['xpos'], size=6)
         self.mock_es_client.indices.update_aliases.assert_called_with(body={
-            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': index_name_alias}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
