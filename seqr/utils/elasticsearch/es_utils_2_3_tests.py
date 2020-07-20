@@ -16,12 +16,12 @@ from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, g
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37, \
     _liftover_grch37_to_grch38
 from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, TRANSCRIPT_2
-from seqr.utils.redis_utils import safe_redis_get_json
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 SV_INDEX_NAME = 'test_index_sv'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
+ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 
 ES_VARIANTS = [
     {
@@ -833,6 +833,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
 
 
 def create_mock_response(search, index=INDEX_NAME):
+    index = ALIAS_MAP.get(index, index)
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
@@ -2071,8 +2072,6 @@ class EsUtilsTest(TestCase):
 
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': v} for k, v in INDEX_METADATA.items()}
-        self.mock_search.side_effect = lambda index=None, body=None, **kwargs: create_mock_response(
-            deepcopy(body), index=','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME]))
 
         get_es_variants(results_model, num_results=2)
 
