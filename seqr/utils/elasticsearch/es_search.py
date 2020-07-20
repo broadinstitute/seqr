@@ -65,10 +65,10 @@ class EsSearch(object):
             if len(self.samples_by_family_index) < 1:
                 raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()), reverse = True)
+        self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
 
-        if len(self.samples_by_family_index) != len(self.index_metadata):
+        if len(self.samples_by_family_index) > len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
                 ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
             ))
@@ -94,7 +94,7 @@ class EsSearch(object):
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
-            alias = hashlib.md5(self.index_name).hexdigest()
+            alias = hashlib.md5(self.index_name.encode('utf-8')).hexdigest()
             cache_key = 'index_alias__{}'.format(alias)
             if safe_redis_get_json(cache_key) != self.index_name:
                 self._client.indices.update_aliases(body={'actions': [
@@ -115,6 +115,11 @@ class EsSearch(object):
             indices.update(new_indices)
             self._indices = list(indices)
         else:
+            if not new_indices:
+                error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
+                    dataset_type
+                )
+                raise Exception(error)
             self._indices = new_indices
         self._set_index_name()
         return self
@@ -208,7 +213,10 @@ class EsSearch(object):
             for index in self._indices:
                 family_samples_by_id = self.samples_by_family_index[index]
                 affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                self._family_individual_affected_status.update(affected_status)
+                for family_guid, family_affected_status in affected_status.items():
+                    if family_guid not in self._family_individual_affected_status:
+                        self._family_individual_affected_status[family_guid] = {}
+                    self._family_individual_affected_status[family_guid].update(family_affected_status)
 
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 

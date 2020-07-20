@@ -20,6 +20,8 @@ from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, TRAN
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 SV_INDEX_NAME = 'test_index_sv'
+INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
+ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 
 ES_VARIANTS = [
     {
@@ -831,6 +833,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
 
 
 def create_mock_response(search, index=INDEX_NAME):
+    index = ALIAS_MAP.get(index, index)
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
@@ -1037,6 +1040,23 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'No es index found')
 
+        search_model.search = {'inheritance': {'mode': 'recessive'}}
+        search_model.save()
+        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
+        )
+
+        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.save()
+        results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model)
+        error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+        self.assertEqual(str(cm.exception), error)
+
         results_model.families.set(self.families)
         with self.assertRaises(Exception) as cm:
             get_es_variants(results_model, page=200)
@@ -1160,15 +1180,6 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
         search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-
-        # Test edge case where searching by inheritance with no affected individuals
-
-        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
-        with self.assertRaises(Exception) as cm:
-            get_es_variants(results_model, num_results=2)
-        self.assertEqual(
-            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
-        )
 
         # Test successful search
         search_model.search['locus']['excludeLocations'] = True
@@ -1645,14 +1656,10 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must': [{
-                                            'bool': {
-                                                'minimum_should_match': 1,
-                                                'should': [
-                                                    {'term': {'samples_cn_1': 'HG00732'}},
-                                                    {'term': {'samples_cn_3': 'HG00732'}},
-                                                ]}
-                                        }]
+                                        'must_not': [
+                                            {'term': {'samples_cn_0': 'HG00732'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                        ]
                                     }},
                                     {'bool': {
                                         'minimum_should_match': 1,
@@ -2058,21 +2065,19 @@ class EsUtilsTest(TestCase):
         )
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
-    @mock.patch('seqr.utils.elasticsearch.es_search.hashlib.md5')
-    def test_get_es_variants_index_alias(self, mock_hashlib):
+    def test_get_es_variants_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        mock_hashlib.return_value.hexdigest.return_value = INDEX_NAME
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': v} for k, v in INDEX_METADATA.items()}
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_NAME, sort=['xpos'], size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, sort=['xpos'], size=6)
         self.mock_es_client.indices.update_aliases.assert_called_with(body={
-            'actions': [{'add': {'indices': [SV_INDEX_NAME, SECOND_INDEX_NAME, INDEX_NAME], 'alias': INDEX_NAME}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
@@ -2448,14 +2453,10 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_2': 'HG00731'}},
                     {'term': {'samples_cn_gte_4': 'HG00731'}},
                 ],
-                'must': [{
-                    'bool': {
-                        'minimum_should_match': 1,
-                        'should': [
-                            {'term': {'samples_cn_1': 'HG00732'}},
-                            {'term': {'samples_cn_3': 'HG00732'}},
-                    ]}
-                }]
+                'must_not': [
+                    {'term': {'samples_cn_0': 'HG00732'}},
+                    {'term': {'samples_cn_gte_4': 'HG00732'}},
+                ]
             }
         }
         custom_affected_recessive_filter = {
