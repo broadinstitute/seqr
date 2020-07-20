@@ -306,7 +306,7 @@ def _get_json_for_variant_tag_types(project):
         })
 
     project_variant_tags.append(note_tag_type)
-    project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
+    project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
     discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
                                 if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0]
@@ -325,7 +325,7 @@ def _get_json_for_variant_tag_types(project):
         } for name, tag_json in tags]
 
     return {
-        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }
