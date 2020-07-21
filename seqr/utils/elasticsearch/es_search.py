@@ -358,13 +358,10 @@ class EsSearch(object):
                 if paired_index:
                     pair_index_fields = self.index_metadata[paired_index]['fields']
                     pair_samples_by_id = self.samples_by_family_index[paired_index][family_guid]
-                    try:
-                        family_samples_q |= _family_genotype_inheritance_filter(
-                            COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], pair_samples_by_id, affected_status,
-                            pair_index_fields,
-                        )
-                    except Exception as e:
-                        import pdb; pdb.set_trace()
+                    family_samples_q |= _family_genotype_inheritance_filter(
+                        COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], pair_samples_by_id, affected_status,
+                        pair_index_fields,
+                    )
                     index = ','.join(sorted([index, paired_index]))
 
                 samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
