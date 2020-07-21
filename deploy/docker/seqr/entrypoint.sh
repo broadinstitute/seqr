@@ -37,31 +37,31 @@ if [ $SEQR_GIT_BRANCH ]; then
   git checkout $SEQR_GIT_BRANCH
 fi
 
+pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
+
+# allow pg_dump and other postgres command-line tools to run without having to enter a password
+echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
+chmod 600 ~/.pgpass
+cat ~/.pgpass
+
 # init seqrdb unless it already exists
 if ! psql --host postgres -U postgres -l | grep seqrdb; then
 
   psql --host postgres -U postgres -c 'CREATE DATABASE seqrdb';
+  python -u manage.py makemigrations
+  python -u manage.py migrate
+  python -u manage.py check
+  python -u manage.py collectstatic --no-input
+  python -u manage.py loaddata variant_tag_types
+  python -u manage.py loaddata variant_searches
+
   psql --host postgres -U postgres -c 'CREATE DATABASE reference_data_db';
   psql --host postgres -U postgres reference_data_db <  <(curl -s $REFERENCE_DATA_DB_INIT_URL | gunzip -c -);
 
 fi
 
-
-pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
-python -u manage.py makemigrations
-python -u manage.py migrate
-python -u manage.py check
-python -u manage.py collectstatic --no-input
-python -u manage.py loaddata variant_tag_types
-python -u manage.py loaddata variant_searches
-
-
 # launch django server in background
 /usr/local/bin/start_server.sh
-
-# allow pg_dump and other postgres command-line tools to run without having to enter a password
-echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
-chmod 600 ~/.pgpass
 
 if [ $ENABLE_DATABASE_BACKUPS ]; then
     # set up cron database backups
