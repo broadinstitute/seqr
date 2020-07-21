@@ -1772,6 +1772,98 @@ class EsUtilsTest(TestCase):
             ),
         ])
 
+    def test_multi_datatype_secondary_annotations_recessive_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['DEL']},
+            'annotations_secondary': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'recessive'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        get_es_variants(results_model, num_results=10)
+
+        annotation_secondary_query = {'bool': {'should': [
+            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+        ]}}
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+                    {'bool': {
+                        '_name': 'F000002_2',
+                        'must': [{
+                            'bool': {
+                                'should': [
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'term': {'samples_cn_0': 'HG00731'}},
+                                            {'term': {'samples_cn_2': 'HG00731'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                        ],
+                                        'must_not': [
+                                            {'term': {'samples_cn_0': 'HG00732'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                        ]
+                                    }},
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'term': {'samples_cn_0': 'HG00731'}},
+                                            {'term': {'samples_cn_2': 'HG00731'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                        ],
+                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must': [{'match': {'contig': 'X'}}],
+                                    }}
+                                ]
+                            }
+                        }]
+                    }}
+                ], start_index=0, size=10, sort=['xpos'], index=SV_INDEX_NAME,
+            ),
+            dict(
+                filters=[annotation_secondary_query, {'bool': {
+                    '_name': 'F000002_2',
+                    'must': [
+                        {'bool': {
+                            'should': [
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                }},
+                                {'term': {'samples': 'HG00731'}},
+                            ]
+                        }},
+                    ]
+                    }},
+                 ],
+                gene_aggs=True,
+                sort=['xpos'],
+                start_index=0,
+                size=1,
+                index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            ),
+            dict(
+                filters=[
+                    annotation_secondary_query,
+                    {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
+                ],
+                gene_aggs=True,
+                sort=['xpos'],
+                start_index=0,
+                size=1
+            ),
+        ])
+
     def test_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']}
