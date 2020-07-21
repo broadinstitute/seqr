@@ -1622,28 +1622,22 @@ class EsUtilsTest(TestCase):
 
     def test_multi_datatype_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'frameshift': ['frameshift_variant'], 'structural': ['DEL']},
             'inheritance': {'mode': 'recessive'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=10)
-        self.assertEqual(len(variants), 5)
+        self.assertEqual(len(variants), 4)
         self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
-        self.assertDictEqual(variants[1][0], PARSED_SV_COMPOUND_HET_VARIANTS[0])
-        self.assertDictEqual(variants[1][1], PARSED_SV_COMPOUND_HET_VARIANTS[1])
-        self.assertDictEqual(variants[2], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[3][0], PARSED_COMPOUND_HET_VARIANTS[0])
-        self.assertDictEqual(variants[3][1], PARSED_COMPOUND_HET_VARIANTS[1])
-        self.assertDictEqual(variants[4], PARSED_VARIANTS[1])
-
-        annotation_query = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
+        self.assertDictEqual(variants[1], PARSED_VARIANTS[0])
+        self.assertDictEqual(variants[2][0], PARSED_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    annotation_query,
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -1678,7 +1672,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=10, sort=['xpos'], index=SV_INDEX_NAME,
             ),
             dict(
-                filters=[annotation_query, {'bool': {
+                filters=[{'bool': {
                     '_name': 'F000002_2',
                     'must': [
                         {'bool': {
@@ -1706,7 +1700,6 @@ class EsUtilsTest(TestCase):
             ),
             dict(
                 filters=[
-                    annotation_query,
                     {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
                 ],
                 gene_aggs=True,
@@ -1716,7 +1709,6 @@ class EsUtilsTest(TestCase):
             ),
             dict(
                 filters=[
-                    annotation_query,
                     {
                         'bool': {
                             'should': [
