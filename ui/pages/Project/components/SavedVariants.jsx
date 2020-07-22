@@ -38,7 +38,7 @@ const LabelLink = styled(Link)`
 `
 
 const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
-  const { familyGuid, tag, variantGuid, analysisGroupGuid } = props.match.params
+  const { familyGuid, variantGuid, analysisGroupGuid } = props.match.params
 
   const categoryOptions = [...new Set(
     project.variantTagTypes.map(type => type.category).filter(category => category),
@@ -57,16 +57,13 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
 
   const loadVariants = (newParams) => {
     const isInitialLoad = props.match.params === newParams
-    const hasUpdatedTag = newParams.tag !== tag
     const hasUpdatedFamilies = newParams.familyGuid !== familyGuid ||
       newParams.analysisGroupGuid !== analysisGroupGuid ||
       newParams.variantGuid !== variantGuid
 
     const familyGuids = newParams.familyGuid ? [newParams.familyGuid] : (analysisGroup || {}).familyGuids
 
-    if (hasUpdatedTag || hasUpdatedFamilies) {
-      props.updateTable({ page: 1 })
-    }
+    props.updateTable({ page: 1 })
     if (isInitialLoad || hasUpdatedFamilies) {
       loadProjectSavedVariants({ familyGuids, ...newParams })
     }
