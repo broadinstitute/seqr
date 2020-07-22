@@ -20,6 +20,8 @@ from seqr.views.utils.test_utils import PARSED_VARIANTS, PARSED_SV_VARIANT, TRAN
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 SV_INDEX_NAME = 'test_index_sv'
+INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
+ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 
 ES_VARIANTS = [
     {
@@ -831,6 +833,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
 
 
 def create_mock_response(search, index=INDEX_NAME):
+    index = ALIAS_MAP.get(index, index)
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
@@ -2062,21 +2065,19 @@ class EsUtilsTest(TestCase):
         )
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
-    @mock.patch('seqr.utils.elasticsearch.es_search.hashlib.md5')
-    def test_get_es_variants_index_alias(self, mock_hashlib):
+    def test_get_es_variants_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        mock_hashlib.return_value.hexdigest.return_value = INDEX_NAME
         self.mock_es_client.indices.get_mapping.side_effect = lambda index='': {
             k: {'mappings': v} for k, v in INDEX_METADATA.items()}
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_NAME, sort=['xpos'], size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, sort=['xpos'], size=6)
         self.mock_es_client.indices.update_aliases.assert_called_with(body={
-            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_NAME}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
