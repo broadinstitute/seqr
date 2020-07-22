@@ -328,7 +328,7 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
 ]
 
 export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
-  const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+  const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(
     (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
   )]
   const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
