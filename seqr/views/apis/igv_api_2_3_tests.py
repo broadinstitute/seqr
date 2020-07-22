@@ -21,6 +21,8 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val.decode('utf-8') for val in response.streaming_content], STREAMING_READS_CONTENT)
+        self.assertEqual(response.get('Content-Length'), '101')
+        self.assertEqual(response.get('Content-Range'), 'bytes 100-200')
         mock_subprocess.assert_called_with(
             'gsutil cat -r 100-200 gs://project_A/sample_1.bai',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
