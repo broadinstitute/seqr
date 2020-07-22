@@ -756,34 +756,32 @@ class EsSearch(object):
 
     def _filter_invalid_family_compound_hets(self, gene_id, family_compound_het_pairs, family_unaffected_individual_guids):
         for family_guid, variants in family_compound_het_pairs.items():
-            unaffected_genotypes = [
-                [variant['genotypes'].get(individual_guid, {'isRef': True}) for variant in variants]
-                for individual_guid in family_unaffected_individual_guids.get(family_guid, [])
-            ]
+            unaffected_individuals = family_unaffected_individual_guids.get(family_guid, [])
 
-            gene_consequences = [
-                variant['gene_consequences'].get(gene_id, []) for variant in variants
-            ]
+            valid_combinations = []
+            for ch_1_index, ch_2_index in combinations(range(len(variants)), 2):
+                variant_1 = variants[ch_1_index]
+                variant_2 = variants[ch_2_index]
 
-            def _is_valid_compound_het_pair(variant_1_index, variant_2_index):
-                # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
-                for genotype in unaffected_genotypes:
-                    is_valid_for_individual = any(
-                        genotype[variant_index].get('numAlt') == 0 or genotype[variant_index].get('isRef')
-                        for variant_index in [variant_1_index, variant_2_index]
-                    )
-                    if not is_valid_for_individual:
-                        return False
+                is_valid_for_individual = True
+                for individual_guid in unaffected_individuals:
+                    genotype_1 = variant_1['genotypes'].get(individual_guid)
+                    genotype_2 = variant_2['genotypes'].get(individual_guid)
+                    if genotype_1 and genotype_2 and genotype_1.get('numAlt') != 0 and not genotype_1.get('isRef') and \
+                            genotype_2.get('numAlt') != 0 and not genotype_2.get('isRef'):
+                        is_valid_for_individual = False
+                        break
+                if not is_valid_for_individual:
+                    continue
+
                 if self._allowed_consequences and self._allowed_consequences_secondary:
-                    consequences = gene_consequences[variant_1_index] + gene_consequences[variant_2_index]
+                    consequences = variant_1['gene_consequences'].get(gene_id, [])
+                    consequences += variant_2['gene_consequences'].get(gene_id, [])
                     if all(consequence not in self._allowed_consequences for consequence in consequences) or all(
                             consequence not in self._allowed_consequences_secondary for consequence in consequences):
-                        return False
-                return True
+                        continue
 
-            valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in
-                                  combinations(range(len(variants)), 2)
-                                  if _is_valid_compound_het_pair(ch_1_index, ch_2_index)]
+                valid_combinations.append([ch_1_index, ch_2_index])
 
             family_compound_het_pairs[family_guid] = [
                 [variants[valid_ch_1_index], variants[valid_ch_2_index]] for
