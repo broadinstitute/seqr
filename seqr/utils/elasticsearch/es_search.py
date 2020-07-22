@@ -270,37 +270,10 @@ class EsSearch(object):
 
             if not genotypes_q:
                 for family_guid in sorted(family_samples_by_id.keys()):
-                    samples_by_id = family_samples_by_id[family_guid]
-                    affected_status = self._family_individual_affected_status.get(family_guid)
-
-                    # Filter samples by inheritance
-                    if inheritance_mode == ANY_AFFECTED:
-                        # Only return variants where at least one of the affected samples has an alt allele
-                        sample_ids = [sample_id for sample_id, sample in samples_by_id.items()
-                                      if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
-                        family_samples_q = _any_affected_sample_filter(sample_ids)
-                    elif has_inheritance_filter:
-                        if inheritance_mode:
-                            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-
-                        if list(inheritance_filter.keys()) == ['affected']:
-                            raise Exception('Inheritance must be specified if custom affected status is set')
-
-                        family_samples_q = _family_genotype_inheritance_filter(
-                            inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
-                        )
-
-                        # For recessive search, should be hom recessive, x-linked recessive, or compound het
-                        if inheritance_mode == RECESSIVE:
-                            x_linked_q = _family_genotype_inheritance_filter(
-                                X_LINKED_RECESSIVE, inheritance_filter, samples_by_id, affected_status, index_fields,
-                            )
-                            family_samples_q |= x_linked_q
-                    else:
-                        # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
-                        family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))
-
-                    family_samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
+                    family_samples_q = self._get_family_sample_query(
+                        family_guid, family_samples_by_id, quality_filters_by_family,
+                        index_fields, inheritance_mode, inheritance_filter
+                    )
                     if not genotypes_q:
                         genotypes_q = family_samples_q
                     else:
@@ -311,6 +284,39 @@ class EsSearch(object):
         if no_filter_indices and self._index_searches:
             for index in no_filter_indices:
                 self._index_searches[index].append(self._search)
+
+    def _get_family_sample_query(self, family_guid, family_samples_by_id, quality_filters_by_family, index_fields, inheritance_mode, inheritance_filter):
+        samples_by_id = family_samples_by_id[family_guid]
+        affected_status = self._family_individual_affected_status.get(family_guid)
+
+        # Filter samples by inheritance
+        if inheritance_mode == ANY_AFFECTED:
+            # Only return variants where at least one of the affected samples has an alt allele
+            sample_ids = [sample_id for sample_id, sample in samples_by_id.items()
+                          if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
+            family_samples_q = _any_affected_sample_filter(sample_ids)
+        elif inheritance_filter or inheritance_mode:
+            if inheritance_mode:
+                inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
+
+            if list(inheritance_filter.keys()) == ['affected']:
+                raise Exception('Inheritance must be specified if custom affected status is set')
+
+            family_samples_q = _family_genotype_inheritance_filter(
+                inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
+            )
+
+            # For recessive search, should be hom recessive, x-linked recessive, or compound het
+            if inheritance_mode == RECESSIVE:
+                x_linked_q = _family_genotype_inheritance_filter(
+                    X_LINKED_RECESSIVE, inheritance_filter, samples_by_id, affected_status, index_fields,
+                )
+                family_samples_q |= x_linked_q
+        else:
+            # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
+            family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))
+
+        return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
         indices = set(self._indices)
