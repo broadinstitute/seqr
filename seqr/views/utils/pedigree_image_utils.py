@@ -88,15 +88,15 @@ def _get_parsed_individuals(family, project_guid=None):
     SEX_TO_FAM_FILE_VALUE = {"M": "1", "F": "2", "U": "0"}
     AFFECTED_STATUS_TO_FAM_FILE_VALUE = {"A": "2", "N": "1", "U": "0", "INVISIBLE": "9"}   # HaploPainter1.043.pl has been modified to hide individuals with affected-status='9'
 
-    return {
-        individual_id: {
+    return [
+        {
             'individualId': individual_id,
-            'paternalId': individual_json['paternalId'] or '0',
-            'maternalId': individual_json['maternalId'] or '0',
-            'sex': SEX_TO_FAM_FILE_VALUE[individual_json['sex']],
-            'affected': AFFECTED_STATUS_TO_FAM_FILE_VALUE[individual_json['affected']],
-        } for individual_id, individual_json in individual_records.items()
-    }
+            'paternalId': individual_records[individual_id]['paternalId'] or '0',
+            'maternalId': individual_records[individual_id]['maternalId'] or '0',
+            'sex': SEX_TO_FAM_FILE_VALUE[individual_records[individual_id]['sex']],
+            'affected': AFFECTED_STATUS_TO_FAM_FILE_VALUE[individual_records[individual_id]['affected']],
+        } for individual_id in sorted(individual_records.keys())
+    ]
 
 
 def _update_pedigree_image(family, project_guid=None):
@@ -116,7 +116,7 @@ def _update_pedigree_image(family, project_guid=None):
     with tempfile.NamedTemporaryFile('w', suffix=".fam", delete=True) as fam_file:
 
         # columns: family, individual id, paternal id, maternal id, sex, affected
-        for i in individual_records.values():
+        for i in individual_records:
             row = [family_id] + [i[key] for key in ['individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
             fam_file.write("\t".join(row))
             fam_file.write("\n")
@@ -140,7 +140,7 @@ def _update_pedigree_image(family, project_guid=None):
 
 
 def _save_pedigree_image_file(family, png_file_path):
-    with open(png_file_path) as pedigree_image_file:
+    with open(png_file_path, 'rb') as pedigree_image_file:
         family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
         family.save()
 

@@ -25,8 +25,8 @@ class PedigreeImageTest(TestCase):
         mock_randint.return_value = 123456
 
         def _mock_paint(command):
-            with open(command.split('-outfile ')[-1], 'w') as f:
-                f.write('img')
+            with open(command.split('-outfile ')[-1], 'wb') as f:
+                f.write(b'\xff\xd8\xff')
         mock_os_system.side_effect = _mock_paint
 
         test_families = Family.objects.filter(guid='F000001_1')
@@ -43,9 +43,9 @@ class PedigreeImageTest(TestCase):
         mock_tempfile_file.write.assert_has_calls([
             mock.call('\t'.join(['1', 'NA19675_1', 'NA19678', 'NA19679', '1', '2'])),
             mock.call('\n'),
-            mock.call('\t'.join(['1', 'NA19679', '0', '0', '2', '1'])),
-            mock.call('\n'),
             mock.call('\t'.join(['1', 'NA19678', '0', '0', '1', '1'])),
+            mock.call('\n'),
+            mock.call('\t'.join(['1', 'NA19679', '0', '0', '2', '1'])),
             mock.call('\n'),
         ])
 
@@ -66,9 +66,9 @@ class PedigreeImageTest(TestCase):
         mock_tempfile_file.write.assert_has_calls([
             mock.call('\t'.join(['1', 'NA19675_1', 'placeholder_123456', 'NA19679', '1', '2'])),
             mock.call('\n'),
-            mock.call('\t'.join(['1', 'placeholder_123456', '0', '0', '1', '9'])),
-            mock.call('\n'),
             mock.call('\t'.join(['1', 'NA19679', '0', '0', '2', '1'])),
+            mock.call('\n'),
+            mock.call('\t'.join(['1', 'placeholder_123456', '0', '0', '1', '9'])),
             mock.call('\n'),
         ])
 
