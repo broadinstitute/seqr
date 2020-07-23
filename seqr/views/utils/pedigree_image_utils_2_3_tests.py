@@ -25,8 +25,8 @@ class PedigreeImageTest(TestCase):
         mock_randint.return_value = 123456
 
         def _mock_paint(command):
-            with open(command.split('-outfile ')[-1], 'w') as f:
-                f.write('img')
+            with open(command.split('-outfile ')[-1], 'wb') as f:
+                f.write(b'\xff\xd8\xff')
         mock_os_system.side_effect = _mock_paint
 
         test_families = Family.objects.filter(guid='F000001_1')

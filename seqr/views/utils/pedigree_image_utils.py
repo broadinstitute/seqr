@@ -140,7 +140,7 @@ def _update_pedigree_image(family, project_guid=None):
 
 
 def _save_pedigree_image_file(family, png_file_path):
-    with open(png_file_path) as pedigree_image_file:
+    with open(png_file_path, 'rb') as pedigree_image_file:
         family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
         family.save()
 
