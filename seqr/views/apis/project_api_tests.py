@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import json
 from datetime import datetime
 from django.urls.base import reverse

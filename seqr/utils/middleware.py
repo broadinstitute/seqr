@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from builtins import str
-
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.utils.deprecation import MiddlewareMixin
 from requests import HTTPError

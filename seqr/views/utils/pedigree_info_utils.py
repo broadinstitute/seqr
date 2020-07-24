@@ -1,7 +1,4 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
-from __future__ import unicode_literals
-from builtins import str
-
 import difflib
 import os
 import json

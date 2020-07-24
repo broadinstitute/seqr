@@ -1,8 +1,6 @@
 """
 Utility functions related to authentication.
 """
-from __future__ import unicode_literals
-
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.shortcuts import redirect

@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import json
 from django.urls.base import reverse
 from seqr.views.apis.project_categories_api import update_project_categories_handler

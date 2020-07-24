@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from unittest import TestCase
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 

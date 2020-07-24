@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import re
 from django.http import StreamingHttpResponse
 from django.contrib.auth.decorators import login_required

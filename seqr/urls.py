@@ -3,8 +3,6 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
-from __future__ import unicode_literals
-
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \

@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
 import json

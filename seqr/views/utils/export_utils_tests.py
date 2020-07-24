@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-from builtins import str
-
 from django.test import TestCase
 
 from openpyxl import load_workbook

@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from builtins import str
-
 from django.core.management.base import BaseCommand
 
 from seqr.models import IgvSample
