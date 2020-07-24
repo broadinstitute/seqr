@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from django.urls.base import reverse
 import json
 
@@ -46,12 +47,12 @@ class DashboardPageTest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid'})
         self.assertSetEqual(
-            set(response_json['projectCategoriesByGuid'].values()[0].keys()),
+            set(next(iter(response_json['projectCategoriesByGuid'].values())).keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
         )
         self.assertEqual(len(response_json['projectsByGuid']), 2)
         self.assertSetEqual(
-            set(response_json['projectsByGuid'].values()[0].keys()),
+            set(next(iter(response_json['projectsByGuid'].values())).keys()),
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
              'isMmeEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids', 'projectGuid',
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
@@ -73,21 +74,21 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.get('Content-Type'), 'text/tsv')
         self.assertEqual(response.get('Content-Disposition'), 'attachment; filename="projects.tsv"')
         # authenticated user has access to no projects so should be empty export
-        export_content = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
+        export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
         self.assertListEqual(export_content, [PROJECT_EXPORT_HEADER])
 
         # test with access to data
         self.login_staff_user()
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
-        export_content = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
+        export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
         self.assertEqual(len(export_content), 4)
         self.assertListEqual(export_content[0], PROJECT_EXPORT_HEADER)
         self.assertListEqual(
             export_content[1],
-            ['1kg project n\xc3\xa5me with uni\xc3\xa7\xc3\xb8de',
-             '1000 genomes project description with uni\xc3\xa7\xc3\xb8de',
-             'c\xc3\xa5teg\xc3\xb8ry with uni\xc3\xa7\xc3\xb8de, test category name',
+            ['1kg project n\u00e5me with uni\u00e7\u00f8de',
+             '1000 genomes project description with uni\u00e7\u00f8de',
+             'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, test category name',
              '2017-03-12 19:27:08.156000+00:00', '11', '14', '4', '14', '0', '0', '0', '0', '0', '0', '0', '0', '0',
              '0', '0', '0', '11'],
         )
@@ -101,12 +102,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get('Content-Type'), 'application/json')
         self.assertEqual(response.get('Content-Disposition'), 'attachment; filename="projects.json"')
-        export_content = [json.loads(row) for row in response.content.rstrip('\n').split('\n')]
+        export_content = [json.loads(row) for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
         self.assertEqual(len(export_content), 3)
         self.assertDictEqual(export_content[0], {
-            'project': u'1kg project n\u00e5me with uni\u00e7\u00f8de',
-            'description': u'1000 genomes project description with uni\u00e7\u00f8de',
-            'categories': u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, test category name',
+            'project': '1kg project n\u00e5me with uni\u00e7\u00f8de',
+            'description': '1000 genomes project description with uni\u00e7\u00f8de',
+            'categories': 'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, test category name',
             'created_date': '2017-03-12 19:27:08.156000+00:00', 'families': '11', 'individuals': '14',
             'tagged_variants': '4', 'wes_samples': '14', 'wgs_samples': '0', 'rna_samples': '0',
             'solved_-_known_gene_for_phenotype': '0', 'closed,_no_longer_under_analysis': '0',
