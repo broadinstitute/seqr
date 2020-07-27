@@ -112,6 +112,8 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
     ), []),
 )
 
+export const getVariantUniqueId = ({ chrom, pos, ref, alt, end, geneId }, variantGeneId) =>
+  `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -124,13 +126,13 @@ export const getIndividualTaggedVariants = createSelector(
     return Object.values(savedVariants).filter(
       o => o.familyGuids.includes(familyGuid) && o.tagGuids.length).reduce((acc, variant) => {
       const variantDetail = {
+        ...variant.genotypes[individualGuid],
         ...variant,
         tags: variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid]),
-        ...variant.genotypes[individualGuid],
       }
       return [...acc, ...Object.keys(variant.transcripts || {}).map(geneId => ({
         ...variantDetail,
-        variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}-${geneId}`,
+        variantId: getVariantUniqueId(variant, geneId),
         ...genesById[geneId],
       }))]
     }, [])
@@ -364,17 +366,23 @@ export const getMmeDefaultContactEmail = createSelector(
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
 
-    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, genomeVersion }) => {
+    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, end, genomeVersion }) => {
       const savedVariant = Object.values(savedVariants).find(
-        o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
+        o => o.chrom === chrom && o.pos === pos && (ref ? o.ref === ref && o.alt === alt : end === o.end)
           && o.familyGuids.includes(familyGuid)) || {}
       const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
       const mainTranscript = getVariantMainTranscript(savedVariant)
-      const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
-      const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
+      let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
+      let variantDetail = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
       const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion
-      const inheritance = genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'
-      return `a ${inheritance} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${hgvs ? ` (${hgvs})` : ''}`
+      let inheritance = genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'
+      if (genotype.numAlt === -1) {
+        inheritance = 'copy number'
+        consequence = genotype.cn < 2 ? 'deletion' : 'duplication'
+        variantDetail = `CN=${genotype.cn}`
+      }
+      const position = ref ? `${pos} ${ref}>${alt}` : `${pos}-${end}`
+      return `a ${inheritance} ${consequence} ${chrom}:${position}${displayGenomeVersion ? ` (${displayGenomeVersion})` : ''}${variantDetail ? ` (${variantDetail})` : ''}`
     }).join(', ')
 
     const submittedPhenotypeList = (phenotypes || []).filter(

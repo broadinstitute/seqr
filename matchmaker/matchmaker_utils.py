@@ -97,6 +97,7 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
+                    'end': gene_feature['variant'].get('end'),
                     'genomeVersion': gene_feature['variant'].get('assembly'),
                 })
             gene_variants.append(gene_variant)
