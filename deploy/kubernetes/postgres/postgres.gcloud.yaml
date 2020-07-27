@@ -60,11 +60,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - /usr/lib/postgresql/9.6/bin/pg_isready
-            - -U
-            - postgres
-            - -d
-            - postgres
+            - pg_isready
         volumeMounts:
         - name: postgres-dbpath
           mountPath: /var/lib/postgresql/data
