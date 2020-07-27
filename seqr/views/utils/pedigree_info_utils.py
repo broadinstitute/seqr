@@ -435,8 +435,7 @@ def _parse_datstat_export_format(rows):
 
 
 def _get_datstat_family_notes(row):
-    row = {k: v.encode('ascii', errors='ignore').decode() if isinstance(v, str) else str(v, 'ascii', errors='ignore')
-           for k, v in row.items()}
+    row = {k: v.encode('ascii', errors='ignore').decode() for k, v in row.items()}
 
     DC = DatstatConstants
 
