@@ -94,7 +94,8 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
-  (submissionsByGuid, familiesByGuid, individualsByGuid) =>
+  getGenesById,
+  (submissionsByGuid, familiesByGuid, individualsByGuid, genesById) =>
     Object.values(individualsByGuid).reduce((acc, individual) => (
       individual.mmeSubmissionGuid ? [
         ...acc,
@@ -104,6 +105,8 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
           individualName: individual.displayName,
           familyGuid: individual.familyGuid,
           projectGuid: individual.projectGuid,
+          geneSymbols: (submissionsByGuid[individual.mmeSubmissionGuid].geneIds || []).map(
+            geneId => (genesById[geneId] || {}).geneSymbol || geneId),
           ...submissionsByGuid[individual.mmeSubmissionGuid],
         },
       ] : acc
