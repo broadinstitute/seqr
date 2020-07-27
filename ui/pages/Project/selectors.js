@@ -10,7 +10,6 @@ import {
   GENOME_VERSION_DISPLAY_LOOKUP,
   familyVariantSamples,
   getVariantMainTranscript,
-  getVariantMainGeneId,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -123,13 +122,18 @@ export const getIndividualTaggedVariants = createSelector(
   (savedVariants, individualsByGuid, genesById, variantTagsByGuid, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
     return Object.values(savedVariants).filter(
-      o => o.familyGuids.includes(familyGuid) && o.tagGuids.length).map(variant => ({
-      ...variant,
-      tags: variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid]),
-      variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
-      ...variant.genotypes[individualGuid],
-      ...genesById[getVariantMainGeneId(variant)],
-    }))
+      o => o.familyGuids.includes(familyGuid) && o.tagGuids.length).reduce((acc, variant) => {
+      const variantDetail = {
+        ...variant,
+        tags: variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid]),
+        ...variant.genotypes[individualGuid],
+      }
+      return [...acc, ...Object.keys(variant.transcripts || {}).map(geneId => ({
+        ...variantDetail,
+        variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}-${geneId}`,
+        ...genesById[geneId],
+      }))]
+    }, [])
   },
 )
 
