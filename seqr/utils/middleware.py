@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from builtins import str
-
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.utils.deprecation import MiddlewareMixin
 from requests import HTTPError
@@ -36,7 +33,7 @@ class JsonErrorMiddleware(MiddlewareMixin):
     @staticmethod
     def process_exception(request, exception):
         if request.path.startswith('/api'):
-            exception_json = {'message': exception.message if hasattr(exception, 'message') else str(exception)}
+            exception_json = {'message': str(exception)}
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
             if DEBUG:

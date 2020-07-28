@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging

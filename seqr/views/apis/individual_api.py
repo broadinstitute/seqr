@@ -1,9 +1,6 @@
 """
 APIs for retrieving, updating, creating, and deleting Individual records
 """
-
-from __future__ import unicode_literals
-
 import json
 import logging
 import re

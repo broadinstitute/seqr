@@ -2,8 +2,6 @@
 Utility functions for converting Django ORM object to JSON
 """
 
-from __future__ import unicode_literals
-
 import itertools
 import json
 import logging
