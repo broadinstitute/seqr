@@ -2,8 +2,6 @@
 APIs for updating project metadata, as well as creating or deleting projects
 """
 
-from __future__ import unicode_literals
-
 import json
 import logging
 from django.contrib.auth.decorators import login_required

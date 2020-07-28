@@ -1,6 +1,4 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-from __future__ import unicode_literals
-
 import logging
 
 from django.contrib.auth.decorators import login_required
