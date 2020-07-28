@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sample',
             name='sample_type',
-            field=models.CharField(choices=[(b'WES', b'Exome'), (b'WGS', b'Whole Genome'), (b'RNA', b'RNA')], max_length=10),
+            field=models.CharField(choices=[('WES', 'Exome'), ('WGS', 'Whole Genome'), ('RNA', 'RNA')], max_length=10),
         ),
         migrations.AlterField(
             model_name='savedvariant',
