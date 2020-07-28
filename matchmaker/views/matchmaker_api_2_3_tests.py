@@ -432,37 +432,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
         new_submission_guid = next(iter(response_json['mmeSubmissionsByGuid']))
-        exp =  {
-            'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
-            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'submissionGuid': new_submission_guid,
-            'createdDate': mock.ANY,
-            'lastModifiedDate': mock.ANY,
-            'deletedDate': None,
-            'contactName': 'PI',
-            'contactHref': 'mailto:test@broadinstitute.org',
-            'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'phenotypes': [
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-            ],
-            'geneVariants': [{
-                'geneId': 'ENSG00000235249',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'end': None,
-                'genomeVersion': 'GRCh38',
-            }, {
-                'geneId': 'ENSG00000235249',
-                'alt': None,
-                'ref': None,
-                'chrom': '14',
-                'pos': 77027623,
-                'end': 77028137,
-                'genomeVersion': '38',
-            }],
-        }
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
