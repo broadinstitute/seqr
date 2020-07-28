@@ -278,7 +278,7 @@ class Family(ModelWithGUID):
 
 # TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/macarthur-lab/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete = models.DO_NOTHING)
 
     def __unicode__(self):
         return '{}_{}'.format(self.family.guid, self.created_by)

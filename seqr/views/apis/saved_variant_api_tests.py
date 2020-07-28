@@ -75,6 +75,7 @@ COMPOUND_HET_5_JSON = {
 
 class SavedVariantAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
+    databases = {'reference_data', 'default'}
 
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=['R0001_1kg'])

@@ -294,6 +294,7 @@ urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
     url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
     url(r'^admin/', admin.site.urls),
+    url(r'^accounts/', include('allauth.urls')),  # <--
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
     }),

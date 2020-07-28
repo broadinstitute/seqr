@@ -46,6 +46,6 @@ def login_required_error(request):
 
     This is used to redirect AJAX HTTP handlers to the login page.
     """
-    assert not request.user.is_authenticated()
+    assert not request.user.is_authenticated
 
     return create_json_response({}, status=401, reason="login required")
