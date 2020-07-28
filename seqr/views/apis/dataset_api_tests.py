@@ -167,9 +167,13 @@ class DatasetAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000001_na19675': {'sampleGuids': [existing_index_sample_guid]},
-            'I000002_na19678': {'sampleGuids': [new_sample_guid, existing_old_index_sample_guid]},
+            'I000002_na19678': {'sampleGuids': mock.ANY},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
         })
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000002_na19678']['sampleGuids']),
+            {new_sample_guid, existing_old_index_sample_guid}
+        )
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
         updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
         self.assertSetEqual(
