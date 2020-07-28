@@ -559,6 +559,62 @@ export const STATE_WITH_2_FAMILIES = {
       variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
+    SV0000002_SV48367227_r0390_100: {
+      alt: null,
+      chrom: "1",
+      familyGuids: ["F011652_1"],
+      functionalDataGuids: [],
+      genomeVersion: "37",
+      geneIds: ['ENSG00000228198', 'ENSG00000164458'],
+      genotypes: {
+        I021475_na19675_1: {
+          cn: 0,
+          qs: 57,
+          numAlt: -1,
+        },
+        NA19678: {
+          cn: 2,
+          numAlt: -1,
+        },
+        NA19679: {
+          cn: 2,
+          numAlt: -1,
+        },
+      },
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      noteGuids: [],
+      projectGuid: 'R0237_1000_genomes_demo',
+      pos: 248367227,
+      end: 248369100,
+      populations: {
+        sv_callset: { af: 0.03, ac: 7, an: 1032 },
+        g1k: {},
+        exac: {},
+        gnomad_genomes: {},
+        gnomad_exomes: {},
+        topmed: {},
+      },
+      predictions: { strvctvre: '0.272' },
+      ref: null,
+      tagGuids: [],
+      transcripts: {
+        ENSG00000164458: [
+          {
+            transcriptId: "ENST00000456744",
+          }
+        ],
+        ENSG00000228198: [
+          {
+            transcriptId: "ENST00000456743",
+          }
+        ],
+      },
+      variantId: "batch_123_DEL",
+      variantGuid: "SV0000002_SV48367227_r0390_100",
+      xpos: 1248367227,
+    },
     SV0000003_2246859832_r0390_100: {
       alt: "T",
       annotation: {
@@ -802,7 +858,10 @@ export const STATE_WITH_2_FAMILIES = {
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
         {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
       ],
-      geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
+      geneVariants: [
+        { geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 },
+        { geneId: "ENSG00000228198", alt: null, ref: null, chrom: '1', pos: 248367227, end: 248369100 }
+      ],
     }
   },
   mmeResultsByGuid: {
