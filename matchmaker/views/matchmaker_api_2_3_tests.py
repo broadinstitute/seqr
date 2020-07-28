@@ -36,6 +36,16 @@ SUBMISSION_DATA = {
         'pos': 77027549,
         'genomeVersion': '38',
         'numAlt': 2,
+    }, {
+        'geneId': 'ENSG00000235249',
+        'alt': None,
+        'ref': None,
+        'chrom': '14',
+        'pos': 77027623,
+        'end': 77028137,
+        'genomeVersion': '38',
+        'numAlt': -1,
+        'cn': 3,
     }],
 }
 
@@ -194,6 +204,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': 77027548,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -283,6 +294,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': 77027548,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -420,6 +432,37 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
         new_submission_guid = next(iter(response_json['mmeSubmissionsByGuid']))
+        exp =  {
+            'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
+            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'submissionGuid': new_submission_guid,
+            'createdDate': mock.ANY,
+            'lastModifiedDate': mock.ANY,
+            'deletedDate': None,
+            'contactName': 'PI',
+            'contactHref': 'mailto:test@broadinstitute.org',
+            'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'phenotypes': [
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
+            ],
+            'geneVariants': [{
+                'geneId': 'ENSG00000235249',
+                'alt': 'C',
+                'ref': 'CCACT',
+                'chrom': '14',
+                'pos': 77027549,
+                'end': None,
+                'genomeVersion': 'GRCh38',
+            }, {
+                'geneId': 'ENSG00000235249',
+                'alt': None,
+                'ref': None,
+                'chrom': '14',
+                'pos': 77027623,
+                'end': 77028137,
+                'genomeVersion': '38',
+            }],
+        }
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
@@ -439,6 +482,15 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': None,
+                'genomeVersion': 'GRCh38',
+            }, {
+                'geneId': 'ENSG00000235249',
+                'alt': None,
+                'ref': None,
+                'chrom': '14',
+                'pos': 77027623,
+                'end': 77028137,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -482,6 +534,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
                         'referenceBases': 'CCACT'
                     },
                     'zygosity': 2
+                }, {
+                    'gene': {'id': 'ENSG00000235249'},
+                    'variant': {
+                        'start': 77027623,
+                        'end': 77028137,
+                        'assembly': 'GRCh38',
+                        'referenceName': '14',
+                    },
                 }],
             },
             '_disclaimer': MME_DISCLAIMER,
@@ -575,6 +635,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                     'chrom': '17',
                     'genomeVersion': 'GRCh38',
                     'pos': 38739601,
+                    'end': 38739601,
                     'alt': 'A',
                     'ref': 'G',
                 }
