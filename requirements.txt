@@ -1,6 +1,7 @@
-Django==1.11.29                  # core server-side framework. Behind a major version due to missing Python 2 support
+Django==3.0.8                    # core server-side framework. Behind a major version due to missing Python 2 support
 django-anymail==7.0.0            # for sending emails using cloud-based mail service providers
 django-guardian==2.3.0           # object-level permissions for database records. Behind a major version due to missing Python 2 support
+django-allauth==0.42.0		 # for Google Auth
 django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.4.0       # allows CORS requests for client-side development
 
