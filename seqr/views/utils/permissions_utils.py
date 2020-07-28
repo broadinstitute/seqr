@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 

@@ -10,11 +10,11 @@ This README describes steps for migrating an older seqr instance.
 
 3. Run migrations:
    ```
-   python2.7 -m manage makemigrations 
-   python2.7 -m manage migrate 
-   python2.7 -m manage loaddata variant_tag_types // This will fail if it has been run before, and that is okay
-   python2.7 -m manage loaddata variant_searches // This will fail if it has been run before, and that is okay
-   python2.7 -m manage reload_saved_variant_json
+   python -m manage makemigrations 
+   python -m manage migrate 
+   python -m manage loaddata variant_tag_types // This will fail if it has been run before, and that is okay
+   python -m manage loaddata variant_searches // This will fail if it has been run before, and that is okay
+   python -m manage reload_saved_variant_json
    ```
     
 4. Update gene-level reference datasets:

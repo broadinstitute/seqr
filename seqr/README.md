@@ -4,7 +4,7 @@ To run server-side django tests:
 
 ```
 cd $SEQR_ROOT
-python2.7 -Wmodule -u manage.py test -p '*_tests.py' -v 2
+python -Wmodule -u manage.py test -p '*_tests.py' -v 2
 ```
 
 

@@ -1,7 +1,4 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
-from __future__ import unicode_literals
-from builtins import str
-
 import difflib
 import os
 import json
@@ -438,8 +435,7 @@ def _parse_datstat_export_format(rows):
 
 
 def _get_datstat_family_notes(row):
-    row = {k: v.encode('ascii', errors='ignore').decode() if isinstance(v, str) else str(v, 'ascii', errors='ignore')
-           for k, v in row.items()}
+    row = {k: v.encode('ascii', errors='ignore').decode() for k, v in row.items()}
 
     DC = DatstatConstants
 

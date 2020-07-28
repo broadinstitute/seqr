@@ -1,8 +1,6 @@
 """
 APIs used by the case review page
 """
-from __future__ import unicode_literals
-
 import json
 
 from django.contrib.admin.views.decorators import staff_member_required

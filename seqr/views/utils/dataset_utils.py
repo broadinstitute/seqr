@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import logging
 import elasticsearch_dsl
 from django.utils import timezone
