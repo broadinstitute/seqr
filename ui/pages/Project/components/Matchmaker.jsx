@@ -36,6 +36,7 @@ import {
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
+  getVariantUniqueId,
 } from '../selectors'
 
 const BreakWordLink = styled.a.attrs({ target: '_blank' })`
@@ -59,14 +60,14 @@ const MATCH_STATUS_EDIT_FIELDS = [
 const variantSummary = variant => (
   <span>
     {variant.chrom}:{variant.pos}
-    {variant.alt && <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span>}
+    {variant.alt ? <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span> : `-${variant.end}`}
   </span>
 )
 
 const GENOTYPE_FIELDS = [
   { name: 'geneSymbol', content: 'Gene', width: 2 },
   { name: 'xpos', content: 'Variant', width: 3, format: val => variantSummary(val) },
-  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} numAlt={val.numAlt} /> },
+  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} numAlt={val.numAlt} cn={val.cn} /> },
   {
     name: 'tags',
     content: 'Tags',
@@ -156,7 +157,7 @@ const SUBMISSION_EDIT_FIELDS = [
     name: 'geneVariants',
     component: EditGenotypesTable,
     format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantId || `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`]: true }), {}),
+      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: true }), {}),
   },
   {
     name: 'phenotypes',

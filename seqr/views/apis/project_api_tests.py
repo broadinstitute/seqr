@@ -101,7 +101,7 @@ class ProjectAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             {tag['variantGuid'] for tag in discovery_tags},
             {'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100'})
-        self.assertListEqual(list(response_json['genesById'].keys()), ['ENSG00000135953'])
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000186092'})
         family_fields = {'individualGuids'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
@@ -117,7 +117,7 @@ class ProjectAPITest(AuthenticationTestCase):
         )
         self.assertSetEqual(
             set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()),
-            {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate'}
+            {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate', 'geneIds'}
         )
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000001_na19675']['features'][0].keys()),

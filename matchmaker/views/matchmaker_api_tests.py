@@ -34,6 +34,16 @@ SUBMISSION_DATA = {
         'pos': 77027549,
         'genomeVersion': '38',
         'numAlt': 2,
+    }, {
+        'geneId': 'ENSG00000235249',
+        'alt': None,
+        'ref': None,
+        'chrom': '14',
+        'pos': 77027623,
+        'end': 77028137,
+        'genomeVersion': '38',
+        'numAlt': -1,
+        'cn': 3,
     }],
 }
 
@@ -192,6 +202,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': 77027548,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -281,6 +292,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': 77027548,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -437,6 +449,15 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
+                'end': None,
+                'genomeVersion': 'GRCh38',
+            }, {
+                'geneId': 'ENSG00000235249',
+                'alt': None,
+                'ref': None,
+                'chrom': '14',
+                'pos': 77027623,
+                'end': 77028137,
                 'genomeVersion': 'GRCh38',
             }],
         }})
@@ -480,6 +501,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
                         'referenceBases': 'CCACT'
                     },
                     'zygosity': 2
+                }, {
+                    'gene': {'id': 'ENSG00000235249'},
+                    'variant': {
+                        'start': 77027623,
+                        'end': 77028137,
+                        'assembly': 'GRCh38',
+                        'referenceName': '14',
+                    },
                 }],
             },
             '_disclaimer': MME_DISCLAIMER,
@@ -573,6 +602,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                     'chrom': '17',
                     'genomeVersion': 'GRCh38',
                     'pos': 38739601,
+                    'end': 38739601,
                     'alt': 'A',
                     'ref': 'G',
                 }

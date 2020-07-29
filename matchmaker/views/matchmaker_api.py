@@ -201,17 +201,22 @@ def update_mme_submission(request, submission_guid=None):
         if not gene_variant.get('geneId'):
             return create_json_response({}, status=400, reason='Gene id is required for genomic features')
         feature = {'gene': {'id': gene_variant['geneId']}}
-        if 'numAlt' in gene_variant:
+        if 'numAlt' in gene_variant and gene_variant['numAlt'] > 0:
             feature['zygosity'] = gene_variant['numAlt']
         if gene_variant.get('pos'):
             genome_version = gene_variant['genomeVersion']
             feature['variant'] = {
-                'alternateBases': gene_variant['alt'],
-                'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
                 'assembly': GENOME_VERSION_LOOKUP.get(genome_version, genome_version),
             }
+            if gene_variant.get('alt'):
+                feature['variant'].update({
+                    'alternateBases': gene_variant['alt'],
+                    'referenceBases': gene_variant['ref'],
+                })
+            elif gene_variant.get('end'):
+                feature['variant']['end'] = gene_variant['end']
         genomic_features.append(feature)
 
     submission_json.update({
