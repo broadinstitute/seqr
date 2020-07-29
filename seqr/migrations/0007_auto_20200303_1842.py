@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='individual',
             name='case_review_status',
-            field=models.CharField(choices=[(b'I', b'In Review'), (b'U', b'Uncertain'), (b'A', b'Accepted'), (b'R', b'Not Accepted'), (b'Q', b'More Info Needed'), (b'P', b'Pending Results and Records'), (b'N', b'NMI Review'), (b'W', b'Waitlist'), (b'L', b'Lost To Follow-Up'), (b'V', b'Inactive')], default=b'I', max_length=2),
+            field=models.CharField(choices=[('I', 'In Review'), ('U', 'Uncertain'), ('A', 'Accepted'), ('R', 'Not Accepted'), ('Q', 'More Info Needed'), ('P', 'Pending Results and Records'), ('N', 'NMI Review'), ('W', 'Waitlist'), ('L', 'Lost To Follow-Up'), ('V', 'Inactive')], default='I', max_length=2),
         ),
     ]

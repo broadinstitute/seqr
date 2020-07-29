@@ -9,45 +9,45 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     replaces = [
-        (b'seqr', '0001_initial'), (b'seqr', '0002_auto_20170309_0751'), (b'seqr', '0003_auto_20170313_0315'),
-        (b'seqr', '0004_auto_20170313_0853'), (b'seqr', '0005_auto_20170319_0332'),
-        (b'seqr', '0006_auto_20170430_0044'), (b'seqr', '0007_auto_20170509_0046'),
-        (b'seqr', '0008_sample_deprecated_base_project'),
-        (b'seqr', '0009_uploadedfileforfamily_uploadedfileforindividual'),
-        (b'seqr', '0010_auto_20170516_0735'), (b'seqr', '0011_auto_20170517_2222'),
-        (b'seqr', '0012_auto_20170518_2015'), (b'seqr', '0013_auto_20170526_0157'),
-        (b'seqr', '0014_auto_20170527_1953'), (b'seqr', '0015_auto_20170606_1910'),
-        (b'seqr', '0016_auto_20170621_1800'), (b'seqr', '0017_auto_20170623_1300'),
-        (b'seqr', '0018_auto_20170626_1401'), (b'seqr', '0019_auto_20170630_1754'),
-        (b'seqr', '0020_auto_20170630_1759'), (b'seqr', '0021_dataset_dataset_id'),
-        (b'seqr', '0022_auto_20170704_1948'), (b'seqr', '0023_auto_20170909_1828'),
-        (b'seqr', '0024_auto_20171101_2354'), (b'seqr', '0025_auto_20171106_0757'),
-        (b'seqr', '0026_auto_20171112_1649'), (b'seqr', '0027_auto_20171115_1532'),
-        (b'seqr', '0028_auto_20171123_0200'), (b'seqr', '0029_auto_20171130_0700'),
-        (b'seqr', '0030_auto_20171213_1652'), (b'seqr', '0031_auto_20171214_1104'),
-        (b'seqr', '0032_auto_20171218_0423'), (b'seqr', '0033_auto_20180111_1006'),
-        (b'seqr', '0034_auto_20180411_1951'), (b'seqr', '0035_variantnote_submit_to_clinvar'),
-        (b'seqr', '0036_auto_20180415_2250'), (b'seqr', '0037_remove_individual_case_review_status_accepted_for'),
-        (b'seqr', '0037_project_disable_staff_access'), (b'seqr', '0038_merge_20180530_2034'),
-        (b'seqr', '0037_auto_20180515_1440'), (b'seqr', '0038_merge_20180525_1800'),
-        (b'seqr', '0039_merge_20180531_1604'), (b'seqr', '0040_auto_20180612_1513'),
-        (b'seqr', '0040_auto_20180603_1309'), (b'seqr', '0041_merge_20180621_1247'),
-        (b'seqr', '0041_genenote'), (b'seqr', '0042_merge_20180625_1529'), (b'seqr', '0043_auto_20180719_1212'),
-        (b'seqr', '0044_familyanalysedby'), (b'seqr', '0044_auto_20180723_1808'),
-        (b'seqr', '0045_merge_20180726_1246'), (b'seqr', '0045_auto_20180801_1933'),
-        (b'seqr', '0046_merge_20180803_1534'), (b'seqr', '0046_auto_20180803_1708'),
-        (b'seqr', '0047_merge_20180809_1746'), (b'seqr', '0048_auto_20181106_1639'),
-        (b'seqr', '0049_auto_20190114_2030'), (b'seqr', '0050_family_pubmed_ids'), (b'seqr', '0051_auto_20190320_2109'),
-        (b'seqr', '0052_remove_variantsearchresults_es_index'), (b'seqr', '0053_auto_20190405_1525'),
-        (b'seqr', '0054_project_has_new_search'), (b'seqr', '0055_remove_sample_dataset_name'),
-        (b'seqr', '0056_auto_20190513_1621'), (b'seqr', '0056_auto_20190424_2059'),
-        (b'seqr', '0057_merge_20190513_2009'), (b'seqr', '0058_matchmakercontactnotes'),
-        (b'seqr', '0059_auto_20190705_1450'), (b'seqr', '0060_matchmakerresult_match_removed'),
-        (b'seqr', '0061_family_assigned_analyst'), (b'seqr', '0061_auto_20190715_1500'),
-        (b'seqr', '0062_merge_20190723_1539'), (b'seqr', '0063_auto_20190806_1801'),
-        (b'seqr', '0064_auto_20190823_2112'), (b'seqr', '0063_auto_20190723_1825'),
-        (b'seqr', '0065_merge_20190827_2031'), (b'seqr', '0066_auto_20191007_1946'),
-        (b'seqr', '0067_remove_project_custom_reference_populations')
+        ('seqr', '0001_initial'), ('seqr', '0002_auto_20170309_0751'), ('seqr', '0003_auto_20170313_0315'),
+        ('seqr', '0004_auto_20170313_0853'), ('seqr', '0005_auto_20170319_0332'),
+        ('seqr', '0006_auto_20170430_0044'), ('seqr', '0007_auto_20170509_0046'),
+        ('seqr', '0008_sample_deprecated_base_project'),
+        ('seqr', '0009_uploadedfileforfamily_uploadedfileforindividual'),
+        ('seqr', '0010_auto_20170516_0735'), ('seqr', '0011_auto_20170517_2222'),
+        ('seqr', '0012_auto_20170518_2015'), ('seqr', '0013_auto_20170526_0157'),
+        ('seqr', '0014_auto_20170527_1953'), ('seqr', '0015_auto_20170606_1910'),
+        ('seqr', '0016_auto_20170621_1800'), ('seqr', '0017_auto_20170623_1300'),
+        ('seqr', '0018_auto_20170626_1401'), ('seqr', '0019_auto_20170630_1754'),
+        ('seqr', '0020_auto_20170630_1759'), ('seqr', '0021_dataset_dataset_id'),
+        ('seqr', '0022_auto_20170704_1948'), ('seqr', '0023_auto_20170909_1828'),
+        ('seqr', '0024_auto_20171101_2354'), ('seqr', '0025_auto_20171106_0757'),
+        ('seqr', '0026_auto_20171112_1649'), ('seqr', '0027_auto_20171115_1532'),
+        ('seqr', '0028_auto_20171123_0200'), ('seqr', '0029_auto_20171130_0700'),
+        ('seqr', '0030_auto_20171213_1652'), ('seqr', '0031_auto_20171214_1104'),
+        ('seqr', '0032_auto_20171218_0423'), ('seqr', '0033_auto_20180111_1006'),
+        ('seqr', '0034_auto_20180411_1951'), ('seqr', '0035_variantnote_submit_to_clinvar'),
+        ('seqr', '0036_auto_20180415_2250'), ('seqr', '0037_remove_individual_case_review_status_accepted_for'),
+        ('seqr', '0037_project_disable_staff_access'), ('seqr', '0038_merge_20180530_2034'),
+        ('seqr', '0037_auto_20180515_1440'), ('seqr', '0038_merge_20180525_1800'),
+        ('seqr', '0039_merge_20180531_1604'), ('seqr', '0040_auto_20180612_1513'),
+        ('seqr', '0040_auto_20180603_1309'), ('seqr', '0041_merge_20180621_1247'),
+        ('seqr', '0041_genenote'), ('seqr', '0042_merge_20180625_1529'), ('seqr', '0043_auto_20180719_1212'),
+        ('seqr', '0044_familyanalysedby'), ('seqr', '0044_auto_20180723_1808'),
+        ('seqr', '0045_merge_20180726_1246'), ('seqr', '0045_auto_20180801_1933'),
+        ('seqr', '0046_merge_20180803_1534'), ('seqr', '0046_auto_20180803_1708'),
+        ('seqr', '0047_merge_20180809_1746'), ('seqr', '0048_auto_20181106_1639'),
+        ('seqr', '0049_auto_20190114_2030'), ('seqr', '0050_family_pubmed_ids'), ('seqr', '0051_auto_20190320_2109'),
+        ('seqr', '0052_remove_variantsearchresults_es_index'), ('seqr', '0053_auto_20190405_1525'),
+        ('seqr', '0054_project_has_new_search'), ('seqr', '0055_remove_sample_dataset_name'),
+        ('seqr', '0056_auto_20190513_1621'), ('seqr', '0056_auto_20190424_2059'),
+        ('seqr', '0057_merge_20190513_2009'), ('seqr', '0058_matchmakercontactnotes'),
+        ('seqr', '0059_auto_20190705_1450'), ('seqr', '0060_matchmakerresult_match_removed'),
+        ('seqr', '0061_family_assigned_analyst'), ('seqr', '0061_auto_20190715_1500'),
+        ('seqr', '0062_merge_20190723_1539'), ('seqr', '0063_auto_20190806_1801'),
+        ('seqr', '0064_auto_20190823_2112'), ('seqr', '0063_auto_20190723_1825'),
+        ('seqr', '0065_merge_20190827_2031'), ('seqr', '0066_auto_20191007_1946'),
+        ('seqr', '0067_remove_project_custom_reference_populations')
     ]
 
     initial = True
@@ -70,9 +70,9 @@ class Migration(migrations.Migration):
                 ('is_phenotips_enabled', models.BooleanField(default=False)),
                 ('phenotips_user_id', models.CharField(blank=True, db_index=True, max_length=100, null=True)),
                 ('is_mme_enabled', models.BooleanField(default=True)),
-                ('mme_primary_data_owner', models.TextField(blank=True, default=b'Samantha Baxter', null=True)),
+                ('mme_primary_data_owner', models.TextField(blank=True, default='Samantha Baxter', null=True)),
                 ('last_accessed_date', models.DateTimeField(blank=True, null=True, db_index=True)),
-                ('deprecated_project_id', models.TextField(blank=True, db_index=True, default=b'')),
+                ('deprecated_project_id', models.TextField(blank=True, db_index=True, default='')),
                 ('can_edit_group',
                  models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='auth.Group')),
                 ('can_view_group',
@@ -83,17 +83,17 @@ class Migration(migrations.Migration):
                 ('owners_group',
                  models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='auth.Group')),
                 ('mme_contact_url', models.TextField(
-                    blank=True, default=b'mailto:matchmaker@broadinstitute.org', null=True)),
+                    blank=True, default='mailto:matchmaker@broadinstitute.org', null=True)),
                 ('mme_contact_institution', models.TextField(
-                    blank=True, default=b'Broad Center for Mendelian Genomics', null=True)),
+                    blank=True, default='Broad Center for Mendelian Genomics', null=True)),
                 ('disease_area', models.CharField(blank=True, choices=[
-                    (b'blood', b'Blood'), (b'cardio', b'Cardio'), (b'kidney', b'Kidney'), (b'muscle', b'Muscle'),
-                    (b'neurodev', b'Neurodev'), (b'orphan_disease', b'Orphan Disease'), (b'retinal', b'Retinal')
+                    ('blood', 'Blood'), ('cardio', 'Cardio'), ('kidney', 'Kidney'), ('muscle', 'Muscle'),
+                    ('neurodev', 'Neurodev'), ('orphan_disease', 'Orphan Disease'), ('retinal', 'Retinal')
                 ], max_length=20, null=True)),
                 ('is_functional_data_enabled', models.BooleanField(default=False)),
                 ('disable_staff_access', models.BooleanField(default=False)),
                 ('genome_version', models.CharField(
-                    choices=[(b'37', b'GRCh37'), (b'38', b'GRCh38')], default=b'37', max_length=5)),
+                    choices=[('37', 'GRCh37'), ('38', 'GRCh38')], default='37', max_length=5)),
                 ('has_new_search', models.BooleanField(default=False)),
             ],
             options={
@@ -111,21 +111,21 @@ class Migration(migrations.Migration):
                 ('family_id', models.CharField(db_index=True, max_length=100)),
                 ('display_name', models.CharField(blank=True, db_index=True, max_length=100, null=True)),
                 ('description', models.TextField(blank=True, null=True)),
-                ('pedigree_image', models.ImageField(blank=True, null=True, upload_to=b'pedigree_images')),
+                ('pedigree_image', models.ImageField(blank=True, null=True, upload_to='pedigree_images')),
                 ('analysis_notes', models.TextField(blank=True, null=True)),
                 ('analysis_summary', models.TextField(blank=True, null=True)),
                 ('causal_inheritance_mode', models.CharField(choices=[
-                    (b'r', b'recessive'), (b'u', b'unknown'), (b'd', b'dominant'), (b'x', b'x-linked recessive'),
-                    (b'n', b'de novo')], default=b'u', max_length=20)),
+                    ('r', 'recessive'), ('u', 'unknown'), ('d', 'dominant'), ('x', 'x-linked recessive'),
+                    ('n', 'de novo')], default='u', max_length=20)),
                 ('analysis_status', models.CharField(choices=[
-                    (b'S', b'S'), (b'S_kgfp', b'S'), (b'S_kgdp', b'S'), (b'S_ng', b'S'), (b'Sc_kgfp', b'S'),
-                    (b'Sc_kgdp', b'S'), (b'Sc_ng', b'S'), (b'Rcpc', b'R'), (b'Rncc', b'R'), (b'C', b'C'), (b'I', b'A'),
-                    (b'Q', b'W')
-                ], default=b'Q', max_length=10)),
+                    ('S', 'S'), ('S_kgfp', 'S'), ('S_kgdp', 'S'), ('S_ng', 'S'), ('Sc_kgfp', 'S'),
+                    ('Sc_kgdp', 'S'), ('Sc_ng', 'S'), ('Rcpc', 'R'), ('Rncc', 'R'), ('C', 'C'), ('I', 'A'),
+                    ('Q', 'W')
+                ], default='Q', max_length=10)),
                 ('internal_analysis_status', models.CharField(blank=True, choices=[
-                    (b'S', b'S'), (b'S_kgfp', b'S'), (b'S_kgdp', b'S'), (b'S_ng', b'S'), (b'Sc_kgfp', b'S'),
-                    (b'Sc_kgdp', b'S'), (b'Sc_ng', b'S'), (b'Rcpc', b'R'), (b'Rncc', b'R'), (b'C', b'C'),
-                    (b'I', b'A'), (b'Q', b'W')
+                    ('S','S'), ('S_kgfp','S'), ('S_kgdp','S'), ('S_ng','S'), ('Sc_kgfp','S'),
+                    ('Sc_kgdp', 'S'), ('Sc_ng', 'S'), ('Rcpc', 'R'), ('Rncc', 'R'), ('C', 'C'),
+                    ('I', 'A'), ('Q', 'W')
                 ], max_length=10, null=True)),
                 ('internal_case_review_notes', models.TextField(blank=True, null=True)),
                 ('internal_case_review_summary', models.TextField(blank=True, null=True)),
@@ -143,8 +143,8 @@ class Migration(migrations.Migration):
                 ('success_story', models.TextField(blank=True, null=True)),
                 ('success_story_types', django.contrib.postgres.fields.ArrayField(
                     base_field=models.CharField(blank=True, choices=[
-                        (b'N', b'Novel Discovery'), (b'A', b'Altered Clinical Outcome'), (b'C', b'Collaboration'),
-                        (b'T', b'Technical Win'), (b'D', b'Data Sharing'), (b'O', b'Other')
+                        ('N', 'Novel Discovery'), ('A', 'Altered Clinical Outcome'), ('C', 'Collaboration'),
+                        ('T', 'Technical Win'), ('D', 'Data Sharing'), ('O', 'Other')
                     ], max_length=1, null=True), default=[], size=None)),
             ],
         ),
@@ -168,14 +168,14 @@ class Migration(migrations.Migration):
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL,
                     related_name='maternal_children', to='seqr.Individual')),
                 ('sex', models.CharField(choices=[
-                    (b'M', b'Male'), (b'F', b'Female'), (b'U', b'Unknown')], default=b'U', max_length=1)),
+                    ('M', 'Male'), ('F', 'Female'), ('U', 'Unknown')], default='U', max_length=1)),
                 ('affected', models.CharField(choices=[
-                    (b'A', b'Affected'), (b'N', b'Unaffected'), (b'U', b'Unknown')], default=b'U', max_length=1)),
-                ('display_name', models.TextField(blank=True, default=b'')),
+                    ('A', 'Affected'), ('N', 'Unaffected'), ('U', 'Unknown')], default='U', max_length=1)),
+                ('display_name', models.TextField(blank=True, default='')),
                 ('case_review_status', models.CharField(choices=[
-                    (b'I', b'In Review'), (b'U', b'Uncertain'), (b'A', b'Accepted'), (b'R', b'Not Accepted'),
-                    (b'Q', b'More Info Needed'), (b'P', b'Pending Results and Records'), (b'N', b'NMI Review'), (b'W', b'Waitlist')
-                ], default=b'I', max_length=2)),
+                    ('I', 'In Review'), ('U', 'Uncertain'), ('A', 'Accepted'), ('R', 'Not Accepted'),
+                    ('Q', 'More Info Needed'), ('P', 'Pending Results and Records'), ('N', 'NMI Review'), ('W', 'Waitlist')
+                ], default='I', max_length=2)),
                 ('case_review_status_last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
                 ('case_review_discussion', models.TextField(blank=True, null=True)),
                 ('phenotips_patient_id', models.CharField(blank=True, db_index=True, max_length=30, null=True)),
@@ -219,15 +219,15 @@ class Migration(migrations.Migration):
                 ('individual', models.ForeignKey(
                     null=True, on_delete=django.db.models.deletion.PROTECT, to='seqr.Individual')),
                 ('sample_type', models.CharField(blank=True, choices=[
-                    (b'WES', b'Exome'), (b'WGS', b'Whole Genome'), (b'RNA', b'RNA'), (b'ARRAY', b'ARRAY')
+                    ('WES', 'Exome'), ('WGS', 'Whole Genome'), ('RNA', 'RNA'), ('ARRAY', 'ARRAY')
                 ], max_length=20, null=True)),
                 ('elasticsearch_index', models.TextField(blank=True, db_index=True, null=True)),
                 ('is_active', models.BooleanField(default=False)),
                 ('dataset_file_path', models.TextField(blank=True, db_index=True, null=True)),
                 ('dataset_type', models.CharField(blank=True, choices=[
-                    (b'ALIGN', b'Alignment'), (b'VARIANTS', b'Variant Calls'), (b'SV', b'SV Calls'),
-                    (b'BREAK', b'Breakpoints'), (b'SPLICE', b'Splice Junction Calls'),
-                    (b'ASE', b'Allele Specific Expression')
+                    ('ALIGN', 'Alignment'), ('VARIANTS', 'Variant Calls'), ('SV', 'SV Calls'),
+                    ('BREAK', 'Breakpoints'), ('SPLICE', 'Splice Junction Calls'),
+                    ('ASE', 'Allele Specific Expression')
                 ], max_length=20, null=True),
         ),
             ],
@@ -319,7 +319,7 @@ class Migration(migrations.Migration):
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
                 ('name', models.TextField()),
                 ('description', models.TextField(blank=True, null=True)),
-                ('color', models.CharField(default=b'#1f78b4', max_length=20)),
+                ('color', models.CharField(default='#1f78b4', max_length=20)),
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+',
                     to=settings.AUTH_USER_MODEL)),
@@ -366,21 +366,21 @@ class Migration(migrations.Migration):
                 ('created_date', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
                 ('functional_data_tag', models.TextField(choices=[
-                    (b'Functional Data', (
-                        (b'Biochemical Function', b'{"color": "#311B92", "description": "Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype."}'),
-                        (b'Protein Interaction', b'{"color": "#4A148C", "description": "Gene product interacts with proteins previously implicated (genetically or biochemically) in the disease of interest."}'),
-                        (b'Expression', b'{"color": "#7C4DFF", "description": "Gene is expressed in tissues relevant to the disease of interest and/or is altered in expression in patients who have the disease."}'),
-                        (b'Patient Cells', b'{"color": "#B388FF", "description": "Gene and/or gene product function is demonstrably altered in patients carrying candidate mutations."}'),
-                        (b'Non-patient cells', b'{"color": "#9575CD", "description": "Gene and/or gene product function is demonstrably altered in human cell culture models carrying candidate mutations."}'),
-                        (b'Animal Model', b'{"color": "#AA00FF", "description": "Non-human animal models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state."}'),
-                        (b'Non-human cell culture model', b'{"color": "#BA68C8", "description": "Non-human cell-culture models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state."}'),
-                        (b'Rescue', b'{"color": "#663399", "description": "The cellular phenotype in patient-derived cells or engineered equivalents can be rescued by addition of the wild-type gene product."}'))),
-                    (b'Functional Scores', (
-                        (b'Genome-wide Linkage', b'{"color": "#880E4F", "description": "Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.", "metadata_title": "LOD Score"}'),
-                        (b'Bonferroni corrected p-value', b'{"color": "#E91E63", "description": "Bonferroni-corrected p-value for gene if association testing/burden testing/etc was used to identify the gene.", "metadata_title": "P-value"}'),
-                        (b'Kindreds w/ Overlapping SV & Similar Phenotype', b'{"color": "#FF5252", "description": "Number of kindreds (1+) previously reported/in databases as having structural variant overlapping the gene and a similar phenotype.", "metadata_title": "#"}'))),
-                    (b'Additional Kindreds (Literature, MME)', (
-                        (b'Additional Unrelated Kindreds w/ Causal Variants in Gene', b'{"color": "#D84315", "description": "Number of additional kindreds with causal variants in this gene (Any other kindreds from collaborators, MME, literature etc). Do not count your family in this total.", "metadata_title": "# additional families"}'),
+                    ('Functional Data', (
+                        ('Biochemical Function', '{"description": "Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype.", "color": "#311B92"}'),
+                        ('Protein Interaction', '{"description": "Gene product interacts with proteins previously implicated (genetically or biochemically) in the disease of interest.", "color": "#4A148C"}'),
+                        ('Expression', '{"description": "Gene is expressed in tissues relevant to the disease of interest and/or is altered in expression in patients who have the disease.", "color": "#7C4DFF"}'),
+                        ('Patient Cells', '{"description": "Gene and/or gene product function is demonstrably altered in patients carrying candidate mutations.", "color": "#B388FF"}'),
+                        ('Non-patient cells', '{"description": "Gene and/or gene product function is demonstrably altered in human cell culture models carrying candidate mutations.", "color": "#9575CD"}'),
+                        ('Animal Model', '{"description": "Non-human animal models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.", "color": "#AA00FF"}'),
+                        ('Non-human cell culture model', '{"description": "Non-human cell-culture models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.", "color": "#BA68C8"}'),
+                        ('Rescue', '{"description": "The cellular phenotype in patient-derived cells or engineered equivalents can be rescued by addition of the wild-type gene product.", "color": "#663399"}'))),
+                    ('Functional Scores', (
+                        ('Genome-wide Linkage', '{"metadata_title": "LOD Score", "description": "Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.", "color": "#880E4F"}'),
+                        ('Bonferroni corrected p-value', '{"metadata_title": "P-value", "description": "Bonferroni-corrected p-value for gene if association testing/burden testing/etc was used to identify the gene.", "color": "#E91E63"}'),
+                        ('Kindreds w/ Overlapping SV & Similar Phenotype', '{"metadata_title": "#", "description": "Number of kindreds (1+) previously reported/in databases as having structural variant overlapping the gene and a similar phenotype.", "color": "#FF5252"}'))),
+                    ('Additional Kindreds (Literature, MME)', (
+                        ('Additional Unrelated Kindreds w/ Causal Variants in Gene', '{"metadata_title": "# additional families", "description": "Number of additional kindreds with causal variants in this gene (Any other kindreds from collaborators, MME, literature etc). Do not count your family in this total.", "color": "#D84315"}'),
                     ))])),
                 ('metadata', models.TextField(null=True)),
                 ('search_parameters', models.TextField(blank=True, null=True)),
@@ -402,7 +402,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.TextField()),
-                ('uploaded_file', models.FileField(max_length=200, upload_to=b'uploaded_family_files')),
+                ('uploaded_file', models.FileField(max_length=200, upload_to='uploaded_family_files')),
                 ('uploaded_date', models.DateTimeField(blank=True, null=True)),
                 ('family', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='seqr.Family')),
                 ('uploaded_by', models.ForeignKey(
@@ -415,7 +415,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.TextField()),
-                ('uploaded_file', models.FileField(max_length=200, upload_to=b'uploaded_individual_files')),
+                ('uploaded_file', models.FileField(max_length=200, upload_to='uploaded_individual_files')),
                 ('uploaded_date', models.DateTimeField(blank=True, null=True)),
                 ('individual', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='seqr.Individual')),
                 ('uploaded_by', models.ForeignKey(
@@ -474,7 +474,7 @@ class Migration(migrations.Migration):
                 ('created_date', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
                 ('genome_version', models.CharField(
-                    choices=[(b'37', b'GRCh37'), (b'38', b'GRCh38')], default=b'37', max_length=5)),
+                    choices=[('37', 'GRCh37'), ('38', 'GRCh38')], default='37', max_length=5)),
                 ('chrom', models.CharField(max_length=2)),
                 ('start', models.IntegerField()),
                 ('end', models.IntegerField()),
@@ -497,7 +497,7 @@ class Migration(migrations.Migration):
                 ('guid', models.CharField(db_index=True, max_length=30, unique=True)),
                 ('created_date', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('note', models.TextField(blank=True, default=b'')),
+                ('note', models.TextField(blank=True, default='')),
                 ('gene_id', models.CharField(max_length=20)),
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+',

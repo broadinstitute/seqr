@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 ('phenotype_inheritance', models.TextField(blank=True, null=True)),
                 ('phenotype_mim_number', models.IntegerField(blank=True, null=True)),
                 ('phenotype_description', models.TextField(blank=True, null=True)),
-                ('phenotype_map_method', models.CharField(choices=[(b'1', b'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'), (b'2', b'the disorder has been placed on the map by linkage; no mutation has been found.'), (b'3', b'the molecular basis for the disorder is known; a mutation has been found in the gene.'), (b'4', b'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.')], max_length=1)),
+                ('phenotype_map_method', models.CharField(choices=[('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'), ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'), ('3', 'the molecular basis for the disorder is known; a mutation has been found in the gene.'), ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.')], max_length=1)),
                 ('date_downloaded', models.DateTimeField(auto_now_add=True)),
             ],
         ),
