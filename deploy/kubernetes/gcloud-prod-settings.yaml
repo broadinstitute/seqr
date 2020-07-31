@@ -29,10 +29,6 @@ REDIS_POD_MEMORY_LIMIT: 10Gi
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'larkin@broadinstitute.org,shall@broadinstitute.org'
 
-# this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
-# this allows cluster administration only from known machines or from machines on google cloud.
-MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26,69.173.127.0/25,69.173.127.240/28,69.173.127.224/30,69.173.127.230/31,69.173.120.0/22,69.173.127.228/32,69.173.126.0/24,69.173.96.0/20,69.173.64.0/19,69.173.127.192/27,69.173.124.0/23'
-
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 

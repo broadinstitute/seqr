@@ -40,20 +40,23 @@ def _get_resource_info(
     return output.strip('\n') if output is not None else None
 
 
-def get_pod_status(pod_name, json_path_of_status, deployment_target=None):
-    """Utility method for looking up a pod's status."""
+def _get_resource_status(resource_name, json_path_of_status, deployment_target=None, resource_type='pod', verbose_template='status'):
+    """Utility method for looking up a resources's status."""
 
-    labels = {"name": pod_name}
+    labels = {"name": resource_name}
     if deployment_target:
         labels["deployment"] = deployment_target
 
     result = _get_resource_info(
         labels=labels,
-        resource_type="pod",
+        resource_type=resource_type,
         json_path=json_path_of_status,
         errors_to_ignore=["array index out of bounds: index"],
         verbose=False,
     )
+
+    if verbose_template:
+        logger.info('{} = {}'.format(verbose_template, result))
 
     return result
 
@@ -63,12 +66,14 @@ def is_pod_running(pod_name, deployment_target=None, pod_number=0, verbose=True)
 
     json_path = "{.items[%(pod_number)s].status.phase}" % locals()
 
-    status = get_pod_status(pod_name, json_path, deployment_target=deployment_target)
-
+    verbose_template = None
     if verbose:
-        logger.info("%s[%s].is_running = %s" % (pod_name, pod_number, status))
+        verbose_template = '{}[{}].is_running'.format(pod_name, pod_number)
 
-    return status == "Running"
+    status = _get_resource_status(
+        pod_name, json_path, deployment_target=deployment_target, verbose_template=verbose_template)
+
+    return status == 'Running'
 
 
 def is_pod_ready(pod_name, deployment_target=None, pod_number=0, verbose=True):
@@ -76,12 +81,14 @@ def is_pod_ready(pod_name, deployment_target=None, pod_number=0, verbose=True):
 
     json_path = "{.items[%(pod_number)s].status.containerStatuses[0].ready}" % locals()
 
-    status = get_pod_status(pod_name, json_path, deployment_target=deployment_target)
-
+    verbose_template = None
     if verbose:
-        logger.info("%s[%s].is_ready = %s" % (pod_name, pod_number, status))
+        verbose_template = '{}[{}].is_ready'.format(pod_name, pod_number)
 
-    return status == "true"
+    status = _get_resource_status(
+        pod_name, json_path, deployment_target=deployment_target, verbose_template=verbose_template)
+
+    return status == 'true'
 
 
 def wait_until_pod_is_running(pod_name, deployment_target=None, pod_number=0):
@@ -92,12 +99,30 @@ def wait_until_pod_is_running(pod_name, deployment_target=None, pod_number=0):
         time.sleep(5)
 
 
-def wait_until_pod_is_ready(pod_name, deployment_target=None):
+def wait_until_pod_is_ready(pod_name, deployment_target=None, pod_number=0):
     """Sleeps until the pod enters "Ready" state"""
 
-    logger.info("waiting for \"%s\" to complete initialization" % pod_name)
-    while not is_pod_ready(pod_name, deployment_target):
+    logger.info("waiting for \"%s\" pod #%s to complete initialization" % (pod_name, pod_number))
+    while not is_pod_ready(pod_name, deployment_target, pod_number=pod_number):
         time.sleep(5)
+
+
+def wait_for_resource(resource_name, json_path, expected_status, deployment_target=None, verbose_template='status', resource_type='pod'):
+    """Sleeps until the given resource has the expected status"""
+    while expected_status != _get_resource_status(
+            resource_name, json_path, deployment_target=deployment_target, verbose_template=verbose_template,
+            resource_type=resource_type):
+        time.sleep(5)
+
+
+def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_target=None, verbose_template='status', resource_type='pod'):
+    """Sleeps until the given resource does not have the invalid status"""
+    status = None
+    while not status or status == invalid_status:
+        time.sleep(5)
+        status =  _get_resource_status(
+            resource_name, json_path, deployment_target=deployment_target, verbose_template=verbose_template,
+            resource_type=resource_type)
 
 
 def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):

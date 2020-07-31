@@ -1,0 +1,68 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: {{ NAMESPACE }}
+  labels:
+    name: elasticsearch
+    deployment: {{ DEPLOY_TO }}
+spec:
+  version: {{ ELASTICSEARCH_VERSION }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch-sharded{{ DOCKER_IMAGE_TAG }}
+  nodeSets:
+  - name: master
+    count: 1
+#    count: {{ ES_MASTER_NUM_PODS }}
+    config:
+      master: true
+      data: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+#      spec:
+#        containers:
+#        - name: elasticsearch
+#          env:
+#          - name: ES_JAVA_OPTS
+#            value:  "-Xms2g -Xmx2g"
+#  - name: client
+#    count: {{ ES_CLIENT_NUM_PODS }}
+#    config:
+#      master: false
+#      data: false
+#    podTemplate:
+#      spec:
+#        containers:
+#        - name: elasticsearch
+#          env:
+#          - name: ES_JAVA_OPTS
+#            value:  "-Xms2g -Xmx2g"
+  - name: data
+    count: 1
+#    count:  {{ ES_DATA_NUM_PODS }}
+    config:
+      master: false
+      data: true
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+#      spec:
+#        containers:
+#        - name: elasticsearch
+#          env:
+#          - name: ES_JAVA_OPTS
+#            value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ssd-storage-class
+        resources:
+          requests:
+            storage: {{ ELASTICSEARCH_DISK_SIZE }}

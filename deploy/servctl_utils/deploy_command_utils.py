@@ -9,7 +9,8 @@ import time
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
-    wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready
+    wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
+    wait_for_resource, wait_for_not_resource
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
 from deploy.servctl_utils.shell_utils import run
 
@@ -26,6 +27,7 @@ DEPLOYABLE_COMPONENTS = [
     "external-elasticsearch-connector",
 
     "elasticsearch",  # a single elasticsearch instance
+    "elasticsearch-sharded", # an elasticsearch instance with multiple nodes
     "postgres",
     "redis",
     "seqr",
@@ -67,6 +69,12 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "es-client",
     "es-data",
     "es-kibana",
+    "kube-scan",
+]
+DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
+    "init-cluster",
+    "settings",
+    "elasticsearch-sharded",
     "kube-scan",
 ]
 
@@ -214,6 +222,37 @@ def deploy_elasticsearch(settings):
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
     deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_elasticsearch_sharded(settings):
+    print_separator("elasticsearch-sharded")
+
+    docker_build("elasticsearch-sharded", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
+
+    run('kubectl apply -f deploy/kubernetes/elasticsearch-sharded/kubernetes-elasticsearch-all-in-one.yaml')
+
+    deploy_pod("elasticsearch-sharded", settings, wait_until_pod_is_running=False)
+
+    wait_for_not_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.phase}', invalid_status='Invalid',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch status')
+
+    total_pods = 0
+    for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS']:
+        total_pods += settings.get(num_pods, 0)
+    total_pods = 2
+    for pod_number_i in range(total_pods):
+        sleep_until_pod_is_running('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+    for pod_number_i in range(total_pods):
+        sleep_until_pod_is_ready('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+
+    wait_for_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.phase}', expected_status='Ready',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch status')
+
+    wait_for_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
 
 def deploy_postgres(settings):
@@ -381,22 +420,22 @@ def deploy_kube_scan(settings):
 
 
 def deploy_es_client(settings):
-    deploy_elasticsearch_sharded(settings, "es-client")
+    deploy_elasticsearch_sharded_legacy(settings, "es-client")
 
 
 def deploy_es_master(settings):
-    deploy_elasticsearch_sharded(settings, "es-master")
+    deploy_elasticsearch_sharded_legacy(settings, "es-master")
 
 
 def deploy_es_data(settings):
-    deploy_elasticsearch_sharded(settings, "es-data")
+    deploy_elasticsearch_sharded_legacy(settings, "es-data")
 
 
 def deploy_es_kibana(settings):
-    deploy_elasticsearch_sharded(settings, "es-kibana")
+    deploy_elasticsearch_sharded_legacy(settings, "es-kibana")
 
 
-def deploy_elasticsearch_sharded(settings, component):
+def deploy_elasticsearch_sharded_legacy(settings, component):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
@@ -584,7 +623,7 @@ def _init_cluster_gcloud(settings):
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--node-version %(KUBERNETES_VERSION)s",
-            "--no-enable-legacy-authorization",
+            #"--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
             "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
@@ -604,7 +643,8 @@ def _init_cluster_gcloud(settings):
     # create disks from snapshots
     created_disks = []
     for i, snapshot_name in enumerate([d.strip() for d in settings.get("CREATE_FROM_SNAPSHOTS", "").split(",") if d]):
-        disk_name = "es-data-%d" % (i+1)
+        disk_name_prefix = 'dev-' if settings['DEPLOYMENT_TYPE'] == 'dev' else ''
+        disk_name = 'es-data-{}{}'.format(disk_name_prefix, i+1)
         run(" ".join([
             "gcloud compute disks create " + disk_name,
             "--zone %(GCLOUD_ZONE)s",
@@ -664,7 +704,13 @@ spec:
     #]), is_interactive=True)
 
     # create persistent disks
-    for label in ("postgres", "seqr-static-files"):
+    deployment_targets = DEPLOYMENT_TARGETS[settings['DEPLOY_TO']]
+    disks_to_create = []
+    if 'postgres' in deployment_targets:
+        disks_to_create.append('postgres')
+    if 'seqr' in deployment_targets:
+        disks_to_create.append('seqr-static-files')
+    for label in disks_to_create:
         run(" ".join([
             "gcloud compute disks create",
             "--zone %(GCLOUD_ZONE)s",
@@ -774,7 +820,7 @@ def create_vpc(gcloud_project, network_name):
 
 def _get_component_group_to_component_name_mapping():
     result = {
-        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
+        "elasticsearch-sharded-legacy": ["es-master", "es-client", "es-data"],
     }
     return result
 
