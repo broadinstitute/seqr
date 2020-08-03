@@ -201,6 +201,13 @@ class IndividualAPITest(AuthenticationTestCase):
             'errors': ['Could not find individuals with the following previous IDs: NA19675'], 'warnings': []
         })
 
+        response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
+            'test.tsv', 'Family ID	Individual ID	Paternal ID\n"1"	"NA19675_1"	"NA19678_dad"'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ["NA19678_dad is the father of NA19675_1 but doesn't have a separate record in the table"], 'warnings': []
+        })
+
         # send valid requests
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
