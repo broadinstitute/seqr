@@ -3,7 +3,6 @@ import os
 import requests
 import tempfile
 from tqdm import tqdm
-import urllib
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         string: local file path
     """
 
-    if not (url and url.startswith(("http://", "https://", "ftp://"))):
+    if not (url and url.startswith(("http://", "https://"))):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
     remote_file_size = _get_remote_file_size(url)
@@ -24,12 +23,14 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
 
-    input_iter = urllib.urlopen(url)
+    is_gz = url.endswith("gz")
+    response = requests.get(url, stream=is_gz)
+    input_iter = response if is_gz else response.iter_content()
     if verbose:
         logger.info("Downloading {} to {}".format(url, local_file_path))
-        input_iter = tqdm(input_iter, unit=" data" if url.endswith("gz") else " lines")
+        input_iter = tqdm(input_iter, unit=" data" if is_gz else " lines")
 
-    with open(local_file_path, 'w') as f:
+    with open(local_file_path, 'wb') as f:
         f.writelines(input_iter)
 
     input_iter.close()

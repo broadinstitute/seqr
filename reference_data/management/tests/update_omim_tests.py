@@ -1,8 +1,6 @@
 import mock
 
-import os
 import tempfile
-import shutil
 import responses
 import json
 import re
@@ -70,21 +68,18 @@ class UpdateOmimTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
-    def setUp(self):
-        # Create a temporary directory and a test data file
-        self.test_dir = tempfile.mkdtemp()
-        self.temp_file_path = os.path.join(self.test_dir, 'genemap2.txt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(''.join(OMIM_DATA))
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
-
     @responses.activate
     @mock.patch('reference_data.management.commands.update_omim.os')
-    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_omim_command_exceptions(self, mock_download, mock_os):
+    def test_update_omim_command_exceptions(self, mock_os):
+        url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body='This account has expired')
+        responses.add(responses.GET, url, body=OMIM_DATA[2])
+        bad_phenotype_data = OMIM_DATA[:2]
+        bad_phenotype_data.append('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
+        responses.add(responses.GET, url, body=''.join(bad_phenotype_data))
+        responses.add(responses.GET, url, body=''.join(OMIM_DATA))
+
         # Test required argument
         mock_os.environ.get.return_value = ''
         with self.assertRaises(CommandError) as ce:
@@ -92,27 +87,16 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(str(ce.exception), 'omim_key is required')
 
         # Test omim account expired
-        temp_bad_file_path = os.path.join(self.test_dir, 'bad_response.txt')
-        with open(temp_bad_file_path, 'w') as f:
-            f.write('This account has expired')
-        mock_download.return_value = temp_bad_file_path
         with self.assertRaises(Exception) as err:
             call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(err.exception), 'This account has expired')
 
         # Test bad omim data header
-        with open(temp_bad_file_path, 'w') as f:
-            f.write(OMIM_DATA[2])
-        mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(ve.exception), 'Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
 
         # Test bad phenotype field in the record
-        with open(temp_bad_file_path, 'w') as f:
-            f.write(''.join(OMIM_DATA[:2]))
-            f.write('chr1	0	27600000	1p36		605462	BCC1	Basal cell carcinoma, susceptibility to, 1		100307118		associated with rs7538876	{x}, 605462 (5)	\n')
-        mock_download.return_value = temp_bad_file_path
         with self.assertRaises(ValueError) as ve:
             call_command('update_omim', '--omim-key=test_key')
         record = json.loads(re.search(r'No phenotypes found: ({.*})', str(ve.exception)).group(1))
@@ -120,17 +104,22 @@ class UpdateOmimTest(TestCase):
 
         GeneInfo.objects.all().delete()
         with self.assertRaises(CommandError) as ve:
-            call_command('update_omim', '--omim-key=test_key', self.temp_file_path)
+            call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(ve.exception), "GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
 
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.update_omim.logger')
-    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_omim_command(self, mock_download, mock_omim_logger, mock_utils_logger):
-        mock_download.return_value = self.temp_file_path
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_omim_command(self, mock_tempfile, mock_omim_logger, mock_utils_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/genemap2.txt'.format(tmp_dir)
 
+        data_url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
+        responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, data_url, body=''.join(OMIM_DATA))
         # Test omim api response error
         responses.add(responses.GET, 'https://api.omim.org/api/entry?apiKey=test_key&include=geneMap&format=json&mimNumber=612367',
                       json={'error': 'not found'}, status=400)
@@ -155,14 +144,12 @@ class UpdateOmimTest(TestCase):
         mock_utils_logger.reset_mock()
         call_command('update_omim', '--omim-key=test_key')
 
-        mock_download.assert_called_with('https://data.omim.org/downloads/test_key/genemap2.txt')
-
         calls = [
             mock.call('Deleting 0 existing Omim records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_utils_logger.info.assert_has_calls(calls)
@@ -174,17 +161,16 @@ class UpdateOmimTest(TestCase):
         mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
 
         # test with a file_path parameter
-        mock_download.reset_mock()
+        responses.remove(responses.GET, data_url)
         mock_utils_logger.reset_mock()
         mock_omim_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', self.temp_file_path)
-        mock_download.assert_not_called()
+        call_command('update_omim', '--omim-key=test_key', tmp_file)
         calls = [
             mock.call('Deleting 2 existing Omim records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
-            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_utils_logger.info.assert_has_calls(calls)

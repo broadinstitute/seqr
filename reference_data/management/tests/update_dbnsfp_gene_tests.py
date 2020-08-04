@@ -1,8 +1,6 @@
 import mock
-
-import os
+import responses
 import tempfile
-import shutil
 
 from reference_data.models import dbNSFPGene
 
@@ -22,34 +20,27 @@ class UpdateDbNsfpGeneTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
-    def setUp(self):
-        # Create a temporary directory
-        self.test_dir = tempfile.mkdtemp()
-        self.temp_file_path = os.path.join(self.test_dir, 'dbNSFP_gene')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(''.join(dbNSFP_GENE_DATA))
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
-
+    @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_dbnsfp_gene_command(self, mock_download, mock_logger):
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_dbnsfp_gene_command(self, mock_tempfile, mock_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/dbNSFP4.0_gene'.format(tmp_dir)
 
-        mock_download.return_value = self.temp_file_path
+        url = 'http://storage.googleapis.com/seqr-reference-data/dbnsfp/dbNSFP4.0_gene'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body=''.join(dbNSFP_GENE_DATA))
 
         # test without a file_path parameter
         call_command('update_dbnsfp_gene')
-
-        mock_download.assert_called_with('http://storage.googleapis.com/seqr-reference-data/dbnsfp/dbNSFP4.0_gene')
 
         calls = [
             mock.call('Deleting 3 existing dbNSFPGene records'),
             mock.call('Parsing file'),
             mock.call('Creating 1 dbNSFPGene records'),
             mock.call('Done'),
-            mock.call('Loaded 1 dbNSFPGene records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 1 dbNSFPGene records from {}. Skipped 1 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -59,16 +50,15 @@ class UpdateDbNsfpGeneTest(TestCase):
         self.assertEqual(record.gene.gene_id, 'ENSG00000186092')
 
         # test with a file_path parameter
-        mock_download.reset_mock()
         mock_logger.reset_mock()
-        call_command('update_dbnsfp_gene', self.temp_file_path)
-        mock_download.assert_not_called()
+        responses.remove(responses.GET, url)
+        call_command('update_dbnsfp_gene', tmp_file)
         calls = [
             mock.call('Deleting 1 existing dbNSFPGene records'),
             mock.call('Parsing file'),
             mock.call('Creating 1 dbNSFPGene records'),
             mock.call('Done'),
-            mock.call('Loaded 1 dbNSFPGene records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 1 dbNSFPGene records from {}. Skipped 1 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)

@@ -1,8 +1,6 @@
 import mock
-
-import os
+import responses
 import tempfile
-import shutil
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -22,47 +20,40 @@ class UpdatePrimateAiTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
-    def setUp(self):
-        # Create a temporary directory and a temp data file
-        self.test_dir = tempfile.mkdtemp()
-        self.temp_file_path = os.path.join(self.test_dir, 'Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(''.join(PRIMATE_AI_DATA))
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
-
+    @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_primate_ai_command(self, mock_download, mock_logger):
-        mock_download.return_value = self.temp_file_path
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_primate_ai_command(self, mock_tempfile, mock_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt'.format(tmp_dir)
 
         # test without a file_path parameter
+        url = 'http://storage.googleapis.com/seqr-reference-data/primate_ai/Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body=''.join(PRIMATE_AI_DATA))
         call_command('update_primate_ai')
-        mock_download.assert_called_with('http://storage.googleapis.com/seqr-reference-data/primate_ai/Gene_metrics_clinvar_pcnt.cleaned_v0.2.txt')
 
         calls = [
             mock.call('Deleting 1 existing PrimateAI records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 PrimateAI records'),
             mock.call('Done'),
-            mock.call('Loaded 2 PrimateAI records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 PrimateAI records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
 
         # test with a file_path parameter
-        mock_download.reset_mock()
+        responses.remove(responses.GET, url)
         mock_logger.reset_mock()
-        call_command('update_primate_ai', self.temp_file_path)
-        mock_download.assert_not_called()
+        call_command('update_primate_ai', tmp_file)
         calls = [
             mock.call('Deleting 2 existing PrimateAI records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 PrimateAI records'),
             mock.call('Done'),
-            mock.call('Loaded 2 PrimateAI records from {}. Skipped 2 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 PrimateAI records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)

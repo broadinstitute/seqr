@@ -23,8 +23,12 @@ class DownloadUtilsTest(TestCase):
     @mock.patch('reference_data.management.commands.utils.download_utils.logger')
     @mock.patch('reference_data.management.commands.utils.download_utils.os.path.isfile')
     @mock.patch('reference_data.management.commands.utils.download_utils.os.path.getsize')
-    @mock.patch('reference_data.management.commands.utils.download_utils.urllib')
-    def test_download_file(self, mock_urllib, mock_getsize, mock_isfile, mock_logger):
+    def test_download_file(self, mock_getsize, mock_isfile, mock_logger):
+        responses.add(responses.HEAD, 'https://mock_url/test_file.gz',
+                      headers={"Content-Length": "1024"}, status=200)
+        responses.add(responses.HEAD, 'https://mock_url/test_file.txt',
+                      headers={"Content-Length": "1024"}, status=200)
+        responses.add(responses.GET, 'https://mock_url/test_file.txt', body='test data\nanother line\n')
 
         # Test bad url
         with self.assertRaises(ValueError) as ve:
@@ -32,10 +36,6 @@ class DownloadUtilsTest(TestCase):
         self.assertEqual(str(ve.exception), "Invalid url: bad_url")
 
         # Test already downloaded
-        responses.add(responses.HEAD, 'https://mock_url/test_file.gz',
-                      headers={"Content-Length": "1024"}, status=200)
-        responses.add(responses.HEAD, 'ftp://mock_url/test_file.txt',
-                      headers={"Content-Length": "1024"}, status=200)
         mock_isfile.return_value = True
         mock_getsize.return_value = 1024
         result = download_file('https://mock_url/test_file.gz')
@@ -44,10 +44,8 @@ class DownloadUtilsTest(TestCase):
         mock_isfile.return_value = False
         mock_getsize.return_value = 0
         mock_logger.reset_mock()
-        mock_urllib.urlopen.return_value = "test data\nanother line\n"
-        result = download_file('ftp://mock_url/test_file.txt', self.test_dir)
-        mock_logger.info.assert_called_with("Downloading ftp://mock_url/test_file.txt to {}/test_file.txt".format(self.test_dir))
-        mock_urllib.urlopen.assert_called_with('ftp://mock_url/test_file.txt')
+        result = download_file('https://mock_url/test_file.txt', self.test_dir)
+        mock_logger.info.assert_called_with("Downloading https://mock_url/test_file.txt to {}/test_file.txt".format(self.test_dir))
         self.assertEqual(result, "{}/test_file.txt".format(self.test_dir))
 
         with open("{}/test_file.txt".format(self.test_dir), 'r') as f:

@@ -1,8 +1,6 @@
 import mock
-
-import os
+import responses
 import tempfile
-import shutil
 
 from reference_data.models import GeneConstraint
 
@@ -21,48 +19,41 @@ class UpdateGeneConstraintTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
-    def setUp(self):
-        # Create a temporary directory and a test data file in it
-        self.test_dir = tempfile.mkdtemp()
-        self.temp_file_path = os.path.join(self.test_dir, 'gnomad.v2.1.1.lof_metrics.by_gene.txt')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(''.join(GNOMAD_LOF_METRICS_DATA))
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
-
+    @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
-    @mock.patch('reference_data.management.commands.utils.update_utils.download_file')
-    def test_update_gene_constraint_command(self, mock_download, mock_logger):
-        mock_download.return_value = self.temp_file_path
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_gene_constraint_command(self, mock_tempfile, mock_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/gnomad.v2.1.1.lof_metrics.by_gene.txt'.format(tmp_dir)
 
         # test without a file_path parameter
-        call_command('update_gene_constraint')
+        url = 'http://storage.googleapis.com/seqr-reference-data/gene_constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body=''.join(GNOMAD_LOF_METRICS_DATA))
 
-        mock_download.assert_called_with('http://storage.googleapis.com/seqr-reference-data/gene_constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt')
+        call_command('update_gene_constraint')
 
         calls = [
             mock.call('Deleting 1 existing GeneConstraint records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 GeneConstraint records'),
             mock.call('Done'),
-            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
 
         # test with a file_path parameter
-        mock_download.reset_mock()
         mock_logger.reset_mock()
-        call_command('update_gene_constraint', self.temp_file_path)
-        mock_download.assert_not_called()
+        responses.remove(responses.GET, url)
+        call_command('update_gene_constraint', tmp_file)
         calls = [
             mock.call('Deleting 2 existing GeneConstraint records'),
             mock.call('Parsing file'),
             mock.call('Creating 2 GeneConstraint records'),
             mock.call('Done'),
-            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(self.temp_file_path)),
+            mock.call('Loaded 2 GeneConstraint records from {}. Skipped 1 records with unrecognized genes.'.format(tmp_file)),
             mock.call('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
         ]
         mock_logger.info.assert_has_calls(calls)
