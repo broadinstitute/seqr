@@ -14,7 +14,7 @@ from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.http.response import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client
 from seqr.utils.file_utils import file_iter
@@ -305,39 +305,8 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), include_collaborator=include_collaborator)
 
     saved_variants_by_family = get_saved_variants_by_family(list(samples_by_family.keys()))
-    compound_het_gene_id_by_family = {}
-    gene_ids = set()
-    max_saved_variants = 1
-    for family_guid, saved_variants in saved_variants_by_family.items():
-        max_saved_variants = max(max_saved_variants, len(saved_variants))
-        potential_com_het_gene_variants = defaultdict(list)
-        for variant in saved_variants:
-            variant['main_transcript'] = _get_variant_main_transcript(variant)
-            if variant['main_transcript']:
-                gene_ids.add(variant['main_transcript']['geneId'])
-
-            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_guid]
-            inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
-                variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
-            variant['inheritance_models'] = inheritance_models
-            for gene_id in potential_compound_het_gene_ids:
-                potential_com_het_gene_variants[gene_id].append(variant)
-        for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
-            if len(comp_het_variants) > 1:
-                main_gene_ids = set()
-                for variant in comp_het_variants:
-                    variant['inheritance_models'] = {'AR-comphet'}
-                    if variant['main_transcript']:
-                        main_gene_ids.add(variant['main_transcript']['geneId'])
-                    else:
-                        main_gene_ids.update(list(variant['transcripts'].keys()))
-                if len(main_gene_ids) > 1:
-                    # This occurs in compound hets where some hits have a primary transcripts in different genes
-                    for gene_id in sorted(main_gene_ids):
-                        if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
-                            compound_het_gene_id_by_family[family_guid] = gene_id
-                            gene_ids.add(gene_id)
-
+    compound_het_gene_id_by_family, gene_ids, max_saved_variants = _process_saved_variants(
+        saved_variants_by_family, family_individual_affected_guids)
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
@@ -382,130 +351,35 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
         affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family.guid]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
+        base_family_row = {
+            'consanguinity': 'Present' if family_consanguinity else 'None suspected',
+        }
+        if len(affected_individual_guids) > 1:
+            base_family_row['family_history'] = 'Yes'
 
-        parsed_variants = []
-        for variant in saved_variants:
-            if variant['inheritance_models']:
-                inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
-            else:
-                inheritance_mode = 'Unknown / Other'
-            parsed_variant = {
-                'Gene_Class': 'Known',
-                'inheritance_description': inheritance_mode,
-                'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or project.genome_version) or '',
-            }
-
-            if 'discovery_tag_names' in variant:
-                is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
-                parsed_variant['novel_mendelian_gene'] = is_novel
-                _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
-                if any('Tier 1' in name for name in variant['discovery_tag_names']):
-                    parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
-                elif any('Tier 2' in name for name in variant['discovery_tag_names']):
-                    parsed_variant['Gene_Class'] = 'Tier 2 - Candidate'
-
-            if variant.get('svType'):
-                parsed_variant.update({
-                    'sv_name': _get_sv_name(variant),
-                    'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
-                })
-            else:
-                gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
-                parsed_variant.update({
-                    'Gene': genes_by_id[gene_id]['geneSymbol'],
-                    'Chrom': variant['chrom'],
-                    'Pos': str(variant['pos']),
-                    'Ref': variant['ref'],
-                    'Alt': variant['alt'],
-                    'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
-                    'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
-                    'Transcript': variant['main_transcript'].get('transcriptId'),
-                })
-            parsed_variants.append((variant['genotypes'], parsed_variant))
+        parsed_variants = [
+            _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id)
+            for variant in saved_variants]
 
         for sample in family_samples:
             individual = sample.individual
-            features_present = [feature['id'] for feature in individual.features or []]
-            features_absent = [feature['id'] for feature in individual.absent_features or []]
-            onset = individual.onset_age
 
             airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-            sequencing = airtable_metadata.get('SequencingProduct') or set()
-            multiple_datasets = len(sequencing) > 1 or (
-                    len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS)
             dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
             has_dbgap_submission = sample.sample_type in dbgap_submission
 
-            solve_state = 'Unsolved'
-            if parsed_variants:
-                all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
-                solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
-
-            subject_row = {
-                'entity:subject_id': individual.individual_id,
-                'subject_id': individual.individual_id,
-                'sex': Individual.SEX_LOOKUP[individual.sex],
-                'ancestry': ANCESTRY_MAP.get(individual.population, ''),
-                'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
-                'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
-                'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
-                'hpo_present': '|'.join(features_present),
-                'hpo_absent': '|'.join(features_absent),
-                'solve_state': solve_state,
-                'multiple_datasets': 'Yes' if multiple_datasets else 'No',
-                'dbgap_submission': 'No',
-                'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
-            }
-            if has_dbgap_submission:
-                subject_row.update({
-                    'dbgap_submission': 'Yes',
-                    'dbgap_study_id': airtable_metadata.get('dbgap_study_id', ''),
-                    'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', ''),
-                })
+            subject_row = _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants)
             subject_row.update(family_subject_row)
             subject_rows.append(subject_row)
 
-            sample_row = {
-                'entity:sample_id': individual.individual_id,
-                'subject_id': individual.individual_id,
-                'sample_id': sample.sample_id,
-                'data_type': sample.sample_type,
-                'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-                'sample_provider': airtable_metadata.get('CollaboratorName') or '',
-                'sequencing_center': 'Broad',
-            }
-            if has_dbgap_submission:
-                sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
+            sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
             sample_rows.append(sample_row)
 
-            family_row = {
-                'entity:family_id': individual.individual_id,
-                'subject_id': individual.individual_id,
-                'family_id': family.family_id,
-                'paternal_id': individual_id_map.get(individual.father_id, ''),
-                'maternal_id': individual_id_map.get(individual.mother_id, ''),
-                'consanguinity': 'Present' if family_consanguinity else 'None suspected',
-            }
-            if len(affected_individual_guids) > 1:
-                family_row['family_history'] = 'Yes'
+            family_row = _get_family_row(family, individual, individual_id_map)
+            family_row.update(base_family_row)
             family_rows.append(family_row)
 
-            discovery_row = {
-                'entity:discovery_id': individual.individual_id,
-                'subject_id': individual.individual_id,
-                'sample_id': sample.sample_id,
-            }
-            for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
-                genotype = genotypes.get(individual.guid, {})
-                is_x_linked = "X" in parsed_variant.get('Chrom', '')
-                zygosity = _get_genotype_zygosity(
-                    genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
-                if zygosity:
-                    variant_discovery_row = {
-                        'Zygosity': zygosity,
-                    }
-                    variant_discovery_row.update(parsed_variant)
-                    discovery_row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_discovery_row.items()})
+            discovery_row = _get_discovery_row(sample, parsed_variants, male_individual_guids)
             discovery_rows.append(discovery_row)
 
     return subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants
@@ -556,6 +430,165 @@ def _get_saved_known_gene_variants_by_family(families):
             saved_variants_by_family[family_guid].append(variant)
 
     return saved_variants_by_family
+
+
+def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
+    compound_het_gene_id_by_family = {}
+    gene_ids = set()
+    max_saved_variants = 1
+    for family_guid, saved_variants in saved_variants_by_family.items():
+        max_saved_variants = max(max_saved_variants, len(saved_variants))
+        potential_com_het_gene_variants = defaultdict(list)
+        for variant in saved_variants:
+            variant['main_transcript'] = _get_variant_main_transcript(variant)
+            if variant['main_transcript']:
+                gene_ids.add(variant['main_transcript']['geneId'])
+
+            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_guid]
+            inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
+                variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
+            variant['inheritance_models'] = inheritance_models
+            for gene_id in potential_compound_het_gene_ids:
+                potential_com_het_gene_variants[gene_id].append(variant)
+        for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
+            if len(comp_het_variants) > 1:
+                main_gene_ids = set()
+                for variant in comp_het_variants:
+                    variant['inheritance_models'] = {'AR-comphet'}
+                    if variant['main_transcript']:
+                        main_gene_ids.add(variant['main_transcript']['geneId'])
+                    else:
+                        main_gene_ids.update(list(variant['transcripts'].keys()))
+                if len(main_gene_ids) > 1:
+                    # This occurs in compound hets where some hits have a primary transcripts in different genes
+                    for gene_id in sorted(main_gene_ids):
+                        if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
+                            compound_het_gene_id_by_family[family_guid] = gene_id
+                            gene_ids.add(gene_id)
+    return compound_het_gene_id_by_family, gene_ids, max_saved_variants
+
+
+def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id):
+    if variant['inheritance_models']:
+        inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
+    else:
+        inheritance_mode = 'Unknown / Other'
+    variant_genome_version = variant.get('genomeVersion') or family.project.genome_version
+    parsed_variant = {
+        'Gene_Class': 'Known',
+        'inheritance_description': inheritance_mode,
+        'variant_genome_build': GENOME_BUILD_MAP.get(variant_genome_version) or '',
+    }
+
+    if 'discovery_tag_names' in variant:
+        is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
+        parsed_variant['novel_mendelian_gene'] = is_novel
+        _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
+        if any('Tier 1' in name for name in variant['discovery_tag_names']):
+            parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
+        elif any('Tier 2' in name for name in variant['discovery_tag_names']):
+            parsed_variant['Gene_Class'] = 'Tier 2 - Candidate'
+
+    if variant.get('svType'):
+        parsed_variant.update({
+            'sv_name': _get_sv_name(variant),
+            'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
+        })
+    else:
+        gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
+        parsed_variant.update({
+            'Gene': genes_by_id[gene_id]['geneSymbol'],
+            'Chrom': variant['chrom'],
+            'Pos': str(variant['pos']),
+            'Ref': variant['ref'],
+            'Alt': variant['alt'],
+            'hgvsc': (variant['main_transcript'].get('hgvsc') or '').split(':')[-1],
+            'hgvsp': (variant['main_transcript'].get('hgvsp') or '').split(':')[-1],
+            'Transcript': variant['main_transcript'].get('transcriptId'),
+        })
+    return variant['genotypes'], parsed_variant
+
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants):
+    features_present = [feature['id'] for feature in individual.features or []]
+    features_absent = [feature['id'] for feature in individual.absent_features or []]
+    onset = individual.onset_age
+
+    sequencing = airtable_metadata.get('SequencingProduct') or set()
+    multiple_datasets = len(sequencing) > 1 or (
+            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS)
+
+    solve_state = 'Unsolved'
+    if parsed_variants:
+        all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
+        solve_state = 'Tier 2' if all_tier_2 else 'Tier 1'
+
+    subject_row = {
+        'entity:subject_id': individual.individual_id,
+        'subject_id': individual.individual_id,
+        'sex': Individual.SEX_LOOKUP[individual.sex],
+        'ancestry': ANCESTRY_MAP.get(individual.population, ''),
+        'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
+        'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
+        'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
+        'hpo_present': '|'.join(features_present),
+        'hpo_absent': '|'.join(features_absent),
+        'solve_state': solve_state,
+        'multiple_datasets': 'Yes' if multiple_datasets else 'No',
+        'dbgap_submission': 'No',
+        'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
+    }
+    if has_dbgap_submission:
+        subject_row.update({
+            'dbgap_submission': 'Yes',
+            'dbgap_study_id': airtable_metadata.get('dbgap_study_id', ''),
+            'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', ''),
+        })
+    return subject_row
+
+
+def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
+    individual = sample.individual
+    sample_row = {
+        'entity:sample_id': individual.individual_id,
+        'subject_id': individual.individual_id,
+        'sample_id': sample.sample_id,
+        'data_type': sample.sample_type,
+        'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
+        'sample_provider': airtable_metadata.get('CollaboratorName') or '',
+        'sequencing_center': 'Broad',
+    }
+    if has_dbgap_submission:
+        sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
+    return sample_row
+
+def _get_family_row(family, individual, individual_id_map):
+    return {
+        'entity:family_id': individual.individual_id,
+        'subject_id': individual.individual_id,
+        'family_id': family.family_id,
+        'paternal_id': individual_id_map.get(individual.father_id, ''),
+        'maternal_id': individual_id_map.get(individual.mother_id, ''),
+    }
+
+def _get_discovery_row(sample, parsed_variants, male_individual_guids):
+    individual = sample.individual
+    discovery_row = {
+        'entity:discovery_id': individual.individual_id,
+        'subject_id': individual.individual_id,
+        'sample_id': sample.sample_id,
+    }
+    for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
+        genotype = genotypes.get(individual.guid, {})
+        is_x_linked = "X" in parsed_variant.get('Chrom', '')
+        zygosity = _get_genotype_zygosity(
+            genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
+        if zygosity:
+            variant_discovery_row = {
+                'Zygosity': zygosity,
+            }
+            variant_discovery_row.update(parsed_variant)
+            discovery_row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_discovery_row.items()})
+    return discovery_row
 
 
 MAX_FILTER_IDS = 500
@@ -1536,7 +1569,7 @@ def proxy_to_kibana(request):
                 proxy_response[key.title()] = value
 
         return proxy_response
-    except ConnectionError as e:
+    except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e))
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
