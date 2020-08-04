@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
+HEMI = 'Hemizygous'
 
 MAX_SAVED_VARIANTS = 10000
 
@@ -155,12 +156,12 @@ def seqr_stats(request):
 
 SUBJECT_TABLE_COLUMNS = [
     'entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_submission', 'dbgap_study_id',
-    'dbgap_subject_id', 'multiple_datasets', 'sex', 'ancestry', 'ancestry_detail', 'age_at_last_observation',
-    'phenotype_group', 'disease_id', 'disease_description', 'affected_status', 'onset_category', 'age_of_onset',
-    'hpo_present', 'hpo_absent', 'phenotype_description', 'solve_state',
+    'dbgap_subject_id', 'multiple_datasets', 'proband_relationship', 'sex', 'ancestry', 'ancestry_detail',
+    'age_at_last_observation', 'phenotype_group', 'disease_id', 'disease_description', 'affected_status',
+    'congenital_status', 'age_of_onset', 'hpo_present', 'hpo_absent', 'phenotype_description', 'solve_state',
 ]
 SAMPLE_TABLE_COLUMNS = [
-    'entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source', 'sample_provider', 'data_type',
+    'entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source', 'sequencing_center', 'data_type',
     'date_data_generation'
 ]
 FAMILY_TABLE_COLUMNS = [
@@ -169,7 +170,7 @@ FAMILY_TABLE_COLUMNS = [
 ]
 DISCOVERY_TABLE_CORE_COLUMNS = ['entity:discovery_id', 'subject_id', 'sample_id']
 DISCOVERY_TABLE_VARIANT_COLUMNS = [
-    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'Chrom', 'Pos', 'Ref',
+    'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance',
 ]
 
@@ -206,6 +207,11 @@ INHERITANCE_MODE_MAP = {
     'AD': 'Autosomal dominant',
 }
 
+GENOME_BUILD_MAP = {
+    '37': 'GRCh37',
+    '38': 'GRCh38.p12',
+}
+
 SV_TYPE_MAP = {
     'DUP': 'Duplication',
     'DEL': 'Deletion',
@@ -230,7 +236,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        project, individual_samples, _get_saved_known_gene_variants_by_family)
+        project, individual_samples, _get_saved_known_gene_variants_by_family, include_collaborator=False)
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -254,7 +260,7 @@ def sample_metadata_export(request, project_guid):
         project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
-        project, individual_samples, _get_parsed_saved_discovery_variants_by_family)
+        project, individual_samples, _get_parsed_saved_discovery_variants_by_family, include_collaborator=True)
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for rows in [sample_rows, family_rows, discovery_rows]:
@@ -279,7 +285,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_family):
+def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_family, include_collaborator=False):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -293,9 +299,10 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
         family_individual_affected_guids[family.guid] = (
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
+            {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids))
+    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), include_collaborator=include_collaborator)
 
     saved_variants_by_family = get_saved_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family = {}
@@ -309,9 +316,9 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            affected_individual_guids, unaffected_individual_guids = family_individual_affected_guids[family_guid]
+            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_guid]
             inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
-                variant, affected_individual_guids, unaffected_individual_guids)
+                variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
             variant['inheritance_models'] = inheritance_models
             for gene_id in potential_compound_het_gene_ids:
                 potential_com_het_gene_variants[gene_id].append(variant)
@@ -372,7 +379,9 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids, _ = family_individual_affected_guids[family.guid]
+        affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family.guid]
+
+        family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
 
         parsed_variants = []
         for variant in saved_variants:
@@ -383,6 +392,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
             parsed_variant = {
                 'Gene_Class': 'Known',
                 'inheritance_description': inheritance_mode,
+                'variant_genome_build': GENOME_BUILD_MAP.get(variant.get('genomeVersion') or project.genome_version) or '',
             }
 
             if 'discovery_tag_names' in variant:
@@ -438,13 +448,13 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 'ancestry': ANCESTRY_MAP.get(individual.population, ''),
                 'ancestry_detail': ANCESTRY_DETAIL_MAP.get(individual.population, ''),
                 'affected_status': Individual.AFFECTED_STATUS_LOOKUP[individual.affected],
-                'onset_category': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
+                'congenital_status': Individual.ONSET_AGE_LOOKUP[onset] if onset else 'Unknown',
                 'hpo_present': '|'.join(features_present),
                 'hpo_absent': '|'.join(features_absent),
                 'solve_state': solve_state,
                 'multiple_datasets': 'Yes' if multiple_datasets else 'No',
                 'dbgap_submission': 'No',
-                'relationship_to_proband': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
+                'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
             }
             if has_dbgap_submission:
                 subject_row.update({
@@ -462,6 +472,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 'data_type': sample.sample_type,
                 'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
                 'sample_provider': airtable_metadata.get('CollaboratorName') or '',
+                'sequencing_center': 'Broad',
             }
             if has_dbgap_submission:
                 sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
@@ -473,11 +484,8 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
                 'family_id': family.family_id,
                 'paternal_id': individual_id_map.get(individual.father_id, ''),
                 'maternal_id': individual_id_map.get(individual.mother_id, ''),
+                'consanguinity': 'Present' if family_consanguinity else 'None suspected',
             }
-            if individual.consanguinity is True:
-                family_row['consanguinity'] = 'Present'
-            elif individual.consanguinity is False:
-                family_row['consanguinity'] = 'None suspected'
             if len(affected_individual_guids) > 1:
                 family_row['family_history'] = 'Yes'
             family_rows.append(family_row)
@@ -489,7 +497,9 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
             }
             for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
                 genotype = genotypes.get(individual.guid, {})
-                zygosity = _get_genotype_zygosity(genotype)
+                is_x_linked = "X" in parsed_variant.get('Chrom', '')
+                zygosity = _get_genotype_zygosity(
+                    genotype, is_hemi_variant=is_x_linked and individual.guid in male_individual_guids)
                 if zygosity:
                     variant_discovery_row = {
                         'Zygosity': zygosity,
@@ -554,7 +564,7 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids):
+def _get_sample_airtable_metadata(sample_ids, include_collaborator=False):
     raw_records = {}
     # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
@@ -590,7 +600,7 @@ def _get_sample_airtable_metadata(sample_ids):
 
         sample_records[record_id] = parsed_record
 
-    if collaborator_ids:
+    if include_collaborator and collaborator_ids:
         collaborator_map = _fetch_airtable_records(
             'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
                 ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
@@ -914,16 +924,19 @@ def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mm
 
     affected_individual_guids = set()
     unaffected_individual_guids = set()
+    male_individual_guids = set()
     for sample in samples:
         if sample.individual.affected == "A":
             affected_individual_guids.add(sample.individual.guid)
         elif sample.individual.affected == "N":
             unaffected_individual_guids.add(sample.individual.guid)
+        if sample.individual.sex == Individual.SEX_MALE:
+            male_individual_guids.add(sample.individual.guid)
 
     potential_compound_het_genes = defaultdict(set)
     for variant in saved_variants:
         _update_variant_inheritance(
-            variant, affected_individual_guids, unaffected_individual_guids, potential_compound_het_genes)
+            variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids, potential_compound_het_genes)
 
     gene_ids_to_saved_variants, gene_ids_to_variant_tag_names, gene_ids_to_inheritance = _get_gene_to_variant_info_map(
         saved_variants, potential_compound_het_genes)
@@ -964,7 +977,7 @@ def _get_basic_row(initial_row, family, samples, now):
     return row
 
 
-def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_individual_guids):
+def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids):
     inheritance_models = set()
 
     affected_indivs_with_hom_alt_variants = set()
@@ -977,12 +990,12 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
         chrom = variant_json['chrom']
         is_x_linked = "X" in chrom
         for sample_guid, genotype in genotypes.items():
-            zygosity = _get_genotype_zygosity(genotype)
-            if zygosity == HOM_ALT and sample_guid in unaffected_individual_guids:
+            zygosity = _get_genotype_zygosity(genotype, is_hemi_variant=is_x_linked and sample_guid in male_individual_guids)
+            if zygosity in (HOM_ALT, HEMI) and sample_guid in unaffected_individual_guids:
                 # No valid inheritance modes for hom alt unaffected individuals
                 return set(), set()
 
-            if zygosity == HOM_ALT and sample_guid in affected_individual_guids:
+            if zygosity in (HOM_ALT, HEMI) and sample_guid in affected_individual_guids:
                 affected_indivs_with_hom_alt_variants.add(sample_guid)
             elif zygosity == HET and sample_guid in affected_individual_guids:
                 affected_indivs_with_het_variants.add(sample_guid)
@@ -1011,9 +1024,9 @@ def _get_inheritance_models(variant_json, affected_individual_guids, unaffected_
     return inheritance_models, potential_compound_het_gene_ids
 
 
-def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, potential_compound_het_genes):
+def _update_variant_inheritance(variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids, potential_compound_het_genes):
     inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
-        variant.saved_variant_json, affected_individual_guids, unaffected_individual_guids)
+        variant.saved_variant_json, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
     variant.saved_variant_json['inheritance'] = inheritance_models
 
     for gene_id in potential_compound_het_gene_ids:
@@ -1027,13 +1040,13 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
                 break
 
 
-def _get_genotype_zygosity(genotype):
+def _get_genotype_zygosity(genotype, is_hemi_variant):
     num_alt = genotype.get('numAlt')
     cn = genotype.get('cn')
     if num_alt == 2 or cn == 0 or (cn != None and cn > 3):
         return HOM_ALT
     if num_alt == 1 or cn == 1 or cn == 3:
-        return HET
+        return HEMI if is_hemi_variant else HET
     return None
 
 
