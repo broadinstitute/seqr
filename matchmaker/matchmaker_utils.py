@@ -149,7 +149,7 @@ def get_submission_json_for_external_match(submission, score=None):
     return submission_json
 
 
-def get_mme_matches(patient_data, origin_request_host=None, user=None):
+def get_mme_matches(patient_data, origin_request_host=None, user=None, originating_submission=None):
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results([patient_data])
 
     genomic_features = _get_patient_genomic_features(patient_data)
@@ -193,6 +193,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
             MatchmakerResult.objects.create(
                 submission=match_submission,
+                originating_submission=originating_submission,
                 originating_query=incoming_query,
                 result_data=patient_data,
                 last_modified_by=user,
