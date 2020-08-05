@@ -223,6 +223,18 @@ class MatchmakerAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
+        # staff users should see originating query for results
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['originatingSubmission'], {
+            'originatingSubmissionGuid': 'MS000016_P0004515',
+            'familyGuid': 'F000012_12',
+            'projectGuid': 'R0003_test',
+        })
+        self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
+
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
     @mock.patch('seqr.utils.communication_utils.Slacker')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
@@ -522,7 +534,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
+        update_body = {
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'contactHref': 'mailto:matchmaker@broadinstitute.org',
             'contactName': 'Test Name',
@@ -530,7 +542,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
                 {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
             ],
-        }))
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(update_body))
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -676,6 +689,25 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
+
+        # staff users should see originating query for results
+        self.login_staff_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(update_body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid]['originatingSubmission'], {
+            'originatingSubmissionGuid': 'MS000015_na20885',
+            'familyGuid': 'F000011_11',
+            'projectGuid': 'R0003_test',
+        })
+        self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid'][new_match_result_guid])
+
+        # The results for each submission should link to one another
+        result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
+        self.assertEqual(result.submission.guid, new_submission_guid)
+        self.assertEqual(result.originating_submission.guid, 'MS000015_na20885')
+        matched_result = MatchmakerResult.objects.get(originating_submission__guid=new_submission_guid)
+        self.assertEqual(matched_result.submission.guid, 'MS000015_na20885')
 
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate

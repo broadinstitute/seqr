@@ -373,7 +373,6 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
-        result['originatingSubmission'] = None
         if user.is_staff and result_model.originating_submission:
             result['originatingSubmission'] = {
                 'originatingSubmissionGuid': result_model.originating_submission.guid,
