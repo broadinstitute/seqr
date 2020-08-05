@@ -1,5 +1,6 @@
 import mock
 import os
+import responses
 import tempfile
 import shutil
 import gzip
@@ -108,30 +109,44 @@ class UpdateGencodeTest(TestCase):
                                           'Unexpected number of fields on line #0: [u\'gene\', u\'11869\', u\'14412\', u\'.\', u\'+\', u\'.\', u\'gene_id "ENSG00000223972.4";\']'])
         mock_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(temp_bad_file_path))
 
+    @responses.activate
     @mock.patch('reference_data.management.commands.update_gencode.logger')
-    @mock.patch('reference_data.management.commands.update_gencode.download_file')
-    def test_update_gencode_command_url_generation(self, mock_download, mock_logger):
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_gencode_command_url_generation(self, mock_tempfile, mock_logger):
         # Test the code paths of generating urls, gencode_release == 19
-        mock_logger.reset_mock()
-        mock_download.return_value = self.temp_file_path
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+
+        with open(self.temp_file_path, 'rb') as f:
+            gtf_content = f.read()
+
+        url_19 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
+        responses.add(responses.HEAD, url_19, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url_19, body=gtf_content, stream=True)
         call_command('update_gencode', '--gencode-release=19')
-        mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz")
+        self.assertEqual(responses.calls[0].request.url, url_19)
+        responses.reset()
 
         # Test the code paths of generating urls, gencode_release <= 22
         mock_logger.reset_mock()
+        url_20 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz'
+        responses.add(responses.HEAD, url_20, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url_20, body=gtf_content, stream=True)
         call_command('update_gencode', '--gencode-release=20')
-        mock_download.assert_called_with("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz")
+        self.assertEqual(responses.calls[0].request.url, url_20)
+        responses.reset()
 
         # Test the code paths of generating urls, gencode_release > 22
         mock_logger.reset_mock()
-        mock_download.return_value = self.temp_file_path
+        url_23 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/gencode.v23.annotation.gtf.gz'
+        responses.add(responses.HEAD, url_23, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url_23, body=gtf_content, stream=True)
+        url_23_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/GRCh37_mapping/gencode.v23lift37.annotation.gtf.gz'
+        responses.add(responses.HEAD, url_23_lift, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url_23_lift, body=gtf_content, stream=True)
         call_command('update_gencode', '--gencode-release=23')
-        calls = [
-            mock.call("http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/GRCh37_mapping/gencode.v23lift37.annotation.gtf.gz"),
-            mock.call(
-                "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/gencode.v23.annotation.gtf.gz"),
-        ]
-        mock_download.assert_has_calls(calls)
+        self.assertEqual(responses.calls[0].request.url, url_23_lift)
+        self.assertEqual(responses.calls[2].request.url, url_23)
 
     @mock.patch('reference_data.management.commands.update_gencode.logger')
     def test_update_gencode_command(self, mock_logger):
