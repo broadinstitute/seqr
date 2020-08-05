@@ -318,6 +318,53 @@
         "color": "#b44b4b",
         "order": 14.8
     }
+}, {
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_validate_sv",
+        "created_date": "2020-08-05T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Validate SV",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#4ECDC4",
+        "order": 14.91
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sv_validated",
+        "created_date": "2020-08-05T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "SV validated",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#D4E09B",
+        "order": 14.92
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sv_did_not_confirm",
+        "created_date": "2020-08-05T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "SV did not confirm",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#FF6B6B",
+        "order": 14.93
+    }
 },
 {
     "model": "seqr.varianttagtype",

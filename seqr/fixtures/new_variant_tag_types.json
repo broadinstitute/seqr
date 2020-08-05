@@ -3,51 +3,48 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_test_segregation",
-        "created_date": "2018-04-27T00:00:00.000Z",
+        "guid": "VTT_validate_sv",
+        "created_date": "2020-08-05T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Test segregation",
+        "name": "Validate SV",
         "category": "Collaboration",
         "description": "",
-        "color": "#c17110",
-        "order": 14.6,
-        "is_built_in": true
+        "color": "#4ECDC4",
+        "order": 14.91
     }
 },
 {
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_segregation _validated",
-        "created_date": "2018-04-27T00:00:00.000Z",
+        "guid": "VTT_sv_validated",
+        "created_date": "2020-08-05T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Segregation validated",
+        "name": "SV validated",
         "category": "Collaboration",
         "description": "",
-        "color": "#799a5b",
-        "order": 14.7,
-        "is_built_in": true
+        "color": "#D4E09B",
+        "order": 14.92
     }
 },
 {
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_segregation_did_not_confir",
-        "created_date": "2018-04-27T00:00:00.000Z",
+        "guid": "VTT_sv_did_not_confirm",
+        "created_date": "2020-08-05T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Segregation did not confirm",
+        "name": "SV did not confirm",
         "category": "Collaboration",
         "description": "",
-        "color": "#b44b4b",
-        "order": 14.8,
-        "is_built_in": true
+        "color": "#FF6B6B",
+        "order": 14.93
     }
 }
 ]
