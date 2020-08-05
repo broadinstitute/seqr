@@ -23,7 +23,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
 
-    is_gz = url.endswith("gz")
+    is_gz = url.endswith(".gz")
     response = requests.get(url, stream=is_gz)
     input_iter = response if is_gz else response.iter_content()
     if verbose:
