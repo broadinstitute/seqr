@@ -2,8 +2,6 @@
 APIs for updating project metadata, as well as creating or deleting projects
 """
 
-from __future__ import unicode_literals
-
 import json
 import logging
 from django.contrib.auth.decorators import login_required
@@ -151,6 +149,8 @@ def project_page_data(request, project_guid):
     gene_ids = set()
     for tag in project_json['discoveryTags']:
         gene_ids.update(list(tag.get('transcripts', {}).keys()))
+    for submission in response['mmeSubmissionsByGuid'].values():
+        gene_ids.update(submission['geneIds'])
 
     response.update({
         'projectsByGuid': {project_guid: project_json},
@@ -258,10 +258,12 @@ def _retrieve_samples(project_guid, individuals_by_guid, sample_models, sample_g
 def _retrieve_mme_submissions(individuals_by_guid, individual_models):
     models = MatchmakerSubmission.objects.filter(individual__in=individual_models)
 
-    submissions = get_json_for_matchmaker_submissions(models)
+    submissions = get_json_for_matchmaker_submissions(models, additional_model_fields=['genomic_features'])
 
     submissions_by_guid = {}
     for s in submissions:
+        genomic_features = s.pop('genomicFeatures') or []
+        s['geneIds'] = [feature['gene']['id'] for feature in genomic_features if feature.get('gene', {}).get('id')]
         guid = s['submissionGuid']
         submissions_by_guid[guid] = s
 

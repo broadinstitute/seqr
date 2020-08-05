@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import json
 import logging
 import requests
@@ -7,6 +5,7 @@ from datetime import datetime
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
+from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
@@ -78,7 +77,7 @@ def _search_matches(submission, user):
         return create_json_response({'message': message}, status=400, reason=message)
 
     external_results = _search_external_matches(nodes_to_query, patient_data)
-    local_results, incoming_query = get_mme_matches(patient_data, user=user)
+    local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
 
     results = local_results + external_results
 
@@ -86,13 +85,19 @@ def _search_matches(submission, user):
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
     }
 
+    local_result_submissions = {
+        s.submission_id: s for s in MatchmakerSubmission.objects.filter(matchmakerresult__originating_submission=submission)
+    }
+
     new_results = []
     saved_results = {}
     for result in results:
-        saved_result = initial_saved_results.get(result['patient']['id'])
+        result_patient_id = result['patient']['id']
+        saved_result = initial_saved_results.get(result_patient_id)
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
                 submission=submission,
+                originating_submission=local_result_submissions.get(result_patient_id),
                 originating_query=incoming_query,
                 result_data=result,
                 last_modified_by=user,
@@ -203,17 +208,22 @@ def update_mme_submission(request, submission_guid=None):
         if not gene_variant.get('geneId'):
             return create_json_response({}, status=400, reason='Gene id is required for genomic features')
         feature = {'gene': {'id': gene_variant['geneId']}}
-        if 'numAlt' in gene_variant:
+        if 'numAlt' in gene_variant and gene_variant['numAlt'] > 0:
             feature['zygosity'] = gene_variant['numAlt']
         if gene_variant.get('pos'):
             genome_version = gene_variant['genomeVersion']
             feature['variant'] = {
-                'alternateBases': gene_variant['alt'],
-                'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
                 'assembly': GENOME_VERSION_LOOKUP.get(genome_version, genome_version),
             }
+            if gene_variant.get('alt'):
+                feature['variant'].update({
+                    'alternateBases': gene_variant['alt'],
+                    'referenceBases': gene_variant['ref'],
+                })
+            elif gene_variant.get('end'):
+                feature['variant']['end'] = gene_variant['end']
         genomic_features.append(feature)
 
     submission_json.update({
@@ -359,9 +369,16 @@ def update_mme_contact_note(request, institution):
 def _parse_mme_results(submission, saved_results, user, additional_genes=None, response_json=None):
     results = []
     contact_institutions = set()
+    prefetch_related_objects(saved_results, 'originating_submission__individual__family__project')
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
+        if user.is_staff and result_model.originating_submission:
+            result['originatingSubmission'] = {
+                'originatingSubmissionGuid': result_model.originating_submission.guid,
+                'familyGuid': result_model.originating_submission.individual.family.guid,
+                'projectGuid': result_model.originating_submission.individual.family.project.guid,
+            }
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 

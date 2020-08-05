@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from builtins import str
-
 from io import TextIOWrapper
 
 import csv

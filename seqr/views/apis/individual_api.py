@@ -1,9 +1,6 @@
 """
 APIs for retrieving, updating, creating, and deleting Individual records
 """
-
-from __future__ import unicode_literals
-
 import json
 import logging
 import re
@@ -259,10 +256,13 @@ def receive_individuals_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
+    warnings = []
     def process_records(json_records, filename='ped_file'):
-        pedigree_records, errors, warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
+        pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
         if errors:
-            raise ErrorsWarningsException(errors, warnings)
+            raise ErrorsWarningsException(errors, ped_warnings)
+        nonlocal warnings
+        warnings += ped_warnings
         return pedigree_records
 
     try:
@@ -271,6 +271,21 @@ def receive_individuals_table_handler(request, project_guid):
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
         return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
+
+    if warnings:
+        # If there are warnings, it might be because the upload referenced valid existing individuals and there is no
+        # issue, or because it referenced individuals that actually don't exist, so re-validate with all individuals
+        family_ids = {r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records}
+        individual_ids = {r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in json_records}
+
+        related_individuals = Individual.objects.filter(
+            family__family_id__in=family_ids, family__project=project).exclude(individual_id__in=individual_ids)
+        related_individuals_json = _get_json_for_individuals(
+            related_individuals, project_guid=project_guid, family_fields=['family_id'])
+
+        errors, _ = validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
+        if errors:
+            return create_json_response({'errors': errors, 'warnings': []}, status=400, reason=errors)
 
     # send back some stats
     individual_ids_by_family = defaultdict(list)

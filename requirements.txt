@@ -6,17 +6,15 @@ django-cors-headers==3.0.2       # allows CORS requests for client-side developm
 
 elasticsearch==6.4.0             # elasticsearch client
 elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
-future==0.17.1                   # packages include bultins and __future__ for Python2 and 3 compatibility
 gunicorn==19.10.0                # web server
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
-pillow==6.2.2                    # required dependency of Djagno ImageField-type database records
+pillow==7.1.0                    # required dependency of Djagno ImageField-type database records
 psycopg2==2.8.4                  # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests
 redis==3.3.11                    # client lib for the redis in-memory database - used for caching server-side objects
 requests-toolbelt==0.9.1         # for troubleshooting requests
-six==1.13.0                      # Django dependency
 slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations

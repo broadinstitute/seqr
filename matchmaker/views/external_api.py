@@ -1,11 +1,4 @@
-from __future__ import unicode_literals
-
 import json
-if hasattr(json, 'JSONDecodeError'):
-    from json import JSONDecodeError
-else:
-    class JSONDecodeError(ValueError):
-        pass
 
 import logging
 from django.core.mail.message import EmailMessage
@@ -79,7 +72,7 @@ def mme_match_proxy(request, originating_node_name):
     try:
         query_patient_data = json.loads(request.body)
         _validate_patient_data(query_patient_data)
-    except JSONDecodeError:
+    except json.JSONDecodeError:
         return create_json_response({'message': 'No JSON object could be decoded'}, status = 400)
     except Exception as e:
         return create_json_response({'message': str(e)}, status=400)

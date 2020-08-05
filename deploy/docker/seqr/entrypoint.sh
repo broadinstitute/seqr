@@ -66,10 +66,10 @@ fi
 if [ $ENABLE_DATABASE_BACKUPS ]; then
     # set up cron database backups
     echo 'SHELL=/bin/bash
-0 0 * * * /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 */4 * * * /seqr/manage.py run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 0 * * 0 /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
-0 0 * * 0 /seqr/manage.py update_human_phenotype_ontology >> /var/log/cron.log 2>&1
+0 0 * * * /usr/local/bin/python /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 */4 * * * /usr/local/bin/python /seqr/manage.py run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
+0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_human_phenotype_ontology >> /var/log/cron.log 2>&1
 ' | crontab -
 
     env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.

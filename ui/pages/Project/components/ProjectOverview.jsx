@@ -69,10 +69,10 @@ const MME_COLUMNS = [
       </NavLink>,
   },
   { name: 'familyName', content: 'Family', width: 2 },
-  { name: 'individualName', content: 'Individual', width: 2 },
+  { name: 'geneSymbols', content: 'Genes', width: 3, format: ({ geneSymbols }) => (geneSymbols || []).join(', ') },
   { name: 'createdDate', content: 'Created Date', width: 2, format: ({ createdDate }) => createdDate && new Date(createdDate).toLocaleDateString() },
   { name: 'deletedDate', content: 'Removed Date', width: 2, format: ({ deletedDate }) => deletedDate && new Date(deletedDate).toLocaleDateString() },
-  { name: 'mmeNotes', content: 'Notes', width: 7 },
+  { name: 'mmeNotes', content: 'Notes', width: 6 },
 ]
 
 const MatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {

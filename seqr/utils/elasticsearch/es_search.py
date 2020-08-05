@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from collections import defaultdict
 from copy import deepcopy
 import elasticsearch
@@ -503,8 +501,9 @@ class EsSearch(object):
                 self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
                 self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
 
-        self.previous_search_results['total_results'] = sum(
+                total_results = sum(
             counts['total'] for counts in self.previous_search_results['loaded_variant_counts'].values())
+        self.previous_search_results['total_results'] = total_results
 
         # combine new results with unsorted previously loaded results to correctly sort/paginate
         all_loaded_results = self.previous_search_results.get('all_results', [])
@@ -517,7 +516,10 @@ class EsSearch(object):
             if compound_het_results:
                 compound_het_results = self._deduplicate_compound_het_results(compound_het_results)
                 compound_het_results = _sort_compound_hets(compound_het_results)
-            return self._process_compound_hets(compound_het_results, variant_results, num_results)
+            loaded_results = sum(
+                counts['loaded'] for counts in self.previous_search_results['loaded_variant_counts'].values())
+            return self._process_compound_hets(
+                compound_het_results, variant_results, num_results, all_loaded=loaded_results == total_results)
         else:
             end_index = num_results * page
             num_loaded = num_results * page - len(all_loaded_results)
@@ -893,7 +895,7 @@ class EsSearch(object):
 
         return deduplicated_results
 
-    def _process_compound_hets(self, compound_het_results, variant_results, num_results):
+    def _process_compound_hets(self, compound_het_results, variant_results, num_results, all_loaded=False):
         if not self.previous_search_results.get('grouped_results'):
             self.previous_search_results['grouped_results'] = []
 
@@ -916,7 +918,7 @@ class EsSearch(object):
             else:
                 merged_variant_results += variants
                 num_single_variants += 1
-            if len(merged_variant_results) >= num_results:
+            if not all_loaded and len(merged_variant_results) >= num_results:
                 break
 
         self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
