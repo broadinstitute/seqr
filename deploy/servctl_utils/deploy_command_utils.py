@@ -26,8 +26,7 @@ DEPLOYABLE_COMPONENTS = [
 
     "external-elasticsearch-connector",
 
-    "elasticsearch",  # a single elasticsearch instance
-    "elasticsearch-sharded", # an elasticsearch instance with multiple nodes
+    "elasticsearch",
     "postgres",
     "redis",
     "seqr",
@@ -74,7 +73,7 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
 DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
     "init-cluster",
     "settings",
-    "elasticsearch-sharded",
+    "elasticsearch",
     "kube-scan",
 ]
 
@@ -221,17 +220,9 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
-    deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
+    run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
-
-def deploy_elasticsearch_sharded(settings):
-    print_separator("elasticsearch-sharded")
-
-    docker_build("elasticsearch-sharded", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
-
-    run('kubectl apply -f deploy/kubernetes/elasticsearch-sharded/kubernetes-elasticsearch-all-in-one.yaml')
-
-    deploy_pod("elasticsearch-sharded", settings, wait_until_pod_is_running=False)
+    deploy_pod("elasticsearch", settings, wait_until_pod_is_running=False)
 
     wait_for_not_resource(
         'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.phase}', invalid_status='Invalid',
@@ -240,7 +231,7 @@ def deploy_elasticsearch_sharded(settings):
     total_pods = 0
     for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS']:
         total_pods += settings.get(num_pods, 0)
-    total_pods = 2
+    total_pods = 2 # TODO
     for pod_number_i in range(total_pods):
         sleep_until_pod_is_running('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
     for pod_number_i in range(total_pods):
@@ -420,22 +411,22 @@ def deploy_kube_scan(settings):
 
 
 def deploy_es_client(settings):
-    deploy_elasticsearch_sharded_legacy(settings, "es-client")
+    deploy_elasticsearch_sharded(settings, "es-client")
 
 
 def deploy_es_master(settings):
-    deploy_elasticsearch_sharded_legacy(settings, "es-master")
+    deploy_elasticsearch_sharded(settings, "es-master")
 
 
 def deploy_es_data(settings):
-    deploy_elasticsearch_sharded_legacy(settings, "es-data")
+    deploy_elasticsearch_sharded(settings, "es-data")
 
 
 def deploy_es_kibana(settings):
-    deploy_elasticsearch_sharded_legacy(settings, "es-kibana")
+    deploy_elasticsearch_sharded(settings, "es-kibana")
 
 
-def deploy_elasticsearch_sharded_legacy(settings, component):
+def deploy_elasticsearch_sharded(settings, component):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
@@ -820,7 +811,7 @@ def create_vpc(gcloud_project, network_name):
 
 def _get_component_group_to_component_name_mapping():
     result = {
-        "elasticsearch-sharded-legacy": ["es-master", "es-client", "es-data"],
+        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
     }
     return result
 

@@ -8,7 +8,7 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch-sharded{{ DOCKER_IMAGE_TAG }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
   nodeSets:
   - name: master
     count: 1
