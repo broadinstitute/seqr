@@ -50,6 +50,7 @@ class MatchmakerIncomingQuery(ModelWithGUID):
 
 class MatchmakerResult(ModelWithGUID):
     submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT, null=True)
+    originating_submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT, null=True, related_name='origin_results')
     originating_query = models.ForeignKey(MatchmakerIncomingQuery, on_delete=models.SET_NULL, null=True)
     result_data = JSONField()
 

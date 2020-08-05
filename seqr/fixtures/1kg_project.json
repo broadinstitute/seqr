@@ -396,6 +396,7 @@
         "case_review_status_last_modified_date": "2017-03-12T22:34:43.204Z",
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
+        "proband_relationship": "S",
         "birth_year": null,
         "death_year": null,
         "onset_age": "A",
@@ -1944,6 +1945,7 @@
         "created_by": null,
         "last_modified_date": "2019-04-29T17:48:46.367Z",
         "submission": 1,
+        "originating_submission": 3,
         "result_data": {
             "score": {
                 "patient": 0.5706712016939723

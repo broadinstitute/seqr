@@ -5,6 +5,7 @@ from datetime import datetime
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
+from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
@@ -76,7 +77,7 @@ def _search_matches(submission, user):
         return create_json_response({'message': message}, status=400, reason=message)
 
     external_results = _search_external_matches(nodes_to_query, patient_data)
-    local_results, incoming_query = get_mme_matches(patient_data, user=user)
+    local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
 
     results = local_results + external_results
 
@@ -84,13 +85,19 @@ def _search_matches(submission, user):
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
     }
 
+    local_result_submissions = {
+        s.submission_id: s for s in MatchmakerSubmission.objects.filter(matchmakerresult__originating_submission=submission)
+    }
+
     new_results = []
     saved_results = {}
     for result in results:
-        saved_result = initial_saved_results.get(result['patient']['id'])
+        result_patient_id = result['patient']['id']
+        saved_result = initial_saved_results.get(result_patient_id)
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
                 submission=submission,
+                originating_submission=local_result_submissions.get(result_patient_id),
                 originating_query=incoming_query,
                 result_data=result,
                 last_modified_by=user,
@@ -362,9 +369,16 @@ def update_mme_contact_note(request, institution):
 def _parse_mme_results(submission, saved_results, user, additional_genes=None, response_json=None):
     results = []
     contact_institutions = set()
+    prefetch_related_objects(saved_results, 'originating_submission__individual__family__project')
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
+        if user.is_staff and result_model.originating_submission:
+            result['originatingSubmission'] = {
+                'originatingSubmissionGuid': result_model.originating_submission.guid,
+                'familyGuid': result_model.originating_submission.individual.family.guid,
+                'projectGuid': result_model.originating_submission.individual.family.project.guid,
+            }
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 

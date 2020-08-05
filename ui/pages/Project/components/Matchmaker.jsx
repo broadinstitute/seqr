@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
@@ -292,6 +293,10 @@ const DISPLAY_FIELDS = [
       if (val.patient.label) {
         displayName = val.patient.label
         patientFields.unshift('id')
+      }
+      if (val.originatingSubmission) {
+        const href = `/project/${val.originatingSubmission.projectGuid}/family_page/${val.originatingSubmission.familyGuid}/matchmaker_exchange`
+        displayName = <Link to={href} target="_blank">{displayName}</Link>
       }
       return patientFields.length ? <Popup
         header="Patient Details"

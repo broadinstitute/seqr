@@ -384,6 +384,8 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "date_data_generation": "2020-02-05",
     "Zygosity-1": "Heterozygous",
     "Zygosity-2": "Heterozygous",
+    "variant_genome_build-1": "GRCh37",
+    "variant_genome_build-2": "GRCh37",
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
@@ -398,7 +400,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Pos-1": "248367227",
     "data_type": "WES",
     "family_guid": "F000011_11",
-    "onset_category": "Unknown",
+    "congenital_status": "Unknown",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "Transcript-1": "ENST00000505820",
     "ancestry": "Ashkenazi Jewish",
@@ -415,8 +417,9 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "family_id": "11",
     "MME": "Y",
     "subject_id": "NA20885",
-    "relationship_to_proband": "",
+    "proband_relationship": "",
     "consanguinity": "None suspected",
+    "sequencing_center": "Broad",
   }
 
 SAMPLE_QC_DATA = [
@@ -598,8 +601,6 @@ class StaffAPITest(AuthenticationTestCase):
         self.check_staff_login(url)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
-                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -619,22 +620,23 @@ class StaffAPITest(AuthenticationTestCase):
         subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
         self.assertEqual(subject_file[0], '\t'.join([
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
-            '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets', '09-sex',
-            '10-ancestry', '11-ancestry_detail', '12-age_at_last_observation', '13-phenotype_group', '14-disease_id',
-            '15-disease_description', '16-affected_status', '17-onset_category', '18-age_of_onset', '19-hpo_present',
-            '20-hpo_absent', '21-phenotype_description', '22-solve_state']))
+            '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets',
+            '09-proband_relationship', '10-sex', '11-ancestry', '12-ancestry_detail', '13-age_at_last_observation',
+            '14-phenotype_group', '15-disease_id', '16-disease_description', '17-affected_status',
+            '18-congenital_status', '19-age_of_onset', '20-hpo_present', '21-hpo_absent', '22-phenotype_description',
+            '23-solve_state']))
         self.assertIn(u'\t'.join([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
+            'dbgap_subject_id_1', 'No', 'Self', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
             'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
             'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
         self.assertEqual(sample_file[0], '\t'.join([
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sample_source',
-            '05-sample_provider', '06-data_type', '07-date_data_generation']))
+            '05-sequencing_center', '06-data_type', '07-date_data_generation']))
         self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', '-', 'Hildebrandt', 'WES', '2017-02-05']),
+            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', '-', 'Broad', 'WES', '2017-02-05']),
             sample_file,
         )
 
@@ -646,16 +648,20 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertIn('\t'.join([
             'NA19675_1', 'NA19675_1', '1', 'NA19678', 'NA19679', '-', '-', 'Present', '-', '-', '-', '-', '-',
         ]), family_file)
+        self.assertIn('\t'.join([
+            'NA19678', 'NA19678', '1', '-', '-', '-', '-', 'Present', '-', '-', '-', '-', '-',
+        ]), family_file)
 
         discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
         self.assertEqual(discovery_file[0], '\t'.join([
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene-1', '04-Gene_Class-1',
-            '05-inheritance_description-1', '06-Zygosity-1', '07-Chrom-1', '08-Pos-1', '09-Ref-1', '10-Alt-1',
-            '11-hgvsc-1', '12-hgvsp-1', '13-Transcript-1', '14-sv_name-1', '15-sv_type-1', '16-significance-1']))
+            '05-inheritance_description-1', '06-Zygosity-1', '07-variant_genome_build-1', '08-Chrom-1', '09-Pos-1',
+            '10-Ref-1', '11-Alt-1', '12-hgvsc-1', '13-hgvsp-1', '14-Transcript-1', '15-sv_name-1', '16-sv_type-1',
+            '17-significance-1']))
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
-            'Homozygous', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436', '-', '-',
-            '-']), discovery_file)
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+            '-', '-', '-']), discovery_file)
 
     @responses.activate
     def test_sample_metadata_export(self):

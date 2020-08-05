@@ -1,8 +1,6 @@
 import mock
-
-import os
+import responses
 import tempfile
-import shutil
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -132,36 +130,26 @@ class UpdateHpoTest(TestCase):
     fixtures = ['users', 'reference_data']
     multi_db = True
 
-    def setUp(self):
-        # Create a temporary directory
-        self.test_dir = tempfile.mkdtemp()
-
-        # Prepare normal test data
-        self.temp_file_path = os.path.join(self.test_dir, 'hp.obo')
-        with open(self.temp_file_path, 'w') as f:
-            f.write(''.join(PHO_DATA))
-
-    def tearDown(self):
-        # Close the file, the directory will be removed after the test
-        shutil.rmtree(self.test_dir)
-
+    @responses.activate
     @mock.patch('reference_data.management.commands.update_human_phenotype_ontology.logger')
-    @mock.patch('reference_data.management.commands.update_human_phenotype_ontology.download_file')
-    def test_update_hpo_command(self, mock_download, mock_logger):
-        temp_bad_file_path = os.path.join(self.test_dir, 'bad_hp.obo')
-        mock_download.return_value = temp_bad_file_path
-        # Prepare data which causes exception (missing parent hpo id)
-        with open(temp_bad_file_path, 'w') as f:
-            f.write(''.join(PHO_DATA[:40]))
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_hpo_command(self, mock_tempfile, mock_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/hp.obo'.format(tmp_dir)
+
+        url = 'http://purl.obolibrary.org/obo/hp.obo'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body=''.join(PHO_DATA[:40]))
+        responses.add(responses.GET, url, body=''.join(PHO_DATA))
+
+        # test data which causes exception (missing parent hpo id)
         with self.assertRaises(ValueError) as ve:
             call_command('update_human_phenotype_ontology')
         self.assertEqual(str(ve.exception), "Strange id: HP:0000003")
 
         # test without a file_path parameter
-        mock_download.reset_mock()
-        mock_download.return_value = self.temp_file_path
         call_command('update_human_phenotype_ontology')
-        mock_download.assert_called_with(url='http://purl.obolibrary.org/obo/hp.obo')
 
         calls = [
             mock.call('Deleting HumanPhenotypeOntology table with 11 records and creating new table with 5 records'),
@@ -170,10 +158,9 @@ class UpdateHpoTest(TestCase):
         mock_logger.info.assert_has_calls(calls)
 
         # test with a hpo_file_path parameter
-        mock_download.reset_mock()
+        responses.remove(responses.GET, url)
         mock_logger.reset_mock()
-        call_command('update_human_phenotype_ontology', self.temp_file_path)
-        mock_download.assert_not_called()
+        call_command('update_human_phenotype_ontology', tmp_file)
 
         calls = [
             mock.call('Deleting HumanPhenotypeOntology table with 5 records and creating new table with 5 records'),
