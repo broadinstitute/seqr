@@ -231,7 +231,6 @@ def deploy_elasticsearch(settings):
     total_pods = 0
     for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS']:
         total_pods += settings.get(num_pods, 0)
-    total_pods = 2 # TODO
     for pod_number_i in range(total_pods):
         sleep_until_pod_is_running('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
     for pod_number_i in range(total_pods):

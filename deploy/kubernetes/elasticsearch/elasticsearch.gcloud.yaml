@@ -11,51 +11,70 @@ spec:
   image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
   nodeSets:
   - name: master
-    count: 1
-#    count: {{ ES_MASTER_NUM_PODS }}
+    count: {{ ES_MASTER_NUM_PODS }}
     config:
-      master: true
-      data: false
+      node.master: true
+      node.data: false
     podTemplate:
       metadata:
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
-#      spec:
-#        containers:
-#        - name: elasticsearch
-#          env:
-#          - name: ES_JAVA_OPTS
-#            value:  "-Xms2g -Xmx2g"
-#  - name: client
-#    count: {{ ES_CLIENT_NUM_PODS }}
-#    config:
-#      master: false
-#      data: false
-#    podTemplate:
-#      spec:
-#        containers:
-#        - name: elasticsearch
-#          env:
-#          - name: ES_JAVA_OPTS
-#            value:  "-Xms2g -Xmx2g"
+      spec:
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+  - name: client
+    count: {{ ES_CLIENT_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
   - name: data
-    count: 1
-#    count:  {{ ES_DATA_NUM_PODS }}
+    count:  {{ ES_DATA_NUM_PODS }}
     config:
-      master: false
-      data: true
+      node.master: false
+      node.data: true
     podTemplate:
       metadata:
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
-#      spec:
-#        containers:
-#        - name: elasticsearch
-#          env:
-#          - name: ES_JAVA_OPTS
-#            value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+          env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
+          resources:
+            requests:
+              memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
+            limits:
+              memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
