@@ -77,6 +77,30 @@ DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
     "kube-scan",
 ]
 
+SECRETS = {
+    'seqr': ['omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key'],
+    'postgres': ['postgres.username', 'postgres.password'],
+    'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
+    'matchbox': ['{deploy_to}/config.json'],
+    'gcloud-client': ['service-account-key.json']
+}
+
+DEPLOYMENT_TARGET_SECRETS = {
+    'gcloud-prod': [
+        'seqr',
+        'postgres',
+        'nginx',
+        'matchbox',
+        'gcloud-client',
+    ],
+    'gcloud-dev-es': [
+        'seqr',
+        'postgres',
+        'gcloud-client',
+    ],
+}
+DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
+
 
 def deploy_init_cluster(settings):
     """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
@@ -144,59 +168,26 @@ def deploy_secrets(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
+#kibana_admin
     print_separator("secrets")
 
     create_namespace(settings)
 
     # deploy secrets
-    for secret_label in [
-        "seqr-secrets",
-        "postgres-secrets",
-        "nginx-secrets",
-        "matchbox-secrets",
-        "gcloud-client-secrets"
-    ]:
-        run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
+    secret_labels = DEPLOYMENT_TARGET_SECRETS[settings['DEPLOY_TO']]
+    for secret_label in secret_labels:
+        run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    run(" ".join([
-        "kubectl create secret generic seqr-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/airtable_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic postgres-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.username",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.password",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic nginx-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.crt",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/%(DEPLOY_TO)s/config.json",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
-    if not os.path.isfile(account_key_path):
-        account_key_path = "deploy/secrets/shared/gcloud/service-account-key.json"
-    if os.path.isfile(account_key_path):
-        run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets",
-            "--from-file %(account_key_path)s",
-            "--from-file deploy/secrets/shared/gcloud/boto",
-        ]) % {'account_key_path': account_key_path}, errors_to_ignore=["already exists"])
-    else:
-        run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
-        ]), errors_to_ignore=["already exists"])
+    for secret_label in secret_labels:
+        secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
+        secret_command += [
+            '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
+                secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
+            for file in SECRETS[secret_label]
+        ]
+        if secret_label == 'gcloud-client':
+            secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
+        run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
 
 
 def deploy_external_elasticsearch_connector(settings):

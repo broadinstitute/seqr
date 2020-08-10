@@ -9,6 +9,13 @@ metadata:
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
   image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+  auth:
+    fileRealm:
+    - secretName: elasticsearch-users-secrets
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
   nodeSets:
   - name: master
     count: {{ ES_MASTER_NUM_PODS }}
