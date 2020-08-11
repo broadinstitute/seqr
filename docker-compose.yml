@@ -5,6 +5,8 @@ services:
     image: gcr.io/seqr-project/postgres:gcloud-prod
     ports:
       - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=docker-compose-postgres-password
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
@@ -69,6 +71,7 @@ services:
       - PYTHONPATH=/seqr
       - STATIC_MEDIA_DIR=/seqr_static_files
       - POSTGRES_SERVICE_HOSTNAME=postgres
+      - POSTGRES_PASSWORD=docker-compose-postgres-password
       - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
       - REDIS_SERVICE_HOSTNAME=redis
       - KIBANA_SERVICE_HOSTNAME=kibana
