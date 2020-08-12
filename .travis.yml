@@ -17,6 +17,7 @@ script:
 - coverage report --fail-under=99
 - cd ui/
 - npm test
+- cd ..
 - ./test_local_deployment.sh
 
 addons:
