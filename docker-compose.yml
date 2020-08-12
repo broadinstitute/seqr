@@ -4,7 +4,7 @@ services:
   postgres:
     image: gcr.io/seqr-project/postgres:gcloud-prod
     ports:
-      - 5432:5432
+      - 5432:5433
     environment:
       - POSTGRES_PASSWORD=docker-compose-postgres-password
     volumes:
@@ -70,6 +70,7 @@ services:
       - REDIS_SERVICE_HOSTNAME=redis
       - KIBANA_SERVICE_HOSTNAME=kibana
       - PGHOST=postgres
+      - PGPORT=5433
       - PGUSER=postgres
       - GUNICORN_WORKER_THREADS=4
     depends_on:
