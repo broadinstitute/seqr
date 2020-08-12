@@ -17,9 +17,7 @@ script:
 - coverage report --fail-under=99
 - cd ui/
 - npm test
-- docker-compose up -d seqr
-
-
+- ./test_local_deployment.sh
 
 addons:
   postgresql: '9.6'
