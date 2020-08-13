@@ -225,7 +225,10 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         wait_until_pod_is_running(component_label, deployment_target)
 
         logger.info("Forwarding port %s for %s" % (port, component_label))
-        pod_name = get_pod_name(component_label, deployment_target=deployment_target)
+        if component_label == 'elasticsearch':
+            pod_name = 'service/elasticsearch-es-http'
+        else:
+            pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
         if use_kubectl_proxy:
             command = "kubectl proxy --port 8001"
