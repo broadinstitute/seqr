@@ -78,11 +78,15 @@ DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
 ]
 
 SECRETS = {
-    'seqr': ['omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key'],
-    'postgres': ['postgres.username', 'postgres.password'],
-    'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
+    'elasticsearch': ['users', 'users_roles', 'roles.yml'],
+    'gcloud-client': ['service-account-key.json'],
     'matchbox': ['{deploy_to}/config.json'],
-    'gcloud-client': ['service-account-key.json']
+    'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
+    'postgres': ['postgres.username', 'postgres.password'],
+    'seqr': [
+        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
+        'kibana_es_password',
+    ],
 }
 
 DEPLOYMENT_TARGET_SECRETS = {
@@ -94,9 +98,7 @@ DEPLOYMENT_TARGET_SECRETS = {
         'gcloud-client',
     ],
     'gcloud-dev-es': [
-        'seqr',
-        'postgres',
-        'gcloud-client',
+        'elasticsearch',
     ],
 }
 DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
