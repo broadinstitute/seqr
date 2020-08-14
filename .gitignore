@@ -17,3 +17,5 @@ pedigree_images/*
 seqr_settings
 
 django_key
+
+client_secret.json

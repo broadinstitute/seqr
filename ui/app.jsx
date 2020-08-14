@@ -15,6 +15,7 @@ import GeneInfoSearch from 'pages/GeneInfoSearch'
 import LocusLists from 'pages/LocusLists'
 import Staff from 'pages/Staff/Staff'
 import Login from 'pages/Login/components/Login'
+import OAuth2Callback from 'pages/Login/components/OAuth2Callback'
 import ForgotPassword from 'pages/Login/components/ForgotPassword'
 import SetPassword from 'pages/Login/components/SetPassword'
 import LandingPage from 'pages/Public/LandingPage'
@@ -57,6 +58,7 @@ ReactDOM.render(
             <Route path="/gene_lists" component={LocusLists} />
             <Route path="/staff" component={Staff} />
             <Route path="/login" component={Login} />
+            <Route path="/oauth2callback" component={OAuth2Callback} />
             <Route path="/users/forgot_password" component={ForgotPassword} />
             <Route path="/users/set_password" component={SetPassword} />
             <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
