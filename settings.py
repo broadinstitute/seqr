@@ -9,9 +9,6 @@ logger = logging.getLogger(__name__)
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # for google auth testing only
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1' #
-
 #########################################################
 #  Django settings
 #########################################################
