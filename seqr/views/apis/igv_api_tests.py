@@ -4,7 +4,7 @@ from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
-STREAMING_READS_CONTENT = ['a', 'b', 'c']
+STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
 
 
 class IgvAPITest(AuthenticationTestCase):
@@ -18,7 +18,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
-        self.assertListEqual([val.decode('utf-8') for val in response.streaming_content], STREAMING_READS_CONTENT)
+        self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
             'gsutil cat -r 100-200 gs://project_A/sample_1.bai',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
@@ -26,7 +26,7 @@ class IgvAPITest(AuthenticationTestCase):
         url = reverse(fetch_igv_track, args=['R0001_1kg', 'gs://fc-secure-project_A/sample_1.cram.gz'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual([val.decode('utf-8') for val in response.streaming_content], STREAMING_READS_CONTENT)
+        self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
             'gsutil -u anvil-datastorage cat gs://fc-secure-project_A/sample_1.cram.gz | gunzip -c -q - ',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
@@ -41,13 +41,13 @@ class IgvAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
-        self.assertListEqual([val.decode('utf-8') for val in response.streaming_content], STREAMING_READS_CONTENT[:2])
+        self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT[:2])
         mock_file.seek.assert_called_with(100)
 
         # test no byte range
         mock_file.reset_mock()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual([val.decode('utf-8') for val in response.streaming_content], STREAMING_READS_CONTENT)
+        self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_file.seek.assert_not_called()
 
