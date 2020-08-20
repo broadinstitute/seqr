@@ -170,7 +170,6 @@ def deploy_secrets(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-#kibana_admin
     print_separator("secrets")
 
     create_namespace(settings)
