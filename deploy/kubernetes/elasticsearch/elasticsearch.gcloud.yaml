@@ -24,6 +24,9 @@ spec:
     config:
       node.master: true
       node.data: false
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
     podTemplate:
       metadata:
         labels:
@@ -43,6 +46,9 @@ spec:
     config:
       node.master: false
       node.data: false
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
     podTemplate:
       metadata:
         labels:
@@ -62,6 +68,9 @@ spec:
     config:
       node.master: false
       node.data: true
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
     podTemplate:
       metadata:
         labels:
@@ -84,6 +93,12 @@ spec:
               memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
             limits:
               memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
+# for use in mounting multiple disks to copy data - should not be used for real in production
+#          volumeMounts:
+#          - name: storage
+#            mountPath: /data
+#        volumes:
+#        - name: storage
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
@@ -93,4 +108,13 @@ spec:
         storageClassName: ssd-storage-class
         resources:
           requests:
-            storage: {{ ELASTICSEARCH_DISK_SIZE }}
+            storage: {{ ES_DATA_DISK_SIZE }}
+# for use in mounting multiple disks to copy data - should not be used for real in production
+#    - metadata:
+#        name: storage
+#      spec:
+#        accessModes: [ "ReadWriteOnce" ]
+#        storageClassName: ssd-storage-class
+#        resources:
+#          requests:
+#            storage: {{ ES_DATA_DISK_SIZE }}

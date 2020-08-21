@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ DISK_NAME }}
+  namespace: {{ NAMESPACE }}
+spec:
+  capacity:
+    storage: {{ ES_DATA_DISK_SIZE }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ssd-storage-class
+  gcePersistentDisk:
+    fsType: ext4
+    pdName: {{ DISK_NAME }}

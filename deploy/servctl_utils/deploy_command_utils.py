@@ -4,7 +4,6 @@ import logging
 import os
 from pprint import pformat
 
-import tempfile
 import time
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
@@ -531,16 +530,20 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
     logger.addHandler(sh)
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
-    # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
-    input_base_dir = settings["BASE_DIR"]
-    output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
     template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
                           glob.glob("deploy/kubernetes/*/*.yaml") + \
                           glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
-    for file_path in template_file_paths:
-        process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
+    _process_templates(settings, template_file_paths)
 
     return settings
+
+
+def _process_templates(settings, template_file_paths):
+    # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
+    input_base_dir = settings["BASE_DIR"]
+    output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
+    for file_path in template_file_paths:
+        process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
 
 def print_separator(label):
     message = "       DEPLOY %s       " % (label,)
@@ -622,84 +625,53 @@ def _init_cluster_gcloud(settings):
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
 
-    # create disks from snapshots
-    created_disks = []
-    for i, snapshot_name in enumerate([d.strip() for d in settings.get("CREATE_FROM_SNAPSHOTS", "").split(",") if d]):
-        disk_name_prefix = 'dev-' if settings['DEPLOYMENT_TYPE'] == 'dev' else ''
-        disk_name = 'es-data-{}{}'.format(disk_name_prefix, i+1)
-        run(" ".join([
-            "gcloud compute disks create " + disk_name,
-            "--zone %(GCLOUD_ZONE)s",
-            "--type pd-ssd",
-            "--source-snapshot " + snapshot_name,
-        ]) % settings, errors_to_ignore=["lready exists"])
+    _init_gcloud_disks(settings)
 
-        created_disks.append(disk_name)
+def _init_gcloud_disks(settings):
+    disks_to_create = {}
+    for disk in [d.strip() for d in settings['DISKS'].split(',') if d]:
+        num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
+        disks_to_create[disk] = num_disks
 
-    if created_disks:
-        settings["CREATE_WITH_EXISTING_DISKS"] = ",".join(created_disks)
+    created_disks = {}
+    for label, num_disks in disks_to_create.items():
+        setting_prefix = label.upper().replace('-', '_')
 
-    # create PersistentVolume objects for disk
-    namespace = settings["NAMESPACE"]
-    for i, existing_disk_name in enumerate([d.strip() for d in settings.get("CREATE_WITH_EXISTING_DISKS", "").split(",") if d]):
-        file_path = None
-        existing_disk_name = existing_disk_name.strip()
-        elasticsearch_disk_size = settings["ELASTICSEARCH_DISK_SIZE"]
-        with tempfile.NamedTemporaryFile("w") as f:
-            f.write("""apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: %(existing_disk_name)s
-  namespace: %(namespace)s
-spec:
-  capacity:
-    storage: %(elasticsearch_disk_size)s
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: ssd-storage-class
-  gcePersistentDisk:
-    fsType: ext4
-    pdName: %(existing_disk_name)s
-""" % locals())
-            f.flush()
-            file_path = f.name
-            run("kubectl create -f %(file_path)s"  % locals(), print_command=True, errors_to_ignore=["already exists"])
+        snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
+        if snapshots and len(snapshots) != num_disks:
+            raise Exception('Invalid configuration for {}: {} disks to create and {} snapshots'.format(
+                label, num_disks, len(snapshots)
+            ))
 
-    # create elasticsearch disks storage class
-    #run(" ".join([
-    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
-    #]))
+        for i in range(num_disks):
+            disk_name = '{cluster_name}-{label}-disk{suffix}'.format(
+                cluster_name=settings['CLUSTER_NAME'], label=label, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
 
-    #run(" ".join([
-    #    "gcloud compute disks create %(CLUSTER_NAME)s-elasticsearch-disk-0  --type=pd-ssd --zone=us-central1-b --size=%(ELASTICSEARCH_DISK_SIZE)sGi" % settings,
-    #]), errors_to_ignore=["already exists"])
+            command = [
+                'gcloud compute disks create', disk_name, '--zone', settings['GCLOUD_ZONE'],
+            ]
+            if settings.get('{}_DISK_TYPE'.format(setting_prefix)):
+                command += ['--type', settings['{}_DISK_TYPE'.format(setting_prefix)]]
+            if snapshots:
+                command += ['--source-snapshot', snapshots[i]]
+            else:
+                command += ['--size', str(settings['{}_DISK_SIZE'.format(setting_prefix)])]
 
-    #run(" ".join([
-    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-persistent-volume.yaml" % settings,
-    #]))
+            run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
 
+            if label not in created_disks:
+                created_disks[label] = []
+            created_disks[label].append(disk_name)
 
-    # if cluster was already created previously, update its size to match CLUSTER_NUM_NODES
-    #run(" ".join([
-    #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
-    #]), is_interactive=True)
-
-    # create persistent disks
-    deployment_targets = DEPLOYMENT_TARGETS[settings['DEPLOY_TO']]
-    disks_to_create = []
-    if 'postgres' in deployment_targets:
-        disks_to_create.append('postgres')
-    if 'seqr' in deployment_targets:
-        disks_to_create.append('seqr-static-files')
-    for label in disks_to_create:
-        run(" ".join([
-            "gcloud compute disks create",
-            "--zone %(GCLOUD_ZONE)s",
-            "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
-            "%(CLUSTER_NAME)s-"+label+"-disk",
-            ]) % settings, verbose=True, errors_to_ignore=["already exists"])
-
+    for disk_type, disk_names in created_disks.items():
+        template_path = 'deploy/kubernetes/gcloud/persistent-volumes/{}.yaml'.format(disk_type)
+        if os.path.isfile(template_path):
+            for disk_name in disk_names:
+                volume_settings = {'DISK_NAME': disk_name}
+                volume_settings.update(settings)
+                _process_templates(volume_settings, [template_path])
+                run('kubectl create -f {}/{}'.format(settings['DEPLOYMENT_TEMP_DIR'], template_path),
+                    print_command=True, errors_to_ignore=['already exists'])
 
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
