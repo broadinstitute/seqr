@@ -704,7 +704,6 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        act_row = next(row for row in response_json['rows'] if row['subject_id'] == 'NA20885')
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
     @mock.patch('seqr.views.apis.staff_api.MAX_SAVED_VARIANTS', 1)
