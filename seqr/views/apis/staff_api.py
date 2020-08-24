@@ -236,7 +236,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
-        project, individual_samples, _get_saved_known_gene_variants_by_family, include_collaborator=False)
+        project, individual_samples, include_collaborator=False)
 
     variant_columns = []
     for i in range(max_saved_variants):
@@ -260,7 +260,7 @@ def sample_metadata_export(request, project_guid):
         project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
-        project, individual_samples, _get_parsed_saved_discovery_variants_by_family, include_collaborator=True)
+        project, individual_samples, include_collaborator=True)
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for rows in [sample_rows, family_rows, discovery_rows]:
@@ -285,7 +285,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_family, include_collaborator=False):
+def _parse_anvil_metadata(project, individual_samples, include_collaborator=False):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -304,7 +304,7 @@ def _parse_anvil_metadata(project, individual_samples, get_saved_variants_by_fam
 
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), include_collaborator=include_collaborator)
 
-    saved_variants_by_family = get_saved_variants_by_family(list(samples_by_family.keys()))
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family, gene_ids, max_saved_variants = _process_saved_variants(
         saved_variants_by_family, family_individual_affected_guids)
     genes_by_id = get_genes(gene_ids)
@@ -412,24 +412,6 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual
     return {sample.individual: sample for sample in loaded_samples}
-
-
-def _get_saved_known_gene_variants_by_family(families):
-    tag_type = VariantTagType.objects.get(name='Known gene for phenotype')
-
-    project_saved_variants = SavedVariant.objects.select_related('family').filter(
-        varianttag__variant_tag_type=tag_type,
-        family__in=families,
-    )
-
-    project_saved_variants_json = get_json_for_saved_variants(project_saved_variants, add_details=True)
-
-    saved_variants_by_family = defaultdict(list)
-    for variant in project_saved_variants_json:
-        for family_guid in variant['familyGuids']:
-            saved_variants_by_family[family_guid].append(variant)
-
-    return saved_variants_by_family
 
 
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):

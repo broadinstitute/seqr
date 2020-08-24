@@ -629,7 +629,7 @@ class StaffAPITest(AuthenticationTestCase):
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
             'dbgap_subject_id_1', 'No', 'Self', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
             'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
-            'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
+            'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Tier 1']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
         self.assertEqual(sample_file[0], '\t'.join([
@@ -661,6 +661,10 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+            '-', '-', '-']), discovery_file)
+        self.assertIn('\t'.join([
+            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-']), discovery_file)
 
     @responses.activate
