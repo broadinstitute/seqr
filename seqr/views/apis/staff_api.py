@@ -156,17 +156,18 @@ def seqr_stats(request):
 
 SUBJECT_TABLE_COLUMNS = [
     'entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_submission', 'dbgap_study_id',
-    'dbgap_subject_id', 'multiple_datasets', 'proband_relationship', 'sex', 'ancestry', 'ancestry_detail',
-    'age_at_last_observation', 'phenotype_group', 'disease_id', 'disease_description', 'affected_status',
-    'congenital_status', 'age_of_onset', 'hpo_present', 'hpo_absent', 'phenotype_description', 'solve_state',
+    'dbgap_subject_id', 'multiple_datasets', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
+    'proband_relationship', 'sex', 'ancestry', 'ancestry_detail', 'age_at_last_observation', 'phenotype_group',
+    'disease_id', 'disease_description', 'affected_status', 'congenital_status', 'age_of_onset', 'hpo_present',
+    'hpo_absent', 'phenotype_description', 'solve_state',
 ]
 SAMPLE_TABLE_COLUMNS = [
-    'entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sample_source', 'sequencing_center', 'data_type',
-    'date_data_generation'
+    'entity:sample_id', 'subject_id', 'sample_id', 'dbgap_sample_id', 'sequencing_center', 'sample_source',
+    'tissue_affected_status',
 ]
 FAMILY_TABLE_COLUMNS = [
-    'entity:family_id', 'subject_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'family_relationship',
-    'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail', 'family_history', 'family_onset',
+    'entity:family_id', 'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_image', 'pedigree_detail',
+    'family_history', 'family_onset',
 ]
 DISCOVERY_TABLE_CORE_COLUMNS = ['entity:discovery_id', 'subject_id', 'sample_id']
 DISCOVERY_TABLE_VARIANT_COLUMNS = [
@@ -261,15 +262,18 @@ def sample_metadata_export(request, project_guid):
 
     subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
         project, individual_samples, include_collaborator=True)
+    family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
-    for rows in [sample_rows, family_rows, discovery_rows]:
+    for rows in [sample_rows, discovery_rows]:
         for row in rows:
             rows_by_subject_id[row['subject_id']].update(row)
+
 
     rows = list(rows_by_subject_id.values())
     all_features = set()
     for row in rows:
+        row.update(family_rows_by_id[row['family_id']])
         row['MME'] = 'Y' if row['family_guid'] in mme_family_guids else 'N'
         if row['ancestry_detail']:
             row['ancestry'] = row['ancestry_detail']
@@ -335,6 +339,7 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
 
         family_subject_row = {
             'family_guid': family.guid,
+            'family_id': family.family_id,
             'pmid_id': family.pubmed_ids[0].replace('PMID:', '').strip() if family.pubmed_ids else '',
             'phenotype_description': (family.coded_phenotype or '').replace(',', ';').replace('\t', ' '),
             'num_saved_variants': len(saved_variants),
@@ -351,11 +356,14 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
         affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family.guid]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
-        base_family_row = {
+        family_row = {
+            'entity:family_id': family.family_id,
+            'family_id': family.family_id,
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
         }
         if len(affected_individual_guids) > 1:
-            base_family_row['family_history'] = 'Yes'
+            family_row['family_history'] = 'Yes'
+        family_rows.append(family_row)
 
         parsed_variants = [
             _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id)
@@ -368,16 +376,13 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
             dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
             has_dbgap_submission = sample.sample_type in dbgap_submission
 
-            subject_row = _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants)
+            subject_row = _get_subject_row(
+                individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
             subject_row.update(family_subject_row)
             subject_rows.append(subject_row)
 
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
             sample_rows.append(sample_row)
-
-            family_row = _get_family_row(family, individual, individual_id_map)
-            family_row.update(base_family_row)
-            family_rows.append(family_row)
 
             discovery_row = _get_discovery_row(sample, parsed_variants, male_individual_guids)
             discovery_rows.append(discovery_row)
@@ -490,7 +495,7 @@ def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_f
         })
     return variant['genotypes'], parsed_variant
 
-def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants):
+def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map):
     features_present = [feature['id'] for feature in individual.features or []]
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
@@ -518,6 +523,8 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'multiple_datasets': 'Yes' if multiple_datasets else 'No',
         'dbgap_submission': 'No',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
+        'paternal_id': individual_id_map.get(individual.father_id, ''),
+        'maternal_id': individual_id_map.get(individual.mother_id, ''),
     }
     if has_dbgap_submission:
         subject_row.update({
@@ -542,15 +549,6 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
-
-def _get_family_row(family, individual, individual_id_map):
-    return {
-        'entity:family_id': individual.individual_id,
-        'subject_id': individual.individual_id,
-        'family_id': family.family_id,
-        'paternal_id': individual_id_map.get(individual.father_id, ''),
-        'maternal_id': individual_id_map.get(individual.mother_id, ''),
-    }
 
 def _get_discovery_row(sample, parsed_variants, male_individual_guids):
     individual = sample.individual
