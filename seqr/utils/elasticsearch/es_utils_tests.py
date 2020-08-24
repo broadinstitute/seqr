@@ -550,6 +550,7 @@ MAPPING_FIELDS = [
     'dbnsfp_REVEL_score',
     'dbnsfp_GERP_RS',
     'splice_ai_delta_score',
+    'splice_ai_splice_consequence',
     'dbnsfp_FATHMM_pred',
     'primate_ai_score',
     'dbnsfp_SIFT_pred',

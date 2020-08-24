@@ -269,6 +269,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': 'splice_ai'},
+    'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
