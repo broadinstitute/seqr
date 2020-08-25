@@ -394,7 +394,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "NA20885",
+    "entity:family_id": "11",
     "entity:discovery_id": "NA20885",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
@@ -621,35 +621,32 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(subject_file[0], '\t'.join([
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
             '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets',
-            '09-proband_relationship', '10-sex', '11-ancestry', '12-ancestry_detail', '13-age_at_last_observation',
-            '14-phenotype_group', '15-disease_id', '16-disease_description', '17-affected_status',
-            '18-congenital_status', '19-age_of_onset', '20-hpo_present', '21-hpo_absent', '22-phenotype_description',
-            '23-solve_state']))
+            '09-family_id', '10-paternal_id', '11-maternal_id', '12-twin_id', '13-proband_relationship', '14-sex',
+            '15-ancestry', '16-ancestry_detail', '17-age_at_last_observation', '18-phenotype_group', '19-disease_id',
+            '20-disease_description', '21-affected_status', '22-congenital_status', '23-age_of_onset', '24-hpo_present',
+            '25-hpo_absent', '26-phenotype_description', '27-solve_state']))
         self.assertIn(u'\t'.join([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', 'Self', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
-            'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
-            'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
+            'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
+            'Tier 1']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
         self.assertEqual(sample_file[0], '\t'.join([
-            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sample_source',
-            '05-sequencing_center', '06-data_type', '07-date_data_generation']))
+            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
+            '05-sample_source', '06-tissue_affected_status',]))
         self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', '-', 'Broad', 'WES', '2017-02-05']),
+            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
             sample_file,
         )
 
         family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
         self.assertEqual(family_file[0], '\t'.join([
-            'entity:family_id', '01-subject_id', '02-family_id', '03-paternal_id', '04-maternal_id', '05-twin_id',
-            '06-family_relationship', '07-consanguinity', '08-consanguinity_detail', '09-pedigree_image',
-            '10-pedigree_detail', '11-family_history', '12-family_onset']))
+            'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
+            '05-pedigree_detail', '06-family_history', '07-family_onset']))
         self.assertIn('\t'.join([
-            'NA19675_1', 'NA19675_1', '1', 'NA19678', 'NA19679', '-', '-', 'Present', '-', '-', '-', '-', '-',
-        ]), family_file)
-        self.assertIn('\t'.join([
-            'NA19678', 'NA19678', '1', '-', '-', '-', '-', 'Present', '-', '-', '-', '-', '-',
+            '1', '1', 'Present', '-', '-', '-', '-', '-',
         ]), family_file)
 
         discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
@@ -661,6 +658,10 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+            '-', '-', '-']), discovery_file)
+        self.assertIn('\t'.join([
+            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-']), discovery_file)
 
     @responses.activate
