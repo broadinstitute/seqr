@@ -3,7 +3,7 @@ import mock
 
 from django.urls.base import reverse
 
-from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
@@ -707,10 +707,15 @@ class SavedVariantAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        self.assertSetEqual(
-            set(response.json().keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100',
-            'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
+        self.assertDictEqual(
+            response.json(),
+            {'SV0000002_1248367227_r0390_100': None, 'SV0000001_2103343353_r0390_100': None,
+            'SV0059957_11562437_f019313_1': None, 'SV0059956_11560662_f019313_1': None}
+        )
+
+        mock_get_variants.assert_called_with(
+            [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')],
+            ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G']
         )
 
     def test_update_variant_main_transcript(self):
