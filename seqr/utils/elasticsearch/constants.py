@@ -242,6 +242,7 @@ NESTED_FIELDS = {
     }.items()
 }
 
+GRCH38_LOCUS_FIELD = 'rg37_locus'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -255,6 +256,7 @@ CORE_FIELDS_CONFIG = {
     'svType': {},
     'variantId': {},
     'xpos': {'format_value': int},
+    GRCH38_LOCUS_FIELD: {},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -269,6 +271,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': 'splice_ai'},
+    'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
