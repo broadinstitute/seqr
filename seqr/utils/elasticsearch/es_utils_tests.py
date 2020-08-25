@@ -2104,7 +2104,7 @@ class EsUtilsTest(TestCase):
         }
 
         # Test using rg37_locus from pipeline
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertListEqual(variants, [expected_grch38_variant])
         mock_liftover.assert_not_called()
@@ -2120,7 +2120,7 @@ class EsUtilsTest(TestCase):
             'liftedOverChrom': None,
             'liftedOverPos': None,
         })
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertListEqual(variants, [expected_no_lift_grch38_variant])
         self.assertIsNone(_liftover_grch38_to_grch37())
@@ -2129,7 +2129,7 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         mock_liftover.side_effect = None
         mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
-        variants, total_results = get_es_variants(results_model, num_results=2)
+        variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
         self.assertListEqual(variants, [expected_grch38_variant])
         self.assertIsNotNone(_liftover_grch38_to_grch37())
