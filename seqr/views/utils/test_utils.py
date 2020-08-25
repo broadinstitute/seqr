@@ -414,7 +414,8 @@ PARSED_VARIANTS = [
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': 25.9, 'metasvm': None, 'primate_ai': None,
-                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None},
+                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+                        'splice_ai_consequence': None},
         'ref': 'TC',
         'rsid': None,
         'transcripts': {
@@ -472,7 +473,7 @@ PARSED_VARIANTS = [
         'predictions': {
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
             'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': 1, 'gerp_rs': None,
-            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None, 'splice_ai_consequence': None,
         },
         'ref': 'GAGA',
         'rsid': None,
@@ -523,7 +524,8 @@ PARSED_SV_VARIANT = {
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
-                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374},
+                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374,
+                    'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
     'transcripts': {

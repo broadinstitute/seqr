@@ -26,8 +26,9 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_NAME,
                      '--family-id={}'.format(FAMILY_ID))
 
+        family_1 = Family.objects.get(id=1)
         mock_get_variants.assert_called_with(
-            set(Family.objects.filter(id=1)), {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C'})
+            [family_1], ['1-1562437-G-C', '1-46859832-G-A','21-3343353-GAGA-G'])
 
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
@@ -44,12 +45,12 @@ class ReloadSavedVariantJsonTest(TestCase):
         call_command('reload_saved_variant_json')
 
         self.assertEqual(mock_get_variants.call_count, 2)
+        family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
-                set(Family.objects.filter(id__in=[1, 2])),
-                {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C', '12-48367227-TC-T'},
+                [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'],
             ),
-            mock.call(set(Family.objects.filter(id=11)), {'12-48367227-TC-T', 'prefix_19107_DEL'})
+            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL'])
         ], any_order=True)
 
         logger_info_calls = [
@@ -74,8 +75,7 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_GUID,
                      '--family-id={}'.format(FAMILY_ID))
 
-        mock_get_variants.assert_called_with(
-            set(Family.objects.filter(id=1)), {'21-3343353-GAGA-G', '1-46859832-G-A', '1-1562437-G-C'})
+        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'])
 
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),

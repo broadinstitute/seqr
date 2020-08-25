@@ -15,7 +15,8 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
-    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, SV_DOC_TYPE, QUALITY_FIELDS
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, SV_DOC_TYPE, QUALITY_FIELDS, \
+    GRCH38_LOCUS_FIELD
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -600,20 +601,36 @@ class EsSearch(object):
                     gen['start'] = None
                     gen['end'] = None
 
+        result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
+        result.update({
+            field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
+            for field_name, fields in NESTED_FIELDS.items()
+        })
+        if hasattr(raw_hit.meta, 'sort'):
+            result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
+
+
         genome_version = self.index_metadata[index_name]['genomeVersion']
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
-        liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-        if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
-            if liftover_grch38_to_grch37:
-                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                )
-                if grch37_coord and grch37_coord[0]:
-                    lifted_over_genome_version = GENOME_VERSION_GRCh37
-                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                    lifted_over_pos = grch37_coord[0][1]
+        grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
+        if genome_version == GENOME_VERSION_GRCh38:
+            if grch37_locus:
+                lifted_over_genome_version = GENOME_VERSION_GRCh37
+                lifted_over_chrom = grch37_locus['contig']
+                lifted_over_pos = grch37_locus['position']
+            else:
+                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/macarthur-lab/seqr/issues/1010)
+                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+                if liftover_grch38_to_grch37:
+                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                        'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                    )
+                    if grch37_coord and grch37_coord[0]:
+                        lifted_over_genome_version = GENOME_VERSION_GRCh37
+                        lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                        lifted_over_pos = grch37_coord[0][1]
 
         populations = {
             population: _get_field_values(
@@ -634,14 +651,6 @@ class EsSearch(object):
             transcripts[transcript['geneId']].append(transcript)
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
-
-        result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
-        result.update({
-            field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
-            for field_name, fields in NESTED_FIELDS.items()
-        })
-        if hasattr(raw_hit.meta, 'sort'):
-            result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
         result.update({
             'familyGuids': sorted(family_guids),

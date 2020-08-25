@@ -25,7 +25,7 @@ def update_project_saved_variant_json(project, family_id=None):
         variant_ids.add(v.variant_id)
         saved_variants_map[(v.variant_id, v.family.guid)] = v
 
-    variants_json = get_es_variants_for_variant_ids(families, variant_ids)
+    variants_json = get_es_variants_for_variant_ids(sorted(families, key=lambda f: f.guid), sorted(variant_ids))
 
     updated_saved_variant_guids = []
     for var in variants_json:

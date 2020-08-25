@@ -394,7 +394,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "NA20885",
+    "entity:family_id": "11",
     "entity:discovery_id": "NA20885",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
@@ -423,40 +423,40 @@ EXPECTED_SAMPLE_METADATA_ROW = {
   }
 
 SAMPLE_QC_DATA = [
-    'PCT_CONTAMINATION	AL_PCT_CHIMERAS	HS_PCT_TARGET_BASES_20X	seqr_id	data_type	filter_flags	qc_platform	qc_pop	pop_PC1	pop_PC2	pop_PC3	pop_PC4	pop_PC5	pop_PC6	qc_metrics_filters	sample_qc.call_rate	sample_qc.n_called	sample_qc.n_not_called	sample_qc.n_filtered	sample_qc.n_hom_ref	sample_qc.n_het	sample_qc.n_hom_var	sample_qc.n_non_ref	sample_qc.n_singleton	sample_qc.n_snp	sample_qc.n_insertion	sample_qc.n_deletion	sample_qc.n_transition	sample_qc.n_transversion	sample_qc.n_star	sample_qc.r_ti_tv	sample_qc.r_het_hom_var	sample_qc.r_insertion_deletion	sample_qc.f_inbreeding.f_stat	sample_qc.f_inbreeding.n_called	sample_qc.f_inbreeding.expected_homs	sample_qc.f_inbreeding.observed_homs\n',
-    '1.6E-01	5.567E-01	9.2619E+01	MANZ_1169_DNA	WES	[]	WES-010230 Standard Germline Exome	nfe	6.0654E-02	6.0452E-02	-6.2635E-03	-4.3252E-03	-2.1807E-02	-1.948E-02	["n_snp"]	7.1223E-01	14660344	5923237	0	14485322	114532	60490	175022	585	195114	18516	21882	133675	61439	0	2.1757E+00	1.8934E+00	8.4617E-01	5.3509E-01	14660344	1.4414E+07	14545812\n',
-    'NA	NA	NA	NA	WES	[]	Unknown	nfe	4.6581E-02	5.7881E-02	-5.6011E-03	3.5992E-03	-2.9438E-02	-9.6098E-03	["r_insertion_deletion"]	6.2631E-01	12891805	7691776	0	12743977	97831	49997	147828	237	165267	15474	17084	114154	51113	0	2.2334E+00	1.9567E+00	9.0576E-01	5.4467E-01	12891805	1.2677E+07	12793974\n',
-    'NA	NA	NA	NA19675_1	WES	[]	Unknown	amr	2.2367E-02	-1.9772E-02	6.3769E-02	2.5774E-03	-1.6655E-02	2.0457E-03	["r_ti_tv","n_deletion","n_snp","r_insertion_deletion","n_insertion"]	1.9959E-01	4108373	16475208	0	3998257	67927	42189	110116	18572	127706	13701	10898	82568	45138	0	1.8292E+00	1.6101E+00	1.2572E+00	5.3586E-02	4108373	4.0366E+06	4040446\n',
-    '5.6E-01	3.273E-01	8.1446E+01	NA19678	WES	["coverage"]	Standard Exome Sequencing v4	sas	2.4039E-02	-6.9517E-02	-4.1485E-02	1.421E-01	7.5583E-02	-2.0986E-02	["n_insertion"]	4.6084E-01	9485820	11097761	0	9379951	59871	45998	105869	736	136529	6857	8481	95247	41282	0	2.3072E+00	1.3016E+00	8.0851E-01	5.2126E-01	9485820	9.3608E+06	9425949\n',
-    '5.4E-01	5.0841E+00	8.7288E+01	HG00732	WES	["chimera"]	Standard Germline Exome v5	nfe	5.2785E-02	5.547E-02	-5.82E-03	2.7961E-02	-4.2259E-02	3.0271E-02	["n_insertion","r_insertion_deletion"]	6.8762E-01	14153622	6429959	0	13964844	123884	64894	188778	1719	202194	29507	21971	138470	63724	0	2.173E+00	1.909E+00	1.343E+00	4.924E-01	14153622	1.391E+07	14029738\n',
-    '2.79E+00	1.8996E+01	7.352E+01	HG00733	WES	["contamination","not_real_flag"]	Standard Germline Exome v5	oth	-1.5417E-01	2.8868E-02	-1.3819E-02	4.1915E-02	-4.0001E-02	7.6392E-02	["n_insertion","r_insertion_deletion", "not_real_filter"]	6.1147E-01	12586314	7997267	0	12383958	140784	61572	202356	8751	204812	38051	21065	140282	64530	0	2.1739E+00	2.2865E+00	1.8064E+00	3.6592E-01	12586314	1.2364E+07	12445530\n',
+    b'PCT_CONTAMINATION	AL_PCT_CHIMERAS	HS_PCT_TARGET_BASES_20X	seqr_id	data_type	filter_flags	qc_platform	qc_pop	pop_PC1	pop_PC2	pop_PC3	pop_PC4	pop_PC5	pop_PC6	qc_metrics_filters	sample_qc.call_rate	sample_qc.n_called	sample_qc.n_not_called	sample_qc.n_filtered	sample_qc.n_hom_ref	sample_qc.n_het	sample_qc.n_hom_var	sample_qc.n_non_ref	sample_qc.n_singleton	sample_qc.n_snp	sample_qc.n_insertion	sample_qc.n_deletion	sample_qc.n_transition	sample_qc.n_transversion	sample_qc.n_star	sample_qc.r_ti_tv	sample_qc.r_het_hom_var	sample_qc.r_insertion_deletion	sample_qc.f_inbreeding.f_stat	sample_qc.f_inbreeding.n_called	sample_qc.f_inbreeding.expected_homs	sample_qc.f_inbreeding.observed_homs\n',
+    b'1.6E-01	5.567E-01	9.2619E+01	MANZ_1169_DNA	WES	[]	WES-010230 Standard Germline Exome	nfe	6.0654E-02	6.0452E-02	-6.2635E-03	-4.3252E-03	-2.1807E-02	-1.948E-02	["n_snp"]	7.1223E-01	14660344	5923237	0	14485322	114532	60490	175022	585	195114	18516	21882	133675	61439	0	2.1757E+00	1.8934E+00	8.4617E-01	5.3509E-01	14660344	1.4414E+07	14545812\n',
+    b'NA	NA	NA	NA	WES	[]	Unknown	nfe	4.6581E-02	5.7881E-02	-5.6011E-03	3.5992E-03	-2.9438E-02	-9.6098E-03	["r_insertion_deletion"]	6.2631E-01	12891805	7691776	0	12743977	97831	49997	147828	237	165267	15474	17084	114154	51113	0	2.2334E+00	1.9567E+00	9.0576E-01	5.4467E-01	12891805	1.2677E+07	12793974\n',
+    b'NA	NA	NA	NA19675_1	WES	[]	Unknown	amr	2.2367E-02	-1.9772E-02	6.3769E-02	2.5774E-03	-1.6655E-02	2.0457E-03	["r_ti_tv","n_deletion","n_snp","r_insertion_deletion","n_insertion"]	1.9959E-01	4108373	16475208	0	3998257	67927	42189	110116	18572	127706	13701	10898	82568	45138	0	1.8292E+00	1.6101E+00	1.2572E+00	5.3586E-02	4108373	4.0366E+06	4040446\n',
+    b'5.6E-01	3.273E-01	8.1446E+01	NA19678	WES	["coverage"]	Standard Exome Sequencing v4	sas	2.4039E-02	-6.9517E-02	-4.1485E-02	1.421E-01	7.5583E-02	-2.0986E-02	["n_insertion"]	4.6084E-01	9485820	11097761	0	9379951	59871	45998	105869	736	136529	6857	8481	95247	41282	0	2.3072E+00	1.3016E+00	8.0851E-01	5.2126E-01	9485820	9.3608E+06	9425949\n',
+    b'5.4E-01	5.0841E+00	8.7288E+01	HG00732	WES	["chimera"]	Standard Germline Exome v5	nfe	5.2785E-02	5.547E-02	-5.82E-03	2.7961E-02	-4.2259E-02	3.0271E-02	["n_insertion","r_insertion_deletion"]	6.8762E-01	14153622	6429959	0	13964844	123884	64894	188778	1719	202194	29507	21971	138470	63724	0	2.173E+00	1.909E+00	1.343E+00	4.924E-01	14153622	1.391E+07	14029738\n',
+    b'2.79E+00	1.8996E+01	7.352E+01	HG00733	WES	["contamination","not_real_flag"]	Standard Germline Exome v5	oth	-1.5417E-01	2.8868E-02	-1.3819E-02	4.1915E-02	-4.0001E-02	7.6392E-02	["n_insertion","r_insertion_deletion", "not_real_filter"]	6.1147E-01	12586314	7997267	0	12383958	140784	61572	202356	8751	204812	38051	21065	140282	64530	0	2.1739E+00	2.2865E+00	1.8064E+00	3.6592E-01	12586314	1.2364E+07	12445530\n',
 ]
 
 SAMPLE_QC_DATA_NO_DATA_TYPE = [
-    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
-    '03133B_2	n/a	[]	Standard Germline Exome v5	nfe	[]\n',
+    b'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    b'03133B_2	n/a	[]	Standard Germline Exome v5	nfe	[]\n',
 ]
 
 SAMPLE_QC_DATA_MORE_DATA_TYPE = [
-    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
-    '03133B_2	WES	[]	Standard Germline Exome v5	nfe	[]\n',
-    '03133B_3	WGS	[]	Standard Germline Exome v5	nfe	[]\n',
+    b'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    b'03133B_2	WES	[]	Standard Germline Exome v5	nfe	[]\n',
+    b'03133B_3	WGS	[]	Standard Germline Exome v5	nfe	[]\n',
 ]
 
 
 SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE = [
-    'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
-    '03133B_2	UNKNOWN	[]	Standard Germline Exome v5	nfe	[]\n',
+    b'seqr_id	data_type	filter_flags	qc_platform	qc_pop	qc_metrics_filters\n',
+    b'03133B_2	UNKNOWN	[]	Standard Germline Exome v5	nfe	[]\n',
 ]
 
 SAMPLE_SV_QC_DATA = [
-    'sample	lt100_raw_calls	lt10_highQS_rare_calls\n',
-    'RP-123_MANZ_1169_DNA_v1_Exome_GCP	FALSE	TRUE\n',
-    'RP-123_NA_v1_Exome_GCP	TRUE	FALSE\n',
-    'RP-123_NA19675_1_v1_Exome_GCP	TRUE	TRUE\n',
-    'RP-123_NA19678_v1_Exome_GCP	TRUE	FALSE\n',
-    'RP-123_HG00732_v1_Exome_GCP	FALSE	TRUE\n',
-    'RP-123_HG00733_v1_Exome_GCP	FALSE	FALSE\n',
+    b'sample	lt100_raw_calls	lt10_highQS_rare_calls\n',
+    b'RP-123_MANZ_1169_DNA_v1_Exome_GCP	FALSE	TRUE\n',
+    b'RP-123_NA_v1_Exome_GCP	TRUE	FALSE\n',
+    b'RP-123_NA19675_1_v1_Exome_GCP	TRUE	TRUE\n',
+    b'RP-123_NA19678_v1_Exome_GCP	TRUE	FALSE\n',
+    b'RP-123_HG00732_v1_Exome_GCP	FALSE	TRUE\n',
+    b'RP-123_HG00733_v1_Exome_GCP	FALSE	FALSE\n',
 ]
 
 
@@ -621,35 +621,32 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertEqual(subject_file[0], '\t'.join([
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
             '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets',
-            '09-proband_relationship', '10-sex', '11-ancestry', '12-ancestry_detail', '13-age_at_last_observation',
-            '14-phenotype_group', '15-disease_id', '16-disease_description', '17-affected_status',
-            '18-congenital_status', '19-age_of_onset', '20-hpo_present', '21-hpo_absent', '22-phenotype_description',
-            '23-solve_state']))
+            '09-family_id', '10-paternal_id', '11-maternal_id', '12-twin_id', '13-proband_relationship', '14-sex',
+            '15-ancestry', '16-ancestry_detail', '17-age_at_last_observation', '18-phenotype_group', '19-disease_id',
+            '20-disease_description', '21-affected_status', '22-congenital_status', '23-age_of_onset', '24-hpo_present',
+            '25-hpo_absent', '26-phenotype_description', '27-solve_state']))
         self.assertIn(u'\t'.join([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', 'Self', 'Male', '-', '-', '-', '-', 'OMIM:615120;OMIM:615123',
-            'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;', 'Affected', 'Adult onset', '-',
-            'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-', 'Unsolved']), subject_file)
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
+            'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
+            'Tier 1']), subject_file)
 
         sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
         self.assertEqual(sample_file[0], '\t'.join([
-            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sample_source',
-            '05-sequencing_center', '06-data_type', '07-date_data_generation']))
+            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
+            '05-sample_source', '06-tissue_affected_status',]))
         self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', '-', 'Broad', 'WES', '2017-02-05']),
+            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
             sample_file,
         )
 
         family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
         self.assertEqual(family_file[0], '\t'.join([
-            'entity:family_id', '01-subject_id', '02-family_id', '03-paternal_id', '04-maternal_id', '05-twin_id',
-            '06-family_relationship', '07-consanguinity', '08-consanguinity_detail', '09-pedigree_image',
-            '10-pedigree_detail', '11-family_history', '12-family_onset']))
+            'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
+            '05-pedigree_detail', '06-family_history', '07-family_onset']))
         self.assertIn('\t'.join([
-            'NA19675_1', 'NA19675_1', '1', 'NA19678', 'NA19679', '-', '-', 'Present', '-', '-', '-', '-', '-',
-        ]), family_file)
-        self.assertIn('\t'.join([
-            'NA19678', 'NA19678', '1', '-', '-', '-', '-', 'Present', '-', '-', '-', '-', '-',
+            '1', '1', 'Present', '-', '-', '-', '-', '-',
         ]), family_file)
 
         discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
@@ -661,6 +658,10 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+            '-', '-', '-']), discovery_file)
+        self.assertIn('\t'.join([
+            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-']), discovery_file)
 
     @responses.activate
@@ -730,8 +731,8 @@ class StaffAPITest(AuthenticationTestCase):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
-    @mock.patch('seqr.views.apis.staff_api.file_iter')
-    def test_upload_qc_pipeline_output(self, mock_file_iter):
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_upload_qc_pipeline_output(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output,)
         self.check_staff_login(url)
 
@@ -740,7 +741,7 @@ class StaffAPITest(AuthenticationTestCase):
         })
 
         # Test missing columns
-        mock_file_iter.return_value = ['', '']
+        mock_subprocess.return_value.stdout = [b'', b'']
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
@@ -748,25 +749,25 @@ class StaffAPITest(AuthenticationTestCase):
             'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop')
 
         # Test no data type error
-        mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE
+        mock_subprocess.return_value.stdout = SAMPLE_QC_DATA_NO_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'No data type detected')
 
         # Test multiple data types error
-        mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
+        mock_subprocess.return_value.stdout = SAMPLE_QC_DATA_MORE_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Multiple data types detected: wes ,wgs')
 
         # Test unexpected data type error
-        mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
+        mock_subprocess.return_value.stdout = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Unexpected data type detected: "unknown" (should be "exome" or "genome")')
 
         # Test normal functions
-        mock_file_iter.return_value = SAMPLE_QC_DATA
+        mock_subprocess.return_value.stdout = SAMPLE_QC_DATA
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -807,8 +808,8 @@ class StaffAPITest(AuthenticationTestCase):
         self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
         self.assertEqual(indiv.population, 'OTH')
 
-    @mock.patch('seqr.views.apis.staff_api.file_iter')
-    def test_upload_sv_qc(self, mock_file_iter):
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_upload_sv_qc(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output, )
         self.check_staff_login(url)
 
@@ -816,7 +817,7 @@ class StaffAPITest(AuthenticationTestCase):
             'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
         })
 
-        mock_file_iter.return_value = SAMPLE_SV_QC_DATA
+        mock_subprocess.return_value.stdout = SAMPLE_SV_QC_DATA
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

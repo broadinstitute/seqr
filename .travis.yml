@@ -6,6 +6,9 @@ python:
 node_js:
 - '11.8.0'
 
+services:
+- docker
+
 install:
 - ./install_dependencies.sh
 
@@ -14,6 +17,8 @@ script:
 - coverage report --fail-under=99
 - cd ui/
 - npm test
+- cd ..
+- ./test_local_deployment.sh
 
 addons:
   postgresql: '9.6'
