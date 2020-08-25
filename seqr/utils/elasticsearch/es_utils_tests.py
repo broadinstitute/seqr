@@ -600,6 +600,7 @@ MAPPING_FIELDS = [
     'topmed_AF',
     'topmed_AN',
     'gnomad_genomes_FAF_AF',
+    'rg37_locus',
 ]
 SV_MAPPING_FIELDS = [
     'start',

@@ -242,6 +242,7 @@ NESTED_FIELDS = {
     }.items()
 }
 
+GRCH38_LOCUS_FIELD = 'rg37_locus'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -255,6 +256,7 @@ CORE_FIELDS_CONFIG = {
     'svType': {},
     'variantId': {},
     'xpos': {'format_value': int},
+    GRCH38_LOCUS_FIELD: {},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
