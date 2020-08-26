@@ -105,7 +105,7 @@ spec:
       spec:
         accessModes:
           - ReadWriteOnce
-        storageClassName: ssd-storage-class
+        storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
         resources:
           requests:
             storage: {{ ES_DATA_DISK_SIZE }}
@@ -114,7 +114,7 @@ spec:
 #        name: storage
 #      spec:
 #        accessModes: [ "ReadWriteOnce" ]
-#        storageClassName: ssd-storage-class
+#        storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
 #        resources:
 #          requests:
 #            storage: {{ ES_DATA_DISK_SIZE }}

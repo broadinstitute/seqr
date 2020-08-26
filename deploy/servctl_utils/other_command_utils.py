@@ -7,7 +7,8 @@ import subprocess
 import sys
 import time
 
-from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running
+from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
+    wait_for_resource
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
 
@@ -304,6 +305,16 @@ def delete_component(component, deployment_target=None):
     """
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
+    elif component == 'elasticsearch':
+        run('kubectl delete elasticsearch elasticsearch', errors_to_ignore=['not found'])
+        # Deleting a released persistent volume does not delete the data on the underlying disk
+        wait_for_resource(
+            component, '{.items[0].status.phase}', 'Released', deployment_target=deployment_target, resource_type='pv')
+        pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
+        while pv:
+            run('kubectl delete pv {}'.format(pv))
+            pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
+
     elif component == "es-data":
         run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":

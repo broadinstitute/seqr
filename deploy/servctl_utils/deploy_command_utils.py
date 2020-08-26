@@ -213,6 +213,16 @@ def deploy_elasticsearch(settings):
 
     run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
+    # create persistent volumes
+    pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
+    disk_names = _get_disk_names('es-data', settings)
+    for disk_name in disk_names:
+        volume_settings = {'DISK_NAME': disk_name}
+        volume_settings.update(settings)
+        _process_templates(volume_settings, [pv_template_path])
+        run('kubectl create -f {}/{}'.format(settings['DEPLOYMENT_TEMP_DIR'], pv_template_path),
+            print_command=True, errors_to_ignore=['already exists'])
+
     deploy_pod("elasticsearch", settings, wait_until_pod_is_running=False)
 
     wait_for_not_resource(
@@ -628,25 +638,18 @@ def _init_cluster_gcloud(settings):
     _init_gcloud_disks(settings)
 
 def _init_gcloud_disks(settings):
-    disks_to_create = {}
-    for disk in [d.strip() for d in settings['DISKS'].split(',') if d]:
-        num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
-        disks_to_create[disk] = num_disks
+    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
+        setting_prefix = disk_label.upper().replace('-', '_')
 
-    created_disks = {}
-    for label, num_disks in disks_to_create.items():
-        setting_prefix = label.upper().replace('-', '_')
+        disk_names = _get_disk_names(disk_label, settings)
 
         snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
-        if snapshots and len(snapshots) != num_disks:
+        if snapshots and len(snapshots) != len(disk_names):
             raise Exception('Invalid configuration for {}: {} disks to create and {} snapshots'.format(
-                label, num_disks, len(snapshots)
+                disk_label, len(disk_names), len(snapshots)
             ))
 
-        for i in range(num_disks):
-            disk_name = '{cluster_name}-{label}-disk{suffix}'.format(
-                cluster_name=settings['CLUSTER_NAME'], label=label, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
-
+        for i, disk_name in enumerate(disk_names):
             command = [
                 'gcloud compute disks create', disk_name, '--zone', settings['GCLOUD_ZONE'],
             ]
@@ -659,19 +662,12 @@ def _init_gcloud_disks(settings):
 
             run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
 
-            if label not in created_disks:
-                created_disks[label] = []
-            created_disks[label].append(disk_name)
-
-    for disk_type, disk_names in created_disks.items():
-        template_path = 'deploy/kubernetes/gcloud/persistent-volumes/{}.yaml'.format(disk_type)
-        if os.path.isfile(template_path):
-            for disk_name in disk_names:
-                volume_settings = {'DISK_NAME': disk_name}
-                volume_settings.update(settings)
-                _process_templates(volume_settings, [template_path])
-                run('kubectl create -f {}/{}'.format(settings['DEPLOYMENT_TEMP_DIR'], template_path),
-                    print_command=True, errors_to_ignore=['already exists'])
+def _get_disk_names(disk, settings):
+    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
+    return [
+        '{cluster_name}-{disk}-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+    for i in range(num_disks)]
 
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying

@@ -125,7 +125,7 @@ def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_t
             resource_type=resource_type)
 
 
-def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
+def get_pod_name(pod_name_label, deployment_target=None, pod_number=0, resource_type='pod'):
     """Takes a pod name label (eg. "phenotips") and returns the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx").
     If there are multiple pods with the given label, it returns the 1st one by default.
 
@@ -144,7 +144,7 @@ def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
 
     return _get_resource_info(
         labels=labels,
-        resource_type="pod",
+        resource_type=resource_type,
         json_path="{.items[%(pod_number)s].metadata.name}" % locals(),
         errors_to_ignore=["array index out of bounds: index 0"],
         verbose=False,

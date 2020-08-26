@@ -33,12 +33,9 @@ services:
     ports:
       - 9200:9200
     volumes:
-      - ./data/elasticsearch:/elasticsearch-data
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=false
-      - network.host=0.0.0.0
-      - path.data=/elasticsearch-data
-      - path.logs=/logs
       - "ES_JAVA_OPTS=-Xms3900m -Xmx3900m"
     healthcheck:
       test: bash -c "curl -s elasticsearch:9200 | grep search"
