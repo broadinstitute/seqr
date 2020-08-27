@@ -105,7 +105,7 @@ class EsSearch(object):
     def _set_index_metadata(self):
         self._set_index_name()
         from seqr.utils.elasticsearch.utils import get_index_metadata
-        self.index_metadata = get_index_metadata(self.index_name, self._client)
+        self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
@@ -124,7 +124,28 @@ class EsSearch(object):
         return self
 
     def sort(self, sort):
-        self._sort = _get_sort(sort)
+        self._sort = SORT_FIELDS.get(sort, [])
+
+        main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
+
+        # Add parameters to scripts
+        if main_sort_dict and main_sort_dict.get('_script', {}).get('script', {}).get('params'):
+            for key, val_func in self._sort[0]['_script']['script']['params'].items():
+                if callable(val_func):
+                    self._sort[0]['_script']['script']['params'][key] = val_func()
+
+        # Add unmapped_type
+        if main_sort_dict and 'unmapped_type' in list(main_sort_dict.values())[0]:
+            sort_field = list(main_sort_dict.keys())[0]
+            field_type = next((
+                metadata['fields'][sort_field] for metadata in self.index_metadata.values()
+                if metadata['fields'].get(sort_field)
+            ), 'float')
+            self._sort[0][sort_field]['unmapped_type'] = field_type
+
+        if XPOS_SORT_KEY not in self._sort:
+            self._sort.append(XPOS_SORT_KEY)
+
         self._search = self._search.sort(*self._sort)
 
     def filter(self, new_filter):
@@ -1235,20 +1256,6 @@ def _build_or_filter(op, filters):
     return q
 
 
-def _get_sort(sort_key):
-    sorts = SORT_FIELDS.get(sort_key, [])
-
-    # Add parameters to scripts
-    if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
-        for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if callable(val_func):
-                sorts[0]['_script']['script']['params'][key] = val_func()
-
-    if XPOS_SORT_KEY not in sorts:
-        sorts.append(XPOS_SORT_KEY)
-    return sorts
-
-
 def _sort_compound_hets(grouped_variants):
     return sorted(grouped_variants, key=lambda variants: next(iter(variants.values()))[0]['_sort'])
 
@@ -1273,7 +1280,7 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
 
 
 def _parse_es_sort(sort, sort_config):
-    if sort in {'Infinity', '-Infinity'}:
+    if sort in {'Infinity', '-Infinity', None}:
         # ES returns these values for sort when a sort field is missing, using the correct value for the given direction
         sort = maxsize
     elif hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
