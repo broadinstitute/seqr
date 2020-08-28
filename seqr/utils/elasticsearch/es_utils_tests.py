@@ -30,7 +30,7 @@ ES_VARIANTS = [
           'hgmd_accession': None,
           'g1k_AF': None,
           'gnomad_genomes_Hom': 0,
-          'cadd_PHRED': 25.9,
+          'cadd_PHRED': '25.9',
           'exac_AC_Hemi': None,
           'g1k_AC': None,
           'topmed_AN': 125568,
@@ -639,18 +639,23 @@ SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
 SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
+FIELD_TYPE_MAP = {
+    'cadd_PHRED': 'keyword',
+    'primate_ai_score': 'double',
+}
+
 INDEX_METADATA = {
     INDEX_NAME: {'variant': {
         '_meta': {'genomeVersion': '37'},
-        'properties': {field: {} for field in MAPPING_FIELDS},
+        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in MAPPING_FIELDS},
     }},
     SECOND_INDEX_NAME: {'variant': {
         '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
-        'properties': {field: {} for field in MAPPING_FIELDS},
+        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in MAPPING_FIELDS},
     }},
     SV_INDEX_NAME: {'structural_variant': {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
-        'properties': {field: {} for field in SV_MAPPING_FIELDS},
+        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in SV_MAPPING_FIELDS},
     }},
 }
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
@@ -1383,7 +1388,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}, 'xpos'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos'])
 
     def test_sv_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -2423,7 +2428,7 @@ class EsUtilsTest(TestCase):
 
         variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
-            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}, 'xpos'])
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double'}}, 'xpos'])
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 

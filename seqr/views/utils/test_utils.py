@@ -413,7 +413,7 @@ PARSED_VARIANTS = [
         },
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
-                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': 25.9, 'metasvm': None, 'primate_ai': None,
+                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'metasvm': None, 'primate_ai': None,
                         'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
                         'splice_ai_consequence': None},
         'ref': 'TC',

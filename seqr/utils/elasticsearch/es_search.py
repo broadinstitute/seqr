@@ -1284,7 +1284,7 @@ def _parse_es_sort(sort, sort_config):
         # ES returns these values for sort when a sort field is missing, using the correct value for the given direction
         sort = maxsize
     elif hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
-        sort = sort * -1
+        sort = float(sort) * -1
 
     return sort
 
