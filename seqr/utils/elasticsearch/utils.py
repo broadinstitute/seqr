@@ -22,7 +22,7 @@ def get_es_client(timeout=60):
     return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
 
 
-def get_index_metadata(index_name, client):
+def get_index_metadata(index_name, client, include_fields=False):
     cache_key = 'index_metadata__{}'.format(index_name)
     cached_metadata = safe_redis_get_json(cache_key)
     if cached_metadata:
@@ -37,7 +37,10 @@ def get_index_metadata(index_name, client):
     for index_name, mapping in mappings.items():
         variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE) or mapping['mappings'].get(SV_DOC_TYPE, {})
         index_metadata[index_name] = variant_mapping.get('_meta', {})
-        index_metadata[index_name]['fields'] = list(variant_mapping['properties'].keys())
+        if include_fields:
+            index_metadata[index_name]['fields'] = {
+                field: field_props['type'] for field, field_props in variant_mapping['properties'].items()
+            }
     safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 

@@ -188,12 +188,6 @@ SORT_FIELDS = {
             }
         }
     }],
-    'cadd': [{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'eigen': [{'eigen_Eigen_phred': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'mpc': [{'mpc_MPC': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'primate_ai': [{'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}],
     'constraint': [{
         '_script': {
             'order': 'asc',
@@ -229,6 +223,18 @@ POPULATION_SORTS = {
         }
     }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
+PREDICTOR_SORT_FIELDS = {
+    'cadd': 'cadd_PHRED',
+    'revel': 'dbnsfp_REVEL_score',
+    'eigen': 'eigen_Eigen_phred',
+    'mpc': 'mpc_MPC',
+    'splice_ai': 'splice_ai_delta_score',
+    'primate_ai': 'primate_ai_score',
+}
+SORT_FIELDS.update({
+    sort: [{sort_field: {'order': 'desc', 'unmapped_type': True}}]
+    for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
+})
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
