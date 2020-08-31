@@ -611,7 +611,7 @@ def _init_cluster_gcloud(settings):
     num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
     while num_nodes_remaining_to_create > 0:
         i += 1
-        run(" ".join([
+        command = [
             "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
             "--cluster %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
@@ -625,7 +625,10 @@ def _init_cluster_gcloud(settings):
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]) % settings, verbose=False, errors_to_ignore=["lready exists"])
+        ]
+        if settings.get('CLUSTER_NODE_LABELS'):
+            command += ['--node-labels', settings['CLUSTER_NODE_LABELS']]
+        run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
 
         num_nodes_remaining_to_create -= num_nodes_per_node_pool
 

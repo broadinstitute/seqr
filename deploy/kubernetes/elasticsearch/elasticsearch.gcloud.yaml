@@ -33,6 +33,15 @@ spec:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
         initContainers:
           - name: sysctl
             securityContext:
@@ -55,6 +64,15 @@ spec:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
         initContainers:
           - name: sysctl
             securityContext:
@@ -77,6 +95,15 @@ spec:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: In
+                  values:
+                  - data
         initContainers:
         - name: sysctl
           securityContext:
