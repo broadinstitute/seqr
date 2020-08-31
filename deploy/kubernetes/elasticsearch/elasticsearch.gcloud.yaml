@@ -90,9 +90,9 @@ spec:
             value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
           resources:
             requests:
-              memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
             limits:
-              memory: {{ ELASTCISEATCH_CONTAINER_MEMORY }}
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
 # for use in mounting multiple disks to copy data - should not be used for real in production
 #          volumeMounts:
 #          - name: storage
