@@ -70,10 +70,11 @@ DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "kube-scan",
 ]
 DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
-    "init-cluster",
-    "settings",
-    "elasticsearch",
-    "kube-scan",
+    'init-cluster',
+    'settings',
+    'secrets',
+    'elasticsearch',
+    'kube-scan',
 ]
 
 SECRETS = {
