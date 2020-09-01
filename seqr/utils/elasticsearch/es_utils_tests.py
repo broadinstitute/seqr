@@ -640,22 +640,24 @@ SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
 SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
 FIELD_TYPE_MAP = {
-    'cadd_PHRED': 'keyword',
-    'primate_ai_score': 'double',
+    'cadd_PHRED': {'type': 'keyword'},
+    'primate_ai_score': {'type': 'double'},
+    'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
 }
+MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
 INDEX_METADATA = {
     INDEX_NAME: {'variant': {
         '_meta': {'genomeVersion': '37'},
-        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in MAPPING_FIELDS},
+        'properties': MAPPING_PROPERTIES,
     }},
     SECOND_INDEX_NAME: {'variant': {
         '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
-        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in MAPPING_FIELDS},
+        'properties': MAPPING_PROPERTIES,
     }},
     SV_INDEX_NAME: {'structural_variant': {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
-        'properties': {field: {'type': FIELD_TYPE_MAP.get(field, 'keyword')} for field in SV_MAPPING_FIELDS},
+        'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
     }},
 }
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]

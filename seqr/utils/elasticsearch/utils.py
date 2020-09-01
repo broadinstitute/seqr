@@ -39,7 +39,7 @@ def get_index_metadata(index_name, client, include_fields=False):
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         if include_fields:
             index_metadata[index_name]['fields'] = {
-                field: field_props['type'] for field, field_props in variant_mapping['properties'].items()
+                field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
             }
     safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
