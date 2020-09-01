@@ -1,5 +1,4 @@
 from collections import defaultdict
-from elasticsearch_dsl import Index
 import json
 import logging
 import re
@@ -16,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.elasticsearch.utils import get_es_client
+from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -68,8 +67,7 @@ def elasticsearch_status(request):
     for alias in client.cat.aliases(format="json", h='alias,index'):
         aliases[alias['alias']].append(alias['index'])
 
-    # TODO client.indices.get_mapping ?
-    mappings = Index('_all', using=client).get_mapping()
+    index_metadata = get_index_metadata('_all', client, use_cache=False)
 
     active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
 
@@ -87,8 +85,7 @@ def elasticsearch_status(request):
 
     for index in indices:
         index_name = index['index']
-        index_mappings = mappings[index_name]['mappings']
-        index.update(index_mappings.get('_meta', {}))
+        index.update(index_metadata[index_name])
 
         projects_for_index = []
         for index_prefix in list(seqr_index_projects.keys()):

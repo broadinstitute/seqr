@@ -454,9 +454,8 @@ class StaffAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
-    @mock.patch('elasticsearch_dsl.index.Index.get_mapping')
     @mock.patch('elasticsearch.Elasticsearch')
-    def test_elasticsearch_status(self, mock_elasticsearch, mock_get_mapping):
+    def test_elasticsearch_status(self, mock_elasticsearch):
         url = reverse(elasticsearch_status)
         self.check_staff_login(url)
 
@@ -464,7 +463,7 @@ class StaffAPITest(AuthenticationTestCase):
         mock_es_client.cat.allocation.return_value = ES_CAT_ALLOCATION
         mock_es_client.cat.indices.return_value = ES_CAT_INDICES
         mock_es_client.cat.aliases.return_value = ES_CAT_ALIAS
-        mock_get_mapping.return_value = ES_INDEX_MAPPING
+        mock_es_client.indices.get_mapping.return_value = ES_INDEX_MAPPING
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -483,7 +482,7 @@ class StaffAPITest(AuthenticationTestCase):
         mock_es_client.cat.indices.assert_called_with(format="json",
                                                       h="index,docs.count,store.size,creation.date.string")
         mock_es_client.cat.aliases.assert_called_with(format="json", h="alias,index")
-        mock_get_mapping.assert_called_with()
+        mock_es_client.indices.get_mapping.assert_called_with(index='_all')
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
