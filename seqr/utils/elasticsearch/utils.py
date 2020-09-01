@@ -2,7 +2,7 @@ import elasticsearch
 from elasticsearch_dsl import Q
 import logging
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
@@ -19,7 +19,13 @@ class InvalidIndexException(Exception):
 
 
 def get_es_client(timeout=60):
-    return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
+    kwargs = {
+        'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
+        'timeout': timeout,
+    }
+    if ELASTICSEARCH_CREDENTIALS:
+        kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
+    return elasticsearch.Elasticsearch(**kwargs)
 
 
 def get_index_metadata(index_name, client, include_fields=False):
