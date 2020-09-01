@@ -38,7 +38,7 @@ def update_project_saved_variant_json(project, family_id=None):
     return updated_saved_variant_guids
 
 
-def reset_cached_search_results(project):
+def reset_cached_search_results(project, reset_index_metadata=False):
     try:
         redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
         keys_to_delete = []
@@ -48,6 +48,8 @@ def reset_cached_search_results(project):
                 keys_to_delete += redis_client.keys(pattern='search_results__{}*'.format(guid))
         else:
             keys_to_delete = redis_client.keys(pattern='search_results__*')
+        if reset_index_metadata:
+            keys_to_delete += redis_client.keys(pattern='index_metadata__*')
         if keys_to_delete:
             redis_client.delete(*keys_to_delete)
             logger.info('Reset {} cached results'.format(len(keys_to_delete)))
