@@ -7,15 +7,12 @@ from requests import HTTPError
 import responses
 from settings import AIRTABLE_URL
 import json
-from urllib3_mock import Responses
 
 from django.urls.base import reverse
 
 from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet, success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 from seqr.models import Individual
-
-urllib3_responses = Responses()
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -473,19 +470,12 @@ class StaffAPITest(AuthenticationTestCase):
         url = reverse(elasticsearch_status)
         self.check_staff_login(url)
 
-        urllib3_responses.add(
-            urllib3_responses.GET, '/_cat/allocation?format=json&h=node,disk.avail,disk.used,disk.percent', status=200,
-            body=json.dumps(ES_CAT_ALLOCATION), content_type='application/json', match_querystring=True)
-        urllib3_responses.add(
-            urllib3_responses.GET,
-            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', status=200,
-            body=json.dumps(ES_CAT_INDICES), content_type='application/json', match_querystring=True)
-        urllib3_responses.add(
-            urllib3_responses.GET, '/_cat/aliases?format=json&h=alias,index', status=200,
-            body=json.dumps(ES_CAT_ALIAS), content_type='application/json', match_querystring=True)
-        urllib3_responses.add(
-            urllib3_responses.GET, '/_all/_mapping/variant,structural_variant', status=200,
-            body=json.dumps(ES_INDEX_MAPPING), content_type='application/json', match_querystring=True)
+        urllib3_responses.add_json(
+            '/_cat/allocation?format=json&h=node,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
+        urllib3_responses.add_json(
+           '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
+        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
+        urllib3_responses.add_json('/_all/_mapping/variant,structural_variant', ES_INDEX_MAPPING)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
