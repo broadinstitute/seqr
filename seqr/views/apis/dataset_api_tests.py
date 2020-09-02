@@ -14,8 +14,6 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_response
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
-EMPTY_INDEX_NAME = 'test_empty_index'
-INVALID_SAMPLE_INDEX_NAME = 'test_invalid_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
