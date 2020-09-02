@@ -1106,6 +1106,20 @@ class EsUtilsTest(TestCase):
         search_model.search = {}
         search_model.save()
         urllib3_responses.reset()
+        urllib3_responses.add(
+            urllib3_responses.GET, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
+        urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
+            123: {'running_time_in_nanos': 10},
+            456: {'running_time_in_nanos': 10 ** 12},
+        }})
+        urllib3_responses.add_json('/_tasks/_cancel?parent_task_id=456', {}, method=urllib3_responses.POST)
+        with self.assertRaises(ConnectionTimeout):
+            get_es_variants(results_model)
+        self.assertListEqual(
+            [call.request.url for call in urllib3_responses.calls],
+            ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents',
+             '/_tasks/_cancel?parent_task_id=456']
+        )
 
         _set_cache('index_metadata__test_index,test_index_sv', None)
         urllib3_responses.add(
@@ -1118,25 +1132,6 @@ class EsUtilsTest(TestCase):
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
-
-        urllib3_responses.reset()
-        urllib3_responses.add_json(
-            '/test_index,test_index_sv/_mapping',
-            {index: {'mappings': INDEX_METADATA[index]} for index in ['test_index', 'test_index_sv']})
-        urllib3_responses.add(
-            urllib3_responses.GET, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
-        urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
-            123: {'running_time_in_nanos': 10},
-            456: {'running_time_in_nanos': 10 ** 12},
-        }})
-        urllib3_responses.add_json('/_tasks/_cancel?parent_task_id=456', {}, method=urllib3_responses.POST)
-        with self.assertRaises(ConnectionTimeout):
-            get_es_variants(results_model)
-        self.assertListEqual(
-            [call.request.url for call in urllib3_responses.calls],
-            ['/test_index,test_index_sv/_mapping', '/test_index_sv,test_index/_msearch',
-             '/_tasks?actions=%2Asearch&group_by=parents', '/_tasks/_cancel?parent_task_id=456']
-        )
 
     @urllib3_responses.activate
     def test_get_es_variants(self):
