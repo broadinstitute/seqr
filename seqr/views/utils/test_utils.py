@@ -106,7 +106,7 @@ class Urllib3Responses(Responses):
         self.add_json(url, *args, **kwargs)
         self._urls[existing_index] = self._urls.pop()
 
-    def call_request_json(self, index=0):
+    def call_request_json(self, index=-1):
         return json.loads(self.calls[index].request.body)
 
 

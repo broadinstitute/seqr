@@ -68,7 +68,7 @@ class DatasetAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(urllib3_responses.calls), 2)
         self.assertDictEqual(
-            urllib3_responses.call_request_json(index=1),
+            urllib3_responses.call_request_json(),
             {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
         )
 
@@ -228,7 +228,7 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(
-            urllib3_responses.call_request_json(index=-1),
+            urllib3_responses.call_request_json(),
             {'aggs': {'sample_ids': {'terms': {'field': 'samples', 'size': 10000}}}}
         )
 
