@@ -96,7 +96,7 @@ class EsSearch(object):
             alias = hashlib.md5(self.index_name.encode('utf-8')).hexdigest()
             cache_key = 'index_alias__{}'.format(alias)
             if safe_redis_get_json(cache_key) != self.index_name:
-                # TODO
+                # TODO test aliases working
                 self._client.indices.update_aliases(body={'actions': [
                     {'add': {'indices': self._indices, 'alias': alias}}
                 ]})
@@ -556,7 +556,7 @@ class EsSearch(object):
             response_hits, response_total = self._parse_compound_het_response(response)
             return response_hits, response_total, True, index_name
 
-        response_total = response.hits.total.value
+        response_total = response.hits.total['value']
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
@@ -996,7 +996,7 @@ class EsSearch(object):
         for parent_id, task in search_tasks['tasks'].items():
             if task['running_time_in_nanos'] > 10 ** 11:
                 canceled += 1
-                # TODO
+                # TODO test cancel tasks working
                 self._client.tasks.cancel(parent_task_id=parent_id)
         return canceled
 

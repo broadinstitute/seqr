@@ -57,7 +57,6 @@ class EsGeneAggSearch(EsSearch):
         return gene_aggs
 
     def _parse_response(self, response):
-        # TODO
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
             raise Exception('This search returned too many genes')
 

@@ -649,18 +649,18 @@ FIELD_TYPE_MAP = {
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
 INDEX_METADATA = {
-    INDEX_NAME: {'variant': {
+    INDEX_NAME: {
         '_meta': {'genomeVersion': '37'},
         'properties': MAPPING_PROPERTIES,
-    }},
-    SECOND_INDEX_NAME: {'variant': {
+    },
+    SECOND_INDEX_NAME: {
         '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
         'properties': MAPPING_PROPERTIES,
-    }},
-    SV_INDEX_NAME: {'structural_variant': {
+    },
+    SV_INDEX_NAME: {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
-    }},
+    },
 }
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 
@@ -858,7 +858,7 @@ def create_mock_response(search, index=INDEX_NAME):
 
     response_dict = {
         'took': 1,
-        'hits': {'total': 5, 'hits': []}
+        'hits': {'total': {'value': 5}, 'hits': []}
     }
     for index_name in sorted(indices):
         index_hits = mock_hits(
