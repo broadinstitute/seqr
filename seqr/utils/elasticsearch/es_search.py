@@ -96,7 +96,6 @@ class EsSearch(object):
             alias = hashlib.md5(self.index_name.encode('utf-8')).hexdigest()
             cache_key = 'index_alias__{}'.format(alias)
             if safe_redis_get_json(cache_key) != self.index_name:
-                # TODO test aliases working
                 self._client.indices.update_aliases(body={'actions': [
                     {'add': {'indices': self._indices, 'alias': alias}}
                 ]})
