@@ -917,7 +917,7 @@ def get_msearch_callback(request):
 
 def setup_search_response():
     urllib3_responses.add_callback(
-        urllib3_responses.GET, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
+        urllib3_responses.POST, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
         content_type='application/json', match_querystring=True)
 
 def setup_responses():
@@ -925,7 +925,7 @@ def setup_responses():
         urllib3_responses.GET, re.compile('^/[,\w]+/_mapping$'), callback=get_metadata_callback,
         content_type='application/json', match_querystring=True)
     urllib3_responses.add_callback(
-        urllib3_responses.GET, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
+        urllib3_responses.POST, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
         content_type='application/json', match_querystring=True)
     setup_search_response()
 
@@ -1107,7 +1107,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         urllib3_responses.reset()
         urllib3_responses.add(
-            urllib3_responses.GET, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
+            urllib3_responses.POST, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
         urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
             123: {'running_time_in_nanos': 10},
             456: {'running_time_in_nanos': 10 ** 12},

@@ -46,8 +46,9 @@ class DatasetAPITest(AuthenticationTestCase):
         mock_random.return_value = 98765432101234567890
 
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {}}})
-        urllib3_responses.add_json(
-            '/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {'sample_ids': {'buckets': []}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': []}}
+        }, method=urllib3_responses.POST)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -70,9 +71,9 @@ class DatasetAPITest(AuthenticationTestCase):
             {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
         )
 
-        urllib3_responses.replace_json(
-            '/{}/_search?size=0'.format(INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
@@ -136,9 +137,9 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1, NA19678).']})
 
-        urllib3_responses.replace_json(
-            '/{}/_search?size=0'.format(INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19673'}]}}})
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19673'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'datasetType': 'VARIANTS',
@@ -159,7 +160,8 @@ class DatasetAPITest(AuthenticationTestCase):
 
         # Send valid request
         urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
-            'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
+            'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}
+        }}, method=urllib3_responses.POST)
         mock_file_iter.return_value = StringIO('NA19678_1,NA19678\n')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
@@ -216,9 +218,9 @@ class DatasetAPITest(AuthenticationTestCase):
                 'sourceFilePath': 'test_data.bed',
                 'datasetType': 'SV',
             }}}})
-        urllib3_responses.add_json(
-            '/{}/_search?size=0'.format(SV_INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(SV_INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': SV_INDEX_NAME,
             'datasetType': 'SV',
