@@ -51,6 +51,8 @@ services:
 
   seqr:
     image: gcr.io/seqr-project/seqr:gcloud-prod
+    volumes:
+    - ./data/readviz:/readviz
     ports:
       - 80:8000
     environment:
