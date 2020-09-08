@@ -563,6 +563,7 @@ class EsSearch(object):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
+        is_sv = self.index_metadata[index_name].get('datasetType') == Sample.DATASET_TYPE_SV_CALLS
 
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
@@ -588,7 +589,6 @@ class EsSearch(object):
                                    for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        is_sv = raw_hit.meta.doc_type == SV_DOC_TYPE
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             genotypes.update({
@@ -606,7 +606,7 @@ class EsSearch(object):
                             genotypes[sample.individual.guid]['cn'] = 1
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and all((gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
+        if is_sv and genotypes and all((gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
             start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
             end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
             num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
@@ -995,7 +995,6 @@ class EsSearch(object):
         for parent_id, task in search_tasks['tasks'].items():
             if task['running_time_in_nanos'] > 10 ** 11:
                 canceled += 1
-                # TODO test cancel tasks working
                 self._client.tasks.cancel(parent_task_id=parent_id)
         return canceled
 
