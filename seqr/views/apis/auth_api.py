@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 import google_auth_oauthlib.flow
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from google.oauth2.credentials import Credentials
 
 import json
 import logging
@@ -20,6 +21,11 @@ CLIENT_SECRETS_FILE = "client_secret.json"
 logger = logging.getLogger(__name__)
 
 session = {}
+scopes = ['https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/cloud-billing',
+          'openid']
+
 
 @csrf_exempt
 def login_view(request):
@@ -45,7 +51,7 @@ def login_view(request):
 def login_google(request):
   # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      CLIENT_SECRETS_FILE, scopes=['https://www.googleapis.com/auth/userinfo.profile'])
+      CLIENT_SECRETS_FILE, scopes=scopes)
 
   # The URI created here must exactly match one of the authorized redirect URIs
   # for the OAuth 2.0 client, which you configured in the API Console. If this
@@ -73,12 +79,19 @@ def login_oauth2callback(request):
     state = session['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE, scopes = [], state = state)
+        CLIENT_SECRETS_FILE, scopes = scopes, state = state)
     flow.redirect_uri = 'http://localhost:3000/oauth2callback'
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
     authorization_response = request.body.decode('utf-8')
     flow.fetch_token(authorization_response = authorization_response)
+
+    session['credentials'] = credentials_to_dict(flow.credentials)
+    credentials = Credentials(**session['credentials'])
+    req_token = requests.Request()
+    credentials.refresh(req_token)
+    access_token = credentials.token
+    print(access_token)
 
     token = flow.credentials.id_token
 
@@ -97,6 +110,14 @@ def login_oauth2callback(request):
     login(request, user)
 
     return create_json_response({'success': True})
+
+def credentials_to_dict(credentials):
+  return {'token': credentials.token,
+          'refresh_token': credentials.refresh_token,
+          'token_uri': credentials.token_uri,
+          'client_id': credentials.client_id,
+          'client_secret': credentials.client_secret,
+          'scopes': credentials.scopes}
 
 def logout_view(request):
     logout(request)
