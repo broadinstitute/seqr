@@ -131,7 +131,7 @@ const mapContentDispatchToProps = (dispatch, ownProps) => {
 const VariantSearchResultsContent = connect(mapContentStateToProps, mapContentDispatchToProps)(BaseVariantSearchResultsContent)
 
 const BaseVariantSearchResults = React.memo((
-  { match, displayVariants, load, unload, variantsLoading, contextLoading, errorMessage, contentComponent, ...props }) => {
+  { match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent, ...props }) => {
   return (
     <DataLoader
       contentId={match.params}
@@ -139,6 +139,7 @@ const BaseVariantSearchResults = React.memo((
       loading={variantsLoading || contextLoading}
       load={load}
       unload={unload}
+      initialLoad={initialLoad}
       reloadOnIdUpdate
       errorMessage={errorMessage &&
         <Grid.Row>
@@ -157,6 +158,7 @@ BaseVariantSearchResults.propTypes = {
   match: PropTypes.object,
   load: PropTypes.func,
   unload: PropTypes.func,
+  initialLoad: PropTypes.func,
   variantsLoading: PropTypes.bool,
   contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
