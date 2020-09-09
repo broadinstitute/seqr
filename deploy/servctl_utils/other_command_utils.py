@@ -24,11 +24,6 @@ COMPONENT_PORTS = {
     "elasticsearch":   [9200],
     "kibana":          [5601],
 
-    "es-client":       [9200],
-    "es-master":       [9020],
-    "es-data":         [9020],
-    "es-kibana":       [5601],
-
     "redis":           [6379],
 
     "postgres":        [5432],
@@ -44,7 +39,6 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "cockpit",
     "elasticsearch",
     "kibana",
-    "es-kibana",
     "seqr",
     "pipeline-runner",  # python notebook
 ])
@@ -315,9 +309,6 @@ def delete_component(component, deployment_target=None):
         while pv:
             run('kubectl delete pv {}'.format(pv))
             pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
-
-    elif component == "es-data":
-        run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 

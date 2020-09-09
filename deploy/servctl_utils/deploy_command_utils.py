@@ -55,6 +55,7 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
 
 DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
 #"gcloud-prod-elasticsearch",
+# TODO
 DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "init-cluster",
     "settings",
