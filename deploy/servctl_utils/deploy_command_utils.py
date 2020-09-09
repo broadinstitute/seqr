@@ -10,6 +10,7 @@ from deploy.servctl_utils.other_command_utils import check_kubernetes_context, s
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
+# TODO move into seqr repo
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
 from deploy.servctl_utils.shell_utils import run
 
@@ -34,12 +35,6 @@ DEPLOYABLE_COMPONENTS = [
     "pipeline-runner",
 
     "kube-scan",
-
-    # components of a sharded elasticsearch cluster based on https://github.com/pires/kubernetes-elasticsearch-cluster
-    "es-client",
-    "es-master",
-    "es-data",
-    "es-kibana",
 ]
 
 DEPLOYMENT_TARGETS = {}
@@ -212,7 +207,9 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
-    run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+    has_es_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    if not has_es_kube_resource:
+        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
@@ -411,71 +408,6 @@ def deploy_kube_scan(settings):
     run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
 
-def deploy_es_client(settings):
-    deploy_elasticsearch_sharded(settings, "es-client")
-
-
-def deploy_es_master(settings):
-    deploy_elasticsearch_sharded(settings, "es-master")
-
-
-def deploy_es_data(settings):
-    deploy_elasticsearch_sharded(settings, "es-data")
-
-
-def deploy_es_kibana(settings):
-    deploy_elasticsearch_sharded(settings, "es-kibana")
-
-
-def deploy_elasticsearch_sharded(settings, component):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator(component)
-
-    if component == "es-master":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
-        ]
-    elif component == "es-client":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
-        ]
-    elif component == "es-data":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
-        ]
-    elif component == "es-kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
-        ]
-    elif component == "kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/kibana/kibana.%(DEPLOY_TO_PREFIX)s.yaml",
-        ]
-    else:
-        raise ValueError("Unexpected component: " + component)
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        for config_file in config_files:
-            run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
-
-    for config_file in config_files:
-        run("kubectl apply -f " + config_file % settings)
-
-    if component in ["es-client", "es-master", "es-data", "es-kibana"]:
-        # wait until all replicas are running
-        num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
-        for pod_number_i in range(num_pods):
-            sleep_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
-
-    if component == "es-client":
-       run("kubectl describe svc elasticsearch")
-
-
 def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
@@ -541,9 +473,7 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
     logger.addHandler(sh)
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
-    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
-                          glob.glob("deploy/kubernetes/*/*.yaml") + \
-                          glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
+    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + glob.glob("deploy/kubernetes/*/*.yaml")
     _process_templates(settings, template_file_paths)
 
     return settings
@@ -770,24 +700,3 @@ def create_vpc(gcloud_project, network_name):
         "--allow tcp:22,tcp:3389,icmp",
         "--source-ranges 10.0.0.0/8",
     ]) % locals(), errors_to_ignore=["already exists"])
-
-
-def _get_component_group_to_component_name_mapping():
-    result = {
-        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
-    }
-    return result
-
-
-def resolve_component_groups(deployment_target, components_or_groups):
-    component_groups = _get_component_group_to_component_name_mapping()
-
-    return [
-        component
-        for component_or_group in components_or_groups
-        for component in component_groups.get(component_or_group, [component_or_group])
-    ]
-
-
-COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
-
