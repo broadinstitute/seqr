@@ -70,6 +70,7 @@ DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
     'settings',
     'secrets',
     'elasticsearch',
+    'kibana',
     'kube-scan',
 ]
 
@@ -208,9 +209,7 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
-    has_es_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
-    if not has_es_kube_resource:
-        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+    _set_elasticsearch_kubernetes_resources()
 
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
@@ -244,6 +243,10 @@ def deploy_elasticsearch(settings):
         'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
+def _set_elasticsearch_kubernetes_resources():
+    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    if not has_kube_resource:
+        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 def deploy_postgres(settings):
     print_separator("postgres")
@@ -363,9 +366,15 @@ def _restore_seqr_db_from_backup(postgres_pod_name, seqrdb_backup, reference_dat
 def deploy_kibana(settings):
     print_separator("kibana")
 
-    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
+    docker_build("kibana", settings)
+
+    _set_elasticsearch_kubernetes_resources()
 
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
+
+    wait_for_resource(
+        'kibana', resource_type='kibana', json_path='{.items[0].status.health}', expected_status='green',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
 
 
 def deploy_nginx(settings):
@@ -377,14 +386,6 @@ def deploy_nginx(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
-
-
-def deploy_kibana(settings):
-    print_separator("kibana")
-
-    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
-
-    deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_pipeline_runner(settings):

@@ -223,6 +223,8 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         logger.info("Forwarding port %s for %s" % (port, component_label))
         if component_label == 'elasticsearch':
             pod_name = 'service/elasticsearch-es-http'
+        if component_label == 'kibana':
+            pod_name = 'service/kibana-kb-http'
         else:
             pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
@@ -309,6 +311,8 @@ def delete_component(component, deployment_target=None):
         while pv:
             run('kubectl delete pv {}'.format(pv))
             pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
+    elif component == 'kibana':
+        run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 

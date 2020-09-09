@@ -39,10 +39,9 @@ services:
 
 
   kibana:
-    image: gcr.io/seqr-project/kibana:gcloud-prod
+    image: gcr.io/seqr-project/kibana:gcloud-dev-es
     environment:
-      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
-      - ELASTICSEARCH_SERVICE_PORT=9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       elasticsearch:
         condition: service_healthy
