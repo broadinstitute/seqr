@@ -3,8 +3,6 @@ version: '2.4'
 services:
   postgres:
     image: gcr.io/seqr-project/postgres:gcloud-prod
-    ports:
-      - 5433:5433
     environment:
       - PGPORT=5433
       - POSTGRES_PASSWORD=docker-compose-postgres-password
@@ -19,8 +17,6 @@ services:
 
   redis:
     image: gcr.io/seqr-project/redis:gcloud-prod
-    ports:
-      - 6379:6379
     healthcheck:
       test: redis-cli ping
       interval: 3s
@@ -30,8 +26,6 @@ services:
 
   elasticsearch:
     image: gcr.io/seqr-project/elasticsearch:gcloud-dev-es
-    ports:
-      - 9200:9200
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     environment:
@@ -46,8 +40,6 @@ services:
 
   kibana:
     image: gcr.io/seqr-project/kibana:gcloud-prod
-    ports:
-      - 5601:5601
     environment:
       - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
       - ELASTICSEARCH_SERVICE_PORT=9200
@@ -62,6 +54,8 @@ services:
 
   seqr:
     image: gcr.io/seqr-project/seqr:gcloud-prod
+    volumes:
+    - ./data/readviz:/readviz
     ports:
       - 80:8000
     environment:
