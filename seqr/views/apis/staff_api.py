@@ -1,3 +1,4 @@
+import base64
 from collections import defaultdict
 import json
 import logging
@@ -37,7 +38,8 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL, \
+    KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = logging.getLogger(__name__)
 
@@ -1519,6 +1521,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def proxy_to_kibana(request):
     headers = _convert_django_meta_to_http_headers(request.META)
     headers['Host'] = KIBANA_SERVER
+    if KIBANA_ELASTICSEARCH_PASSWORD:
+        token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
+        headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
 
     url = "{scheme}://{host}{path}".format(scheme=request.scheme, host=KIBANA_SERVER, path=request.get_full_path())
 

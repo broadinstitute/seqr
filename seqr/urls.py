@@ -280,10 +280,11 @@ urlpatterns += [
 #urlpatterns += [
 #   url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 
-kibana_urls = '^(?:%s)' % ('|'.join([
-    "app", "bundles", "elasticsearch", "plugins", "ui", "api/apm", "api/console", "api/index_management", "api/index_patterns",
-    "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
-    "es_admin",
+kibana_urls = '^(?:{})'.format('|'.join([
+    'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
+    'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
+    'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
+    'api/timelion', 'api/ui_metric', 'api/xpack',
 ]))
 
 urlpatterns += [
