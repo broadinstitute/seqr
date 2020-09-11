@@ -182,6 +182,30 @@ python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
 
 ```
 
+To run annotation and database loading as 2 separate steps, use the following commands instead of the `SeqrMTToESTask` command above:
+
+```
+    docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
+
+    SeqrVCFToMTTask --local-scheduler   
+   # for GRCh38 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
+   python3 -m seqr_loading SeqrVCFToMTTask --local-scheduler \
+       --reference-ht-path /seqr_reference_data/combined_reference_data_grch38.ht \
+       --clinvar-ht-path /seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht \
+       --vep-config-json-path /vep85-GRCh38-loftee-gcloud.json \
+       --sample-type WES \
+       --genome-version 38 \
+       --source-paths gs://your-bucket/GRCh38/your-callset.vcf.gz \   # this can be a local path within the pipeline-runner container (eg. /input_vcfs/dir/your-callset.vcf.gz) or a gs:// path 
+       --dest-path gs://your-bucket/GRCh38/your-callset.mt      # this can be a local path within the pipeline-runner container or a gs:// path where you have write access
+ 
+    # load the annotated dataset into your local elasticsearch instance
+   python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
+        --dest-path /input_vcfs/GRCh38/your-callset.mt \
+        --es-host elasticsearch  \
+        --es-index your-callset-name
+```
+
+
 
 #### Adding a loaded dataset to a seqr project.
 
@@ -194,4 +218,4 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 
 #### Enable read viewing in the browser (optional): 
 
-To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](deploy/READVIZ_SETUP.md)**      
+To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/READVIZ_SETUP.md)**      

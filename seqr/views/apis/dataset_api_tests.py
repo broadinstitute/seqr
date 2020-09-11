@@ -4,12 +4,11 @@ import subprocess
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
-
 from io import StringIO
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -21,11 +20,11 @@ ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType
 class DatasetAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', mock.MagicMock())
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
-    @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
-    @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
-    def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter, mock_random):
+    @urllib3_responses.activate
+    def test_add_variants_dataset(self, mock_file_iter, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -45,7 +44,10 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
 
         mock_random.return_value = 98765432101234567890
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = []
+
+        urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {}}})
+        urllib3_responses.add_json(
+            '/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {'sample_ids': {'buckets': []}}})
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -62,56 +64,66 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {
             'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
 
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
-            {'key': 'NA19679'}, {'key': 'NA19678_1'},
-        ]
-        mock_get_index_metadata.return_value = {}
+        self.assertEqual(len(urllib3_responses.calls), 2)
+        self.assertDictEqual(
+            urllib3_responses.call_request_json(),
+            {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
+        )
+
+        urllib3_responses.replace_json(
+            '/{}/_search?size=0'.format(INDEX_NAME),
+            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
 
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'NOT_A_TYPE',
-            'genomeVersion': '37',
-            'sourceFilePath': 'invalidpath.txt',
-        }}
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
+            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'NOT_A_TYPE',
+                'genomeVersion': '37',
+                'sourceFilePath': 'invalidpath.txt',
+            }}}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Sample type not supported: NOT_A_TYPE']})
 
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '38',
-            'sourceFilePath': 'invalidpath.txt',
-        }}
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
+            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'WES',
+                'genomeVersion': '38',
+                'sourceFilePath': 'invalidpath.txt',
+            }}}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 38 but this project uses version 37']})
 
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '37',
-            'sourceFilePath': 'invalidpath.txt',
-        }}
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
+            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'WES',
+                'genomeVersion': '37',
+                'sourceFilePath': 'invalidpath.txt',
+            }}}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
 
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '37',
-            'sourceFilePath': 'test_data.vds',
-            'datasetType': 'SV',
-        }}
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
+            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'WES',
+                'genomeVersion': '37',
+                'sourceFilePath': 'test_data.vds',
+                'datasetType': 'SV',
+            }}}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
 
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '37',
-            'sourceFilePath': 'test_data.vds',
-        }}
+        urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
+            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'WES',
+                'genomeVersion': '37',
+                'sourceFilePath': 'test_data.vds',
+            }}}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
@@ -124,9 +136,9 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1, NA19678).']})
 
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
-            {'key': 'NA19673'}
-        ]
+        urllib3_responses.replace_json(
+            '/{}/_search?size=0'.format(INDEX_NAME),
+            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19673'}]}}})
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'datasetType': 'VARIANTS',
@@ -146,9 +158,8 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
 
         # Send valid request
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
-            {'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'},
-        ]
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
+            'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
         mock_file_iter.return_value = StringIO('NA19678_1,NA19678\n')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
@@ -198,20 +209,26 @@ class DatasetAPITest(AuthenticationTestCase):
 
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
-        mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
-            {'key': 'NA19675_1'}
-        ]
-        mock_get_index_metadata.return_value = {SV_INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '37',
-            'sourceFilePath': 'test_data.bed',
-            'datasetType': 'SV',
-        }}
+        urllib3_responses.add_json('/{}/_mapping'.format(SV_INDEX_NAME), {
+            SV_INDEX_NAME: {'mappings': {'variant': {'_meta': {
+                'sampleType': 'WES',
+                'genomeVersion': '37',
+                'sourceFilePath': 'test_data.bed',
+                'datasetType': 'SV',
+            }}}}})
+        urllib3_responses.add_json(
+            '/{}/_search?size=0'.format(SV_INDEX_NAME),
+            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}})
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': SV_INDEX_NAME,
             'datasetType': 'SV',
         }))
         self.assertEqual(response.status_code, 200)
+
+        self.assertDictEqual(
+            urllib3_responses.call_request_json(),
+            {'aggs': {'sample_ids': {'terms': {'field': 'samples', 'size': 10000}}}}
+        )
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})

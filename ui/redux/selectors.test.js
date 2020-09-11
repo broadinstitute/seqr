@@ -7,6 +7,7 @@ import {
   getPairedFilteredSavedVariants,
   getVariantTagNotesByFamilyVariants,
   getSearchGeneBreakdownValues,
+  getTagTypesByProject,
 } from './selectors'
 import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
@@ -102,4 +103,10 @@ test('getSearchGeneBreakdownValues', () => {
     geneId: GENE_ID,
     geneSymbol: 'OR2M3',
   }])
+})
+
+test('getTagTypesByProject', () => {
+  expect(getTagTypesByProject(STATE, {})).toEqual(
+    { R0237_1000_genomes_demo: [] },
+  )
 })

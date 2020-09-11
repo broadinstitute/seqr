@@ -11,8 +11,9 @@ import json
 from django.urls.base import reverse
 
 from seqr.views.apis.staff_api import elasticsearch_status, mme_details, seqr_stats, get_projects_for_category, discovery_sheet, success_story, anvil_export, sample_metadata_export, saved_variants_page, upload_qc_pipeline_output
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 from seqr.models import Individual
+
 
 PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
@@ -464,17 +465,18 @@ class StaffAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
-    @mock.patch('elasticsearch_dsl.index.Index.get_mapping')
-    @mock.patch('elasticsearch.Elasticsearch')
-    def test_elasticsearch_status(self, mock_elasticsearch, mock_get_mapping):
+    @urllib3_responses.activate
+    def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
         self.check_staff_login(url)
 
-        mock_es_client = mock_elasticsearch.return_value
-        mock_es_client.cat.allocation.return_value = ES_CAT_ALLOCATION
-        mock_es_client.cat.indices.return_value = ES_CAT_INDICES
-        mock_es_client.cat.aliases.return_value = ES_CAT_ALIAS
-        mock_get_mapping.return_value = ES_INDEX_MAPPING
+        urllib3_responses.add_json(
+            '/_cat/allocation?format=json&h=node,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
+        urllib3_responses.add_json(
+           '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
+        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
+        urllib3_responses.add_json('/_all/_mapping/variant,structural_variant', ES_INDEX_MAPPING)
+
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -489,11 +491,6 @@ class StaffAPITest(AuthenticationTestCase):
 
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
 
-        mock_es_client.cat.allocation.assert_called_with(format="json", h="node,disk.avail,disk.used,disk.percent")
-        mock_es_client.cat.indices.assert_called_with(format="json",
-                                                      h="index,docs.count,store.size,creation.date.string")
-        mock_es_client.cat.aliases.assert_called_with(format="json", h="alias,index")
-        mock_get_mapping.assert_called_with(doc_type='variant,structural_variant')
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
