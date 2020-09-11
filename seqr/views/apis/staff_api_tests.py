@@ -822,6 +822,7 @@ class StaffAPITest(AuthenticationTestCase):
             Individual.objects.get(individual_id='HG00733').sv_flags,
             ['raw_calls:_>100', 'high_QS_rare_calls:_>10'])
 
+    @mock.patch('seqr.views.apis.staff_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
     @responses.activate
     def test_kibana_proxy(self):
         url = '/api/kibana/random/path'
@@ -853,10 +854,12 @@ class StaffAPITest(AuthenticationTestCase):
 
         get_request = responses.calls[0].request
         self.assertEqual(get_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
 
         post_request = responses.calls[1].request
         self.assertEqual(post_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '24')
         self.assertEqual(post_request.body, data.encode('utf-8'))
