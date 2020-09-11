@@ -8,10 +8,14 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/kibana:{{ DOCKER_IMAGE_TAG }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
   count: 1
-  elasticsearchRef:
-    name: elasticsearch
+  config:
+    elasticsearch.hosts:
+      - http://{{ ELASTICSEARCH_SERVICE_EXTERNAL_IP }}:{{ ELASTICSEARCH_SERVICE_PORT }}
+    elasticsearch.username: kibana
+  secureSettings:
+    - secretName: kibana-secrets
   podTemplate:
     metadata:
       labels:

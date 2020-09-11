@@ -77,12 +77,12 @@ DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
     'gcloud-client': ['service-account-key.json'],
+    'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
     'postgres': ['postgres.username', 'postgres.password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        'kibana_es_password',
     ],
 }
 
@@ -93,6 +93,7 @@ DEPLOYMENT_TARGET_SECRETS = {
         'nginx',
         'matchbox',
         'gcloud-client',
+        'kibana',
     ],
     'gcloud-dev-es': [
         'elasticsearch',

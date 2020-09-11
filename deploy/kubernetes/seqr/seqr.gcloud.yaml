@@ -111,8 +111,8 @@ spec:
         - name: KIBANA_ES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: seqr-secrets
-              key: kibana_es_password
+              name: kibana-secrets
+              key: elasticsearch.password
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
