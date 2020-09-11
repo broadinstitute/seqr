@@ -107,6 +107,7 @@ def login_oauth2callback(request):
 
     # A temporary solution for Django authenticating the user without a password
     user.backend = 'django.contrib.auth.backends.ModelBackend'
+    request.session['credentials'] = credentials_to_dict(credentials)
     login(request, user)
 
     return create_json_response({'success': True})
