@@ -20,7 +20,6 @@ CLIENT_SECRETS_FILE = "client_secret.json"
 
 logger = logging.getLogger(__name__)
 
-session = {}
 scopes = ['https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/userinfo.email',
           'https://www.googleapis.com/auth/cloud-billing',
@@ -67,7 +66,7 @@ def login_google(request):
       include_granted_scopes='true')
 
   # Store the state so the callback can verify the auth server response.
-  session['state'] = state
+  request.session['state'] = state
 
   # Return the url to be sent for the Google Auth server by the the front end
   return create_json_response({'data': authorization_url})
@@ -76,7 +75,7 @@ def login_google(request):
 def login_oauth2callback(request):
     # Specify the state when creating the flow in the callback so that it can
     # verified in the authorization server response.
-    state = session['state']
+    state = request.session['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes = scopes, state = state)
@@ -86,12 +85,8 @@ def login_oauth2callback(request):
     authorization_response = request.body.decode('utf-8')
     flow.fetch_token(authorization_response = authorization_response)
 
-    session['credentials'] = credentials_to_dict(flow.credentials)
-    credentials = Credentials(**session['credentials'])
-    req_token = requests.Request()
-    credentials.refresh(req_token)
-    access_token = credentials.token
-    print(access_token)
+    credentials = Credentials(**credentials_to_dict(flow.credentials))
+    print(credentials.token)
 
     token = flow.credentials.id_token
 
