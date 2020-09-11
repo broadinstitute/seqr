@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'matchmaker',
 ]
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
