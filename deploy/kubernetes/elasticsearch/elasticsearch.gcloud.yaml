@@ -145,3 +145,39 @@ spec:
 #        resources:
 #          requests:
 #            storage: {{ ES_DATA_DISK_SIZE }}
+{% if ES_LOADING_NUM_PODS > 0 %}
+  - name: data-loading
+    count: {{ ES_LOADING_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: true
+      node.ml: false
+      node.remote_cluster_client: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        volumes:
+        - name: elasticsearch-data
+          emptyDir: {}
+{% endif %}

@@ -229,7 +229,7 @@ def deploy_elasticsearch(settings):
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch status')
 
     total_pods = 0
-    for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS']:
+    for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS', 'ES_LOADING_NUM_PODS']:
         total_pods += settings.get(num_pods, 0)
     for pod_number_i in range(total_pods):
         sleep_until_pod_is_running('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
