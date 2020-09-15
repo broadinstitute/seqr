@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { SubmissionError } from 'redux-form'
+import GoogleButton from 'react-google-button'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
@@ -37,7 +38,7 @@ const Login = ({ onSubmit }) =>
   >
     <Link to="/users/forgot_password">Forgot Password?</Link>
     <br />
-    <button onClick={googleLogin}>Logging in with Google</button>
+    <GoogleButton onClick={googleLogin} />
   </UserFormLayout>
 
 Login.propTypes = {
