@@ -19,6 +19,12 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
+def has_perm(user, permission_level, project):
+    # Fetch members of seqr_STAFF_GROUP
+    # Fetch project current collaborators
+    return True
+
+
 def has_project_permissions(project, user, can_edit=False, is_owner=False):
     permission_level = CAN_VIEW
     if can_edit:
@@ -26,7 +32,8 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    # return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    return has_perm(user, permission_level, project)
 
 
 def check_project_permissions(project, user, **kwargs):
