@@ -284,3 +284,11 @@ MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
+
+#########################################################
+#  AnVIL Terra API specific settings
+#########################################################
+
+TERRA_API_CONFIG = {
+    'root_url': 'https://api.firecloud.org/',
+}
