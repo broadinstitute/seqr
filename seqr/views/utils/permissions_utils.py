@@ -2,7 +2,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import AnvilSession, service_account_session
+from seqr.views.utils.terra_api_utils import service_account_session
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):

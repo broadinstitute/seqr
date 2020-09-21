@@ -2,7 +2,6 @@
 APIs used by the main seqr dashboard page
 """
 
-import json
 import logging
 
 from django.db import models
@@ -59,7 +58,7 @@ def get_anvil_projects_user_can_view(request):
             try:
                 acl = service_account_session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
             except Exception:
-                continue
+                acl={}
             if request.session['anvil']['idinfo']['email'] in acl.keys():
                 workspaces.append(ws['workspace']['name'])
     return Project.objects.filter(name__in = workspaces)
