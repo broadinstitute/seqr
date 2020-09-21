@@ -18,7 +18,7 @@ from seqr.views.utils.permissions_utils import has_project_permissions
 logger = logging.getLogger(__name__)
 
 
-def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None):
+def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None, **kwargs):
     """Returns an array JSON representations of the given models.
 
     Args:
@@ -65,7 +65,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
         if result.get('createdBy'):
             result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
         if process_result:
-            process_result(result, model)
+            process_result(result, model, **kwargs)
         results.append(result)
 
     return results
@@ -106,7 +106,7 @@ def _get_json_for_user(user):
     return user_json
 
 
-def get_json_for_projects(projects, user=None, add_project_category_guids_field=True):
+def get_json_for_projects(projects, user=None, add_project_category_guids_field=True, **kwargs):
     """Returns JSON representation of the given Projects.
 
     Args:
@@ -115,16 +115,16 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     Returns:
         dict: json object
     """
-    def _process_result(result, project):
+    def _process_result(result, project, **kwargs):
         result.update({
             'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
-            'canEdit': has_project_permissions(project, user, can_edit=True),
+            'canEdit': has_project_permissions(project, user, can_edit=True, **kwargs),
         })
 
     if add_project_category_guids_field:
         prefetch_related_objects(projects, 'projectcategory_set')
 
-    return _get_json_for_models(projects, user=user, process_result=_process_result)
+    return _get_json_for_models(projects, user=user, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_project(project, user, **kwargs):

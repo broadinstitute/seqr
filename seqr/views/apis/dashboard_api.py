@@ -2,16 +2,18 @@
 APIs used by the main seqr dashboard page
 """
 
+import json
 import logging
 
 from django.db import models
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family
+from seqr.models import ProjectCategory, Sample, Family, Project
 from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
+from seqr.views.utils.terra_api_utils import service_account_session
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -28,7 +30,10 @@ def dashboard_page_data(request):
          'individualsByGuid': {..},
        }
     """
-    projects_by_guid = _get_projects_json(request.user)
+    try:
+        projects_by_guid = _get_projects_json(request)
+    except Exception as ee:
+        return create_json_response({}, status=500, reason='Error: getting project list failed for {}'.format(str(ee)))
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     json_response = {
@@ -39,8 +44,30 @@ def dashboard_page_data(request):
     return create_json_response(json_response)
 
 
-def _get_projects_json(user):
-    projects = get_projects_user_can_view(user)
+def get_anvil_projects_user_can_view(request):
+    """
+    . Fetch a workspace list with a false “public” attribute
+    . If using a service account, filter out those user doesn’t have access
+    . Get a corresponding project list of the workspaces
+    . General project jsons
+    """
+    requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
+    workspace_list = service_account_session.list_workspaces(requested_fields)
+    workspaces = []
+    for ws in workspace_list:
+        if not ws['public']:
+            try:
+                acl = service_account_session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
+            except Exception:
+                continue
+            if request.session['anvil']['idinfo']['email'] in acl.keys():
+                workspaces.append(ws['workspace']['name'])
+    return Project.objects.filter(name__in = workspaces)
+
+
+def _get_projects_json(request):
+    projects = get_anvil_projects_user_can_view(request) if request.session.has_key('anvil') else\
+        get_projects_user_can_view(request.user)
     if not projects:
         return {}
 
@@ -48,7 +75,8 @@ def _get_projects_json(user):
         models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
         models.Count('family__savedvariant', distinct=True))
 
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user=user)}
+    req = request if request.session.has_key('anvil') else None
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user=request.user, request=req)}
     for project in projects_with_counts:
         projects_by_guid[project.guid]['numFamilies'] = project.family__count
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
@@ -104,7 +132,7 @@ def _retrieve_project_categories_by_guid(project_guids):
 def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 
-    projects_by_guid = _get_projects_json(request.user)
+    projects_by_guid = _get_projects_json(request)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     header = [

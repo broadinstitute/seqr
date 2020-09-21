@@ -135,12 +135,13 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
+    req = request if request.session.has_key('anvil') else None
+    project = get_project_and_check_permissions(project_guid, request.user, request=req)
     update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
     response = _get_project_child_entities(project, request.user)
 
-    project_json = _get_json_for_project(project, request.user)
+    project_json = _get_json_for_project(project, request.user, request=req)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
     project_json['locusListGuids'] = list(response['locusListsByGuid'].keys())
     project_json['detailsLoaded'] = True
