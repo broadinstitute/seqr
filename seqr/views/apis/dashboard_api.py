@@ -50,18 +50,24 @@ def get_anvil_projects_user_can_view(request):
     . Get a corresponding project list of the workspaces
     . General project jsons
     """
+    is_staff = request.user.username in service_account_session.get_staffs()
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = service_account_session.list_workspaces(requested_fields)
     workspaces = []
     for ws in workspace_list:
         if not ws['public']:
-            try:
-                acl = service_account_session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
-            except Exception:
-                acl={}
-            if request.session['anvil']['idinfo']['email'] in acl.keys():
+            if is_staff:
                 workspaces.append(ws['workspace']['name'])
-    return Project.objects.filter(name__in = workspaces)
+            else:
+                try:
+                    acl = service_account_session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
+                except Exception:
+                    acl={}
+                if request.session['anvil']['idinfo']['email'] in acl.keys():
+                    workspaces.append(ws['workspace']['name'])
+    if is_staff:
+        return Project.objects.filter(name__in=workspaces, disable_staff_access=False)
+    return Project.objects.filter(name__in=workspaces)
 
 
 def _get_projects_json(request):
