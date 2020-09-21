@@ -90,7 +90,7 @@ def login_oauth2callback(request):
         return create_json_response({}, status=401, reason=str(ve))
 
     credentials = Credentials(**credentials_to_dict(flow.credentials))
-    session = AnvilSession(credentials = credentials)
+    session = AnvilSession(credentials = credentials, scopes = scopes)
     try:
         _ = session.get_anvil_profile()
     except Exception as ee:

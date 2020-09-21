@@ -7,9 +7,7 @@ import logging
 
 from urllib.parse import urljoin
 
-import google.auth
-from google.auth.exceptions import DefaultCredentialsError, RefreshError
-from google.auth.transport.requests import AuthorizedSession, Request
+from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
 from settings import SEQR_VERSION, TERRA_API_CONFIG
@@ -31,7 +29,7 @@ class TerraAPIException(Exception):
 
 
 class AnvilSession:
-    def __init__(self, credentials=None, service_account_secret="service_account.json", scopes=scopes):
+    def __init__(self, credentials=None, service_account_secret="service_account.json", scopes=None):
         if credentials is None:
             credentials = service_account.Credentials.from_service_account_file(service_account_secret, scopes = scopes)
         self._session = AuthorizedSession(credentials = credentials)
