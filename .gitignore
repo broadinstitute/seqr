@@ -19,3 +19,5 @@ seqr_settings
 django_key
 
 client_secret.json
+service_account.json
+
