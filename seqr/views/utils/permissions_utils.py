@@ -2,6 +2,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
+from seqr.views.utils.terra_api_utils import AnvilSession, service_account_session
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -19,21 +20,34 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
-def has_perm(user, permission_level, project):
-    # Fetch members of seqr_STAFF_GROUP
-    # Fetch project current collaborators
-    return True
+def has_perm(user, permission_level, project, request):
+    is_staff = user.username in service_account_session.get_staffs()
+    if is_staff and not project.disable_staff_access:
+        return True
+    collaborators = service_account_session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
+    if user.username in collaborators.keys():
+        permission = collaborators[user.username]
+        if permission['pending']:
+            return False
+        if permission_level is IS_OWNER:
+            return permission['accessLevel'] == 'OWNER'
+        if permission_level is CAN_EDIT:
+            return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+        return True
+    return False
 
 
-def has_project_permissions(project, user, can_edit=False, is_owner=False):
+def has_project_permissions(project, user, request=None, can_edit=False, is_owner=False):
     permission_level = CAN_VIEW
     if can_edit:
         permission_level = CAN_EDIT
     if is_owner:
         permission_level = IS_OWNER
 
-    # return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
-    return has_perm(user, permission_level, project)
+    if request:
+        return has_perm(user, permission_level, project, request)
+    else:
+        return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
 
 
 def check_project_permissions(project, user, **kwargs):

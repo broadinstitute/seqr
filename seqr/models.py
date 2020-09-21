@@ -118,6 +118,9 @@ class Project(ModelWithGUID):
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
+    workspace_name = models.TextField(null = True, blank = True)
+    workspace_namespace = models.TextField(null = True, blank = True)
+
     def __unicode__(self):
         return self.name.strip()
 

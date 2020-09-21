@@ -15,7 +15,7 @@ import json
 import logging
 
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.google_auth_utils import AnvilSession, scopes
+from seqr.views.utils.terra_api_utils import AnvilSession, scopes
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
@@ -81,16 +81,6 @@ def login_oauth2callback(request):
     authorization_response = request.body.decode('utf-8')
     flow.fetch_token(authorization_response = authorization_response)
 
-    credentials = Credentials(**credentials_to_dict(flow.credentials))
-    request.session['anvil_session'] = AnvilSession(credentials = credentials, scopes = scopes)
-    session = request.session['anvil_session']
-    r = session.get_anvil_profile()
-    if r.status_code is not 200:
-        return create_json_response({}, status=400, reason='Google account must be registered on AnVIL first. \
-        Please open https://anvil.terra.bio and sign in with Google to register your account')
-    print(r.text)
-    print(credentials.token)
-
     token = flow.credentials.id_token
 
     try:
@@ -99,13 +89,27 @@ def login_oauth2callback(request):
     except ValueError as ve:
         return create_json_response({}, status=401, reason=str(ve))
 
+    credentials = Credentials(**credentials_to_dict(flow.credentials))
+    session = AnvilSession(credentials = credentials)
+    try:
+        _ = session.get_anvil_profile()
+    except Exception as ee:
+        return create_json_response({}, status=400, reason='Google account must be registered on AnVIL first. \
+        Please open https://anvil.terra.bio and sign in with Google to register your account. AnVIL responses: {}'
+                                    .format(str(ee)))
+
+    # To be updated to use user's Google ID to look for the user record in the model
     users = User.objects.filter(email__iexact=idinfo['email'])
     username = users.first().username
     user = User.objects.get(username=username)
 
     # A temporary solution for Django authenticating the user without a password
     user.backend = 'django.contrib.auth.backends.ModelBackend'
-    request.session['credentials'] = credentials_to_dict(credentials)
+    request.session['anvil'] = {
+        "credentials": credentials_to_dict(credentials),
+        "session": session,
+        "idinfo": idinfo,
+    }
     login(request, user)
 
     return create_json_response({'success': True})
