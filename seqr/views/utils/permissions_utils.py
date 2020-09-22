@@ -72,7 +72,7 @@ def check_user_created_object_permissions(obj, user, session=None):
 def check_multi_project_permissions(obj, user, session=None):
     for project in obj.projects.all():
         try:
-            check_project_permissions(project, user, session)
+            check_project_permissions(project, user, session=session)
             return
         except PermissionDenied:
             continue
@@ -120,7 +120,7 @@ def get_projects_user_can_view(user, session=None):
 
 def check_mme_permissions(submission, user, session=None):
     project = submission.individual.family.project
-    check_project_permissions(project, user, session)
+    check_project_permissions(project, user, session=session)
     if not project.is_mme_enabled:
         raise PermissionDenied('Matchmaker is not enabled')
 

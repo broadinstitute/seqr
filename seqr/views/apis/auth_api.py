@@ -101,11 +101,11 @@ def login_oauth2callback(request):
         Please open https://anvil.terra.bio and sign in with Google to register your account. AnVIL responses: {}'
                                     .format(str(ee)))
 
-    # To be updated to use user's Google ID to look for the user record in the model
+    # Use user's Google ID to look for the user record in the model
     anvil_users = AnvilUser.objects.filter(anvil_user_name__iexact = idinfo['email'])
     if len(anvil_users) > 0: # Registered user
         user = anvil_users.first().user
-    else:
+    else: # Auto-register the Google account to the local account with the same email address
         users = User.objects.filter(email__iexact = idinfo['email'])
         if len(users) == 0:
             return create_json_response({}, status=401, reason="User {} doesn't exist.".format(idinfo['email']))
