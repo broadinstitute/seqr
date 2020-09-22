@@ -28,25 +28,23 @@ class TerraAPIException(Exception):
     pass
 
 
+def _seqr_agent_header(headers=None):
+    """ Return request headers for Terra API message.
+        Inserts seqr/version as the User-Agent.
+    Args:
+        headers (dict): Include additional headers as key-value pairs
+    """
+    seqr_headers = {"User-Agent": SEQR_USER_AGENT}
+    if headers is not None:
+        seqr_headers.update(headers)
+    return seqr_headers
+
+
 class AnvilSession:
     def __init__(self, credentials=None, service_account_secret="service_account.json", scopes=None):
         if credentials is None:
             credentials = service_account.Credentials.from_service_account_file(service_account_secret, scopes = scopes)
         self._session = AuthorizedSession(credentials = credentials)
-
-    #################################################
-    # Utilities
-    #################################################
-    def _seqr_agent_header(sefl, headers=None):
-        """ Return request headers for Terra API message.
-            Inserts seqr/version as the User-Agent.
-        Args:
-            headers (dict): Include additional headers as key-value pairs
-        """
-        seqr_headers = {"User-Agent": SEQR_USER_AGENT}
-        if headers is not None:
-            seqr_headers.update(headers)
-        return seqr_headers
 
     def __get(self, methcall, headers=None, root_url=None, **kwargs):
         """ Call Terra API with HTTP GET method with an authentication header.
@@ -59,7 +57,7 @@ class AnvilSession:
             HTTP response
         """
         if not headers:
-            headers = self._seqr_agent_header()
+            headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_CONFIG['root_url']
         return self._session.get(urljoin(root_url, methcall), headers = headers, **kwargs)
@@ -68,7 +66,7 @@ class AnvilSession:
         """ See the __get() method
         """
         if not headers:
-            headers = self._seqr_agent_header({"Content-type": "application/json"})
+            headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
             root_url = TERRA_API_CONFIG['root_url']
         return self._session.post(urljoin(root_url, methcall), headers = headers, **kwargs)
@@ -77,7 +75,7 @@ class AnvilSession:
         """ See the __get() method
         """
         if not headers:
-            headers = self._seqr_agent_header()
+            headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_CONFIG['root_url']
         return self._session.put(urljoin(root_url, methcall), headers = headers, **kwargs)
@@ -86,7 +84,7 @@ class AnvilSession:
         """ See the __get() method
         """
         if not headers:
-            headers = self._seqr_agent_header()
+            headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_CONFIG['root_url']
         return self._session.delete(urljoin(root_url, methcall), headers = headers)
@@ -171,5 +169,9 @@ class AnvilSession:
                 'Error: called Terra API "api/groups/seqr-staffs" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         group = json.loads(r.text)
         return group["adminsEmails"]
+
+    def is_staff(self, user_email):
+        return user_email in self.get_staffs()
+
 
 service_account_session = AnvilSession(scopes = scopes)

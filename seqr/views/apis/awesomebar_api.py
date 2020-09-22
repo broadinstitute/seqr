@@ -213,7 +213,7 @@ def awesomebar_autocomplete_handler(request):
 
     categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
-    projects = get_projects_user_can_view(request.user) if any(
+    projects = get_projects_user_can_view(request.user, session=request.session['anvil']) if any(
         category for category in categories if category in PROJECT_SPECIFIC_CATEGORY_MAP) else None
 
     results = {

@@ -36,6 +36,16 @@ def _slugify(text):
     return __slugify(text).replace('-', '_')
 
 
+class AnvilUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    anvil_user_name = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
+
+    @classmethod
+    def create(cls, user, user_name) -> object:
+        anvil_user = cls(user=user, anvil_user_name = user_name)
+        return anvil_user
+
+
 class ModelWithGUID(models.Model):
     MAX_GUID_SIZE = 30
 
