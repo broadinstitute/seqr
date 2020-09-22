@@ -29,7 +29,7 @@ def dashboard_page_data(request):
        }
     """
     try:
-        projects_by_guid = _get_projects_json(request)
+        projects_by_guid = _get_projects_json(request.user, session=request.session['anvil'])
     except Exception as ee:
         return create_json_response({}, status=500, reason='Error: getting project list failed for {}'.format(str(ee)))
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
@@ -42,8 +42,8 @@ def dashboard_page_data(request):
     return create_json_response(json_response)
 
 
-def _get_projects_json(request):
-    projects = get_projects_user_can_view(request.user, session=request.session['anvil'])
+def _get_projects_json(user, session=None):
+    projects = get_projects_user_can_view(user, session=session)
     if not projects:
         return {}
 
@@ -52,7 +52,7 @@ def _get_projects_json(request):
         models.Count('family__savedvariant', distinct=True))
 
     projects_by_guid = {p['projectGuid']: p for p in
-                        get_json_for_projects(projects, user=request.user, session=request.session['anvil'])}
+                        get_json_for_projects(projects, user=user, session=session)}
     for project in projects_with_counts:
         projects_by_guid[project.guid]['numFamilies'] = project.family__count
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
@@ -108,7 +108,7 @@ def _retrieve_project_categories_by_guid(project_guids):
 def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 
-    projects_by_guid = _get_projects_json(request)
+    projects_by_guid = _get_projects_json(request.user, session=request.session['anvil'])
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     header = [
