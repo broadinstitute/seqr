@@ -44,7 +44,7 @@ def edit_families_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="'families' not specified")
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
 
     updated_families = []
     for fields in modified_families:
@@ -76,7 +76,7 @@ def delete_families_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -121,7 +121,7 @@ def update_family_fields_handler(request, family_guid):
     # check permission
     project = family.project
 
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
     update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
@@ -141,7 +141,7 @@ def update_family_assigned_analyst(request, family_guid):
     """
     family = Family.objects.get(guid=family_guid)
     # assigned_analyst can be edited by anyone with access to the project
-    check_project_permissions(family.project, request.user, can_edit=False)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'], can_edit=False)
 
     request_json = json.loads(request.body)
     assigned_analyst_username = request_json.get('assigned_analyst_username')
@@ -174,7 +174,7 @@ def update_family_analysed_by(request, family_guid):
 
     family = Family.objects.get(guid=family_guid)
     # analysed_by can be edited by anyone with access to the project
-    check_project_permissions(family.project, request.user, can_edit=False)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'], can_edit=False)
 
     FamilyAnalysedBy.objects.create(family=family, created_by=request.user)
 
@@ -195,7 +195,7 @@ def update_family_pedigree_image(request, family_guid):
     family = Family.objects.get(guid=family_guid)
 
     # check permission
-    check_project_permissions(family.project, request.user, can_edit=True)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'], can_edit=True)
 
     if len(request.FILES) == 0:
         pedigree_image = None
@@ -224,7 +224,7 @@ def receive_families_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     def _process_records(records, filename=''):
         column_map = {}

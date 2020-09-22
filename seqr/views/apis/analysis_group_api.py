@@ -19,7 +19,7 @@ REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_analysis_group_handler(request, project_guid, analysis_group_guid=None):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
     missing_fields = [field for field in REQUIRED_FIELDS.keys() if not request_json.get(field)]
@@ -64,7 +64,7 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
     AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete()
 
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})

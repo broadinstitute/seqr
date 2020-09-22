@@ -66,7 +66,7 @@ def update_individual_handler(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -87,7 +87,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -133,7 +133,7 @@ def edit_individuals_handler(request, project_guid):
             }
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -210,7 +210,7 @@ def delete_individuals_handler(request, project_guid):
     """
 
     # validate request
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')
@@ -254,7 +254,7 @@ def receive_individuals_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     warnings = []
     def process_records(json_records, filename='ped_file'):
@@ -349,7 +349,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
         project_guid (string): project GUID
         uploadedFileId (string): a token sent to the client by receive_individuals_table(..)
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     json_records = load_uploaded_file(upload_file_id)
 
@@ -495,7 +495,7 @@ def receive_hpo_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     def process_records(json_records, filename=''):
         records, errors, warnings = _process_hpo_records(json_records, filename, project)
@@ -675,7 +675,7 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_hpo_table_handler
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     json_records, _ = load_uploaded_file(upload_file_id)
 

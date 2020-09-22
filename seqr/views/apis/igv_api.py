@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def fetch_igv_track(request, project_guid, igv_track_path):
 
-    get_project_and_check_permissions(project_guid, request.user)
+    get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
 
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')

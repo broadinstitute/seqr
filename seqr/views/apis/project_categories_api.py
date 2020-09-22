@@ -41,7 +41,7 @@ def update_project_categories_handler(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     # check permissions
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 

@@ -10,6 +10,7 @@ from seqr.utils.gene_utils import get_gene, get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
+from seqr.views.utils.permissions_utils import is_staff
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -66,7 +67,7 @@ def update_gene_note_handler(request, gene_id, note_guid):
 @csrf_exempt
 def delete_gene_note_handler(request, gene_id, note_guid):
     note = GeneNote.objects.get(guid=note_guid)
-    if not _can_edit_note(note, request.user):
+    if not _can_edit_note(note, request.user, request.session['anvil']):
         raise PermissionDenied("User does not have permission to delete this note")
 
     note.delete()
@@ -79,5 +80,5 @@ def _get_gene_notes(gene_id, user):
     return get_json_for_gene_notes_by_gene_id([gene_id], user).get(gene_id, [])
 
 
-def _can_edit_note(note, user):
-    return user.is_staff or user == note.created_by
+def _can_edit_note(note, user, session):
+    return is_staff(user, session) or user == note.created_by

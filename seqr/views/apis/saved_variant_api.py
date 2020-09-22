@@ -13,7 +13,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, is_staff
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def saved_variant_data(request, project_guid, variant_guids=None):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'])
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
     variant_guids = variant_guids.split(',') if variant_guids else None
 
@@ -39,7 +39,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
     discovery_tags_query = None
-    if request.user.is_staff:
+    if is_staff(request.user, request.session['anvil']):
         discovery_tags_query = Q()
         for variant in variant_query:
             discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
@@ -64,7 +64,7 @@ def create_saved_variant_handler(request):
     family_guid = variant_json['familyGuid']
 
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'])
 
     if isinstance(variant_json['variant'], list):
         # are compound hets
@@ -118,7 +118,7 @@ def create_variant_note_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'])
 
     all_variant_guids = variant_guids.split(',')
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -172,7 +172,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
-        check_project_permissions(project, request.user)
+        check_project_permissions(project, request.user, session=request.session['anvil'])
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
@@ -191,7 +191,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
-        check_project_permissions(project, request.user)
+        check_project_permissions(project, request.user, session=request.session['anvil'])
     note.delete()
 
     saved_variants_by_guid = {}
@@ -216,7 +216,7 @@ def update_variant_tags_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'])
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -252,7 +252,7 @@ def update_variant_functional_data_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_project_permissions(family.project, request.user, session=request.session['anvil'])
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -326,7 +326,7 @@ def _create_new_tags(saved_variants, tags_json, user):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_saved_variant_json(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
     reset_cached_search_results(project)
     updated_saved_variant_guids = update_project_saved_variant_json(project)
 
@@ -337,7 +337,7 @@ def update_saved_variant_json(request, project_guid):
 @csrf_exempt
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_project_permissions(saved_variant.family.project, request.user, can_edit=True)
+    check_project_permissions(saved_variant.family.project, request.user, session=request.session['anvil'], can_edit=True)
 
     saved_variant.selected_main_transcript_id = transcript_id
     saved_variant.save()

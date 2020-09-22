@@ -14,6 +14,7 @@ from google.oauth2.credentials import Credentials
 import json
 import logging
 
+from seqr.models import AnvilUser
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import AnvilSession, scopes
 
@@ -37,6 +38,8 @@ def login_view(request):
     u = authenticate(username=users.first().username, password=request_json['password'])
     if not u:
         return create_json_response({}, status=401, reason='Invalid credentials')
+
+    request.session['anvil'] = None
 
     login(request, u)
 
@@ -99,17 +102,20 @@ def login_oauth2callback(request):
                                     .format(str(ee)))
 
     # To be updated to use user's Google ID to look for the user record in the model
-    users = User.objects.filter(email__iexact=idinfo['email'])
-    username = users.first().username
-    user = User.objects.get(username=username)
+    anvil_users = AnvilUser.objects.filter(anvil_user_name__iexact = idinfo['email'])
+    if len(anvil_users) > 0: # Registered user
+        user = anvil_users.first().user
+    else:
+        users = User.objects.filter(email__iexact = idinfo['email'])
+        if len(users) == 0:
+            return create_json_response({}, status=401, reason="User {} doesn't exist.".format(idinfo['email']))
+        user = users.first()
+        anvil_user = AnvilUser.create(user, idinfo['email'])
+        anvil_user.save()
 
     # A temporary solution for Django authenticating the user without a password
     user.backend = 'django.contrib.auth.backends.ModelBackend'
-    request.session['anvil'] = {
-        "credentials": credentials_to_dict(credentials),
-        "session": session,
-        "idinfo": idinfo,
-    }
+    request.session['anvil'] = session
     login(request, user)
 
     return create_json_response({'success': True})

@@ -42,7 +42,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
     request_json = json.loads(request.body)
 
     try:
@@ -131,7 +131,7 @@ def add_variants_dataset_handler(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_igv_table_handler(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
     info = []
 
     def _process_alignment_records(rows, **kwargs):
@@ -177,7 +177,7 @@ def receive_igv_table_handler(request, project_guid):
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user, session=request.session['anvil'], can_edit=True)
 
     request_json = json.loads(request.body)
 

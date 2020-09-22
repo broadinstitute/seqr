@@ -7,12 +7,11 @@ import logging
 from django.db import models
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family, Project
+from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
-from seqr.views.utils.terra_api_utils import service_account_session
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -43,36 +42,8 @@ def dashboard_page_data(request):
     return create_json_response(json_response)
 
 
-def get_anvil_projects_user_can_view(request):
-    """
-    . Fetch a workspace list with a false “public” attribute
-    . If using a service account, filter out those user doesn’t have access
-    . Get a corresponding project list of the workspaces
-    . General project jsons
-    """
-    is_staff = request.user.username in service_account_session.get_staffs()
-    requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
-    workspace_list = service_account_session.list_workspaces(requested_fields)
-    workspaces = []
-    for ws in workspace_list:
-        if not ws['public']:
-            if is_staff:
-                workspaces.append(ws['workspace']['name'])
-            else:
-                try:
-                    acl = service_account_session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
-                except Exception:
-                    acl={}
-                if request.session['anvil']['idinfo']['email'] in acl.keys():
-                    workspaces.append(ws['workspace']['name'])
-    if is_staff:
-        return Project.objects.filter(name__in=workspaces, disable_staff_access=False)
-    return Project.objects.filter(name__in=workspaces)
-
-
 def _get_projects_json(request):
-    projects = get_anvil_projects_user_can_view(request) if request.session.has_key('anvil') else\
-        get_projects_user_can_view(request.user)
+    projects = get_projects_user_can_view(request.user, session=request.session['anvil'])
     if not projects:
         return {}
 
@@ -80,8 +51,8 @@ def _get_projects_json(request):
         models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
         models.Count('family__savedvariant', distinct=True))
 
-    req = request if request.session.has_key('anvil') else None
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user=request.user, request=req)}
+    projects_by_guid = {p['projectGuid']: p for p in
+                        get_json_for_projects(projects, user=request.user, session=request.session['anvil'])}
     for project in projects_with_counts:
         projects_by_guid[project.guid]['numFamilies'] = project.family__count
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
