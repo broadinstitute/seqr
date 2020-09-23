@@ -25,7 +25,7 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def locus_lists(request):
-    if is_staff(request.user, request.session['anvil']):
+    if is_staff(request.user, request.session):
         locus_list_models = LocusList.objects.all()
     else:
         locus_list_models = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
@@ -44,7 +44,7 @@ def locus_list_info(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
 
     if not locus_list.is_public:
-        check_multi_project_permissions(locus_list, request.user, session=request.session['anvil'])
+        check_multi_project_permissions(locus_list, request.user, session=request.session)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
     gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
@@ -84,7 +84,7 @@ def create_locus_list_handler(request):
 @csrf_exempt
 def update_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_user_created_object_permissions(locus_list, request.user, session=request.session['anvil'])
+    check_user_created_object_permissions(locus_list, request.user, session=request.session)
 
     request_json = json.loads(request.body)
 
@@ -106,7 +106,7 @@ def update_locus_list_handler(request, locus_list_guid):
 @csrf_exempt
 def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_user_created_object_permissions(locus_list, request.user, session=request.session['anvil'])
+    check_user_created_object_permissions(locus_list, request.user, session=request.session)
 
     locus_list.delete()
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
@@ -115,7 +115,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
@@ -130,7 +130,7 @@ def add_project_locus_lists(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session['anvil'], can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:

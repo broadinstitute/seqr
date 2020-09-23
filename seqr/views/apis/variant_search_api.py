@@ -58,17 +58,17 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and is_staff(request.user, request.session['anvil']):
+    if sort == PATHOGENICTY_SORT_KEY and is_staff(request.user, request.session):
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'),
-                                                     request.user, session=request.session['anvil'])
+                                                     request.user, session=request.session)
     except Exception as e:
         logger.error(e)
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
-    _check_results_permission(results_model, request.user, session=request.session['anvil'])
+    _check_results_permission(results_model, request.user, session=request.session)
 
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
@@ -78,7 +78,7 @@ def query_variants_handler(request, search_hash):
     except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants or [], results_model.families.all(), request.user, request.session['anvil'])
+    response = _process_variants(variants or [], results_model.families.all(), request.user, request.session)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
@@ -129,7 +129,7 @@ def query_single_variant_handler(request, variant_id):
 
     variant = get_single_es_variant(families, variant_id)
 
-    response = _process_variants([variant], families, request.user, request.session['anvil'])
+    response = _process_variants([variant], families, request.user, request.session)
     response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
@@ -228,7 +228,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
 @csrf_exempt
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    _check_results_permission(results_model, request.user, session=request.session['anvil'])
+    _check_results_permission(results_model, request.user, session=request.session)
 
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
@@ -242,7 +242,7 @@ def get_variant_gene_breakdown(request, search_hash):
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
-    _check_results_permission(results_model, request.user, session=request.session['anvil'])
+    _check_results_permission(results_model, request.user, session=request.session)
 
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
@@ -311,7 +311,7 @@ def search_context_handler(request):
     elif context.get('searchHash'):
         try:
             results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'),
-                                                         request.user, session=request.session['anvil'])
+                                                         request.user, session=request.session)
         except Exception as e:
             return create_json_response({'error': str(e)}, status=400, reason=str(e))
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
@@ -319,7 +319,7 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    response.update(_get_projects_details(projects, request.user, session=request.session['anvil'],
+    response.update(_get_projects_details(projects, request.user, session=request.session,
                                           project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
@@ -466,7 +466,7 @@ def create_saved_search_handler(request):
 
     return create_json_response({
         'savedSearchesByGuid': {
-            saved_search.guid: get_json_for_saved_search(saved_search, request.user)
+            saved_search.guid: get_json_for_saved_search(saved_search, request.user, request.session)
         }
     })
 
@@ -488,7 +488,7 @@ def update_saved_search_handler(request, saved_search_guid):
 
     return create_json_response({
         'savedSearchesByGuid': {
-            saved_search_guid: get_json_for_saved_search(search, request.user)
+            saved_search_guid: get_json_for_saved_search(search, request.user, request.session)
         }
     })
 
