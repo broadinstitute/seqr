@@ -327,7 +327,7 @@ def search_context_handler(request):
 
 def _get_projects_details(projects, user, session=None, project_category_guid=None):
     for project in projects:
-        check_project_permissions(project, user, session)
+        check_project_permissions(project, user, session=session)
 
     prefetch_related_objects(projects, 'can_view_group')
     project_models_by_guid = {project.guid: project for project in projects}
