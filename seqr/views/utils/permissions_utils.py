@@ -21,7 +21,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def is_staff(user, session):
-    return session['anvil'] and service_account_session.is_staff(user.anviluser.anvil_user_name)
+    return session and session['anvil'] and service_account_session.is_staff(user.anviluser.anvil_user_name)
 
 def has_perm(user, permission_level, project, session):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
