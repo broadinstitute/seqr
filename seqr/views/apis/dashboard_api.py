@@ -29,7 +29,7 @@ def dashboard_page_data(request):
        }
     """
     try:
-        projects_by_guid = _get_projects_json(request.user, session=request.session['anvil'])
+        projects_by_guid = _get_projects_json(request.user, session=request.session)
     except Exception as ee:
         return create_json_response({}, status=500, reason='Error: getting project list failed for {}'.format(str(ee)))
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
@@ -108,7 +108,7 @@ def _retrieve_project_categories_by_guid(project_guids):
 def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 
-    projects_by_guid = _get_projects_json(request.user, session=request.session['anvil'])
+    projects_by_guid = _get_projects_json(request.user, session=request.session)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     header = [

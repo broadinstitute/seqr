@@ -21,7 +21,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def is_staff(user, session):
-    return session and session.is_staff(user.anviluser.anvil_user_name)
+    return session['anvil'] and service_account_session.is_staff(user.anviluser.anvil_user_name)
 
 def has_perm(user, permission_level, project, session):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
@@ -49,7 +49,7 @@ def has_project_permissions(project, user, session=None, can_edit=False, is_owne
     if is_owner:
         permission_level = IS_OWNER
 
-    if session:
+    if session and session['anvil']:
         return has_perm(user, permission_level, project, session)
     else:
         return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
@@ -109,7 +109,7 @@ def _get_anvil_projects_user_can_view(user, session):
 
 
 def get_projects_user_can_view(user, session=None):
-    if session:
+    if session and session['anvil']:
         return _get_anvil_projects_user_can_view(user, session)
     can_view_filter = Q(can_view_group__user=user)
     if user.is_staff:
