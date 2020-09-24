@@ -508,7 +508,7 @@ def _check_results_permission(results_model, user, session=None):
     families = results_model.families.prefetch_related('project').all()
     projects = {family.project for family in families}
     for project in projects:
-        check_project_permissions(project, user, session)
+        check_project_permissions(project, user, session=session)
 
 
 def _get_search_context(results_model):

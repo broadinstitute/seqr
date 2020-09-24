@@ -38,11 +38,11 @@ def _slugify(text):
 
 class AnvilUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    anvil_user_name = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
+    anvil_username = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
 
     @classmethod
     def create(cls, user, user_name) -> object:
-        anvil_user = cls(user=user, anvil_user_name = user_name)
+        anvil_user = cls(user=user, anvil_username = user_name)
         return anvil_user
 
 

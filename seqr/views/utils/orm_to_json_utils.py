@@ -10,11 +10,13 @@ from collections import defaultdict
 from copy import copy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, is_staff
+from seqr.views.utils.terra_api_utils import service_account_session
 logger = logging.getLogger(__name__)
 
 
@@ -105,8 +107,10 @@ def _get_json_for_user(user, session=None):
     if session and session['anvil']:
         user_json['displayName'] = 'AnVIL: {}'.format(user.get_full_name())
         user_json['isStaff'] = is_staff(user, session)
+        user_json['isAnvil'] = True
     else:
         user_json['displayName'] = user.get_full_name()
+        user_json['isAnvil'] = False
 
     return user_json
 
@@ -675,32 +679,42 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_project_collaborator_list(project):
+def get_json_for_project_collaborator_list(project, session=None):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(project).values())
+    collaborator_list = list(get_project_collaborators_by_username(project, session=session).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def get_project_collaborators_by_username(project, include_permissions=True):
+def get_project_collaborators_by_username(project, include_permissions=True, session=None):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    for collaborator in project.can_view_group.user_set.all():
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False
-        )
+    if session and session['anvil']:
+        acl = service_account_session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
+        for anvil_username in acl.keys():
+            collaborator = User.objects.filter(anviluser__anvil_username = anvil_username)
+            if len(collaborator) > 0:
+                collaborator = collaborator.first()
+                collaborators[collaborator.username] = _get_collaborator_json(collaborator,
+                    include_permissions, can_edit=acl[anvil_username]['accessLevel'] == 'OWNER', session=session
+                )
+    else:
+        for collaborator in project.can_view_group.user_set.all():
+            collaborators[collaborator.username] = _get_collaborator_json(
+                collaborator, include_permissions, can_edit=False
+            )
 
-    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True
-        )
+        for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+            collaborators[collaborator.username] = _get_collaborator_json(
+                collaborator, include_permissions, can_edit=True
+            )
 
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit):
-    collaborator_json = _get_json_for_user(collaborator)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, session=None):
+    collaborator_json = _get_json_for_user(collaborator, session=session)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,

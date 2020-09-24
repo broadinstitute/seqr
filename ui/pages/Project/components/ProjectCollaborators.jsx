@@ -108,7 +108,7 @@ const CollaboratorContainer = styled.div`
 const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
   orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
-      {project.canEdit &&
+      {project.canEdit && !c.isAnvil &&
         <span>
           <HorizontalSpacer width={10} />
           <UpdateButton

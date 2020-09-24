@@ -28,11 +28,12 @@ class CreateUserException(Exception):
 @csrf_exempt
 def get_all_collaborators(request):
     if is_staff(request.user, request.session):
-        collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
+        collaborators = {user.username: _get_json_for_user(user, session = request.session)
+                         for user in User.objects.exclude(email='')}
     else:
         collaborators = {}
         for project in get_projects_user_can_view(request.user, session=request.session):
-            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False))
+            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False, session=request.session))
 
     return create_json_response(collaborators)
 
@@ -42,7 +43,7 @@ def get_all_collaborators(request):
 def get_all_staff(request):
     if request.session['anvil']:
         staff_names = service_account_session.get_staffs()
-        staffs = User.objects.filter(anviluser__anvil_user_name__in = staff_names)
+        staffs = User.objects.filter(anviluser__anvil_username__in = staff_names)
     else:
         staffs = User.objects.filter(is_staff=True)
     staff_analysts = {staff.username: _get_json_for_user(staff) for staff in staffs}
