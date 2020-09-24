@@ -22,9 +22,11 @@ class DatasetAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', mock.MagicMock())
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
-    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
+    @mock.patch('seqr.utils.file_utils.open')
     @urllib3_responses.activate
-    def test_add_variants_dataset(self, mock_file_iter, mock_random):
+    def test_add_variants_dataset(self, mock_open, mock_random):
+        mock_file_iter = mock_open.return_value.__enter__.return_value.__iter__
+
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -167,6 +169,7 @@ class DatasetAPITest(AuthenticationTestCase):
             'datasetType': 'VARIANTS',
         }))
         self.assertEqual(response.status_code, 200)
+        mock_open.assert_called_with('mapping.csv', 'r')
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
