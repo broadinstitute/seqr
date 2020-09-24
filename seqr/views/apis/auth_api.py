@@ -102,7 +102,7 @@ def login_oauth2callback(request):
                                     .format(str(ee)))
 
     # Use user's Google ID to look for the user record in the model
-    anvil_users = AnvilUser.objects.filter(anvil_user_name__iexact = idinfo['email'])
+    anvil_users = AnvilUser.objects.filter(anvil_username__iexact = idinfo['email'])
     if len(anvil_users) > 0: # Registered user
         user = anvil_users.first().user
     else: # Auto-register the Google account to the local account with the same email address
