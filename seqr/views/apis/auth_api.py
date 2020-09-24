@@ -106,10 +106,16 @@ def login_oauth2callback(request):
     if len(anvil_users) > 0: # Registered user
         user = anvil_users.first().user
     else: # Auto-register the Google account to the local account with the same email address
-        users = User.objects.filter(email__iexact = idinfo['email'])
-        if len(users) == 0:
-            return create_json_response({}, status=401, reason="User {} doesn't exist.".format(idinfo['email']))
-        user = users.first()
+        user = User.objects.filter(email__iexact = idinfo['email']).first()
+        if not user: # User not exist, create one
+            username = User.objects.make_random_password()
+            user = User.objects.create_user(
+                username,
+                email = 'AnVIL User: {}'.format(idinfo['email']), # AnVIL only user
+                first_name = idinfo['email'],
+                last_name = '',
+                is_staff = False
+            )
         anvil_user = AnvilUser.create(user, idinfo['email'])
         anvil_user.save()
 
