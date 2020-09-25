@@ -42,6 +42,7 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT[:2])
+        mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
         mock_file.seek.assert_called_with(100)
 
         # test no byte range
@@ -49,5 +50,6 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
+        mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
         mock_file.seek.assert_not_called()
 
