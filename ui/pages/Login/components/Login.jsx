@@ -16,7 +16,7 @@ const FIELDS = [
   { name: 'password', label: 'Password', type: 'password', validate: validators.required },
 ]
 
-const googleLogin = () => {
+export const googleLogin = () => {
   return new HttpRequestHelper('/api/login_google',
     (responseJson) => {
       // Redirect to google auth website

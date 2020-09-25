@@ -7,6 +7,9 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import MessagesPanel from 'shared/components/form/MessagesPanel'
+import { googleLogin } from 'pages/Login/components/Login'
 
 import AwesomeBar from './AwesomeBar'
 
@@ -14,6 +17,14 @@ const HeaderMenu = styled(Menu)`
   padding-left: 100px;
   padding-right: 100px;
 `
+
+const MESSAGE_FIELD = user => [{
+  name: 'anvilUsername',
+  info: [user.anvilUsername ? `${user.anvilUsername}` : 'AnVIL user is not configured'],
+  component: MessagesPanel,
+  width: 16,
+},
+]
 
 const PageHeader = React.memo(({ user }) =>
   <HeaderMenu borderless inverted attached>
@@ -26,6 +37,16 @@ const PageHeader = React.memo(({ user }) =>
       <Menu.Item key="user" position="right">
         <p>Logged in as &nbsp; <b>{user ? (user.displayName || user.email) : null}</b></p>
       </Menu.Item>,
+      user.isAnvil ? null : <UpdateButton
+        modalId="editAnvilUser"
+        modalTitle={`${user.displayName}'s AnVIL Account`}
+        formFields={MESSAGE_FIELD(user)}
+        initialValues={user}
+        onSubmit={googleLogin}
+        submitButtonText="Change"
+        showErrorPanel
+        size="tiny"
+      />,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ]}
   </HeaderMenu>,
