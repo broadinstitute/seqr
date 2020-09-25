@@ -35,7 +35,8 @@ def file_iter(file_path, byte_range=None, raw_content=False):
         for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content):
             yield line
     else:
-        with open(file_path) as f:
+        mode = 'rb' if raw_content else 'r'
+        with open(file_path, mode) as f:
             if byte_range:
                 f.seek(byte_range[0])
                 for line in f:

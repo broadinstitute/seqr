@@ -22,7 +22,7 @@ REDIS_POD_MEMORY_LIMIT: 8Gi
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS: ''
 
-KUBERNETES_VERSION: '1.15.7-gke.23'
+KUBERNETES_VERSION: '1.16.13-gke.401'
 
 # this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
 # this allows cluster administration only from known machines or from machines on google cloud.
