@@ -102,12 +102,28 @@ def login_oauth2callback(request):
                                     .format(str(ee)))
 
     # Use user's Google ID to look for the user record in the model
-    anvil_users = AnvilUser.objects.filter(anvil_username__iexact = idinfo['email'])
-    if len(anvil_users) > 0: # Registered user
-        user = anvil_users.first().user
-    else: # Auto-register the Google account to the local account with the same email address
+    anvil_user = AnvilUser.objects.filter(anvil_username__iexact = idinfo['email']).first()
+
+    if request.user and not request.session['anvil']:  # Local logged in user is registering an AnVIL account
+        if anvil_user:
+            return create_json_response({}, status = 400,
+                reason = 'AnVIL account {} has been used by other seqr account'.format(idinfo['email']))
+        user = request.user
+        if hasattr(user,'anviluser'):  # Change AnVIL account
+            user.anviluser.anvil_username = idinfo['email']
+            user.anviluser.save()
+        else:
+            anvil_user = AnvilUser.create(user, idinfo['email'])
+            anvil_user.save()
+        return create_json_response({'success': True})
+
+    if anvil_user: # Registered user
+        user = anvil_user.user
+    else: # Un-registered user, auto-register the Google account to the local account with the same email address
         user = User.objects.filter(email__iexact = idinfo['email']).first()
-        if not user: # User not exist, create one
+        if not user:  # User not exist, create one (disabled during transitioning phase)
+            create_json_response({}, status = 400,
+                reason = "seqr user with email {} doesn't exist".format(idinfo["email"]))
             username = User.objects.make_random_password()
             user = User.objects.create_user(
                 username,

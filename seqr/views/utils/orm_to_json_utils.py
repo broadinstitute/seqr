@@ -104,13 +104,15 @@ def _get_json_for_user(user, session=None):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    if session and session['anvil']:
-        user_json['displayName'] = 'AnVIL: {}'.format(user.get_full_name())
-        user_json['isStaff'] = is_staff(user, session)
+    anvil_username = user.anviluser.anvil_username if hasattr(user, 'anviluser') else None
+    user_json['anvilUsername'] = anvil_username
+    user_json['displayName'] = user.get_full_name()
+    user_json['isAnvil'] = False
+    if session and session['anvil'] and anvil_username:
         user_json['isAnvil'] = True
-    else:
-        user_json['displayName'] = user.get_full_name()
-        user_json['isAnvil'] = False
+        user_json['displayName'] = 'AnVIL: {}'.format(anvil_username)  # Todo: Update to using user profile from AnVIL
+        user_json['isStaff'] = is_staff(user, session)
+
 
     return user_json
 
