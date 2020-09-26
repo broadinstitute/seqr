@@ -141,7 +141,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
         content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
-      {c.displayName && `${c.displayName} - `}
+      {c.anvilUsername && 'AnVIL: '}{ c.displayName && `${c.displayName} - `}
       <a href={`mailto:${c.email}`}>{c.email}</a>
     </CollaboratorContainer>,
   )

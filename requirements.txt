@@ -6,6 +6,12 @@ django-cors-headers==3.0.2       # allows CORS requests for client-side developm
 
 elasticsearch==6.4.0             # elasticsearch client
 elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
+google-api-core==1.22.0          # required by the google auth web-server client
+google-api-python-client==1.10.0 # google auth web-werver client library
+google-auth==1.20.1              # google auth library
+google-auth-httplib2==0.0.4      # provides httplib2 for google auth
+google-auth-oauthlib==0.4.1      # provide oauthlib for google auth
+googleapis-common-protos==1.52.0 # common protol classes for google api
 gunicorn==19.10.0                # web server
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
@@ -19,9 +25,4 @@ slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling. Behind a major version due to missing Python 2 support
-google-api-core==1.22.0
-google-api-python-client==1.10.0
-google-auth==1.20.1
-google-auth-httplib2==0.0.4
-google-auth-oauthlib==0.4.1
-googleapis-common-protos==1.52.0
+

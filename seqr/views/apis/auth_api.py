@@ -14,11 +14,10 @@ from google.oauth2.credentials import Credentials
 import json
 import logging
 
+from settings import GOOGLE_AUTH_CLIENT_SECRETS_FILE
 from seqr.models import AnvilUser
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import AnvilSession, scopes
-
-CLIENT_SECRETS_FILE = "client_secret.json"
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ def login_view(request):
 def login_google(request):
   # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      CLIENT_SECRETS_FILE, scopes=scopes)
+      GOOGLE_AUTH_CLIENT_SECRETS_FILE, scopes=scopes)
 
   # The URI created here must exactly match one of the authorized redirect URIs
   # for the OAuth 2.0 client, which you configured in the API Console. If this
@@ -77,7 +76,7 @@ def login_oauth2callback(request):
     state = request.session['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        CLIENT_SECRETS_FILE, scopes = scopes, state = state)
+        GOOGLE_AUTH_CLIENT_SECRETS_FILE, scopes = scopes, state = state)
     flow.redirect_uri = 'http://localhost:3000/oauth2callback'
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
@@ -104,17 +103,12 @@ def login_oauth2callback(request):
     # Use user's Google ID to look for the user record in the model
     anvil_user = AnvilUser.objects.filter(anvil_username__iexact = idinfo['email']).first()
 
-    if request.user and not request.session['anvil']:  # Local logged in user is registering an AnVIL account
-        if anvil_user:
+    if request.user and request.user.id and not request.session['anvil']:  # Local logged in user is registering an AnVIL account
+        if anvil_user: # AnVIL account is occupied
             return create_json_response({}, status = 400,
                 reason = 'AnVIL account {} has been used by other seqr account'.format(idinfo['email']))
         user = request.user
-        if hasattr(user,'anviluser'):  # Change AnVIL account
-            user.anviluser.anvil_username = idinfo['email']
-            user.anviluser.save()
-        else:
-            anvil_user = AnvilUser.create(user, idinfo['email'])
-            anvil_user.save()
+        AnvilUser(user=user, anvil_username=idinfo['email']).save()
         return create_json_response({'success': True})
 
     if anvil_user: # Registered user
@@ -122,7 +116,7 @@ def login_oauth2callback(request):
     else: # Un-registered user, auto-register the Google account to the local account with the same email address
         user = User.objects.filter(email__iexact = idinfo['email']).first()
         if not user:  # User not exist, create one (disabled during transitioning phase)
-            create_json_response({}, status = 400,
+            create_json_response({}, status = 400, # Todo: remove this statement after transitioning
                 reason = "seqr user with email {} doesn't exist".format(idinfo["email"]))
             username = User.objects.make_random_password()
             user = User.objects.create_user(
@@ -132,8 +126,7 @@ def login_oauth2callback(request):
                 last_name = '',
                 is_staff = False
             )
-        anvil_user = AnvilUser.create(user, idinfo['email'])
-        anvil_user.save()
+        AnvilUser(user=user, anvil_username=idinfo['email']).save()
 
     # A temporary solution for Django authenticating the user without a password
     user.backend = 'django.contrib.auth.backends.ModelBackend'

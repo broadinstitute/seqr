@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
-from settings import SEQR_VERSION, TERRA_API_CONFIG
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_SECRET_FILE
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -41,7 +41,7 @@ def _seqr_agent_header(headers=None):
 
 
 class AnvilSession:
-    def __init__(self, credentials=None, service_account_secret="service_account.json", scopes=None):
+    def __init__(self, credentials=None, service_account_secret=None, scopes=None):
         if credentials is None:
             credentials = service_account.Credentials.from_service_account_file(service_account_secret, scopes = scopes)
         self._session = AuthorizedSession(credentials = credentials)
@@ -59,7 +59,7 @@ class AnvilSession:
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
-            root_url = TERRA_API_CONFIG['root_url']
+            root_url = TERRA_API_ROOT_URL
         return self._session.get(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
@@ -68,7 +68,7 @@ class AnvilSession:
         if not headers:
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
-            root_url = TERRA_API_CONFIG['root_url']
+            root_url = TERRA_API_ROOT_URL
         return self._session.post(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
@@ -77,7 +77,7 @@ class AnvilSession:
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
-            root_url = TERRA_API_CONFIG['root_url']
+            root_url = TERRA_API_ROOT_URL
         return self._session.put(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __delete(self, methcall, headers=None, root_url=None):
@@ -86,7 +86,7 @@ class AnvilSession:
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
-            root_url = TERRA_API_CONFIG['root_url']
+            root_url = TERRA_API_ROOT_URL
         return self._session.delete(urljoin(root_url, methcall), headers = headers)
 
     def get_billing_projects(self):
@@ -174,4 +174,4 @@ class AnvilSession:
         return user_email in self.get_staffs()
 
 
-service_account_session = AnvilSession(scopes = scopes)
+service_account_session = AnvilSession(service_account_secret = GOOGLE_SERVICE_ACCOUNT_SECRET_FILE, scopes = scopes)

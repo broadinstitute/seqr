@@ -41,12 +41,7 @@ class AnvilUser(models.Model):
     anvil_username = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
 
     def __str__(self):
-        return str(self.user)
-
-    @classmethod
-    def create(cls, user, user_name) -> object:
-        anvil_user = cls(user=user, anvil_username = user_name)
-        return anvil_user
+        return 'User: {}, Email: {}'.format(str(self.user), str(self.anvil_username))
 
 
 class ModelWithGUID(models.Model):

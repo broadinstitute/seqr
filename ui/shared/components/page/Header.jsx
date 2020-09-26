@@ -7,9 +7,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import UpdateButton from 'shared/components/buttons/UpdateButton'
-import MessagesPanel from 'shared/components/form/MessagesPanel'
-import { googleLogin } from 'pages/Login/components/Login'
+import { googleLogin } from 'pages/Login/reducers'
 
 import AwesomeBar from './AwesomeBar'
 
@@ -17,14 +15,6 @@ const HeaderMenu = styled(Menu)`
   padding-left: 100px;
   padding-right: 100px;
 `
-
-const MESSAGE_FIELD = user => [{
-  name: 'anvilUsername',
-  info: [user.anvilUsername ? `${user.anvilUsername}` : 'AnVIL user is not configured'],
-  component: MessagesPanel,
-  width: 16,
-},
-]
 
 const PageHeader = React.memo(({ user }) =>
   <HeaderMenu borderless inverted attached>
@@ -35,18 +25,10 @@ const PageHeader = React.memo(({ user }) =>
       user.isStaff ? <Menu.Item key="staff" as={Link} to="/staff" content="Staff Pages" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
       <Menu.Item key="user" position="right">
-        <p>Logged in as &nbsp; <b>{user ? (user.displayName || user.email) : null}</b></p>
+        <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email) + (user.isAnvil ? ' with AnVIL' : '')}</b></p>
       </Menu.Item>,
-      user.isAnvil ? null : <UpdateButton
-        modalId="editAnvilUser"
-        modalTitle={`${user.displayName}'s AnVIL Account`}
-        formFields={MESSAGE_FIELD(user)}
-        initialValues={user}
-        onSubmit={googleLogin}
-        submitButtonText="Change"
-        showErrorPanel
-        size="tiny"
-      />,
+      user.anvilUsername ? <Menu.Item key="connect_anvil" content={!user.isAnvil && `Connected AnVIL email: ${user.anvilUsername}`} /> :
+      <Menu.Item key="connect_anvil" content="Connect AnVIL email" onClick={googleLogin} />,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ]}
   </HeaderMenu>,
