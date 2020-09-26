@@ -289,6 +289,8 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 #  AnVIL Terra API specific settings
 #########################################################
 
-TERRA_API_CONFIG = {
-    'root_url': 'https://api.firecloud.org/',
-}
+TERRA_API_ROOT_URL = 'https://api.firecloud.org/'
+
+GOOGLE_SERVICE_ACCOUNT_SECRET_FILE = 'service_account.json'
+
+GOOGLE_AUTH_CLIENT_SECRETS_FILE = "client_secret.json"

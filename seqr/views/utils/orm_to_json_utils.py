@@ -106,13 +106,11 @@ def _get_json_for_user(user, session=None):
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
     anvil_username = user.anviluser.anvil_username if hasattr(user, 'anviluser') else None
     user_json['anvilUsername'] = anvil_username
-    user_json['displayName'] = user.get_full_name()
     user_json['isAnvil'] = False
-    if session and session['anvil'] and anvil_username:
-        user_json['isAnvil'] = True
-        user_json['displayName'] = 'AnVIL: {}'.format(anvil_username)  # Todo: Update to using user profile from AnVIL
+    if session and session['anvil']:
         user_json['isStaff'] = is_staff(user, session)
-
+        user_json['isAnvil'] = True
+    user_json['displayName'] = user.get_full_name()  # Todo: Update to using user profile from AnVIL
 
     return user_json
 
@@ -701,16 +699,15 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
                 collaborators[collaborator.username] = _get_collaborator_json(collaborator,
                     include_permissions, can_edit=acl[anvil_username]['accessLevel'] == 'OWNER', session=session
                 )
-    else:
-        for collaborator in project.can_view_group.user_set.all():
-            collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, include_permissions, can_edit=False
-            )
+    for collaborator in project.can_view_group.user_set.all():
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=False, session=session
+        )
 
-        for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-            collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, include_permissions, can_edit=True
-            )
+    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=True, session=session
+        )
 
     return collaborators
 

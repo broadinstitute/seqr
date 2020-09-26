@@ -19,6 +19,25 @@ export const login = (values) => {
   }
 }
 
+export const googleLogin = () => {
+  return new HttpRequestHelper('/api/login_google',
+    (responseJson) => {
+      // Redirect to google auth website
+      const width = 600
+      const height = 800
+      const left = (window.screen.width - width) / 2
+      const top = (window.screen.height - height) / 2
+      const params = `scrollbars=no,status=no,location=no,toolbar=no,menubar=no,
+        width=${width},height=${height},left=${left},top=${top}`
+      const win = window.open(responseJson.data, 'Google Sign In', params)
+      win.focus()
+    },
+    (e) => {
+      throw new SubmissionError({ _error: [e.message] })
+    },
+  ).get()
+}
+
 export const forgotPassword = (values) => {
   return () => {
     return new HttpRequestHelper('/api/users/forgot_password',
