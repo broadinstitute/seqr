@@ -21,28 +21,34 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def is_staff(user, session):
-    if session and session['anvil'] and hasattr(user, 'anviluser'):
-        return session and session['anvil'] and service_account_session.is_staff(user.anviluser.email)
-    else:
-        return user.is_staff
+    """
+    The staff management with an AnVIL group is problematic because it hard to tracking the changes in the group.
+    Since we keep user models on seqr, the 'is_staff' is available from the model.
+    """
+    return user.is_staff
+
 
 def has_perm(user, permission_level, project, session):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    session = service_account_session
-    is_staff_user = session.is_staff(user.anviluser.email)
+    is_staff_user = is_staff(user, session)
     if is_staff_user and not project.disable_staff_access:
         return True
-    collaborators = session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
-    if user.username in collaborators.keys():
-        permission = collaborators[user.username]
-        if permission['pending']:
-            return False
-        if permission_level is IS_OWNER:
-            return permission['accessLevel'] == 'OWNER'
-        if permission_level is CAN_EDIT:
-            return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
-        return True
-    return False
+    session = service_account_session
+    workspace = project.workspace.split('/') if project.workspace is not None else ''
+    if len(workspace) is 2:
+        collaborators = session.get_workspace_acl(workspace[0], workspace[1])
+        if user.anviluser.email in collaborators.keys():
+            permission = collaborators[user.anviluser.email]
+            if permission['pending']:
+                return False
+            if permission_level is IS_OWNER:
+                return permission['accessLevel'] == 'OWNER'
+            if permission_level is CAN_EDIT:
+                return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+            return True
+        return False
+    else:
+        user.has_perm(permission_level, project)
 
 
 def has_project_permissions(project, user, session=None, can_edit=False, is_owner=False):
@@ -82,7 +88,7 @@ def check_multi_project_permissions(obj, user, session=None):
     raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
-def _get_anvil_projects_user_can_view(user, session):
+def _get_workspaces_user_can_view(user, session):
     """
     . Fetch a workspace list with a false “public” attribute
     . If using a service account, filter out those user doesn’t have access
@@ -90,31 +96,31 @@ def _get_anvil_projects_user_can_view(user, session):
     . General project jsons
     """
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
+    is_staff_user = is_staff(user, session)
     session = service_account_session
-    is_staff_user = session.is_staff(user.anviluser.email)
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = session.list_workspaces(requested_fields)
     workspaces = []
     for ws in workspace_list:
         if not ws['public']:
             if is_staff_user:
-                workspaces.append(ws['workspace']['name'])
+                workspaces.append('{}/{}'.format(ws['workspace']['namespace'], ws['workspace']['name']))
             else:
                 try:
                     acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
                 except Exception:
                     acl={}
                 if user.anviluser.email in acl.keys():
-                    workspaces.append(ws['workspace']['name'])
-    if is_staff_user:
-        return Project.objects.filter(name__in=workspaces, disable_staff_access=False)
-    return Project.objects.filter(name__in=workspaces)
+                    workspaces.append('{}/{}'.format(ws['workspace']['namespace'], ws['workspace']['name']))
+    return workspaces
 
 
 def get_projects_user_can_view(user, session=None):
     if session and session['anvil']:
-        return _get_anvil_projects_user_can_view(user, session)
-    can_view_filter = Q(can_view_group__user=user)
+        workspaces = _get_workspaces_user_can_view(user, session)
+        can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
+    else:
+        can_view_filter = Q(can_view_group__user=user)
     if user.is_staff:
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
