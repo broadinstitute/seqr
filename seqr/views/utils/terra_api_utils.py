@@ -10,7 +10,7 @@ from urllib.parse import urljoin
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_SECRET_FILE
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -41,9 +41,9 @@ def _seqr_agent_header(headers=None):
 
 
 class AnvilSession:
-    def __init__(self, credentials=None, service_account_secret=None, scopes=None):
+    def __init__(self, credentials=None, service_account_info=None, scopes=None):
         if credentials is None:
-            credentials = service_account.Credentials.from_service_account_file(service_account_secret, scopes = scopes)
+            credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
         self._session = AuthorizedSession(credentials = credentials)
 
     def __get(self, methcall, headers=None, root_url=None, **kwargs):
@@ -174,4 +174,4 @@ class AnvilSession:
         return user_email in self.get_staffs()
 
 
-service_account_session = AnvilSession(service_account_secret = GOOGLE_SERVICE_ACCOUNT_SECRET_FILE, scopes = scopes)
+service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = scopes)

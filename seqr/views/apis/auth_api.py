@@ -14,7 +14,7 @@ from google.oauth2.credentials import Credentials
 import json
 import logging
 
-from settings import GOOGLE_AUTH_CLIENT_SECRETS_FILE
+from settings import GOOGLE_AUTH_CLIENT_CONFIG
 from seqr.models import AnvilUser
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import AnvilSession, scopes
@@ -47,8 +47,8 @@ def login_view(request):
 @csrf_exempt
 def login_google(request):
   # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      GOOGLE_AUTH_CLIENT_SECRETS_FILE, scopes=scopes)
+  flow = google_auth_oauthlib.flow.Flow.from_client_config(
+      GOOGLE_AUTH_CLIENT_CONFIG, scopes=scopes)
 
   # The URI created here must exactly match one of the authorized redirect URIs
   # for the OAuth 2.0 client, which you configured in the API Console. If this
@@ -75,8 +75,8 @@ def login_oauth2callback(request):
     # verified in the authorization server response.
     state = request.session['state']
 
-    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        GOOGLE_AUTH_CLIENT_SECRETS_FILE, scopes = scopes, state = state)
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        GOOGLE_AUTH_CLIENT_CONFIG, scopes = scopes, state = state)
     flow.redirect_uri = 'http://localhost:3000/oauth2callback'
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
