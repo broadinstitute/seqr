@@ -291,6 +291,14 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 TERRA_API_ROOT_URL = 'https://api.firecloud.org/'
 
-GOOGLE_SERVICE_ACCOUNT_SECRET_FILE = 'service_account.json'
+GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
 
-GOOGLE_AUTH_CLIENT_SECRETS_FILE = "client_secret.json"
+GOOGLE_AUTH_CLIENT_CONFIG = {}
+if GOOGLE_AUTH_CONFIG_DIR:
+    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'client_secret.json'), 'r') as f:
+        GOOGLE_AUTH_CLIENT_CONFIG = json.load(f)
+
+GOOGLE_SERVICE_ACCOUNT_INFO = {}
+if GOOGLE_AUTH_CONFIG_DIR:
+    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'service_account.json'), 'r') as f:
+        GOOGLE_SERVICE_ACCOUNT_INFO = json.load(f)
