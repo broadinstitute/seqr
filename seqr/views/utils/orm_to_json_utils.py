@@ -691,14 +691,16 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
     collaborators = {}
 
     if session and session['anvil']:
-        acl = service_account_session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
-        for email in acl.keys():
-            collaborator = User.objects.filter(anviluser__email = email)
-            if len(collaborator) > 0:
-                collaborator = collaborator.first()
-                collaborators[collaborator.username] = _get_collaborator_json(collaborator,
-                    include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER', session=session
-                )
+        workspace = project.workspace.split('/') if project.workspace is not None else ''
+        if len(workspace) is 2:
+            acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
+            for email in acl.keys():
+                collaborator = User.objects.filter(anviluser__email = email)
+                if len(collaborator) > 0:
+                    collaborator = collaborator.first()
+                    collaborators[collaborator.username] = _get_collaborator_json(collaborator,
+                        include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER', session=session
+                    )
     for collaborator in project.can_view_group.user_set.all():
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=False, session=session
