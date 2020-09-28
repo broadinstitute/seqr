@@ -104,8 +104,8 @@ def _get_json_for_user(user, session=None):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    anvil_username = user.anviluser.anvil_username if hasattr(user, 'anviluser') else None
-    user_json['anvilUsername'] = anvil_username
+    email = user.anviluser.email if hasattr(user, 'anviluser') else None
+    user_json['anvilEmail'] = email
     user_json['isAnvil'] = False
     if session and session['anvil']:
         user_json['isStaff'] = is_staff(user, session)
@@ -692,12 +692,12 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
 
     if session and session['anvil']:
         acl = service_account_session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
-        for anvil_username in acl.keys():
-            collaborator = User.objects.filter(anviluser__anvil_username = anvil_username)
+        for email in acl.keys():
+            collaborator = User.objects.filter(anviluser__email = email)
             if len(collaborator) > 0:
                 collaborator = collaborator.first()
                 collaborators[collaborator.username] = _get_collaborator_json(collaborator,
-                    include_permissions, can_edit=acl[anvil_username]['accessLevel'] == 'OWNER', session=session
+                    include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER', session=session
                 )
     for collaborator in project.can_view_group.user_set.all():
         collaborators[collaborator.username] = _get_collaborator_json(

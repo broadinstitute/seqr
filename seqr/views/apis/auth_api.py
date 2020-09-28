@@ -101,14 +101,13 @@ def login_oauth2callback(request):
                                     .format(str(ee)))
 
     # Use user's Google ID to look for the user record in the model
-    anvil_user = AnvilUser.objects.filter(anvil_username__iexact = idinfo['email']).first()
+    anvil_user = AnvilUser.objects.filter(email__iexact = idinfo['email']).first()
 
     if request.user and request.user.id and not request.session['anvil']:  # Local logged in user is registering an AnVIL account
         if anvil_user: # AnVIL account is occupied
             return create_json_response({}, status = 400,
                 reason = 'AnVIL account {} has been used by other seqr account'.format(idinfo['email']))
-        user = request.user
-        AnvilUser(user=user, anvil_username=idinfo['email']).save()
+        AnvilUser(user=request.user, email=idinfo['email']).save()
         return create_json_response({'success': True})
 
     if anvil_user: # Registered user
@@ -126,7 +125,7 @@ def login_oauth2callback(request):
                 last_name = '',
                 is_staff = False
             )
-        AnvilUser(user=user, anvil_username=idinfo['email']).save()
+        AnvilUser(user=user, email=idinfo['email']).save()
 
     # A temporary solution for Django authenticating the user without a password
     user.backend = 'django.contrib.auth.backends.ModelBackend'

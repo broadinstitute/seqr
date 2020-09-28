@@ -22,14 +22,14 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 def is_staff(user, session):
     if session and session['anvil'] and hasattr(user, 'anviluser'):
-        return session and session['anvil'] and service_account_session.is_staff(user.anviluser.anvil_username)
+        return session and session['anvil'] and service_account_session.is_staff(user.anviluser.email)
     else:
         return user.is_staff
 
 def has_perm(user, permission_level, project, session):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
     session = service_account_session
-    is_staff_user = session.is_staff(user.anviluser.anvil_username)
+    is_staff_user = session.is_staff(user.anviluser.email)
     if is_staff_user and not project.disable_staff_access:
         return True
     collaborators = session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
@@ -91,7 +91,7 @@ def _get_anvil_projects_user_can_view(user, session):
     """
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
     session = service_account_session
-    is_staff_user = session.is_staff(user.anviluser.anvil_username)
+    is_staff_user = session.is_staff(user.anviluser.email)
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = session.list_workspaces(requested_fields)
     workspaces = []
@@ -104,7 +104,7 @@ def _get_anvil_projects_user_can_view(user, session):
                     acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
                 except Exception:
                     acl={}
-                if user.anviluser.anvil_username in acl.keys():
+                if user.anviluser.email in acl.keys():
                     workspaces.append(ws['workspace']['name'])
     if is_staff_user:
         return Project.objects.filter(name__in=workspaces, disable_staff_access=False)

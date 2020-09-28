@@ -43,7 +43,7 @@ def get_all_collaborators(request):
 def get_all_staff(request):
     if request.session['anvil']:
         staff_names = service_account_session.get_staffs()
-        staffs = User.objects.filter(anviluser__anvil_username__in = staff_names)
+        staffs = User.objects.filter(anviluser__email__in = staff_names)
     else:
         staffs = User.objects.filter(is_staff=True)
     staff_analysts = {staff.username: _get_json_for_user(staff) for staff in staffs}
