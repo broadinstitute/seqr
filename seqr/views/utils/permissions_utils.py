@@ -21,7 +21,8 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def is_staff(user, session):
-    """
+    """Background
+
     The staff management with an AnVIL group is problematic because it hard to tracking the changes in the group.
     Since we keep user models on seqr, the 'is_staff' is available from the model.
     """
@@ -35,7 +36,7 @@ def has_perm(user, permission_level, project, session):
         return True
     session = service_account_session
     workspace = project.workspace.split('/') if project.workspace is not None else ''
-    if len(workspace) is 2:
+    if len(workspace) == 2:
         collaborators = session.get_workspace_acl(workspace[0], workspace[1])
         if user.anviluser.email in collaborators.keys():
             permission = collaborators[user.anviluser.email]

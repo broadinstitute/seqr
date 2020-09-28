@@ -41,6 +41,10 @@ class AnvilUser(models.Model):
     email = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
 
     def __str__(self):
+        """
+        Magic function for str()
+        :return: the string of user and email
+        """
         return 'User: {}, Email: {}'.format(str(self.user), str(self.email))
 
 

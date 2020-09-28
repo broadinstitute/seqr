@@ -1,6 +1,4 @@
-"""
-This module provides python bindings for the AnVIL Terra API.
-"""
+# This module provides python bindings for the AnVIL Terra API.
 
 import json
 import logging
@@ -23,16 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
-    """For exceptions happen in Terra API calls
-    """
+    """For exceptions happen in Terra API calls"""
     pass
 
 
 def _seqr_agent_header(headers=None):
-    """ Return request headers for Terra API message.
-        Inserts seqr/version as the User-Agent.
+    """ Generate seqr/version as the User-Agent header
+
     Args:
         headers (dict): Include additional headers as key-value pairs
+    Returns:
+        request headers for Terra API message
     """
     seqr_headers = {"User-Agent": SEQR_USER_AGENT}
     if headers is not None:
@@ -42,6 +41,12 @@ def _seqr_agent_header(headers=None):
 
 class AnvilSession:
     def __init__(self, credentials=None, service_account_info=None, scopes=None):
+        """Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
+
+        :param credentials: User credentials
+        :param service_account_info: service account secrects
+        :param scopes: scopes of the access privilege of the session
+        """
         if credentials is None:
             credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
         self._session = AuthorizedSession(credentials = credentials)
