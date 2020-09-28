@@ -38,10 +38,10 @@ def _slugify(text):
 
 class AnvilUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    anvil_username = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
+    email = models.CharField(db_index=True, max_length=100, null=True, blank=True) # an email address
 
     def __str__(self):
-        return 'User: {}, Email: {}'.format(str(self.user), str(self.anvil_username))
+        return 'User: {}, Email: {}'.format(str(self.user), str(self.email))
 
 
 class ModelWithGUID(models.Model):

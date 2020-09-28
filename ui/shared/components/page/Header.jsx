@@ -27,7 +27,7 @@ const PageHeader = React.memo(({ user }) =>
       <Menu.Item key="user" position="right">
         <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email) + (user.isAnvil ? ' with AnVIL' : '')}</b></p>
       </Menu.Item>,
-      user.anvilUsername ? <Menu.Item key="connect_anvil" content={!user.isAnvil && `Connected AnVIL email: ${user.anvilUsername}`} /> :
+      user.anvilEmail ? <Menu.Item key="connect_anvil" content={!user.isAnvil && `Connected AnVIL email: ${user.anvilEmail}`} /> :
       <Menu.Item key="connect_anvil" content="Connect AnVIL email" onClick={googleLogin} />,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ]}
