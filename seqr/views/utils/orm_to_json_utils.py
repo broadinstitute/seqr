@@ -692,7 +692,7 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
 
     if session and session['anvil']:
         workspace = project.workspace.split('/') if project.workspace is not None else ''
-        if len(workspace) is 2:
+        if len(workspace) == 2:
             acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
             for email in acl.keys():
                 collaborator = User.objects.filter(anviluser__email = email)
