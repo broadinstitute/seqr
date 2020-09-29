@@ -21,7 +21,8 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def is_staff(user, session):
-    """Background
+    """
+    Background
 
     The staff management with an AnVIL group is problematic because it hard to tracking the changes in the group.
     Since we keep user models on seqr, the 'is_staff' is available from the model.
@@ -90,12 +91,6 @@ def check_multi_project_permissions(obj, user, session=None):
 
 
 def _get_workspaces_user_can_view(user, session):
-    """
-    . Fetch a workspace list with a false “public” attribute
-    . If using a service account, filter out those user doesn’t have access
-    . Get a corresponding project list of the workspaces
-    . General project jsons
-    """
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
     is_staff_user = is_staff(user, session)
     session = service_account_session
@@ -105,14 +100,14 @@ def _get_workspaces_user_can_view(user, session):
     for ws in workspace_list:
         if not ws['public']:
             if is_staff_user:
-                workspaces.append('{}/{}'.format(ws['workspace']['namespace'], ws['workspace']['name']))
+                workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
             else:
                 try:
                     acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
                 except Exception:
-                    acl={}
+                    acl = {}
                 if user.anviluser.email in acl.keys():
-                    workspaces.append('{}/{}'.format(ws['workspace']['namespace'], ws['workspace']['name']))
+                    workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
     return workspaces
 
 
@@ -133,5 +128,3 @@ def check_mme_permissions(submission, user, session=None):
     check_project_permissions(project, user, session=session)
     if not project.is_mme_enabled:
         raise PermissionDenied('Matchmaker is not enabled')
-
-
