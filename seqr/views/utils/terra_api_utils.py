@@ -26,7 +26,8 @@ class TerraAPIException(Exception):
 
 
 def _seqr_agent_header(headers=None):
-    """ Generate seqr/version as the User-Agent header
+    """
+    Generate seqr/version as the User-Agent header
 
     Args:
         headers (dict): Include additional headers as key-value pairs
@@ -41,7 +42,8 @@ def _seqr_agent_header(headers=None):
 
 class AnvilSession:
     def __init__(self, credentials=None, service_account_info=None, scopes=None):
-        """Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
+        """
+        Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
 
         :param credentials: User credentials
         :param service_account_info: service account secrects
@@ -52,7 +54,9 @@ class AnvilSession:
         self._session = AuthorizedSession(credentials = credentials)
 
     def __get(self, methcall, headers=None, root_url=None, **kwargs):
-        """ Call Terra API with HTTP GET method with an authentication header.
+        """
+        Call Terra API with HTTP GET method with an authentication header.
+
         Args:
             methcall: A string of API path (start right after the domain name without leading slash (/)
             headers (dict): Include additional headers as key-value pairs
@@ -68,8 +72,7 @@ class AnvilSession:
         return self._session.get(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
-        """ See the __get() method
-        """
+        """ See the __get() method"""
         if not headers:
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
@@ -77,8 +80,7 @@ class AnvilSession:
         return self._session.post(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
-        """ See the __get() method
-        """
+        """ See the __get() method"""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
@@ -86,8 +88,7 @@ class AnvilSession:
         return self._session.put(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __delete(self, methcall, headers=None, root_url=None):
-        """ See the __get() method
-        """
+        """ See the __get() method"""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
@@ -95,26 +96,28 @@ class AnvilSession:
         return self._session.delete(urljoin(root_url, methcall), headers = headers)
 
     def get_billing_projects(self):
-        """Get activation information for the logged-in user.
+        """
+        Get activation information for the logged-in user.
+
         :returns a list of billing project dictionary
         """
         r = self.__get("api/profile/billing")
-        if r.status_code is not 200:
+        if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "api/profile/billing" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         return json.loads(r.text)
 
     def get_anvil_profile(self):
-        """Get activation information for the logged-in user.
-        """
+        """Get activation information for the logged-in user."""
         r = self.__get("register")
-        if r.status_code is not 200:
+        if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "register" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         return json.loads(r.text)
 
     def list_workspaces(self, fields=None):
-        """Get all the workspaces accessible by the logged-in user.
+        """
+        Get all the workspaces accessible by the logged-in user.
 
         Args:
         fields (str): a comma-delimited list of values that limits the
@@ -126,13 +129,15 @@ class AnvilSession:
             r = self.__get("api/workspaces")
         else:
             r = self.__get("api/workspaces", params = {"fields": fields})
-        if r.status_code is not 200:
+        if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         return json.loads(r.text)
 
     def get_workspace_acl(self, namespace, workspace):
-        """Request FireCloud access control list for workspace.
+        """
+        Request FireCloud access control list for workspace.
+
         Args:
             namespace (str): project to which workspace belongs
             workspace (str): Workspace name
@@ -160,23 +165,10 @@ class AnvilSession:
         """
         uri = "api/workspaces/{0}/{1}/acl".format(namespace, workspace)
         r = self.__get(uri)
-        if r.status_code is not 200:
+        if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
         return json.loads(r.text)['acl']
-
-    def get_staffs(self):
-        """Request members of seqr staff group.
-        """
-        r = self.__get("api/groups/seqr-staffs")
-        if r.status_code is not 200:
-            raise TerraAPIException(
-                'Error: called Terra API "api/groups/seqr-staffs" got status: {} with a reason: {}'.format(r.status_code, r.reason))
-        group = json.loads(r.text)
-        return group["adminsEmails"]
-
-    def is_staff(self, user_email):
-        return user_email in self.get_staffs()
 
 
 service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = scopes)
