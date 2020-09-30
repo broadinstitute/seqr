@@ -61,7 +61,7 @@
     "why-did-you-update": "^0.1.1"
   },
   "dependencies": {
-    "draft-js": "^0.10.4",
+    "draft-js": "^0.11.7",
     "draftjs-md-converter": "^0.1.6",
     "extend": "^3.0.2",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
