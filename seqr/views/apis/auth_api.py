@@ -96,9 +96,9 @@ def login_oauth2callback(request):
     try:
         _ = session.get_anvil_profile()
     except Exception as ee:
-        return create_json_response({}, status=400, reason='Google account must be registered on AnVIL first. \
-        Please open https://anvil.terra.bio and sign in with Google to register your account. AnVIL responses: {}'
-                                    .format(str(ee)))
+        return create_json_response({'message': 'Google account {} has\'t been registered on AnVIL yet. '
+            'Please open https://anvil.terra.bio to sign in with Google and register the account.'.format(idinfo['email'])},
+            status=400, reason='Google account has\'t been registered on AnVIL. Exception: {}'.format(str(ee)))
 
     # Use user's Google ID to look for the user record in the model
     anvil_user = AnvilUser.objects.filter(email__iexact = idinfo['email']).first()
@@ -132,7 +132,7 @@ def login_oauth2callback(request):
     request.session['anvil'] = session
     login(request, user)
 
-    return create_json_response({'success': True})
+    return create_json_response({'REQUEST_GOOGLE_AUTH_RESULT': {'success': True}})
 
 
 def credentials_to_dict(credentials):
