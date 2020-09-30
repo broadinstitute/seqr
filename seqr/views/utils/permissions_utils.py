@@ -22,7 +22,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 def is_staff(user, session):
     """
-    Background
+    Background of this function.
 
     The staff management with an AnVIL group is problematic because it hard to tracking the changes in the group.
     Since we keep user models on seqr, the 'is_staff' is available from the model.
@@ -60,7 +60,7 @@ def has_project_permissions(project, user, session=None, can_edit=False, is_owne
     if is_owner:
         permission_level = IS_OWNER
 
-    if session and session['anvil']:
+    if session and session.has_key('anvil'):
         return has_perm(user, permission_level, project, session)
     else:
         return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
@@ -112,7 +112,7 @@ def _get_workspaces_user_can_view(user, session):
 
 
 def get_projects_user_can_view(user, session=None):
-    if session and session['anvil']:
+    if session and session.has_key('anvil'):
         workspaces = _get_workspaces_user_can_view(user, session)
         can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
     else:

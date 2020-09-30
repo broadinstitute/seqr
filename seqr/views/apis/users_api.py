@@ -41,7 +41,7 @@ def get_all_collaborators(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def get_all_staff(request):
-    if request.session['anvil']:
+    if request.session.has_key('anvil'):
         staff_names = service_account_session.get_staffs()
         staffs = User.objects.filter(anviluser__email__in = staff_names)
     else:
