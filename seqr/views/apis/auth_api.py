@@ -38,8 +38,6 @@ def login_view(request):
     if not u:
         return create_json_response({}, status=401, reason='Invalid credentials')
 
-    request.session['anvil'] = None
-
     login(request, u)
 
     return create_json_response({'success': True})
@@ -103,7 +101,7 @@ def login_oauth2callback(request):
     # Use user's Google ID to look for the user record in the model
     anvil_user = AnvilUser.objects.filter(email__iexact = idinfo['email']).first()
 
-    if request.user and request.user.id and not request.session['anvil']:  # Local logged in user is registering an AnVIL account
+    if request.user and request.user.id and not request.session.has_key('anvil'):  # Local logged in user is registering an AnVIL account
         if anvil_user: # AnVIL account is occupied
             return create_json_response({}, status = 400,
                 reason = 'AnVIL account {} has been used by other seqr account'.format(idinfo['email']))

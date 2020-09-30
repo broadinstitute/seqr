@@ -107,7 +107,7 @@ def _get_json_for_user(user, session=None):
     email = user.anviluser.email if hasattr(user, 'anviluser') else None
     user_json['anvilEmail'] = email
     user_json['isAnvil'] = False
-    if session and session['anvil']:
+    if session and session.has_key('anvil'):
         user_json['isStaff'] = is_staff(user, session)
         user_json['isAnvil'] = True
     user_json['displayName'] = user.get_full_name()  # Todo: Update to using user profile from AnVIL
@@ -690,7 +690,8 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    if session and session['anvil']:
+    is_anvil = session and session.has_key('anvil')
+    if is_anvil:
         workspace = project.workspace.split('/') if project.workspace is not None else ''
         if len(workspace) == 2:
             acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
@@ -701,12 +702,17 @@ def get_project_collaborators_by_username(project, include_permissions=True, ses
                     collaborators[collaborator.username] = _get_collaborator_json(collaborator,
                         include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER', session=session
                     )
+
     for collaborator in project.can_view_group.user_set.all():
+        if is_anvil and hasattr(collaborator, 'anviluser'):
+            continue
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=False, session=session
         )
 
     for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+        if is_anvil and hasattr(collaborator, 'anviluser'):
+            continue
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=True, session=session
         )
