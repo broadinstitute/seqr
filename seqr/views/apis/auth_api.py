@@ -52,7 +52,7 @@ def login_google(request):
   # for the OAuth 2.0 client, which you configured in the API Console. If this
   # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
   # error.
-  flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['redirect_uris'][0]
+  flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['web']['redirect_uris'][0]
 
   authorization_url, state = flow.authorization_url(
       # Enable offline access so that you can refresh an access token without
@@ -85,7 +85,7 @@ def login_oauth2callback(request):
 
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
         GOOGLE_AUTH_CLIENT_CONFIG, scopes = scopes, state = state)
-    flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['redirect_uris'][0]
+    flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['web']['redirect_uris'][0]
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
     authorization_response = request.body.decode('utf-8')
