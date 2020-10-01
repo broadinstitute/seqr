@@ -40,7 +40,7 @@ def _seqr_agent_header(headers=None):
     return seqr_headers
 
 
-class AnvilSession:
+class AnvilSession(AuthorizedSession):
     def __init__(self, credentials=None, service_account_info=None, scopes=None):
         """
         Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
@@ -51,7 +51,7 @@ class AnvilSession:
         """
         if credentials is None:
             credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
-        self._session = AuthorizedSession(credentials = credentials)
+        super(AnvilSession, self).__init__(credentials)
 
     def __get(self, methcall, headers=None, root_url=None, **kwargs):
         """
@@ -69,7 +69,7 @@ class AnvilSession:
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self._session.get(urljoin(root_url, methcall), headers = headers, **kwargs)
+        return self.get(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method"""
@@ -77,7 +77,7 @@ class AnvilSession:
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self._session.post(urljoin(root_url, methcall), headers = headers, **kwargs)
+        return self.post(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method"""
@@ -85,7 +85,7 @@ class AnvilSession:
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self._session.put(urljoin(root_url, methcall), headers = headers, **kwargs)
+        return self.put(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __delete(self, methcall, headers=None, root_url=None):
         """See the __get() method"""
@@ -93,7 +93,7 @@ class AnvilSession:
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self._session.delete(urljoin(root_url, methcall), headers = headers)
+        return self.delete(urljoin(root_url, methcall), headers = headers)
 
     def get_billing_projects(self):
         """
