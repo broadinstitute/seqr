@@ -102,10 +102,7 @@ def _get_workspaces_user_can_view(user, session):
             if is_staff_user:
                 workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
             else:
-                try:
-                    acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
-                except Exception:
-                    acl = {}
+                acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
                 if user.anviluser.email in acl.keys():
                     workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
     return workspaces
