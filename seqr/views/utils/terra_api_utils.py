@@ -72,7 +72,7 @@ class AnvilSession:
         return self._session.get(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
-        """ See the __get() method"""
+        """See the __get() method"""
         if not headers:
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
@@ -80,7 +80,7 @@ class AnvilSession:
         return self._session.post(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
-        """ See the __get() method"""
+        """See the __get() method"""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
@@ -88,7 +88,7 @@ class AnvilSession:
         return self._session.put(urljoin(root_url, methcall), headers = headers, **kwargs)
 
     def __delete(self, methcall, headers=None, root_url=None):
-        """ See the __get() method"""
+        """See the __get() method"""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
