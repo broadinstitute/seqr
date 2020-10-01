@@ -52,7 +52,7 @@ def login_google(request):
   # for the OAuth 2.0 client, which you configured in the API Console. If this
   # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
   # error.
-  flow.redirect_uri = 'http://localhost:3000/oauth2callback'
+  flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['redirect_uris'][0]
 
   authorization_url, state = flow.authorization_url(
       # Enable offline access so that you can refresh an access token without
@@ -69,13 +69,23 @@ def login_google(request):
 
 @csrf_exempt
 def login_oauth2callback(request):
+    """
+    Callback function will be called after the OAuth2 server passes the authentication
+
+    In the previous function 'login_google', a redirect url is generated with the information of Google client ID and
+    the front end will be redirect to the url to do authentication with Google auth server. Once the authentication has
+    passed, the result of the authentication will be sent to the web server through this callback function.
+    :param request: includes the authorized code
+    :return: status of authorization server and resource server (which is AnVIL server) responses
+    """
+
     # Specify the state when creating the flow in the callback so that it can
     # verified in the authorization server response.
     state = request.session['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
         GOOGLE_AUTH_CLIENT_CONFIG, scopes = scopes, state = state)
-    flow.redirect_uri = 'http://localhost:3000/oauth2callback'
+    flow.redirect_uri = GOOGLE_AUTH_CLIENT_CONFIG['redirect_uris'][0]
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
     authorization_response = request.body.decode('utf-8')
@@ -87,11 +97,12 @@ def login_oauth2callback(request):
         # Decode the id token (It is a JWT token actually) to get user ID info
         idinfo = id_token.verify_oauth2_token(token, requests.Request())
     except ValueError as ve:
-        return create_json_response({}, status=401, reason=str(ve))
+        return create_json_response({'message': str(ve)}, status=401, reason=str(ve))
 
     credentials = Credentials(**credentials_to_dict(flow.credentials))
     session = AnvilSession(credentials = credentials, scopes = scopes)
     try:
+        # Todo: use the anvil profile for the user name instead of using the name from the User model
         _ = session.get_anvil_profile()
     except Exception as ee:
         return create_json_response({'message': 'Google account {} has\'t been registered on AnVIL yet. '
