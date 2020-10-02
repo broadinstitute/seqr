@@ -69,7 +69,10 @@ class AnvilSession(AuthorizedSession):
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self.get(urljoin(root_url, methcall), headers = headers, **kwargs)
+        url = urljoin(root_url, methcall)
+        r = self.get(url, headers = headers, **kwargs)
+        logger.info('GET {} {} {}'.format(url, r.status_code, len(r.text)))
+        return r
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method"""
@@ -77,7 +80,10 @@ class AnvilSession(AuthorizedSession):
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self.post(urljoin(root_url, methcall), headers = headers, **kwargs)
+        url = urljoin(root_url, methcall)
+        r = self.post(url, headers = headers, **kwargs)
+        logger.info('POST {} {} {}'.format(url, r.status_code, len(r.text)))
+        return r
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method"""
@@ -85,7 +91,10 @@ class AnvilSession(AuthorizedSession):
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self.put(urljoin(root_url, methcall), headers = headers, **kwargs)
+        url = urljoin(root_url, methcall)
+        r = self.put(url, headers = headers, **kwargs)
+        logger.info('PUT {} {} {}'.format(url, r.status_code, len(r.text)))
+        return r
 
     def __delete(self, methcall, headers=None, root_url=None):
         """See the __get() method"""
@@ -93,7 +102,10 @@ class AnvilSession(AuthorizedSession):
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
-        return self.delete(urljoin(root_url, methcall), headers = headers)
+        url = urljoin(root_url, methcall)
+        r = self.delete(url, headers = headers)
+        logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
+        return r
 
     def get_billing_projects(self):
         """

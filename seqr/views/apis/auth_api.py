@@ -97,6 +97,7 @@ def login_oauth2callback(request):
         # Decode the id token (It is a JWT token actually) to get user ID info
         idinfo = id_token.verify_oauth2_token(token, requests.Request())
     except ValueError as ve:
+        logger.warning('Login attempt failed for verify OAuth2 token exception.')
         return create_json_response({'message': str(ve)}, status=401, reason=str(ve))
 
     credentials = Credentials(**credentials_to_dict(flow.credentials))
@@ -105,6 +106,7 @@ def login_oauth2callback(request):
         # Todo: use the anvil profile for the user name instead of using the name from the User model
         _ = session.get_anvil_profile()
     except Exception as ee:
+        logger.warning('User {} attempted logging in without registering with AnVIL.'.format(idinfo['email']))
         return create_json_response({'message': 'Google account {} has\'t been registered on AnVIL yet. '
             'Please open https://anvil.terra.bio to sign in with Google and register the account.'.format(idinfo['email'])},
             status=400, reason='Google account has\'t been registered on AnVIL. Exception: {}'.format(str(ee)))
@@ -119,21 +121,13 @@ def login_oauth2callback(request):
         AnvilUser(user=request.user, email=idinfo['email']).save()
         return create_json_response({'success': True})
 
-    if anvil_user: # Registered user
+    if anvil_user: # The user has registered on seqr
         user = anvil_user.user
     else: # Un-registered user, auto-register the Google account to the local account with the same email address
-        user = User.objects.filter(email__iexact = idinfo['email']).first()
-        if not user:  # User not exist, create one (disabled during transitioning phase)
-            create_json_response({}, status = 400, # Todo: remove this statement after transitioning
-                reason = "seqr user with email {} doesn't exist".format(idinfo["email"]))
-            username = User.objects.make_random_password()
-            user = User.objects.create_user(
-                username,
-                email = 'AnVIL User: {}'.format(idinfo['email']), # AnVIL only user
-                first_name = idinfo['email'],
-                last_name = '',
-                is_staff = False
-            )
+        user, created = User.objects.get_or_create(email__iexact = idinfo['email'])
+        if created:
+            user.username = User.objects.make_random_password()
+            user.save()
         AnvilUser(user=user, email=idinfo['email']).save()
 
     # A temporary solution for Django authenticating the user without a password
@@ -141,6 +135,7 @@ def login_oauth2callback(request):
     request.session['anvil'] = session
     login(request, user)
 
+    logger.info('AnVIL User {} logged in.'.format(idinfo['email']))
     return create_json_response({'REQUEST_GOOGLE_AUTH_RESULT': {'success': True}})
 
 

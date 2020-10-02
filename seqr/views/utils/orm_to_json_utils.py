@@ -104,13 +104,18 @@ def _get_json_for_user(user, session=None):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    email = user.anviluser.email if hasattr(user, 'anviluser') else None
-    user_json['anvilEmail'] = email
-    user_json['isAnvil'] = False
-    if session and session.has_key('anvil'):
-        user_json['isStaff'] = is_staff(user, session)
-        user_json['isAnvil'] = True
-    user_json['displayName'] = user.get_full_name()  # Todo: Update to using user profile from AnVIL
+    user_json['isAnvil'] = session and session.has_key('anvil')
+    user_json['isStaff'] = is_staff(user, session)
+    user_json['anvilEmail'] = user.anviluser.email if hasattr(user, 'anviluser') else None
+    if user_json['isAnvil'] and user_json['anvilEmail']:  # Logged in with AnVIL and the user registered AnVIL email
+        # Todo: Update to use the user profile from AnVIL
+        if user_json['firstName'] == '' and user_json['lastName'] == '' and user_json['email'] == '':
+            user_json['firstName'] = 'user'
+            user_json['lastName'] = '@AnVIL'
+            user_json['email'] = user_json['anvilEmail']
+            user_json['displayName'] = user_json['anvilEmail']
+            return user_json
+    user_json['displayName'] = user.get_full_name()
 
     return user_json
 
