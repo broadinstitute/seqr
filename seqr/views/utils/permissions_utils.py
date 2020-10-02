@@ -114,10 +114,10 @@ def get_projects_user_can_view(user, session=None):
         can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
     else:
         can_view_filter = Q(can_view_group__user=user)
-    if user.is_staff:
+    if is_staff(user, session = session):
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
-        return Project.objects.filter(can_view_filter)
+        return Project.objects.filter(can_view_filter).distinct()
 
 
 def check_mme_permissions(submission, user, session=None):
