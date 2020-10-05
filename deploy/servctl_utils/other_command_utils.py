@@ -231,7 +231,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         if use_kubectl_proxy:
             command = "kubectl proxy --port 8001"
         else:
-            command = "kubectl port-forward %(pod_name)s %(port)s" % locals()
+            command = 'kubectl port-forward {pod_name} {port}'.format(pod_name=pod_name, port=port)
 
         p = run_in_background(command)
 
