@@ -1556,7 +1556,7 @@ def proxy_to_kibana(request):
 
 
 def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers"""
+    """Converts django request.META dictionary into a dictionary of HTTP headers."""
 
     def convert_key(key):
         # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')

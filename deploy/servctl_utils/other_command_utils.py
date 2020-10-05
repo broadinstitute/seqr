@@ -223,7 +223,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         logger.info("Forwarding port %s for %s" % (port, component_label))
         if component_label == 'elasticsearch':
             pod_name = 'service/elasticsearch-es-http'
-        if component_label == 'kibana':
+        elif component_label == 'kibana':
             pod_name = 'service/kibana-kb-http'
         else:
             pod_name = get_pod_name(component_label, deployment_target=deployment_target)

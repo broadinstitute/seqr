@@ -64,9 +64,11 @@ DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch'] = [
 ]
 DEPLOYMENT_TARGETS['gcloud-dev-es'] = DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch']
 
+GCLOUD_SECRET_KEY = 'gcloud-client'
+
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
-    'gcloud-client': ['service-account-key.json'],
+    GCLOUD_SECRET_KEY: ['service-account-key.json'],
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
@@ -82,8 +84,8 @@ DEPLOYMENT_TARGET_SECRETS = {
         'postgres',
         'nginx',
         'matchbox',
-        'gcloud-client',
         'kibana',
+        GCLOUD_SECRET_KEY,
     ],
     'gcloud-prod-elasticsearch': [
         'elasticsearch',
@@ -175,7 +177,7 @@ def deploy_secrets(settings):
                 secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
             for file in SECRETS[secret_label]
         ]
-        if secret_label == 'gcloud-client':
+        if secret_label == GCLOUD_SECRET_KEY:
             secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
         run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
 

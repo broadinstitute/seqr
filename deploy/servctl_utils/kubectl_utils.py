@@ -42,7 +42,6 @@ def _get_resource_info(
 
 def _get_resource_status(resource_name, json_path_of_status, deployment_target=None, resource_type='pod', verbose_template='status'):
     """Utility method for looking up a resources's status."""
-
     labels = {"name": resource_name}
     if deployment_target:
         labels["deployment"] = deployment_target
@@ -108,7 +107,7 @@ def wait_until_pod_is_ready(pod_name, deployment_target=None, pod_number=0):
 
 
 def wait_for_resource(resource_name, json_path, expected_status, deployment_target=None, verbose_template='status', resource_type='pod'):
-    """Sleeps until the given resource has the expected status"""
+    """Sleeps until the given resource has the expected status."""
     while expected_status != _get_resource_status(
             resource_name, json_path, deployment_target=deployment_target, verbose_template=verbose_template,
             resource_type=resource_type):
@@ -116,7 +115,7 @@ def wait_for_resource(resource_name, json_path, expected_status, deployment_targ
 
 
 def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_target=None, verbose_template='status', resource_type='pod'):
-    """Sleeps until the given resource does not have the invalid status"""
+    """Sleeps until the given resource does not have the invalid status."""
     status = None
     while not status or status == invalid_status:
         time.sleep(5)
