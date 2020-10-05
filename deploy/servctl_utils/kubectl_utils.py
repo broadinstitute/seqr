@@ -152,7 +152,6 @@ def get_resource_name(name_label, resource_type, deployment_target=None, pod_num
     Returns:
         string: full name of the pod, or None if such a pod doesn't exist
     """
-
     labels = {"name": name_label}
     if deployment_target:
         labels["deployment"] = deployment_target
