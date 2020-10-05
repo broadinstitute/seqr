@@ -201,6 +201,7 @@ To run annotation and database loading as 2 separate steps, use the following co
     # load the annotated dataset into your local elasticsearch instance
    python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
         --dest-path /input_vcfs/GRCh38/your-callset.mt \
+        --genome-version 38 \
         --es-host elasticsearch  \
         --es-index your-callset-name
 ```
