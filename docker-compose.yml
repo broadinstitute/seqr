@@ -25,7 +25,7 @@ services:
 
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch:gcloud-dev-es
+    image: gcr.io/seqr-project/elasticsearch:gcloud-prod-elasticsearch
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     environment:
@@ -39,7 +39,7 @@ services:
 
 
   kibana:
-    image: gcr.io/seqr-project/kibana:gcloud-dev-es
+    image: gcr.io/seqr-project/kibana:gcloud-prod
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:

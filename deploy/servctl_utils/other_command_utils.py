@@ -79,7 +79,7 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
 
     context_is_different = False
     if deployment_target.startswith("gcloud"):
-        suffix = "-%s" % deployment_target.split("-")[-1]  # "dev" or "prod"
+        suffix = "-%s" % deployment_target.split("-")[1]  # "dev" or "prod"
         if not kubectl_current_context.startswith('gke_') or suffix not in kubectl_current_context:
             logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s' which doesn't match %(deployment_target)s. "
                           "To fix this, run:\n\n   "
@@ -366,7 +366,10 @@ def delete_all(deployment_target):
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
         run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
+        for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
+            for disk_name in  get_disk_names(disk_label, settings):
+                run('gcloud compute disks delete --zone {zone} {disk_name}'.format(
+                    zone=settings['GCLOUD_ZONE'], disk_name=disk_name), is_interactive=True)
     else:
         run('kubectl delete deployments --all')
         run('kubectl delete replicationcontrollers --all')
@@ -376,4 +379,12 @@ def delete_all(deployment_target):
 
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
+
+
+def get_disk_names(disk, settings):
+    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
+    return [
+        '{cluster_name}-{disk}-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+    for i in range(num_disks)]
 

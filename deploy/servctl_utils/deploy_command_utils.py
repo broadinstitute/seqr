@@ -6,7 +6,7 @@ from pprint import pformat
 
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
@@ -54,25 +54,15 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
 
 
 DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
-#"gcloud-prod-elasticsearch",
-# TODO
-DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
-    "init-cluster",
-    "settings",
-    "es-master",
-    "es-client",
-    "es-data",
-    "es-kibana",
-    "kube-scan",
-]
-DEPLOYMENT_TARGETS["gcloud-dev-es"] = [
+
+DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch'] = [
     'init-cluster',
     'settings',
     'secrets',
     'elasticsearch',
-    'kibana',
     'kube-scan',
 ]
+DEPLOYMENT_TARGETS['gcloud-dev-es'] = DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch']
 
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
@@ -95,11 +85,12 @@ DEPLOYMENT_TARGET_SECRETS = {
         'gcloud-client',
         'kibana',
     ],
-    'gcloud-dev-es': [
+    'gcloud-prod-elasticsearch': [
         'elasticsearch',
     ],
 }
 DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
+DEPLOYMENT_TARGET_SECRETS['gcloud-dev-es'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod-elasticsearch']
 
 
 def deploy_init_cluster(settings):
@@ -214,7 +205,7 @@ def deploy_elasticsearch(settings):
 
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
-    disk_names = _get_disk_names('es-data', settings)
+    disk_names = get_disk_names('es-data', settings)
     for disk_name in disk_names:
         volume_settings = {'DISK_NAME': disk_name}
         volume_settings.update(settings)
@@ -578,7 +569,7 @@ def _init_gcloud_disks(settings):
     for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
         setting_prefix = disk_label.upper().replace('-', '_')
 
-        disk_names = _get_disk_names(disk_label, settings)
+        disk_names = get_disk_names(disk_label, settings)
 
         snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
         if snapshots and len(snapshots) != len(disk_names):
@@ -599,12 +590,6 @@ def _init_gcloud_disks(settings):
 
             run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
 
-def _get_disk_names(disk, settings):
-    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
-    return [
-        '{cluster_name}-{disk}-disk{suffix}'.format(
-            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
-    for i in range(num_disks)]
 
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying

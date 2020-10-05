@@ -89,6 +89,7 @@ spec:
       node.ingest: false
       node.ml: false
       node.remote_cluster_client: false
+      cluster.routing.allocation.disk.watermark.low: '90%'
     podTemplate:
       metadata:
         labels:
