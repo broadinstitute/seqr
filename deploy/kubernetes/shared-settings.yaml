@@ -5,6 +5,9 @@ POSTGRES_DISK_SIZE: '200Gb'   # used when creating the GKE cluster on gcloud dep
 SEQR_STATIC_FILES_DISK_SIZE: '50Gb'  # used when creating the GKE cluster on gcloud deployments
 
 DISKS: postgres, seqr-static-files
+
+# This is not used in most deployments so picked 0 as an arbitrary default.
+# Because all yamls's are templated on deploy whether or not they are used, it needs to be defined
 ES_LOADING_NUM_PODS: 0
 
 NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments

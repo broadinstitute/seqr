@@ -8,7 +8,7 @@ import sys
 import time
 
 from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
-    wait_for_resource
+    wait_for_resource, get_resource_name
 # TODO move into seqr repo
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
@@ -307,10 +307,10 @@ def delete_component(component, deployment_target=None):
         # Deleting a released persistent volume does not delete the data on the underlying disk
         wait_for_resource(
             component, '{.items[0].status.phase}', 'Released', deployment_target=deployment_target, resource_type='pv')
-        pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
+        pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
         while pv:
             run('kubectl delete pv {}'.format(pv))
-            pv = get_pod_name(component, deployment_target=deployment_target, resource_type='pv')
+            pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
     elif component == "nginx":
