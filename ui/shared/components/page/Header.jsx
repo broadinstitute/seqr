@@ -7,7 +7,6 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import { googleLogin } from 'pages/Login/reducers'
 
 import AwesomeBar from './AwesomeBar'
 
@@ -29,7 +28,7 @@ const PageHeader = React.memo(({ user }) =>
       </Menu.Item>,
       user.anvilEmail ?
         <Menu.Item key="connect_anvil" content={!user.isAnvil && `Connected AnVIL email: ${user.anvilEmail}`} /> :
-        <Menu.Item key="connect_anvil" content="Connect AnVIL email" onClick={googleLogin} />,
+        <Menu.Item key="connect_anvil" content="Connect AnVIL email" href="/google_login" />,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ]}
   </HeaderMenu>,

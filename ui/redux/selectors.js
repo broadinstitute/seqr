@@ -17,8 +17,6 @@ import {
   familyVariantSamples,
 } from 'shared/utils/constants'
 
-export const getGoogleAuthIsLoading = state => state.googleAuthLoading.isLoading
-export const getGoogleAuthIsLoadingError = state => state.googleAuthLoading.errorMessage
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
