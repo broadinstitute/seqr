@@ -114,7 +114,7 @@ from seqr.views.apis.staff_api import \
     proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.apis.auth_api import login_required_error, login_view, logout_view, login_google, login_oauth2callback
+from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
@@ -230,8 +230,6 @@ api_endpoints = {
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
     'login': login_view,
-    'login_google': login_google,
-    'login_oauth2callback': login_oauth2callback,
     'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
 
