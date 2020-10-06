@@ -19,7 +19,6 @@ import modalReducers from './utils/modalReducer'
 
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
-export const REQUEST_GOOGLE_AUTH_RESULT = 'REQUEST_GOOGLE_AUTH_RESULT'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
@@ -371,7 +370,6 @@ export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILIT
 const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
-  googleAuthLoading: loadingReducer(REQUEST_GOOGLE_AUTH_RESULT, RECEIVE_DATA),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),

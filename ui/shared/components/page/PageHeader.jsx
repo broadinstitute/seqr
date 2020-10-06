@@ -157,7 +157,6 @@ export default () =>
     <Route path="/dashboard" component={() => null} />
     <Route path="/users" component={() => null} />
     <Route path="/login" component={() => null} />
-    <Route path="/oauth2callback" component={() => null} />
     <Route path="/matchmaker" component={() => null} />
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />

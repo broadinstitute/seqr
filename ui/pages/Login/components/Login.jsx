@@ -6,7 +6,7 @@ import { Divider } from 'semantic-ui-react'
 import GoogleButton from 'react-google-button'
 
 import { validators } from 'shared/components/form/ReduxFormWrapper'
-import { login, googleLogin } from '../reducers'
+import { login } from '../reducers'
 import UserFormLayout from './UserFormLayout'
 
 const FIELDS = [
@@ -24,7 +24,8 @@ const Login = ({ onSubmit }) =>
   >
     <Link to="/users/forgot_password">Forgot Password?</Link>
     <Divider />
-    <GoogleButton onClick={googleLogin} />
+    <GoogleButton href="/google_login" />
+    <a href="/google_login">Google Login</a>
   </UserFormLayout>
 
 Login.propTypes = {
