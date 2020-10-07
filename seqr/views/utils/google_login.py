@@ -45,7 +45,11 @@ def google_login_view(request):
       include_granted_scopes='true')
 
   # Store the state so the callback can verify the auth server response.
-  request.session['state'] = state
+  request.session['google_auth'] = {
+      'state': state,
+      'origin': request.GET['origin'] if request.GET.get('origin') else '/' ,
+      'connect_anvil': request.GET.get('connect_anvil'),
+  }
 
   try:
       return HttpResponseRedirect(authorization_url)
@@ -56,7 +60,7 @@ def google_login_view(request):
 def google_grant_view(request):
     # Specify the state when creating the flow in the callback so that it can
     # verified in the authorization server response.
-    state = request.session['state']
+    state = request.session['google_auth']['state']
 
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
         GOOGLE_AUTH_CLIENT_CONFIG, scopes = scopes, state = state)
@@ -73,7 +77,7 @@ def google_grant_view(request):
         idinfo = id_token.verify_oauth2_token(token, requests.Request())
     except ValueError as ve:
         logger.warning('Login attempt failed for verify OAuth2 token exception.')
-        return HttpResponse('message: {}'.format(str(ve)))
+        return HttpResponse('<p>message: {}</p><a href={}>Return</a>'.format(str(ve), request.session['google_auth']['origin']))
 
     credentials = Credentials(**credentials_to_dict(flow.credentials))
     session = AnvilSession(credentials = credentials, scopes = scopes)
@@ -82,19 +86,18 @@ def google_grant_view(request):
         _ = session.get_anvil_profile()
     except Exception as ee:
         logger.warning('User {} attempted logging in without registering with AnVIL.'.format(idinfo['email']))
-        return HttpResponse(str({'message': 'Google account {} has\'t been registered on AnVIL yet. '
-                                                'Please open https://anvil.terra.bio to sign in with Google and register the account.'.format(
-            idinfo['email'])}))
+        return HttpResponse('<p>Google account {} has\'t been registered on AnVIL yet.</p>'
+            '<p>Please open <a href=https://anvil.terra.bio>https://anvil.terra.bio</a> to sign in with Google and register the account.</p>'
+            '<a href={}>Return</a>'.format(idinfo['email'], request.session['google_auth']['origin']))
 
     # Use user's Google ID to look for the user record in the model
     anvil_user = AnvilUser.objects.filter(email__iexact = idinfo['email']).first()
 
-    if request.user and request.user.id and not request.session.has_key(
-            'anvil'):  # Local logged in user is registering an AnVIL account
+    if request.session.get('connect_anvil_origin'):  # Local logged in user is registering an AnVIL account
         if anvil_user:  # AnVIL account is occupied
-            return HttpResponse('AnVIL account {} has been used by other seqr account'.format(idinfo['email']))
+            return HttpResponse('<p>AnVIL account {} has been used by other seqr account</p><a href={}>Return</a>'.format(idinfo['email'], request.session['google_auth']['origin']))
         AnvilUser(user = request.user, email = idinfo['email']).save()
-        return HttpResponse('success')
+        return HttpResponseRedirect(request.session['google_auth']['origin'])
 
     if anvil_user:  # The user has registered on seqr
         user = anvil_user.user
@@ -106,9 +109,9 @@ def google_grant_view(request):
         AnvilUser(user = user, email = idinfo['email']).save()
 
     # A temporary solution for Django authenticating the user without a password
-    user.backend = 'django.contrib.auth.backends.ModelBackend'
+    # user.backend = 'django.contrib.auth.backends.ModelBackend'
     request.session['anvil'] = session
-    login(request, user)
+    login(request, user, backend = 'django.contrib.auth.backends.ModelBackend')
 
     logger.info('AnVIL User {} logged in.'.format(idinfo['email']))
-    return HttpResponseRedirect('/')
+    return HttpResponseRedirect(request.session['google_auth']['origin'])
