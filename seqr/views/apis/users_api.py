@@ -27,13 +27,13 @@ class CreateUserException(Exception):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def get_all_collaborators(request):
-    if is_staff(request.user, request.session):
-        collaborators = {user.username: _get_json_for_user(user, session = request.session)
+    if is_staff(request.user):
+        collaborators = {user.username: _get_json_for_user(user)
                          for user in User.objects.exclude(email='')}
     else:
         collaborators = {}
-        for project in get_projects_user_can_view(request.user, session=request.session):
-            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False, session=request.session))
+        for project in get_projects_user_can_view(request.user):
+            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False))
 
     return create_json_response(collaborators)
 
@@ -114,7 +114,7 @@ def create_staff_user(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_project_collaborator(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     try:
         user = _create_user(request)
@@ -176,7 +176,7 @@ def _update_existing_user(user, project, request_json):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)
@@ -186,7 +186,7 @@ def update_project_collaborator(request, project_guid, username):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
 
     project.can_view_group.user_set.remove(user)

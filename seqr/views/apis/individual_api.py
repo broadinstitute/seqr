@@ -66,11 +66,11 @@ def update_individual_handler(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, session=request.session, can_edit=True)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
-    update_individual_from_json(individual, request_json, user=request.user, session=request.session, allow_unknown_keys=True)
+    update_individual_from_json(individual, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
@@ -87,7 +87,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, session=request.session, can_edit=True)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -133,7 +133,7 @@ def edit_individuals_handler(request, project_guid):
             }
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
 
@@ -161,7 +161,7 @@ def edit_individuals_handler(request, project_guid):
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
     updated_families, updated_individuals = _add_or_update_individuals_and_families(
-        project, modified_individuals_list, user=request.user, session=request.session
+        project, modified_individuals_list, user=request.user
     )
 
     individuals_by_guid = {
@@ -210,7 +210,7 @@ def delete_individuals_handler(request, project_guid):
     """
 
     # validate request
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')
@@ -254,7 +254,7 @@ def receive_individuals_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     warnings = []
     def process_records(json_records, filename='ped_file'):
@@ -349,12 +349,12 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
         project_guid (string): project GUID
         uploadedFileId (string): a token sent to the client by receive_individuals_table(..)
     """
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     json_records = load_uploaded_file(upload_file_id)
 
     updated_families, updated_individuals = _add_or_update_individuals_and_families(
-        project, individual_records=json_records, user=request.user, session=request.session
+        project, individual_records=json_records, user=request.user
     )
 
     # edit individuals
@@ -371,7 +371,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def _add_or_update_individuals_and_families(project, individual_records, user=None, session=None):
+def _add_or_update_individuals_and_families(project, individual_records, user=None):
     """Add or update individual and family records in the given project.
 
     Args:
@@ -449,14 +449,14 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
             update_family_from_json(family, {'analysis_notes': family_notes})
             updated_families.add(family)
 
-        is_updated = update_individual_from_json(individual, record, user=user, session=session, allow_unknown_keys=True)
+        is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
             updated_individuals.add(individual)
             updated_families.add(family)
 
     for update in parent_updates:
         individual = update.pop('individual')
-        update_individual_from_json(individual, update, user=user, session=session)
+        update_individual_from_json(individual, update, user=user)
 
     # update pedigree images
     update_pedigree_images(updated_families, project_guid=project.guid)
@@ -495,7 +495,7 @@ def receive_hpo_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     def process_records(json_records, filename=''):
         records, errors, warnings = _process_hpo_records(json_records, filename, project)
@@ -675,7 +675,7 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_hpo_table_handler
     """
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     json_records, _ = load_uploaded_file(upload_file_id)
 

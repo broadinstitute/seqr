@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, is_staff
-from seqr.views.utils.terra_api_utils import service_account_session
+from seqr.views.utils.terra_api_utils import service_account_session, getAnvilSession
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +38,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
     model_class = type(models[0])
     fields = copy(model_class._meta.json_fields)
-    if user and (is_staff(user, kwargs['session']) if 'session' in kwargs.keys() else user.is_staff):
+    if user and is_staff(user):
         fields += getattr(model_class._meta, 'internal_json_fields', [])
     if additional_model_fields:
         fields += additional_model_fields
@@ -89,7 +89,7 @@ def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
-def _get_json_for_user(user, session=None):
+def _get_json_for_user(user):
     """Returns JSON representation of the given User object
 
     Args:
@@ -104,8 +104,8 @@ def _get_json_for_user(user, session=None):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    user_json['isAnvil'] = session and session.has_key('anvil')
-    user_json['isStaff'] = is_staff(user, session)
+    user_json['isAnvil'] = getAnvilSession(user) != None
+    user_json['isStaff'] = is_staff(user)
     user_json['anvilEmail'] = user.anviluser.email if hasattr(user, 'anviluser') else None
     if user_json['isAnvil'] and user_json['anvilEmail']:  # Logged in with AnVIL and the user registered AnVIL email
         # Todo: Update to use the user profile from AnVIL
@@ -609,7 +609,7 @@ def get_json_for_variant_note(note, **kwargs):
     return _get_json_for_model(note, get_json_for_models=get_json_for_variant_notes, **kwargs)
 
 
-def get_json_for_gene_notes(notes, user, session):
+def get_json_for_gene_notes(notes, user):
     """Returns a JSON representation of the given gene note.
 
     Args:
@@ -620,13 +620,13 @@ def get_json_for_gene_notes(notes, user, session):
 
     def _process_result(result, note):
         result.update({
-            'editable': is_staff(user, session) or user == note.created_by,
+            'editable': is_staff(user) or user == note.created_by,
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
 
 
-def get_json_for_gene_notes_by_gene_id(gene_ids, user, session):
+def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     """Returns a JSON representation of the gene notes for the given gene ids.
 
     Args:
@@ -635,7 +635,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user, session):
         dict: json object
     """
     notes_by_gene_id = defaultdict(list)
-    for note in get_json_for_gene_notes(GeneNote.objects.filter(gene_id__in=gene_ids), user, session):
+    for note in get_json_for_gene_notes(GeneNote.objects.filter(gene_id__in=gene_ids), user):
         notes_by_gene_id[note['geneId']].append(note)
     return notes_by_gene_id
 
@@ -684,49 +684,43 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_project_collaborator_list(project, session=None):
+def get_json_for_project_collaborator_list(project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(project, session=session).values())
+    collaborator_list = list(get_project_collaborators_by_username(project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def get_project_collaborators_by_username(project, include_permissions=True, session=None):
+def get_project_collaborators_by_username(project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    is_anvil = session and session.has_key('anvil')
-    if is_anvil:
-        workspace = project.workspace.split('/') if project.workspace is not None else ''
-        if len(workspace) == 2:
-            acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
-            for email in acl.keys():
-                collaborator = User.objects.filter(anviluser__email = email)
-                if len(collaborator) > 0:
-                    collaborator = collaborator.first()
-                    collaborators[collaborator.username] = _get_collaborator_json(collaborator,
-                        include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER', session=session
-                    )
+    workspace = project.workspace.split('/') if project.workspace is not None else ''
+    if len(workspace) == 2:
+        acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
+        for email in acl.keys():
+            collaborator = User.objects.filter(anviluser__email = email)
+            if len(collaborator) > 0:
+                collaborator = collaborator.first()
+                collaborators[collaborator.username] = _get_collaborator_json(collaborator,
+                    include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER'
+                )
 
     for collaborator in project.can_view_group.user_set.all():
-        if is_anvil and hasattr(collaborator, 'anviluser'):
-            continue
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False, session=session
+            collaborator, include_permissions, can_edit=False
         )
 
     for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-        if is_anvil and hasattr(collaborator, 'anviluser'):
-            continue
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True, session=session
+            collaborator, include_permissions, can_edit=True
         )
 
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, session=None):
-    collaborator_json = _get_json_for_user(collaborator, session=session)
+def _get_collaborator_json(collaborator, include_permissions, can_edit):
+    collaborator_json = _get_json_for_user(collaborator)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,
@@ -735,7 +729,7 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit, session=
     return collaborator_json
 
 
-def get_json_for_genes(genes, user=None, session=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
+def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
                        add_primate_ai=False, add_mgi=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
@@ -746,7 +740,7 @@ def get_json_for_genes(genes, user=None, session=None, add_dbnsfp=False, add_omi
     """
     total_gene_constraints = GeneConstraint.objects.count()
     if add_notes:
-        gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user, session)
+        gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user)
 
     def _add_total_constraint_count(result, *args):
         result['totalGenes'] = total_gene_constraints
@@ -804,10 +798,10 @@ def get_json_for_gene(gene, **kwargs):
     return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
 
 
-def get_json_for_saved_searches(searches, user, session=None):
+def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-staff users
-        if not search.created_by and not is_staff(user, session) and result['search'].get('pathogenicity', {}).get('hgmd'):
+        if not search.created_by and not is_staff(user) and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }
@@ -815,8 +809,8 @@ def get_json_for_saved_searches(searches, user, session=None):
     return _get_json_for_models(searches, guid_key='savedSearchGuid', process_result=_process_result)
 
 
-def get_json_for_saved_search(search, user, session):
-    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches, session=session)
+def get_json_for_saved_search(search, user):
+    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
 
 
 def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None, all_parent_guids=False):

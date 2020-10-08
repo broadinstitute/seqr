@@ -55,7 +55,7 @@ def create_project_handler(request):
 
     return create_json_response({
         'projectsByGuid': {
-            project.guid: _get_json_for_project(project, request.user, session=request.session)
+            project.guid: _get_json_for_project(project, request.user)
         },
     })
 
@@ -88,14 +88,14 @@ def update_project_handler(request, project_guid):
 
     project = Project.objects.get(guid=project_guid)
 
-    check_project_permissions(project, request.user, session=request.session, can_edit=True)
+    check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
     update_project_from_json(project, request_json, allow_unknown_keys=True)
 
     return create_json_response({
         'projectsByGuid': {
-            project.guid: _get_json_for_project(project, request.user, session=request.session)
+            project.guid: _get_json_for_project(project, request.user)
         },
     })
 
@@ -109,7 +109,7 @@ def delete_project_handler(request, project_guid):
         project_guid (string): GUID of the project to delete
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, session=request.session, is_owner=True)
+    project = get_project_and_check_permissions(project_guid, request.user, is_owner=True)
 
     _delete_project(project)
 
@@ -136,15 +136,15 @@ def project_page_data(request, project_guid):
         project_guid (string): GUID of the Project to retrieve data for.
     """
     try:
-        project = get_project_and_check_permissions(project_guid, request.user, session=request.session)
+        project = get_project_and_check_permissions(project_guid, request.user)
         update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
         response = _get_project_child_entities(project, request.user)
     except Exception as ee:
         return create_json_response({}, status=500, reason='Error: getting project page failed for {}'.format(str(ee)))
 
-    project_json = _get_json_for_project(project, request.user, session=request.session)
-    project_json['collaborators'] = get_json_for_project_collaborator_list(project, session=request.session)
+    project_json = _get_json_for_project(project, request.user)
+    project_json['collaborators'] = get_json_for_project_collaborator_list(project)
     project_json['locusListGuids'] = list(response['locusListsByGuid'].keys())
     project_json['detailsLoaded'] = True
     project_json.update(_get_json_for_variant_tag_types(project))
