@@ -21,18 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
-    """For exceptions happen in Terra API calls"""
+    """For exceptions happen in Terra API calls."""
     pass
 
 
 def _seqr_agent_header(headers=None):
     """
-    Generate seqr/version as the User-Agent header
+    Generate seqr/version as the User-Agent header.
 
     Args:
         headers (dict): Include additional headers as key-value pairs
     Returns:
-        request headers for Terra API message
+        request headers for Terra API message.
     """
     seqr_headers = {"User-Agent": SEQR_USER_AGENT}
     if headers is not None:
@@ -75,7 +75,7 @@ class AnvilSession(AuthorizedSession):
         return r
 
     def __post(self, methcall, headers=None, root_url=None, **kwargs):
-        """See the __get() method"""
+        """See the __get() method."""
         if not headers:
             headers = _seqr_agent_header({"Content-type": "application/json"})
         if root_url is None:
@@ -86,7 +86,7 @@ class AnvilSession(AuthorizedSession):
         return r
 
     def __put(self, methcall, headers=None, root_url=None, **kwargs):
-        """See the __get() method"""
+        """See the __get() method."""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
@@ -97,7 +97,7 @@ class AnvilSession(AuthorizedSession):
         return r
 
     def __delete(self, methcall, headers=None, root_url=None):
-        """See the __get() method"""
+        """See the __get() method."""
         if not headers:
             headers = _seqr_agent_header()
         if root_url is None:
