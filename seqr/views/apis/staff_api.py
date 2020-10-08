@@ -1290,8 +1290,7 @@ def saved_variants_page(request, tag):
     genes = saved_variant_genes(saved_variants)
     locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
 
-    projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user,
-                                          add_project_category_guids_field=False)
+    projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
     functional_tag_types = get_json_for_variant_functional_data_tag_types()
 
     variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))

@@ -48,8 +48,7 @@ def _get_projects_json(user):
         models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
         models.Count('family__savedvariant', distinct=True))
 
-    projects_by_guid = {p['projectGuid']: p for p in
-                        get_json_for_projects(projects, user=user)}
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user=user)}
     for project in projects_with_counts:
         projects_by_guid[project.guid]['numFamilies'] = project.family__count
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count

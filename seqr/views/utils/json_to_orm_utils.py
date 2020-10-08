@@ -4,7 +4,6 @@ from django.utils import timezone
 
 from seqr.models import Individual
 from seqr.views.utils.json_utils import _to_snake_case
-from seqr.views.utils.permissions_utils import is_staff
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False,
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
         if getattr(model_obj, orm_key) != value:
-            if orm_key in internal_fields and not (user and is_staff(user)):
+            if orm_key in internal_fields and not (user and user.is_staff):
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             has_updates = True
             setattr(model_obj, orm_key, value)
