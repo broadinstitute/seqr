@@ -2,6 +2,8 @@
 
 set -ex
 
+mkdir ./data/elasticsearch
+
 docker-compose up -d elasticsearch
 docker-compose logs elasticsearch
 
