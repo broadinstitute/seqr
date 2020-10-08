@@ -5,6 +5,7 @@ set -ex
 mkdir ./data
 
 docker-compose up -d elasticsearch
+sleep 30
 docker-compose logs elasticsearch
 
 docker-compose up -d seqr
