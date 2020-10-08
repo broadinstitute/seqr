@@ -58,17 +58,17 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and is_staff(request.user, request.session):
+    if sort == PATHOGENICTY_SORT_KEY and is_staff(request.user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'),
-                                                     request.user, session=request.session)
+                                                     request.user)
     except Exception as e:
         logger.error(e)
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
-    _check_results_permission(results_model, request.user, session=request.session)
+    _check_results_permission(results_model, request.user)
 
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
@@ -78,14 +78,14 @@ def query_variants_handler(request, search_hash):
     except ConnectionTimeout:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants or [], results_model.families.all(), request.user, request.session)
+    response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
     return create_json_response(response)
 
 
-def _get_or_create_results_model(search_hash, search_context, user, session=None):
+def _get_or_create_results_model(search_hash, search_context, user):
     results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
     if not results_model:
         if not search_context:
@@ -99,7 +99,7 @@ def _get_or_create_results_model(search_hash, search_context, user, session=None
             families = Family.objects.filter(guid__in=all_families)
         elif search_context.get('allProjectFamilies'):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(user, session=session) if project not in omit_projects]
+            projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
@@ -129,13 +129,13 @@ def query_single_variant_handler(request, variant_id):
 
     variant = get_single_es_variant(families, variant_id)
 
-    response = _process_variants([variant], families, request.user, request.session)
+    response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
 
 
-def _process_variants(variants, families, user, session):
+def _process_variants(variants, families, user):
     if not variants:
         return {'searchedVariants': variants}
 
@@ -143,7 +143,7 @@ def _process_variants(variants, families, user, session):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=is_staff(user, session))
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=is_staff(user))
 
     response_json.update({
         'searchedVariants': variants,
@@ -228,7 +228,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
 @csrf_exempt
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    _check_results_permission(results_model, request.user, session=request.session)
+    _check_results_permission(results_model, request.user)
 
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
@@ -242,7 +242,7 @@ def get_variant_gene_breakdown(request, search_hash):
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
-    _check_results_permission(results_model, request.user, session=request.session)
+    _check_results_permission(results_model, request.user)
 
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
@@ -311,7 +311,7 @@ def search_context_handler(request):
     elif context.get('searchHash'):
         try:
             results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'),
-                                                         request.user, session=request.session)
+                                                         request.user)
         except Exception as e:
             return create_json_response({'error': str(e)}, status=400, reason=str(e))
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
@@ -319,15 +319,15 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    response.update(_get_projects_details(projects, request.user, session=request.session,
+    response.update(_get_projects_details(projects, request.user,
                                           project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
 
 
-def _get_projects_details(projects, user, session=None, project_category_guid=None):
+def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
-        check_project_permissions(project, user, session=session)
+        check_project_permissions(project, user)
 
     prefetch_related_objects(projects, 'can_view_group')
     project_models_by_guid = {project.guid: project for project in projects}
@@ -466,7 +466,7 @@ def create_saved_search_handler(request):
 
     return create_json_response({
         'savedSearchesByGuid': {
-            saved_search.guid: get_json_for_saved_search(saved_search, request.user, request.session)
+            saved_search.guid: get_json_for_saved_search(saved_search, request.user)
         }
     })
 
@@ -488,7 +488,7 @@ def update_saved_search_handler(request, saved_search_guid):
 
     return create_json_response({
         'savedSearchesByGuid': {
-            saved_search_guid: get_json_for_saved_search(search, request.user, request.session)
+            saved_search_guid: get_json_for_saved_search(search, request.user)
         }
     })
 
@@ -504,11 +504,11 @@ def delete_saved_search_handler(request, saved_search_guid):
     return create_json_response({'savedSearchesByGuid': {saved_search_guid: None}})
 
 
-def _check_results_permission(results_model, user, session=None):
+def _check_results_permission(results_model, user):
     families = results_model.families.prefetch_related('project').all()
     projects = {family.project for family in families}
     for project in projects:
-        check_project_permissions(project, user, session=session)
+        check_project_permissions(project, user)
 
 
 def _get_search_context(results_model):

@@ -13,7 +13,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 @login_required
 def main_app(request, *args, **kwargs):
     """Loads the react single page app."""
-    return _render_app_html(request, {'user': _get_json_for_user(request.user, request.session)})
+    return _render_app_html(request, {'user': _get_json_for_user(request.user)})
 
 
 def no_login_main_app(request, *args, **kwargs):
@@ -23,7 +23,7 @@ def no_login_main_app(request, *args, **kwargs):
     if user_token:
         initial_json['newUser'] = _get_json_for_user(User.objects.get(password=user_token))
     elif not request.user.is_anonymous():
-        initial_json['user'] = _get_json_for_user(request.user, request.session)
+        initial_json['user'] = _get_json_for_user(request.user)
     return _render_app_html(request, initial_json)
 
 

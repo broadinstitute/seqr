@@ -184,3 +184,27 @@ class AnvilSession(AuthorizedSession):
 
 
 service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = scopes)
+
+anvilSessionStore = {}
+
+
+def getAnvilSession(user):
+    if not hasattr(user,'anviluser'):
+        return
+    return anvilSessionStore.get(user.anviluser.email)
+
+
+def deleteAnvilSession(user):
+    if not hasattr(user,'anviluser'):
+        return
+    session = anvilSessionStore.get(user.anviluser.email)
+    if session:
+        session.close()
+        anvilSessionStore.pop(user.anviluser.email)
+
+
+def updateAnvilSession(user, session):
+    if not hasattr(user,'anviluser'):
+        return
+    deleteAnvilSession(user)
+    anvilSessionStore.update({user.anviluser.email: session})

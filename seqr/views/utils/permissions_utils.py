@@ -2,7 +2,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import service_account_session
+from seqr.views.utils.terra_api_utils import service_account_session, getAnvilSession
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -20,7 +20,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
-def is_staff(user, session):
+def is_staff(user):
     """
     Background of this function.
 
@@ -30,9 +30,9 @@ def is_staff(user, session):
     return user.is_staff
 
 
-def has_perm(user, permission_level, project, session):
+def has_perm(user, permission_level, project):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = is_staff(user, session)
+    is_staff_user = is_staff(user)
     if is_staff_user and not project.disable_staff_access:
         return True
     session = service_account_session
@@ -49,19 +49,20 @@ def has_perm(user, permission_level, project, session):
                 return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
             return True
         return False
-    else:
-        user.has_perm(permission_level, project)
+    # if the project hasn't been connected to an AnVIL workspace yet than use the local permissions
+    return user.has_perm(permission_level, project)
 
 
-def has_project_permissions(project, user, session=None, can_edit=False, is_owner=False):
+def has_project_permissions(project, user, can_edit=False, is_owner=False):
     permission_level = CAN_VIEW
     if can_edit:
         permission_level = CAN_EDIT
     if is_owner:
         permission_level = IS_OWNER
 
-    if session and session.has_key('anvil'):
-        return has_perm(user, permission_level, project, session)
+    session = getAnvilSession(user)
+    if session:
+        return has_perm(user, permission_level, project)
     else:
         return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
 
@@ -74,25 +75,25 @@ def check_project_permissions(project, user, **kwargs):
         user=user, project=project))
 
 
-def check_user_created_object_permissions(obj, user, session=None):
-    if is_staff(user, session) or obj.created_by == user:
+def check_user_created_object_permissions(obj, user):
+    if is_staff(user) or obj.created_by == user:
         return
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
-def check_multi_project_permissions(obj, user, session=None):
+def check_multi_project_permissions(obj, user):
     for project in obj.projects.all():
         try:
-            check_project_permissions(project, user, session=session)
+            check_project_permissions(project, user)
             return
         except PermissionDenied:
             continue
     raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
-def _get_workspaces_user_can_view(user, session):
+def _get_workspaces_user_can_view(user):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = is_staff(user, session)
+    is_staff_user = is_staff(user)
     session = service_account_session
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = session.list_workspaces(requested_fields)
@@ -108,20 +109,20 @@ def _get_workspaces_user_can_view(user, session):
     return workspaces
 
 
-def get_projects_user_can_view(user, session=None):
-    if session and session.has_key('anvil'):
-        workspaces = _get_workspaces_user_can_view(user, session)
+def get_projects_user_can_view(user):
+    if getAnvilSession(user):
+        workspaces = _get_workspaces_user_can_view(user)
         can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
     else:
         can_view_filter = Q(can_view_group__user=user)
-    if is_staff(user, session = session):
+    if is_staff(user):
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
         return Project.objects.filter(can_view_filter).distinct()
 
 
-def check_mme_permissions(submission, user, session=None):
+def check_mme_permissions(submission, user):
     project = submission.individual.family.project
-    check_project_permissions(project, user, session=session)
+    check_project_permissions(project, user)
     if not project.is_mme_enabled:
         raise PermissionDenied('Matchmaker is not enabled')

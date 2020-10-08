@@ -12,7 +12,7 @@ import logging
 
 from settings import GOOGLE_AUTH_CLIENT_CONFIG
 from seqr.models import AnvilUser
-from seqr.views.utils.terra_api_utils import AnvilSession, scopes
+from seqr.views.utils.terra_api_utils import AnvilSession, scopes, updateAnvilSession
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +106,13 @@ def google_grant_view(request):
         if created:
             user.username = User.objects.make_random_password()
             user.save()
-        AnvilUser(user = user, email = idinfo['email']).save()
+        anvil_user = AnvilUser(user = user, email = idinfo['email']).save()
 
     # A temporary solution for Django authenticating the user without a password
     # user.backend = 'django.contrib.auth.backends.ModelBackend'
-    request.session['anvil'] = session
+    request.session['anvil'] = True
     login(request, user, backend = 'django.contrib.auth.backends.ModelBackend')
+    updateAnvilSession(user, session)
 
     logger.info('AnVIL User {} logged in.'.format(idinfo['email']))
     return HttpResponseRedirect(request.session['google_auth']['origin'])
