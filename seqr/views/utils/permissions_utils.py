@@ -20,19 +20,9 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
-def is_staff(user):
-    """
-    Background of this function.
-
-    The staff management with an AnVIL group is problematic because it hard to tracking the changes in the group.
-    Since we keep user models on seqr, the 'is_staff' is available from the model.
-    """
-    return user.is_staff
-
-
 def has_perm(user, permission_level, project):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = is_staff(user)
+    is_staff_user = user.is_staff
     if is_staff_user and not project.disable_staff_access:
         return True
     session = service_account_session
@@ -76,7 +66,7 @@ def check_project_permissions(project, user, **kwargs):
 
 
 def check_user_created_object_permissions(obj, user):
-    if is_staff(user) or obj.created_by == user:
+    if user.is_staff or obj.created_by == user:
         return
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
@@ -93,7 +83,7 @@ def check_multi_project_permissions(obj, user):
 
 def _get_workspaces_user_can_view(user):
     # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = is_staff(user)
+    is_staff_user = user.is_staff
     session = service_account_session
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = session.list_workspaces(requested_fields)
@@ -115,7 +105,7 @@ def get_projects_user_can_view(user):
         can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
     else:
         can_view_filter = Q(can_view_group__user=user)
-    if is_staff(user):
+    if user.is_staff:
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
         return Project.objects.filter(can_view_filter).distinct()
