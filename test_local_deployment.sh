@@ -2,6 +2,9 @@
 
 set -ex
 
+docker-compose up -d elasticsearch
+docker-compose logs elasticsearch
+
 docker-compose up -d seqr
 docker-compose logs postgres
 docker-compose logs elasticsearch

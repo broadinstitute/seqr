@@ -13,11 +13,6 @@ install:
 - ./install_dependencies.sh
 
 script:
-- coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
-- coverage report --fail-under=99
-- cd ui/
-- npm test
-- cd ..
 - ./test_local_deployment.sh
 
 addons:

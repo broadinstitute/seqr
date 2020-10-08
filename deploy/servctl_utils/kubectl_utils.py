@@ -140,7 +140,8 @@ def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
 
 
 def get_resource_name(name_label, resource_type, deployment_target=None, pod_number=0):
-    """Takes a resource name label (eg. "phenotips") and returns the full resource name (eg. "phenotips-cdd4d7dc9-vgmjx").
+    """
+    Takes a resource name label (eg. "phenotips") and returns the full resource name (eg. "phenotips-cdd4d7dc9-vgmjx").
     If there are multiple resources with the given label, it returns the 1st one by default.
 
     Args:
