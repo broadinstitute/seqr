@@ -32,7 +32,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, is_staff
+from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -58,12 +58,11 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and is_staff(request.user):
+    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:
-        results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'),
-                                                     request.user)
+        results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
         logger.error(e)
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
@@ -143,7 +142,7 @@ def _process_variants(variants, families, user):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=is_staff(user))
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
 
     response_json.update({
         'searchedVariants': variants,
@@ -310,8 +309,7 @@ def search_context_handler(request):
         projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
         try:
-            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'),
-                                                         request.user)
+            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
         except Exception as e:
             return create_json_response({'error': str(e)}, status=400, reason=str(e))
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
@@ -319,8 +317,7 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    response.update(_get_projects_details(projects, request.user,
-                                          project_category_guid=context.get('projectCategoryGuid')))
+    response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
 

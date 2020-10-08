@@ -13,7 +13,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
-    check_user_created_object_permissions, is_staff
+    check_user_created_object_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -25,7 +25,7 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def locus_lists(request):
-    if is_staff(request.user):
+    if request.user.is_staff:
         locus_list_models = LocusList.objects.all()
     else:
         locus_list_models = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))

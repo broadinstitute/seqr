@@ -12,7 +12,7 @@ import logging
 
 from settings import GOOGLE_AUTH_CLIENT_CONFIG
 from seqr.models import AnvilUser
-from seqr.views.utils.terra_api_utils import AnvilSession, scopes, updateAnvilSession
+from seqr.views.utils.terra_api_utils import AnvilSession, scopes, anvilSessionStore
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def google_grant_view(request):
         # Todo: use the anvil profile for the user name instead of using the name from the User model
         _ = session.get_anvil_profile()
     except Exception as ee:
-        logger.warning('User {} attempted logging in without registering with AnVIL.'.format(idinfo['email']))
+        logger.warning('User {} attempted logging in without registering with AnVIL. {}'.format(idinfo['email'], str(ee)))
         return HttpResponse('<p>Google account {} has\'t been registered on AnVIL yet.</p>'
             '<p>Please open <a href=https://anvil.terra.bio>https://anvil.terra.bio</a> to sign in with Google and register the account.</p>'
             '<a href={}>Return</a>'.format(idinfo['email'], request.session['google_auth']['origin']))
@@ -112,7 +112,7 @@ def google_grant_view(request):
     # user.backend = 'django.contrib.auth.backends.ModelBackend'
     request.session['anvil'] = True
     login(request, user, backend = 'django.contrib.auth.backends.ModelBackend')
-    updateAnvilSession(user, session)
+    anvilSessionStore.update_session(user, session)
 
     logger.info('AnVIL User {} logged in.'.format(idinfo['email']))
     return HttpResponseRedirect(request.session['google_auth']['origin'])

@@ -135,13 +135,10 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-    try:
-        project = get_project_and_check_permissions(project_guid, request.user)
-        update_project_from_json(project, {'last_accessed_date': timezone.now()})
+    project = get_project_and_check_permissions(project_guid, request.user)
+    update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
-        response = _get_project_child_entities(project, request.user)
-    except Exception as ee:
-        return create_json_response({}, status=500, reason='Error: getting project page failed for {}'.format(str(ee)))
+    response = _get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)

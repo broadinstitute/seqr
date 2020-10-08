@@ -2,7 +2,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import service_account_session, getAnvilSession
+from seqr.views.utils.terra_api_utils import service_account_session, anvilSessionStore
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -60,7 +60,7 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    session = getAnvilSession(user)
+    session = anvilSessionStore.get_session(user)
     if session:
         return has_perm(user, permission_level, project)
     else:
@@ -110,7 +110,7 @@ def _get_workspaces_user_can_view(user):
 
 
 def get_projects_user_can_view(user):
-    if getAnvilSession(user):
+    if anvilSessionStore.get_session(user):
         workspaces = _get_workspaces_user_can_view(user)
         can_view_filter = (Q(can_view_group__user=user) & Q(workspace__isnull=True)) | Q(workspace__in=workspaces)
     else:

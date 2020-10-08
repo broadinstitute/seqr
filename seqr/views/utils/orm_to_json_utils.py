@@ -15,12 +15,12 @@ from django.contrib.auth.models import User
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, is_staff
-from seqr.views.utils.terra_api_utils import service_account_session, getAnvilSession
+from seqr.views.utils.permissions_utils import has_project_permissions
+from seqr.views.utils.terra_api_utils import service_account_session, anvilSessionStore
 logger = logging.getLogger(__name__)
 
 
-def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None, **kwargs):
+def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None):
     """Returns an array JSON representations of the given models.
 
     Args:
@@ -38,7 +38,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
     model_class = type(models[0])
     fields = copy(model_class._meta.json_fields)
-    if user and is_staff(user):
+    if user and user.is_staff:
         fields += getattr(model_class._meta, 'internal_json_fields', [])
     if additional_model_fields:
         fields += additional_model_fields
@@ -67,7 +67,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
         if result.get('createdBy'):
             result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
         if process_result:
-            process_result(result, model, **kwargs)
+            process_result(result, model)
         results.append(result)
 
     return results
@@ -104,8 +104,8 @@ def _get_json_for_user(user):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    user_json['isAnvil'] = getAnvilSession(user) != None
-    user_json['isStaff'] = is_staff(user)
+    user_json['isAnvil'] = anvilSessionStore.get_session(user) != None
+    user_json['isStaff'] = user.is_staff
     user_json['anvilEmail'] = user.anviluser.email if hasattr(user, 'anviluser') else None
     if user_json['isAnvil'] and user_json['anvilEmail']:  # Logged in with AnVIL and the user registered AnVIL email
         # Todo: Update to use the user profile from AnVIL
@@ -120,7 +120,7 @@ def _get_json_for_user(user):
     return user_json
 
 
-def get_json_for_projects(projects, user=None, add_project_category_guids_field=True, **kwargs):
+def get_json_for_projects(projects, user=None, add_project_category_guids_field=True):
     """Returns JSON representation of the given Projects.
 
     Args:
@@ -129,16 +129,16 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     Returns:
         dict: json object
     """
-    def _process_result(result, project, **kwargs):
+    def _process_result(result, project):
         result.update({
             'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
-            'canEdit': has_project_permissions(project, user, can_edit=True, **kwargs),
+            'canEdit': has_project_permissions(project, user, can_edit=True),
         })
 
     if add_project_category_guids_field:
         prefetch_related_objects(projects, 'projectcategory_set')
 
-    return _get_json_for_models(projects, user=user, process_result=_process_result, **kwargs)
+    return _get_json_for_models(projects, user=user, process_result=_process_result)
 
 
 def _get_json_for_project(project, user, **kwargs):
@@ -620,7 +620,7 @@ def get_json_for_gene_notes(notes, user):
 
     def _process_result(result, note):
         result.update({
-            'editable': is_staff(user) or user == note.created_by,
+            'editable': user.is_staff or user == note.created_by,
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
@@ -801,7 +801,7 @@ def get_json_for_gene(gene, **kwargs):
 def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-staff users
-        if not search.created_by and not is_staff(user) and result['search'].get('pathogenicity', {}).get('hgmd'):
+        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }

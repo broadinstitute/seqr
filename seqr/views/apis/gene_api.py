@@ -10,7 +10,6 @@ from seqr.utils.gene_utils import get_gene, get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
-from seqr.views.utils.permissions_utils import is_staff
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -81,4 +80,4 @@ def _get_gene_notes(gene_id, user):
 
 
 def _can_edit_note(note, user):
-    return is_staff(user) or user == note.created_by
+    return user.is_staff or user == note.created_by
