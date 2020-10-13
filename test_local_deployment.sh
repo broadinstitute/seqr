@@ -7,11 +7,10 @@ set -ex
 #mkdir ./data
 #chmod +rw ./data
 echo "$USER"
+printenv
 
 docker-compose up -d elasticsearch
-docker-compose exec elasticsearch bash
-echo "$USER"
-exit
+docker-compose exec elasticsearch printenv
 sleep 30
 docker-compose logs elasticsearch
 
