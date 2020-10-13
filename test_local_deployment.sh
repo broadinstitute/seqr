@@ -9,7 +9,9 @@ set -ex
 echo "$USER"
 
 docker-compose up -d elasticsearch
-docker-compose exec elasticsearch echo "$USER"
+docker-compose exec elasticsearch bash
+echo "$USER"
+exit
 sleep 30
 docker-compose logs elasticsearch
 
