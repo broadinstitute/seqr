@@ -2,12 +2,13 @@
 
 set -ex
 
-#cp docker-compose.yml ..
-#cd ..
-#mkdir ./data
-#chmod +x ./data
+cp docker-compose.yml ..
+cd ..
+mkdir ./data
+chmod +rw ./data
 
 docker-compose up -d elasticsearch
+docker-compose exec elasticsearch chmod +rw ./data
 sleep 30
 docker-compose logs elasticsearch
 
