@@ -2,20 +2,8 @@
 
 set -ex
 
-#cp docker-compose.yml ..
-#cd ..
-#mkdir ./data
-#chmod 777 ./data
-#ls -ld ./data/
-
-docker-compose up -d elasticsearch
-#docker-compose exec elasticsearch ls -ld ./data/
-docker-compose exec elasticsearch chmod 777 ./data
-#docker-compose exec elasticsearch ls -ld ./data/
-sleep 30
-#docker-compose logs elasticsearch
-
 docker-compose up -d seqr
+docker-compose exec elasticsearch chmod 777 ./data
 docker-compose logs postgres
 docker-compose logs elasticsearch
 docker-compose logs redis
