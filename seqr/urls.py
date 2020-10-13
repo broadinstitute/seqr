@@ -14,7 +14,7 @@ from django.contrib import admin
 import django.contrib.admindocs.urls
 import django.views.static
 
-from seqr.views.utils.google_login import google_login_view, google_grant_view
+from seqr.views.google_login import google_login_view, google_grant_view
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \

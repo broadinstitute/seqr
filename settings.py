@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
+    'seqr.utils.middleware.AnvilSessionMiddleware',
 ]
 
 # django-hijack plugin
@@ -180,6 +181,7 @@ LOGGING = {
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
+    'seqr.google_auth_backend.AuthenticationBackend',
 )
 
 # set the secret key

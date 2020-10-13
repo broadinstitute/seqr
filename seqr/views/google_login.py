@@ -1,18 +1,14 @@
 
 from django.http import HttpResponseRedirect, HttpResponse
-from django.contrib.auth.models import User
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate
 
 import google_auth_oauthlib.flow
-from google.oauth2 import id_token
-from google.auth.transport import requests
 from google.oauth2.credentials import Credentials
 
 import logging
 
 from settings import GOOGLE_AUTH_CLIENT_CONFIG
-from seqr.models import AnvilUser
-from seqr.views.utils.terra_api_utils import AnvilSession, scopes, anvilSessionStore
+from seqr.views.utils.terra_api_utils import scopes, anvilSessionStore
 
 logger = logging.getLogger(__name__)
 
@@ -71,48 +67,26 @@ def google_grant_view(request):
     flow.fetch_token(authorization_response = authorization_response)
 
     token = flow.credentials.id_token
-
-    try:
-        # Decode the id token (It is a JWT token actually) to get user ID info
-        idinfo = id_token.verify_oauth2_token(token, requests.Request())
-    except ValueError as ve:
-        logger.warning('Login attempt failed for verify OAuth2 token exception.')
-        return HttpResponse('<p>message: {}</p><a href={}>Return</a>'.format(str(ve), request.session['google_auth']['origin']))
-
     credentials = Credentials(**credentials_to_dict(flow.credentials))
-    session = AnvilSession(credentials = credentials, scopes = scopes)
-    try:
-        # Todo: use the anvil profile for the user name instead of using the name from the User model
-        _ = session.get_anvil_profile()
-    except Exception as ee:
-        logger.warning('User {} attempted logging in without registering with AnVIL. {}'.format(idinfo['email'], str(ee)))
-        return HttpResponse('<p>Google account {} has\'t been registered on AnVIL yet.</p>'
-            '<p>Please open <a href=https://anvil.terra.bio>https://anvil.terra.bio</a> to sign in with Google and register the account.</p>'
-            '<a href={}>Return</a>'.format(idinfo['email'], request.session['google_auth']['origin']))
+    user = authenticate(token = token, creds = credentials)
 
-    # Use user's Google ID to look for the user record in the model
-    anvil_user = AnvilUser.objects.filter(email__iexact = idinfo['email']).first()
+    if not user or not hasattr(user, 'anviluser'):
+        logger.warning("Failed to login user {}".format(token))
+        return HttpResponse('<p>Login failed.</p><p>Make sure you have registered your account on '
+            '<a href=https://anvil.terra.bio>https://anvil.terra.bio</a> to sign in with Google and register the account.</p>'
+            '<a href={}>Return</a>'.format(request.session['google_auth']['origin']))
 
-    if request.session.get('connect_anvil_origin'):  # Local logged in user is registering an AnVIL account
-        if anvil_user:  # AnVIL account is occupied
-            return HttpResponse('<p>AnVIL account {} has been used by other seqr account</p><a href={}>Return</a>'.format(idinfo['email'], request.session['google_auth']['origin']))
-        AnvilUser(user = request.user, email = idinfo['email']).save()
+    # Local logged in user is registering an AnVIL account
+    if request.session.get('connect_anvil_origin'):
+        if user != request.user:  # AnVIL account is occupied
+            return HttpResponse('<p>AnVIL account {} has been used by other seqr account</p><a href={}>Return</a>'
+                                .format(request.user.useranvil_user.email, request.session['google_auth']['origin']))
         return HttpResponseRedirect(request.session['google_auth']['origin'])
 
-    if anvil_user:  # The user has registered on seqr
-        user = anvil_user.user
-    else:  # Un-registered user, auto-register the Google account to the local account with the same email address
-        user, created = User.objects.get_or_create(email__iexact = idinfo['email'])
-        if created:
-            user.username = User.objects.make_random_password()
-            user.save()
-        anvil_user = AnvilUser(user = user, email = idinfo['email']).save()
-
-    # A temporary solution for Django authenticating the user without a password
-    # user.backend = 'django.contrib.auth.backends.ModelBackend'
+    # Login user
+    login(request, user)
     request.session['anvil'] = True
-    login(request, user, backend = 'django.contrib.auth.backends.ModelBackend')
-    anvilSessionStore.update_session(user, session)
+    anvilSessionStore.add_session(user, credentials, request.session.session_key)
 
-    logger.info('AnVIL User {} logged in.'.format(idinfo['email']))
+    logger.info('AnVIL User {} logged in.'.format(user.anviluser.email))
     return HttpResponseRedirect(request.session['google_auth']['origin'])
