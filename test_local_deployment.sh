@@ -2,8 +2,10 @@
 
 set -ex
 
-docker-compose up -d seqr
+docker-compose up -d elasticsearch
 docker-compose exec elasticsearch chmod 777 ./data
+
+docker-compose up -d seqr
 docker-compose logs postgres
 docker-compose logs elasticsearch
 docker-compose logs redis
