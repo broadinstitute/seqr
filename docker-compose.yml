@@ -27,7 +27,7 @@ services:
   elasticsearch:
     image: gcr.io/seqr-project/elasticsearch:gcloud-prod-elasticsearch
     volumes:
-      - ./data/elasticsearch:/usr/share/elasticsearch/data
+      - /data/elasticsearch:/usr/share/elasticsearch/data
     container_name: elasticsearch
     environment:
       - http.host=0.0.0.0
