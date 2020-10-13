@@ -4,13 +4,12 @@ set -ex
 
 #cp docker-compose.yml ..
 #cd ..
-#mkdir ./data
-#chmod +rw ./data
-echo "$USER"
-printenv
+mkdir ./data
+chmod +rw ./data
+ls -ld ./data/
 
 docker-compose up -d elasticsearch
-docker-compose exec elasticsearch printenv
+docker-compose exec elasticsearch ls -ld ./data/
 sleep 30
 docker-compose logs elasticsearch
 
