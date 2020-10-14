@@ -20,7 +20,7 @@ class AuthenticationBackend(ModelBackend):
         try:
             # Decode the id token (It is a JWT token actually) to get user ID info
             idinfo = id_token.verify_oauth2_token(token, requests.Request())
-        except ValueError:
+        except ValueError as ve:
             return
 
         # Use user's Google ID to look for the user record in the model
@@ -39,7 +39,7 @@ class AuthenticationBackend(ModelBackend):
         try:
             # Todo: Update user names according to the profile from AnVIL
             _ = session.get_anvil_profile()
-        except Exception: # The user hasn't registered on AnVIL, authentication failed
+        except Exception as ee: # The user hasn't registered on AnVIL, authentication failed
             logger.warning("Failed to get user profile for user {}".format(idinfo['email']))
             return
 

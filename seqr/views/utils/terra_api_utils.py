@@ -54,7 +54,7 @@ class AnvilSession(AuthorizedSession):
         super(AnvilSession, self).__init__(credentials)
 
     def _get_call_args(self, methcall, headers=None, root_url=None):
-        if not headers:
+        if headers is None:
             headers = _seqr_agent_header()
         if root_url is None:
             root_url = TERRA_API_ROOT_URL
@@ -73,28 +73,28 @@ class AnvilSession(AuthorizedSession):
         Return:
             HTTP response
         """
-        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        url, headers = self._get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).get(url, headers = headers, **kwargs)
         logger.info('GET {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def post(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        url, headers = self._get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).post(url, headers = headers, **kwargs)
         logger.info('POST {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def put(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        url, headers = self._get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).put(url, headers = headers, **kwargs)
         logger.info('PUT {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def delete(self, methcall, headers=None, root_url=None):
         """See the __get() method."""
-        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        url, headers = self._get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).delete(url, headers = headers)
         logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
@@ -105,7 +105,7 @@ class AnvilSession(AuthorizedSession):
 
         :returns a list of billing project dictionary
         """
-        r = self.__get("api/profile/billing")
+        r = self.get("api/profile/billing")
         if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "api/profile/billing" got status: {} with a reason: {}'.format(r.status_code, r.reason))
@@ -113,7 +113,7 @@ class AnvilSession(AuthorizedSession):
 
     def get_anvil_profile(self):
         """Get activation information for the logged-in user."""
-        r = self.__get("register")
+        r = self.get("register")
         if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "register" got status: {} with a reason: {}'.format(r.status_code, r.reason))
@@ -130,9 +130,9 @@ class AnvilSession(AuthorizedSession):
             specify "workspace.attributes").
         """
         if fields is None:
-            r = self.__get("api/workspaces")
+            r = self.get("api/workspaces")
         else:
-            r = self.__get("api/workspaces", params = {"fields": fields})
+            r = self.get("api/workspaces", params = {"fields": fields})
         if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
@@ -168,7 +168,7 @@ class AnvilSession(AuthorizedSession):
               }
         """
         uri = "api/workspaces/{0}/{1}/acl".format(namespace, workspace)
-        r = self.__get(uri)
+        r = self.get(uri)
         if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
