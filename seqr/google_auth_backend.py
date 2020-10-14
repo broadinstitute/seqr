@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class AuthenticationBackend(ModelBackend):
 
-    def authenticate(self, request, username=None, password=None, token=None, creds=None):
+    def authenticate(self, request, token=None, creds=None, **kwargs):
 
         try:
             # Decode the id token (It is a JWT token actually) to get user ID info
@@ -38,9 +38,8 @@ class AuthenticationBackend(ModelBackend):
 
         session = AnvilSession(credentials = creds, scopes = scopes)
         try:
-            # Todo: Update user names according to the profile from AnVIL
             _ = session.get_anvil_profile()
-        except Exception as ee: # The user hasn't registered on AnVIL, authentication failed
+        except Exception as ee:  # The user hasn't registered on AnVIL, authentication failed
             logger.warning("Failed to get user profile for user {} for {}".format(idinfo['email'], str(ee)))
             return
 
