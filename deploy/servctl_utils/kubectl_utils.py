@@ -126,6 +126,7 @@ def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_t
 
 def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
     """Takes a pod name label (eg. "phenotips") and returns the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx").
+
     If there are multiple pods with the given label, it returns the 1st one by default.
 
     Args:
