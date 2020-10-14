@@ -13,7 +13,6 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
-from seqr.views.utils.terra_api_utils import service_account_session
 from settings import API_LOGIN_REQUIRED_URL, BASE_URL
 
 
@@ -40,12 +39,7 @@ def get_all_collaborators(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def get_all_staff(request):
-    if request.session.has_key('anvil'):
-        staff_names = service_account_session.get_staffs()
-        staffs = User.objects.filter(anviluser__email__in = staff_names)
-    else:
-        staffs = User.objects.filter(is_staff=True)
-    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in staffs}
+    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
 
     return create_json_response(staff_analysts)
 

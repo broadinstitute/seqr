@@ -104,8 +104,7 @@ def _get_json_for_user(user):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    user_json['isAnvil'] = anvilSessionStore.get_session(user) != None
-    user_json['isStaff'] = user.is_staff
+    user_json['isAnvil'] = hasattr(user, '_session_pk')
     user_json['anvilEmail'] = user.anviluser.email if hasattr(user, 'anviluser') else None
     if user_json['isAnvil'] and user_json['anvilEmail']:  # Logged in with AnVIL and the user registered AnVIL email
         # Todo: Update to use the user profile from AnVIL
