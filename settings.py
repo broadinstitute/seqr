@@ -294,11 +294,9 @@ TERRA_API_ROOT_URL = 'https://api.firecloud.org/'
 GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
 
 GOOGLE_AUTH_CLIENT_CONFIG = {}
+GOOGLE_SERVICE_ACCOUNT_INFO = {}
 if GOOGLE_AUTH_CONFIG_DIR:
     with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'client_secret.json'), 'r') as f:
         GOOGLE_AUTH_CLIENT_CONFIG = json.load(f)
-
-GOOGLE_SERVICE_ACCOUNT_INFO = {}
-if GOOGLE_AUTH_CONFIG_DIR:
     with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'service_account.json'), 'r') as f:
         GOOGLE_SERVICE_ACCOUNT_INFO = json.load(f)

@@ -20,7 +20,7 @@ class AuthenticationBackend(ModelBackend):
         try:
             # Decode the id token (It is a JWT token actually) to get user ID info
             idinfo = id_token.verify_oauth2_token(token, requests.Request())
-        except:
+        except ValueError:
             return
 
         # Use user's Google ID to look for the user record in the model
@@ -38,8 +38,8 @@ class AuthenticationBackend(ModelBackend):
         session = AnvilSession(credentials = creds, scopes = scopes)
         try:
             # Todo: Update user names according to the profile from AnVIL
-            profile = session.get_anvil_profile()
-        except:
+            _ = session.get_anvil_profile()
+        except Exception: # The user hasn't registered on AnVIL, authentication failed
             logger.warning("Failed to get user profile for user {}".format(idinfo['email']))
             return
 
@@ -51,15 +51,17 @@ class AuthenticationBackend(ModelBackend):
         except User.DoesNotExist:
             return None
 
-    def has_perm(self, user, perm, project=None):
-        session = anvilSessionStore.get_session(user)
-        if hasattr(project, 'workspace') and session:
+    def has_perm(self, user_obj, perm, obj=None):
+        if not user_obj.is_active:
+            return False
+        session = anvilSessionStore.get_session(user_obj)
+        if hasattr(obj, 'workspace') and session:
             session = service_account_session # Todo: remove this line after seqr is whitelisted
-            workspace = project.workspace.split('/') if project.workspace is not None else ''
+            workspace = obj.workspace.split('/') if obj.workspace is not None else ''
             if len(workspace) == 2:
                 collaborators = session.get_workspace_acl(workspace[0], workspace[1])
-                if user.anviluser.email in collaborators.keys():
-                    permission = collaborators[user.anviluser.email]
+                if user_obj.anviluser.email in collaborators.keys():
+                    permission = collaborators[user_obj.anviluser.email]
                     if permission['pending']:
                         return False
                     if perm is IS_OWNER:
@@ -70,5 +72,5 @@ class AuthenticationBackend(ModelBackend):
                 return False
 
         # if the project hasn't been connected to an AnVIL workspace yet than use the local permissions
-        return super().has_perm(user, perm, project)
+        return super().has_perm(user_obj, perm, obj)
 
