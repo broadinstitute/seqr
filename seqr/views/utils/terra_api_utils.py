@@ -7,7 +7,6 @@ from urllib.parse import urljoin
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
-from google.oauth2.credentials import Credentials
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO
 
@@ -54,7 +53,15 @@ class AnvilSession(AuthorizedSession):
             credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
         super(AnvilSession, self).__init__(credentials)
 
-    def __get(self, methcall, headers=None, root_url=None, **kwargs):
+    def _get_call_args(self, methcall, headers=None, root_url=None):
+        if not headers:
+            headers = _seqr_agent_header()
+        if root_url is None:
+            root_url = TERRA_API_ROOT_URL
+        url = urljoin(root_url, methcall)
+        return url, headers
+
+    def get(self, methcall, headers=None, root_url=None, **kwargs):
         """
         Call Terra API with HTTP GET method with an authentication header.
 
@@ -66,45 +73,29 @@ class AnvilSession(AuthorizedSession):
         Return:
             HTTP response
         """
-        if not headers:
-            headers = _seqr_agent_header()
-        if root_url is None:
-            root_url = TERRA_API_ROOT_URL
-        url = urljoin(root_url, methcall)
-        r = self.get(url, headers = headers, **kwargs)
+        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        r = super(AnvilSession, self).get(url, headers = headers, **kwargs)
         logger.info('GET {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
-    def __post(self, methcall, headers=None, root_url=None, **kwargs):
+    def post(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        if not headers:
-            headers = _seqr_agent_header({"Content-type": "application/json"})
-        if root_url is None:
-            root_url = TERRA_API_ROOT_URL
-        url = urljoin(root_url, methcall)
-        r = self.post(url, headers = headers, **kwargs)
+        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        r = super(AnvilSession, self).post(url, headers = headers, **kwargs)
         logger.info('POST {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
-    def __put(self, methcall, headers=None, root_url=None, **kwargs):
+    def put(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        if not headers:
-            headers = _seqr_agent_header()
-        if root_url is None:
-            root_url = TERRA_API_ROOT_URL
-        url = urljoin(root_url, methcall)
-        r = self.put(url, headers = headers, **kwargs)
+        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        r = super(AnvilSession, self).put(url, headers = headers, **kwargs)
         logger.info('PUT {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
-    def __delete(self, methcall, headers=None, root_url=None):
+    def delete(self, methcall, headers=None, root_url=None):
         """See the __get() method."""
-        if not headers:
-            headers = _seqr_agent_header()
-        if root_url is None:
-            root_url = TERRA_API_ROOT_URL
-        url = urljoin(root_url, methcall)
-        r = self.delete(url, headers = headers)
+        url, headers = self._get_call_args(self, methcall, headers = None, root_url = None)
+        r = super(AnvilSession, self).delete(url, headers = headers)
         logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 

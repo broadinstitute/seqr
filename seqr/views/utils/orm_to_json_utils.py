@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions
-from seqr.views.utils.terra_api_utils import service_account_session, anvilSessionStore
+from seqr.views.utils.terra_api_utils import service_account_session
 logger = logging.getLogger(__name__)
 
 
