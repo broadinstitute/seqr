@@ -20,29 +20,6 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
-def has_perm(user, permission_level, project):
-    # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = user.is_staff
-    if is_staff_user and not project.disable_staff_access:
-        return True
-    session = service_account_session
-    workspace = project.workspace.split('/') if project.workspace is not None else ''
-    if len(workspace) == 2:
-        collaborators = session.get_workspace_acl(workspace[0], workspace[1])
-        if user.anviluser.email in collaborators.keys():
-            permission = collaborators[user.anviluser.email]
-            if permission['pending']:
-                return False
-            if permission_level is IS_OWNER:
-                return permission['accessLevel'] == 'OWNER'
-            if permission_level is CAN_EDIT:
-                return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
-            return True
-        return False
-    # if the project hasn't been connected to an AnVIL workspace yet than use the local permissions
-    return user.has_perm(permission_level, project)
-
-
 def has_project_permissions(project, user, can_edit=False, is_owner=False):
     permission_level = CAN_VIEW
     if can_edit:
@@ -50,11 +27,7 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    session = anvilSessionStore.get_session(user)
-    if session:
-        return has_perm(user, permission_level, project)
-    else:
-        return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
 
 
 def check_project_permissions(project, user, **kwargs):

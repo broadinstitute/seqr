@@ -7,7 +7,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 
 from seqr.models import AnvilUser
-from seqr.views.utils.terra_api_utils import AnvilSession, scopes
+from seqr.models import CAN_EDIT, IS_OWNER
+from seqr.views.utils.terra_api_utils import AnvilSession, scopes, service_account_session, anvilSessionStore
 
 logger = logging.getLogger(__name__)
 
@@ -49,3 +50,25 @@ class AuthenticationBackend(ModelBackend):
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
+
+    def has_perm(self, user, perm, project=None):
+        session = anvilSessionStore.get_session(user)
+        if hasattr(project, 'workspace') and session:
+            session = service_account_session # Todo: remove this line after seqr is whitelisted
+            workspace = project.workspace.split('/') if project.workspace is not None else ''
+            if len(workspace) == 2:
+                collaborators = session.get_workspace_acl(workspace[0], workspace[1])
+                if user.anviluser.email in collaborators.keys():
+                    permission = collaborators[user.anviluser.email]
+                    if permission['pending']:
+                        return False
+                    if perm is IS_OWNER:
+                        return permission['accessLevel'] == 'OWNER'
+                    if perm is CAN_EDIT:
+                        return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+                    return True
+                return False
+
+        # if the project hasn't been connected to an AnVIL workspace yet than use the local permissions
+        return super().has_perm(user, perm, project)
+

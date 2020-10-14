@@ -66,12 +66,11 @@ def google_grant_view(request):
     authorization_response = request.get_raw_uri()
     flow.fetch_token(authorization_response = authorization_response)
 
-    token = flow.credentials.id_token
     credentials = Credentials(**credentials_to_dict(flow.credentials))
-    user = authenticate(token = token, creds = credentials)
+    user = authenticate(token = flow.credentials.id_token, creds = credentials)
 
     if not user or not hasattr(user, 'anviluser'):
-        logger.warning("Failed to login user {}".format(token))
+        logger.warning("Failed to login a user with Google".format(authorization_response))
         return HttpResponse('<p>Login failed.</p><p>Make sure you have registered your account on '
             '<a href=https://anvil.terra.bio>https://anvil.terra.bio</a> to sign in with Google and register the account.</p>'
             '<a href={}>Return</a>'.format(request.session['google_auth']['origin']))
