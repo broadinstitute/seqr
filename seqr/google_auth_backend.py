@@ -15,12 +15,13 @@ logger = logging.getLogger(__name__)
 
 class AuthenticationBackend(ModelBackend):
 
-    def authenticate(self, request, token=None, creds=None):
+    def authenticate(self, request, username=None, password=None, token=None, creds=None):
 
         try:
             # Decode the id token (It is a JWT token actually) to get user ID info
             idinfo = id_token.verify_oauth2_token(token, requests.Request())
         except ValueError as ve:
+            logger.warning("Failed to verify oauth2 token: {} for {}".format(token, ve))
             return
 
         # Use user's Google ID to look for the user record in the model
@@ -40,7 +41,7 @@ class AuthenticationBackend(ModelBackend):
             # Todo: Update user names according to the profile from AnVIL
             _ = session.get_anvil_profile()
         except Exception as ee: # The user hasn't registered on AnVIL, authentication failed
-            logger.warning("Failed to get user profile for user {}".format(idinfo['email']))
+            logger.warning("Failed to get user profile for user {} for {}".format(idinfo['email'], str(ee)))
             return
 
         return user

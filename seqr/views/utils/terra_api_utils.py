@@ -39,6 +39,13 @@ def _seqr_agent_header(headers=None):
         seqr_headers.update(headers)
     return seqr_headers
 
+def _get_call_args(methcall, headers=None, root_url=None):
+    if headers is None:
+        headers = _seqr_agent_header()
+    if root_url is None:
+        root_url = TERRA_API_ROOT_URL
+    url = urljoin(root_url, methcall)
+    return url, headers
 
 class AnvilSession(AuthorizedSession):
     def __init__(self, credentials=None, service_account_info=None, scopes=None):
@@ -53,14 +60,6 @@ class AnvilSession(AuthorizedSession):
             credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
         super(AnvilSession, self).__init__(credentials)
 
-    def _get_call_args(self, methcall, headers=None, root_url=None):
-        if headers is None:
-            headers = _seqr_agent_header()
-        if root_url is None:
-            root_url = TERRA_API_ROOT_URL
-        url = urljoin(root_url, methcall)
-        return url, headers
-
     def get(self, methcall, headers=None, root_url=None, **kwargs):
         """
         Call Terra API with HTTP GET method with an authentication header.
@@ -73,28 +72,28 @@ class AnvilSession(AuthorizedSession):
         Return:
             HTTP response
         """
-        url, headers = self._get_call_args(methcall, headers, root_url)
+        url, headers = _get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).get(url, headers = headers, **kwargs)
         logger.info('GET {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def post(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = self._get_call_args(methcall, headers, root_url)
+        url, headers = _get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).post(url, headers = headers, **kwargs)
         logger.info('POST {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def put(self, methcall, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = self._get_call_args(methcall, headers, root_url)
+        url, headers = _get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).put(url, headers = headers, **kwargs)
         logger.info('PUT {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
     def delete(self, methcall, headers=None, root_url=None):
         """See the __get() method."""
-        url, headers = self._get_call_args(methcall, headers, root_url)
+        url, headers = _get_call_args(methcall, headers, root_url)
         r = super(AnvilSession, self).delete(url, headers = headers)
         logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
