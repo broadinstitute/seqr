@@ -142,6 +142,7 @@ def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
 
 def get_resource_name(name_label, resource_type, deployment_target=None, pod_number=0):
     """Takes a resource label (eg. "phenotips") and returns the full resource name (eg. "phenotips-cdd4d7dc9-vgmjx").
+
     If there are multiple resources with the given label, it returns the 1st one by default.
 
     Args:
@@ -178,8 +179,7 @@ def get_node_name():
 
 
 def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, print_command=True, verbose=False, is_interactive=False):
-    """Execute an arbitrary linux command inside the given pod.
-    Assumes there's only 1 instance with the given pod_name.
+    """Execute an arbitrary linux command inside the given pod. Assumes there's only 1 instance with the given pod_name.
 
     Args:
         pod_name (str): either the pod's "name" label (eg. 'phenotips' or 'nginx'), or the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx")
