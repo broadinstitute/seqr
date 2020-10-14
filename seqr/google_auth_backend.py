@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class AuthenticationBackend(ModelBackend):
 
-    def authenticate(self, request, token, creds):
+    def authenticate(self, request, token=None, creds=None):
 
         try:
             # Decode the id token (It is a JWT token actually) to get user ID info
