@@ -1,6 +1,6 @@
 FROM openjdk:8-jdk
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 ENV ELASTICSEARCH_VERSION="6.3.2"
 

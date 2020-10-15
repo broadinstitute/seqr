@@ -1,6 +1,6 @@
 FROM openjdk:8-jdk
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 ENV KIBANA_VERSION="6.3.2"
 

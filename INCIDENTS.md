@@ -1,7 +1,7 @@
 ## Active seqr incidents
 
 There are currently no known seqr incidents. 
-If you are experiencing any difficulties, email seqr@broadinstitute.org or submit a [github issue](https://github.com/macarthur-lab/seqr/issues)
+If you are experiencing any difficulties, email seqr@broadinstitute.org or submit a [github issue](https://github.com/broadinstitute/seqr/issues)
 
 ## Past seqr incidents
 

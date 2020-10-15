@@ -5,7 +5,7 @@ for individual variants to be viewed in the browser using [IGV.js](https://githu
 If your read files are located on the machine that's running the seqr application server, these steps will enable
 viewing this read data through IGV.js:
 
-1) When running seqr using docker-compose (as [described here](https://github.com/macarthur-lab/seqr/blob/master/deploy/LOCAL_INSTALL.md)), 
+1) When running seqr using docker-compose (as [described here](https://github.com/broadinstitute/seqr/blob/master/deploy/LOCAL_INSTALL.md)), 
 place the bam/cram and index files in the `./data/readviz/` sub-directory that was created under the directory containing
 the docker-compose.yml file. When you start seqr, docker-compose will mount the `./data/readviz/` directory to a `/readviz`
 top-level directory inside the seqr container.
