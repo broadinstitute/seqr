@@ -23,7 +23,7 @@ const Login = ({ onSubmit }) =>
   >
     <Link to="/users/forgot_password">Forgot Password?</Link>
     <Divider />
-    <a href="/google_login">Sign in with Google</a>
+    <a href="/login/google-oauth2">Sign in with Google</a>
   </UserFormLayout>
 
 Login.propTypes = {

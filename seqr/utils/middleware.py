@@ -40,22 +40,3 @@ class JsonErrorMiddleware(MiddlewareMixin):
                     exception_json['traceback'] = traceback_message
             return create_json_response(exception_json, status=_get_exception_status_code(exception))
         return None
-
-
-def AnvilSessionMiddleware(get_response):
-    # One-time configuration and initialization.
-
-    def middleware(request):
-        # Code to be executed for each request before
-        # the view (and later middleware) are called.
-        if request.session.has_key('anvil') and request.user:
-            request.user._session_pk=request.session.session_key
-
-        response = get_response(request)
-
-        # Code to be executed for each request/response after
-        # the view is called.
-
-        return response
-
-    return middleware

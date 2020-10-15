@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO
 
@@ -176,35 +177,24 @@ class AnvilSession(AuthorizedSession):
 
 class AnvilSessionStore(object):
     sessions = {}
-    frontend_session_pks = {}
 
     def get_session(self, user):
-        if hasattr(user, 'anviluser') and hasattr(user, '_session_pk'):
-            if user._session_pk in (self.frontend_session_pks.get(user.anviluser.email) or []):
-                return self.sessions.get(user.anviluser.email)
-        return
-
-    def add_session(self, user, credentials, frontend_session_pk):
-        if not hasattr(user, 'anviluser'):
+        session = self.sessions.get(user.username)
+        if session:
+            return session
+        if not hasattr(user, 'social_auth'):
             return
-        self.sessions.update({user.anviluser.email: AnvilSession(credentials = credentials, scopes=scopes)})
-        pks = self.frontend_session_pks.get(user.anviluser.email)
-        if not frontend_session_pk in (pks or []):
-            if pks:
-                self.frontend_session_pks[user.anviluser.email].append(frontend_session_pk)
-            else:
-                self.frontend_session_pks.update({user.anviluser.email: [frontend_session_pk]})
-
-    def remove_session(self, user):
-        if not hasattr(user, 'anviluser') or not hasattr(user, '_session_pk'):
-            return
-        if not user._session_pk in (self.frontend_session_pks.get(user.anviluser.email) or []):
-            return
-        self.frontend_session_pks[user.anviluser.email].remove(user._session_pk)
-        if len(self.frontend_session_pks[user.anviluser.email]) == 0:
-            self.frontend_session_pks.pop(user.anviluser.email)
-            self.sessions.pop(user.anviluser.email)
-
+        social = user.social_auth.get(provider = 'google-oauth2')
+        creds = {'token': social.extra_data['access_token'],
+            'refresh_token': social.extra_data['access_token'],
+            'token_uri': social.extra_data['access_token'],
+            'client_id': social.extra_data['access_token'],
+            'client_secret': social.extra_data['access_token'],
+            'scopes': social.extra_data['access_token']}
+        credentials = Credentials(**creds)
+        session = AnvilSession(credentials = credentials, scopes=scopes)
+        self.sessions.update({user.username: session})
+        return session
 
 service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = scopes)
 
