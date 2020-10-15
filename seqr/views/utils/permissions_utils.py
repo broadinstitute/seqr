@@ -67,7 +67,7 @@ def _get_workspaces_user_can_view(user):
                 workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
             else:
                 acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
-                if user.anviluser.email in acl.keys():
+                if user.email in acl.keys():
                     workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
     return workspaces
 

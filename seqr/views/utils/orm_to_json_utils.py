@@ -105,7 +105,7 @@ def _get_json_for_user(user):
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
     user_json['isAnvil'] = hasattr(user, '_session_pk')
-    user_json['anvilEmail'] = user.anviluser.email if hasattr(user, 'anviluser') else None
+    user_json['anvilEmail'] = user.email if hasattr(user, 'social_auth') else None
     if user_json['isAnvil'] and user_json['anvilEmail']:  # Logged in with AnVIL and the user registered AnVIL email
         # Todo: Update to use the user profile from AnVIL
         if user_json['firstName'] == '' and user_json['lastName'] == '' and user_json['email'] == '':
@@ -698,7 +698,7 @@ def get_project_collaborators_by_username(project, include_permissions=True):
     if len(workspace) == 2:
         acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
         for email in acl.keys():
-            collaborator = User.objects.filter(anviluser__email = email)
+            collaborator = User.objects.filter(email = email)
             if len(collaborator) > 0:
                 collaborator = collaborator.first()
                 collaborators[collaborator.username] = _get_collaborator_json(collaborator,

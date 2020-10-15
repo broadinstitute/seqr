@@ -14,7 +14,6 @@ from django.contrib import admin
 import django.contrib.admindocs.urls
 import django.views.static
 
-from seqr.views.google_login import google_login_view, google_grant_view
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
@@ -264,10 +263,6 @@ api_endpoints = {
 
 urlpatterns = []
 
-# Google auth
-urlpatterns += [url('^google_login$', google_login_view)]
-urlpatterns += [url('^oauth2callback$', google_grant_view)]
-
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), no_login_main_app) for url_endpoint in no_login_react_app_pages]
@@ -302,6 +297,10 @@ urlpatterns += [
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
     }),
+]
+
+urlpatterns += [
+    url('', include('social_django.urls', namespace='social'))
 ]
 
 # django debug toolbar
