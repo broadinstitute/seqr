@@ -19,6 +19,24 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     check_project_permissions(project, user, **kwargs)
     return project
 
+def has_perm(user, permission_level, project):
+    session = service_account_session  # anvilSessionStore.get_session(user)
+    workspace = project.workspace.split('/') if project.workspace is not None else ''
+    if len(workspace) == 2:
+        collaborators = session.get_workspace_acl(workspace[0], workspace[1])
+        if user.email in collaborators.keys():
+            permission = collaborators[user.email]
+            if permission['pending']:
+                return False
+            if permission_level is IS_OWNER:
+                return permission['accessLevel'] == 'OWNER'
+            if permission_level is CAN_EDIT:
+                return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+            return True
+        return False
+    else:
+        user.has_perm(permission_level, project)
+
 
 def has_project_permissions(project, user, can_edit=False, is_owner=False):
     permission_level = CAN_VIEW
@@ -27,7 +45,10 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    if hasattr(user, 'social_auth'):
+        return has_perm(user, permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    else:
+        return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
 
 
 def check_project_permissions(project, user, **kwargs):
