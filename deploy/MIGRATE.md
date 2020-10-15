@@ -6,7 +6,7 @@ This README describes steps for migrating an older seqr instance.
    pg_dump -U postgres seqrdb | gzip -c - > backup.gz
    ```
 
-2. Download or clone the lastest seqr code from [https://github.com/macarthur-lab/seqr](https://github.com/macarthur-lab/seqr)
+2. Download or clone the lastest seqr code from [https://github.com/broadinstitute/seqr](https://github.com/broadinstitute/seqr)
 
 3. Run migrations:
    ```

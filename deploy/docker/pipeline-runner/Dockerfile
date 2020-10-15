@@ -1,6 +1,6 @@
 FROM bitnami/minideb:stretch
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 # install commmon utilities
 RUN install_packages \

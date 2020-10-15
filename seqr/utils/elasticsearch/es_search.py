@@ -642,7 +642,7 @@ class EsSearch(object):
                 lifted_over_chrom = grch37_locus['contig']
                 lifted_over_pos = grch37_locus['position']
             else:
-                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/macarthur-lab/seqr/issues/1010)
+                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
                 liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
                 if liftover_grch38_to_grch37:
                     grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
@@ -1029,7 +1029,7 @@ class EsSearch(object):
         return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
 
 
-# TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/macarthur-lab/seqr/issues/1010)
+# TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/broadinstitute/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
 def _liftover_grch38_to_grch37():
     global LIFTOVER_GRCH38_TO_GRCH37

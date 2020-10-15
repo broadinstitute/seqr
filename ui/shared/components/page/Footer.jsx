@@ -23,7 +23,7 @@ const Footer = React.memo(({ version }) =>
         <TableHeaderCell width={2} disabled>seqr {version}</TableHeaderCell>
         <TableHeaderCell width={6}>
           For bug reports or feature requests please submit  &nbsp;
-          <a href="https://github.com/macarthur-lab/seqr/issues">Github Issues</a>
+          <a href="https://github.com/broadinstitute/seqr/issues">Github Issues</a>
         </TableHeaderCell>
         <TableHeaderCell width={5} textAlign="right">
           If you have questions or feedback, &nbsp;

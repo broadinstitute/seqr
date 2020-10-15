@@ -1,6 +1,6 @@
 FROM debian:stretch
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 # install commmon utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -116,7 +116,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 ARG DISABLE_CACHE=1
 
 # update seqr repo
-RUN git clone -q https://github.com/macarthur-lab/seqr
+RUN git clone -q https://github.com/broadinstitute/seqr
 
 WORKDIR /seqr
 
