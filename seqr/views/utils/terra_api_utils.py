@@ -182,11 +182,12 @@ class AnvilSessionStore(object):
         session = self.sessions.get(user.username)
         if session:
             return session
-        if not hasattr(user, 'social_auth'):
+        social = user.social_auth.filter(provider = 'google-oauth2')
+        if not social:
             return
-        social = user.social_auth.get(provider = 'google-oauth2')
+        social = social.first()
         creds = {'token': social.extra_data['access_token'],
-            'refresh_token': social.extra_data['access_token'],
+            'refresh_token': social.extra_data['access_token'],  # Todo: Update
             'token_uri': social.extra_data['access_token'],
             'client_id': social.extra_data['access_token'],
             'client_secret': social.extra_data['access_token'],
