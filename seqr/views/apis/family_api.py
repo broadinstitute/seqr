@@ -108,7 +108,6 @@ def delete_families_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_fields_handler(request, family_guid):
     """Updates the specified field in the Family model.
 
