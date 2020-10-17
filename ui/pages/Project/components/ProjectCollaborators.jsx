@@ -105,8 +105,8 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
-  orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
+const ProjectCollaborators = React.memo(({ project, anvilCollaborator, onSubmit }) => (
+  orderBy(project.collaborators.filter(col => col.isAnvil === anvilCollaborator), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
       {project.canEdit && !c.isAnvil &&
         <span>
@@ -133,7 +133,6 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
             }
           />
         </span>
-
       }
       <Popup
         position="top center"
@@ -141,7 +140,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
         content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
-      {c.anvilEmail && 'AnVIL: '}{ c.displayName && `${c.displayName} - `}
+      { c.displayName && `${c.displayName} - `}
       <a href={`mailto:${c.email}`}>{c.email}</a>
     </CollaboratorContainer>,
   )
@@ -150,6 +149,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  anvilCollaborator: PropTypes.bool.isRequired,
   onSubmit: PropTypes.func,
 }
 
