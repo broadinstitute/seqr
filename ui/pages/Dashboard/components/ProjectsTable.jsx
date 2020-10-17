@@ -62,8 +62,8 @@ const COLUMNS = [
     content: 'AnVIL',
     format: project => (
       <div>
-        {project.workspace &&
-        <Popup content={`AnVIL workspace: ${project.workspace}`} position="top center" trigger={<Icon name="fire" />} />}
+        {project.workspaceName &&
+        <Popup content={`AnVIL workspace: ${project.workspaceNamespace}/${project.workspaceName}`} position="top center" trigger={<Icon name="fire" />} />}
       </div>
     ),
   },

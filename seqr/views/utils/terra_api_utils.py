@@ -124,12 +124,13 @@ class AnvilSession(AuthorizedSession):
                 'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         return json.loads(r.text)
 
-    def get_workspace_acl(self, workspace):
+    def get_workspace_acl(self, workspace_namespace, workspace_name):
         """
         Request FireCloud access control list for workspace.
 
         Args:
-            workspace (str): Workspace name in the format of 'namespace/workspace_name'
+            workspace_namespace (str): namespace (name of billing project) of the workspace
+            workspace_name (str): the name of the workspace
         Returns:
             {
                 "user1Email": {
@@ -151,16 +152,18 @@ class AnvilSession(AuthorizedSession):
                   "canCompute": true
                 }
               }
+              :param workspace_name:
+              :param workspace_namespace:
         """
-        workspace = workspace.split('/') if workspace else ''
-        if len(workspace) != 2:
+        if workspace_namespace and workspace_name:
+            uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+            r = self.get(uri)
+            if r.status_code != 200:
+                raise TerraAPIException(
+                    'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
+            return json.loads(r.text)['acl']
+        else:
             return {}
-        uri = "api/workspaces/{0}/{1}/acl".format(workspace[0], workspace[1])
-        r = self.get(uri)
-        if r.status_code != 200:
-            raise TerraAPIException(
-                'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
-        return json.loads(r.text)['acl']
 
 
 class AnvilSessionStore(object):

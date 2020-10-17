@@ -685,7 +685,7 @@ def get_project_collaborators_by_username(project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    acl = anvilSessionStore.get_session().get_workspace_acl(project.workspace)
+    acl = anvilSessionStore.get_session().get_workspace_acl(project.workspace_namespace, project.workspace_name)
     for email in acl.keys():
         collaborator = User.objects.filter(email = email)
         if len(collaborator) > 0:

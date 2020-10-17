@@ -118,7 +118,8 @@ class Project(ModelWithGUID):
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
-    workspace = models.TextField(null = True, blank = True)  # A string in the format of '<namespace>/<name>'
+    workspace_namespace = models.TextField(null = True, blank = True)
+    workspace_name = models.TextField(null = True, blank = True)
 
     def __unicode__(self):
         return self.name.strip()
@@ -170,7 +171,8 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
-            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid', 'workspace'
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
+            'workspace_namespace', 'workspace_name'
         ]
 
 
