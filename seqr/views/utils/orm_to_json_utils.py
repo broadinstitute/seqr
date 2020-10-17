@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions
-from seqr.views.utils.terra_api_utils import service_account_session, anvilSessionStore
+from seqr.views.utils.terra_api_utils import anvilSessionStore
 logger = logging.getLogger(__name__)
 
 
@@ -105,11 +105,6 @@ def _get_json_for_user(user):
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
     user_json['isAnvil'] = anvilSessionStore.get_session(user) is not None
-    user_json['anvilEmail'] = user.email if user_json['isAnvil'] else None
-    if user_json['isAnvil']:
-        # Todo: Update to use the user profile from AnVIL
-        user_json['displayName'] = user_json['anvilEmail']
-        return user_json
     user_json['displayName'] = user.get_full_name()
 
     return user_json
@@ -690,16 +685,14 @@ def get_project_collaborators_by_username(project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    workspace = project.workspace.split('/') if project.workspace is not None else ''
-    if len(workspace) == 2:
-        acl = service_account_session.get_workspace_acl(workspace[0], workspace[1])
-        for email in acl.keys():
-            collaborator = User.objects.filter(email = email)
-            if len(collaborator) > 0:
-                collaborator = collaborator.first()
-                collaborators[collaborator.username] = _get_collaborator_json(collaborator,
-                    include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER'
-                )
+    acl = anvilSessionStore.get_session().get_workspace_acl(project.workspace)
+    for email in acl.keys():
+        collaborator = User.objects.filter(email = email)
+        if len(collaborator) > 0:
+            collaborator = collaborator.first()
+            collaborators[collaborator.username] = _get_collaborator_json(collaborator,
+                include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER'
+            )
 
     for collaborator in project.can_view_group.user_set.all():
         collaborators[collaborator.username] = _get_collaborator_json(

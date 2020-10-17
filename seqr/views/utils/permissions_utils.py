@@ -2,7 +2,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import service_account_session, anvilSessionStore
+from seqr.views.utils.terra_api_utils import anvilSessionStore
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -19,20 +19,19 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     check_project_permissions(project, user, **kwargs)
     return project
 
+
 def anvil_has_perm(user, permission_level, project):
-    session = service_account_session  # anvilSessionStore.get_session(user)
-    workspace = project.workspace.split('/') if project.workspace is not None else ''
-    if len(workspace) == 2:
-        collaborators = session.get_workspace_acl(workspace[0], workspace[1])
-        if user.email in collaborators.keys():
-            permission = collaborators[user.email]
-            if permission['pending']:
-                return False
-            if permission_level is IS_OWNER:
-                return permission['accessLevel'] == 'OWNER'
-            if permission_level is CAN_EDIT:
-                return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
-            return True  # for CAN_VIEW level
+    session = anvilSessionStore.get_session(user)
+    collaborators = session.get_workspace_acl(project.workspace)
+    if user.email in collaborators.keys():
+        permission = collaborators[user.email]
+        if permission['pending']:
+            return False
+        if permission_level is IS_OWNER:
+            return permission['accessLevel'] == 'OWNER'
+        if permission_level is CAN_EDIT:
+            return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+        return True  # for CAN_VIEW level
     return False
 
 
@@ -43,9 +42,8 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    if anvil_has_perm(user, permission_level, project) or (user.is_staff and not project.disable_staff_access):
-        return True
-    return user.has_perm(permission_level, project)
+    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)\
+        or anvil_has_perm(user, permission_level, project)
 
 
 def check_project_permissions(project, user, **kwargs):
@@ -73,20 +71,19 @@ def check_multi_project_permissions(obj, user):
 
 
 def _get_workspaces_user_can_view(user):
-    # the 'service_account_session' below will be replaced by 'session' after seqr client ID is whitelisted
-    is_staff_user = user.is_staff
-    session = service_account_session
+    session = anvilSessionStore.get_session(user)  # get service account session
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
     workspace_list = session.list_workspaces(requested_fields)
     workspaces = []
     for ws in workspace_list:
+        workspace_name = '/'.join([ws['workspace']['namespace'], ws['workspace']['name']])
         if not ws['public']:
-            if is_staff_user:
-                workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
+            if user.is_staff:
+                workspaces.append(workspace_name)
             else:
-                acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
+                acl = session.get_workspace_acl(workspace_name)
                 if user.email in acl.keys():
-                    workspaces.append('/'.join([ws['workspace']['namespace'], ws['workspace']['name']]))
+                    workspaces.append(workspace_name)
     return workspaces
 
 

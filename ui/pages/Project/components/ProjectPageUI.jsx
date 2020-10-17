@@ -116,7 +116,10 @@ const ProjectPageUI = React.memo((props) => {
         </Grid.Column>
         <Grid.Column width={4}>
           <ProjectSection label="Collaborators" editButton={<AddProjectCollaboratorButton />}>
-            <ProjectCollaborators />
+            <p>AnVIL Collaborators</p>
+            <ProjectCollaborators anvilCollaborator />
+            <br /><p>Local Collaborators</p>
+            <ProjectCollaborators anvilCollaborator={false} />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>

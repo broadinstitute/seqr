@@ -2,21 +2,19 @@
 
 import json
 import logging
+import time
 
 from urllib.parse import urljoin
+
+from social_django.utils import load_strategy
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO, SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
-
-scopes = ['https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/cloud-billing',
-          'openid']
 
 logger = logging.getLogger(__name__)
 
@@ -26,29 +24,17 @@ class TerraAPIException(Exception):
     pass
 
 
-def _seqr_agent_header(headers=None):
-    """
-    Generate seqr/version as the User-Agent header.
-
-    Args:
-        headers (dict): Include additional headers as key-value pairs
-    Returns:
-        request headers for Terra API message.
-    """
-    seqr_headers = {"User-Agent": SEQR_USER_AGENT}
-    if headers is not None:
-        seqr_headers.update(headers)
-    return seqr_headers
-
 def _get_call_args(methcall, headers=None, root_url=None):
     if headers is None:
-        headers = _seqr_agent_header()
+        headers = {"User-Agent": SEQR_USER_AGENT}
     if root_url is None:
         root_url = TERRA_API_ROOT_URL
     url = urljoin(root_url, methcall)
     return url, headers
 
+
 class AnvilSession(AuthorizedSession):
+
     def __init__(self, credentials=None, service_account_info=None, scopes=None):
         """
         Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
@@ -138,13 +124,12 @@ class AnvilSession(AuthorizedSession):
                 'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
         return json.loads(r.text)
 
-    def get_workspace_acl(self, namespace, workspace):
+    def get_workspace_acl(self, workspace):
         """
         Request FireCloud access control list for workspace.
 
         Args:
-            namespace (str): project to which workspace belongs
-            workspace (str): Workspace name
+            workspace (str): Workspace name in the format of 'namespace/workspace_name'
         Returns:
             {
                 "user1Email": {
@@ -167,7 +152,10 @@ class AnvilSession(AuthorizedSession):
                 }
               }
         """
-        uri = "api/workspaces/{0}/{1}/acl".format(namespace, workspace)
+        workspace = workspace.split('/') if workspace else ''
+        if len(workspace) != 2:
+            return {}
+        uri = "api/workspaces/{0}/{1}/acl".format(workspace[0], workspace[1])
         r = self.get(uri)
         if r.status_code != 200:
             raise TerraAPIException(
@@ -176,27 +164,32 @@ class AnvilSession(AuthorizedSession):
 
 
 class AnvilSessionStore(object):
+    service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
     sessions = {}
 
-    def get_session(self, user):
-        session = self.sessions.get(user.username)
-        if session:
-            return session
+    def get_session(self, user=None):
+        if user is None:
+            return self.service_account_session
         social = user.social_auth.filter(provider = 'google-oauth2')
         if not social:
             return
         social = social.first()
-        creds = {'token': social.extra_data['access_token'],
-            'refresh_token': social.extra_data['access_token'],  # Todo: Update
-            'token_uri': social.extra_data['access_token'],
-            'client_id': social.extra_data['access_token'],
-            'client_secret': social.extra_data['access_token'],
-            'scopes': social.extra_data['access_token']}
-        credentials = Credentials(**creds)
-        session = AnvilSession(credentials = credentials, scopes=scopes)
+        if self.sessions.get(user.username):
+            if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(time.time()):  # token expired or expiring?
+                strategy = load_strategy()
+                try:
+                    social.refresh_token(strategy)
+                except Exception as ee:
+                    logger.info('Refresh token failed. {}'.format(str(ee)))
+                    self.sessions.pop(user.username)
+            else:
+                # Todo: change to 'return self.sessions[user.username]' after whitelisted
+                return self.service_account_session  # self.sessions[user.username]
+        credentials = Credentials(token = social.extra_data['access_token'])
+        session = AnvilSession(credentials = credentials)
         self.sessions.update({user.username: session})
-        return session
+        # Todo: change to 'return session' after whitelisted
+        return self.service_account_session  # session
 
-service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = scopes)
 
 anvilSessionStore = AnvilSessionStore()

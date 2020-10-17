@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import Timeago from 'timeago.js'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
@@ -56,12 +57,23 @@ const COLUMNS = [
     format: project => <CategoryIndicator project={project} />,
   },
   {
+    name: 'anvil',
+    width: 1,
+    content: 'AnVIL',
+    format: project => (
+      <div>
+        {project.workspace &&
+        <Popup content={`AnVIL workspace: ${project.workspace}`} position="top center" trigger={<Icon name="fire" />} />}
+      </div>
+    ),
+  },
+  {
     name: 'name',
     width: 5,
     content: 'Name',
     format: project => (
       <div>
-        <Link to={`/project/${project.projectGuid}/project_page`}>{ project.workspace ? `AnVIL: ${project.name}` : project.name}</Link>
+        <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
         <HorizontalSpacer width={10} />
         { project.description }
       </div>
