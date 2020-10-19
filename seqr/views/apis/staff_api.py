@@ -13,7 +13,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.http.response import HttpResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client
@@ -1304,7 +1303,6 @@ def saved_variants_page(request, tag):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file']
     raw_records = parse_file(file_path, file_iter(file_path))
@@ -1519,7 +1517,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def proxy_to_kibana(request):
     headers = _convert_django_meta_to_http_headers(request.META)
     headers['Host'] = KIBANA_SERVER

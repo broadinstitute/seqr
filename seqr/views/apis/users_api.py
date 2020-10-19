@@ -6,7 +6,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_utils import create_json_response
@@ -24,7 +23,6 @@ class CreateUserException(Exception):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_all_collaborators(request):
     if request.user.is_staff:
         collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
@@ -37,14 +35,12 @@ def get_all_collaborators(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_all_staff(request):
     staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
 
     return create_json_response(staff_analysts)
 
 
-@csrf_exempt
 def forgot_password(request):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
@@ -74,7 +70,6 @@ def forgot_password(request):
     return create_json_response({'success': True})
 
 
-@csrf_exempt
 def set_password(request, username):
     user = User.objects.get(username=username)
 
@@ -94,7 +89,6 @@ def set_password(request, username):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_staff_user(request):
     try:
         _create_user(request, is_staff=True)
@@ -105,7 +99,6 @@ def create_staff_user(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
@@ -167,7 +160,6 @@ def _update_existing_user(user, project, request_json):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -177,7 +169,6 @@ def update_project_collaborator(request, project_guid, username):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)

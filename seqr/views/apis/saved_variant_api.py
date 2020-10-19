@@ -3,7 +3,6 @@ import json
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusList, LocusListInterval, LocusListGene, Family, GeneNote
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def saved_variant_data(request, project_guid, variant_guids=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
@@ -58,7 +56,6 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json['familyGuid']
@@ -111,7 +108,6 @@ def _get_parsed_variant_args(variant_json, family):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_variant_note_handler(request, variant_guids):
     request_json = json.loads(request.body)
     save_as_gene_note = request_json.get('saveAsGeneNote')
@@ -167,7 +163,6 @@ def _create_variant_note(saved_variants, note_json, user):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
@@ -185,7 +180,6 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
@@ -210,7 +204,6 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
     request_json = json.loads(request.body)
 
@@ -246,7 +239,6 @@ def update_variant_tags_handler(request, variant_guids):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_functional_data_handler(request, variant_guids):
     request_json = json.loads(request.body)
 
@@ -324,7 +316,6 @@ def _create_new_tags(saved_variants, tags_json, user):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
@@ -334,7 +325,6 @@ def update_saved_variant_json(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user, can_edit=True)

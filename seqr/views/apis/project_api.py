@@ -7,7 +7,6 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_project_handler(request):
     """Create a new project.
 
@@ -61,7 +59,6 @@ def create_project_handler(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_project_handler(request, project_guid):
     """Update project metadata - including one or more of these fields: name, description
 
@@ -101,7 +98,6 @@ def update_project_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_project_handler(request, project_guid):
     """Delete project - request handler.
 
