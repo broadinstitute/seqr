@@ -336,7 +336,7 @@ export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).get() // TODO should be post
+    ).post()
   }
 }
 
