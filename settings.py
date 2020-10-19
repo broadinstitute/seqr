@@ -71,6 +71,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 
 # django-debug-toolbar settings
