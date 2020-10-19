@@ -12,9 +12,7 @@ def validate_anvil_registration(backend, details, response, uid, user, *args, **
     if backend.name == 'google-oauth2':
         social = kwargs.get('social') or \
                  backend.strategy.storage.user.get_social_auth(backend.name, uid)
-        if social:
-            extra_data = backend.extra_data(user, uid, response, details,
-                                            *args, **kwargs)
+        extra_data = backend.extra_data(user, uid, response, details, *args, **kwargs) if social else {'access_token': ''}
         credentials = Credentials(token = extra_data['access_token'])
         session = AnvilSession(credentials = credentials)
         try:
