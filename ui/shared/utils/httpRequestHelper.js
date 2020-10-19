@@ -55,12 +55,12 @@ export class HttpRequestHelper {
     if (this.debug) {
       console.log(`${this.url} httpHelder - request: `, jsonBody)
     }
-    const csrftoken = Cookies.get('csrf_token')
+    const csrfToken = Cookies.get('csrf_token')
     const promise = fetch(this.url, {
       method: 'POST',
       credentials: 'include',
       body: JSON.stringify(jsonBody),
-      headers: { 'X-CSRFToken': csrftoken },
+      headers: { 'X-CSRFToken': csrfToken },
     })
 
     return this.handlePromise(promise, jsonBody)
