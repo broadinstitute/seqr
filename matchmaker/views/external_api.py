@@ -39,8 +39,8 @@ def authenticate_mme_request(view_func):
                 'message': 'authentication failed',
             }, status=401)
 
-        return csrf_exempt(view_func(request, originating_node['name'], *args, **kwargs))
-    return _wrapped_view
+        return view_func(request, originating_node['name'], *args, **kwargs)
+    return csrf_exempt(_wrapped_view)
 
 
 @authenticate_mme_request
