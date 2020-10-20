@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions
-from seqr.views.utils.terra_api_utils import anvilSessionStore
+from seqr.views.utils.terra_api_utils import anvil_session_store, get_anvil_workspace_acl
 logger = logging.getLogger(__name__)
 
 
@@ -104,7 +104,7 @@ def _get_json_for_user(user):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    user_json['isAnvil'] = anvilSessionStore.get_session(user) is not None
+    user_json['isAnvil'] = anvil_session_store.get_session(user) is not None
     user_json['displayName'] = user.get_full_name()
 
     return user_json
@@ -683,16 +683,11 @@ def get_json_for_project_collaborator_list(project):
 
 def get_project_collaborators_by_username(project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborators = {}
-
-    acl = anvilSessionStore.get_session().get_workspace_acl(project.workspace_namespace, project.workspace_name)
-    for email in acl.keys():
-        collaborator = User.objects.filter(email = email)
-        if len(collaborator) > 0:
-            collaborator = collaborator.first()
-            collaborators[collaborator.username] = _get_collaborator_json(collaborator,
-                include_permissions, can_edit=acl[email]['accessLevel'] == 'OWNER'
-            )
+    acl = get_anvil_workspace_acl(project.workspace_namespace, project.workspace_name)
+    collaborators = {
+        collab.username: _get_collaborator_json(collab, include_permissions, can_edit = acl[collab.email]['accessLevel'] == 'OWNER')
+        for collab in User.objects.filter(email__in = acl.keys())
+    }
 
     for collaborator in project.can_view_group.user_set.all():
         collaborators[collaborator.username] = _get_collaborator_json(

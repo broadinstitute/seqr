@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 from social_django.utils import load_strategy
 
 from google.auth.transport.requests import AuthorizedSession
+from google.auth.transport import DEFAULT_REFRESH_STATUS_CODES
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 
@@ -85,95 +86,115 @@ class AnvilSession(AuthorizedSession):
         logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
         return r
 
-    def get_billing_projects(self):
-        """
-        Get activation information for the logged-in user.
 
-        :returns a list of billing project dictionary
-        """
-        r = self.get("api/profile/billing")
+def get_anvil_billing_projects(user):
+    """
+    Get activation information for the logged-in user.
+
+    :returns a list of billing project dictionary
+    """
+    session = anvil_session_store.get_session(user)
+    r = session.get("api/profile/billing")
+    if r.status_code != 200:
+        raise TerraAPIException(
+            'Error: called Terra API "api/profile/billing" got status: {} with a reason: {}'.format(r.status_code, r.reason))
+    return json.loads(r.text)
+
+
+def get_anvil_profile(user):
+    """Get activation information for the logged-in user."""
+    session = anvil_session_store.get_session(user)
+    r = session.get("register")
+    if r.status_code != 200:
+        raise TerraAPIException(
+            'Error: called Terra API "register" got status: {} with a reason: {}'.format(r.status_code, r.reason))
+    return json.loads(r.text)
+
+
+def list_anvil_workspaces(user, fields=None):
+    """
+    Get all the workspaces accessible by the logged-in user.
+
+    Args:
+    fields (str): a comma-delimited list of values that limits the
+        response payload to include only those keys and exclude other
+        keys (e.g., to include {"workspace": {"attributes": {...}}},
+        specify "workspace.attributes").
+    """
+    session = anvil_session_store.get_session(user)
+    if fields is None:
+        r = session.get("api/workspaces")
+    else:
+        r = session.get("api/workspaces", params = {"fields": fields})
+    if r.status_code != 200:
+        raise TerraAPIException(
+            'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
+    return json.loads(r.text)
+
+
+def get_anvil_workspace_acl(workspace_namespace, workspace_name):
+    """
+    Request FireCloud access control list for workspace.
+
+    Args:
+        workspace_namespace (str): namespace (name of billing project) of the workspace
+        workspace_name (str): the name of the workspace
+    Returns:
+        {
+            "user1Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            },
+            "user2Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            },
+            "user3Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            }
+          }
+          :param workspace_name:
+          :param workspace_namespace:
+    """
+    if workspace_namespace and workspace_name:
+        uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+        r = anvil_session_store.service_account_session.get(uri)
+        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:
+            anvil_session_store.service_account_session = AnvilSession(
+                service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        r = anvil_session_store.service_account_session.get(uri)
         if r.status_code != 200:
             raise TerraAPIException(
-                'Error: called Terra API "api/profile/billing" got status: {} with a reason: {}'.format(r.status_code, r.reason))
-        return json.loads(r.text)
-
-    def get_anvil_profile(self):
-        """Get activation information for the logged-in user."""
-        r = self.get("register")
-        if r.status_code != 200:
-            raise TerraAPIException(
-                'Error: called Terra API "register" got status: {} with a reason: {}'.format(r.status_code, r.reason))
-        return json.loads(r.text)
-
-    def list_workspaces(self, fields=None):
-        """
-        Get all the workspaces accessible by the logged-in user.
-
-        Args:
-        fields (str): a comma-delimited list of values that limits the
-            response payload to include only those keys and exclude other
-            keys (e.g., to include {"workspace": {"attributes": {...}}},
-            specify "workspace.attributes").
-        """
-        if fields is None:
-            r = self.get("api/workspaces")
-        else:
-            r = self.get("api/workspaces", params = {"fields": fields})
-        if r.status_code != 200:
-            raise TerraAPIException(
-                'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
-        return json.loads(r.text)
-
-    def get_workspace_acl(self, workspace_namespace, workspace_name):
-        """
-        Request FireCloud access control list for workspace.
-
-        Args:
-            workspace_namespace (str): namespace (name of billing project) of the workspace
-            workspace_name (str): the name of the workspace
-        Returns:
-            {
-                "user1Email": {
-                  "accessLevel": "string",
-                  "pending": true,
-                  "canShare": true,
-                  "canCompute": true
-                },
-                "user2Email": {
-                  "accessLevel": "string",
-                  "pending": true,
-                  "canShare": true,
-                  "canCompute": true
-                },
-                "user3Email": {
-                  "accessLevel": "string",
-                  "pending": true,
-                  "canShare": true,
-                  "canCompute": true
-                }
-              }
-              :param workspace_name:
-              :param workspace_namespace:
-        """
-        if workspace_namespace and workspace_name:
-            uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-            r = self.get(uri)
-            if r.status_code != 200:
-                raise TerraAPIException(
-                    'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
-            return json.loads(r.text)['acl']
-        else:
-            return {}
+                'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
+        return json.loads(r.text)['acl']
+    else:
+        return {}
 
 
 class AnvilSessionStore(object):
-    service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
     sessions = {}
 
-    def get_session(self, user=None):
-        if user is None:
-            return self.service_account_session
-        social = user.social_auth.filter(provider = 'google-oauth2')
+    def __init__(self):
+        self._service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO,
+                                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+
+    @property
+    def service_account_session(self):
+        return self._service_account_session
+
+    @service_account_session.setter
+    def service_account_session(self, session):
+        self._service_account_session = session
+
+    def get_session(self, user):
+        social = user.social_auth.filter(provider = 'google-oauth2') if user is not None else None
         if not social:
             return
         social = social.first()
@@ -187,12 +208,12 @@ class AnvilSessionStore(object):
                     self.sessions.pop(user.username)
             else:
                 # Todo: change to 'return self.sessions[user.username]' after whitelisted
-                return self.service_account_session  # self.sessions[user.username]
+                return self._service_account_session  # self.sessions[user.username]
         credentials = Credentials(token = social.extra_data['access_token'])
         session = AnvilSession(credentials = credentials)
         self.sessions.update({user.username: session})
         # Todo: change to 'return session' after whitelisted
-        return self.service_account_session  # session
+        return self._service_account_session  # session
 
 
-anvilSessionStore = AnvilSessionStore()
+anvil_session_store = AnvilSessionStore()

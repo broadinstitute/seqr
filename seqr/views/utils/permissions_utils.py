@@ -4,7 +4,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import anvilSessionStore
+from seqr.views.utils.terra_api_utils import anvil_session_store, get_anvil_workspace_acl, list_anvil_workspaces
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -23,8 +23,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def anvil_has_perm(user, permission_level, project):
-    session = anvilSessionStore.get_session(user)
-    collaborators = session.get_workspace_acl(project.workspace_namespace, project.workspace_name)
+    collaborators = get_anvil_workspace_acl(project.workspace_namespace, project.workspace_name)
     if user.email in collaborators.keys():
         permission = collaborators[user.email]
         if permission['pending']:
@@ -73,9 +72,8 @@ def check_multi_project_permissions(obj, user):
 
 
 def _get_workspaces_user_can_view(user):
-    session = anvilSessionStore.get_session(user)  # get service account session
     requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
-    workspace_list = session.list_workspaces(requested_fields)
+    workspace_list = list_anvil_workspaces(user, requested_fields)
     workspaces = []
     for ws in workspace_list:
         workspace_name = '/'.join([ws['workspace']['namespace'], ws['workspace']['name']])
@@ -83,19 +81,19 @@ def _get_workspaces_user_can_view(user):
             if user.is_staff:
                 workspaces.append(workspace_name)
             else:
-                acl = session.get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
+                acl = get_anvil_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
                 if user.email in acl.keys():
                     workspaces.append(workspace_name)
     return workspaces
 
 
 def get_projects_user_can_view(user):
-    can_view_filter = Q(can_view_group__user = user)
+    can_view_filter = Q(can_view_group__user=user)
 
     if user.is_staff:
-        return Project.objects.filter(can_view_filter | Q(disable_staff_access = False))
+        can_view_filter = can_view_filter | Q(disable_staff_access=False)
 
-    if anvilSessionStore.get_session(user):
+    if anvil_session_store.get_session(user):
         workspaces = _get_workspaces_user_can_view(user)
         anvil_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in = workspaces)

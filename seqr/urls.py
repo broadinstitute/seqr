@@ -122,8 +122,6 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
-from seqr.views.require_anvil_reg_view import require_anvil_registration
-
 react_app_pages = [
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
@@ -303,7 +301,6 @@ urlpatterns += [
 
 urlpatterns += [
     url('', include('social_django.urls')),
-    url('^require_anvil_registration$', require_anvil_registration, name='require_anvil_registration'),
 ]
 
 # django debug toolbar

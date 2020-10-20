@@ -12,8 +12,7 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
     if backend.name == 'google-oauth2':
         credentials = Credentials(token = response['access_token'])
         session = AnvilSession(credentials = credentials)
-        try:
-            _ = session.get_anvil_profile()
-        except Exception as ee:  # The user hasn't registered on AnVIL, authentication failed
-            logger.info('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(ee)))
-            return redirect('require_anvil_registration')
+        r = session.get("register")
+        if r.status_code != 200: # The user hasn't registered on AnVIL, authentication failed
+            logger.info('User {} is trying to login without registration on AnVIL.'.format(response['email']))
+            return redirect('/login?googleLoginFailed=true')

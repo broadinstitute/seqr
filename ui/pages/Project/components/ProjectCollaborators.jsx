@@ -106,6 +106,7 @@ const CollaboratorContainer = styled.div`
 `
 
 const ProjectCollaborators = React.memo(({ project, anvilCollaborator, onSubmit }) => (
+  <div>{anvilCollaborator && project.collaborators.filter(col => col.isAnvil === anvilCollaborator).length > 0 && <p>AnVIL Workspace Users</p>}{
   orderBy(project.collaborators.filter(col => col.isAnvil === anvilCollaborator), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
       {project.canEdit && !c.isAnvil &&
@@ -143,7 +144,8 @@ const ProjectCollaborators = React.memo(({ project, anvilCollaborator, onSubmit 
       {c.displayName && `${c.displayName} - `}
       <a href={`mailto:${c.email}`}>{c.email}</a>
     </CollaboratorContainer>,
-  )
+  )}
+  </div>
 ))
 
 

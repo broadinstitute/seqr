@@ -180,11 +180,15 @@ LOGGING = {
     }
 }
 
+TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
+
 AUTHENTICATION_BACKENDS = (
-    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
+
+if TERRA_API_ROOT_URL:
+      AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
 
 # set the secret key
 SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
@@ -290,8 +294,6 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 #########################################################
 #  AnVIL Terra API specific settings
 #########################################################
-
-TERRA_API_ROOT_URL = 'https://api.firecloud.org/'
 
 GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
 
