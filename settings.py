@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'hijack',
-    'corsheaders',
     'guardian',
     'anymail',
     'seqr',
@@ -49,7 +48,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -60,13 +58,6 @@ MIDDLEWARE = [
 # django-hijack plugin
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/'
-
-# cors settings
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'http://localhost:8000',
-)
-CORS_ALLOW_CREDENTIALS = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -229,6 +220,14 @@ if os.environ.get('DEPLOYMENT_TYPE') == 'prod':
     DEBUG = False
 else:
     DEBUG = True
+    # Enable CORS for local development
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+    CORS_ORIGIN_WHITELIST = (
+        'http://localhost:3000',
+        'http://localhost:8000',
+    )
+    CORS_ALLOW_CREDENTIALS = True
 
 
 #########################################################
