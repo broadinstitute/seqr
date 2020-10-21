@@ -5,7 +5,6 @@ from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import prefetch_related_objects
-from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from seqr.models import Individual, Sample, Family, IgvSample
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def add_variants_dataset_handler(request, project_guid):
     """Create or update samples for the given variant dataset
 
@@ -129,7 +127,6 @@ def add_variants_dataset_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def receive_igv_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     info = []
@@ -173,7 +170,6 @@ def receive_igv_table_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project

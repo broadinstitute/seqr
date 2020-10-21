@@ -1,7 +1,6 @@
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response
@@ -17,7 +16,6 @@ REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_analysis_group_handler(request, project_guid, analysis_group_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
@@ -62,7 +60,6 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete()
