@@ -42,6 +42,7 @@ export const getUser = state => state.user
 export const getUsersByUsername = state => state.usersByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getVersion = state => state.meta.version
+export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage

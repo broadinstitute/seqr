@@ -4,9 +4,9 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Divider, Message } from 'semantic-ui-react'
 
+import { getGoogleLoginEnabled } from 'redux/selectors'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
 import { login } from '../reducers'
-import { getGoogleLoginEnabled, getGoogleLoginFailed } from '../selectors'
 import UserFormLayout from './UserFormLayout'
 
 const FIELDS = [
@@ -14,7 +14,7 @@ const FIELDS = [
   { name: 'password', label: 'Password', type: 'password', validate: validators.required },
 ]
 
-const Login = ({ onSubmit, googleLoginEnabled, googleLoginFailed }) =>
+const Login = ({ onSubmit, googleLoginEnabled, location }) =>
   <UserFormLayout
     header="Login to seqr"
     onSubmit={onSubmit}
@@ -26,7 +26,7 @@ const Login = ({ onSubmit, googleLoginEnabled, googleLoginFailed }) =>
     {googleLoginEnabled &&
     <div>
       <Divider />
-      {googleLoginFailed &&
+      {location.search === '?googleLoginFailed=true' &&
       <Message visible warning>
         Logging in has failed. Make sure you have registered your account on AnVIL. <br />
         Click this link <a href="https://anvil.terra.bio">https://anvil.terra.bio</a>, sign in AnVIL with Google, and register your account.
@@ -39,7 +39,7 @@ const Login = ({ onSubmit, googleLoginEnabled, googleLoginFailed }) =>
 Login.propTypes = {
   onSubmit: PropTypes.func,
   googleLoginEnabled: PropTypes.bool,
-  googleLoginFailed: PropTypes.bool,
+  location: PropTypes.object,
 }
 
 const mapDispatchToProps = {
@@ -48,7 +48,6 @@ const mapDispatchToProps = {
 
 const mapStateToProps = state => ({
   googleLoginEnabled: getGoogleLoginEnabled(state),
-  googleLoginFailed: getGoogleLoginFailed(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Login)

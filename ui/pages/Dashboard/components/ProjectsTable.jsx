@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { fetchProjects } from 'redux/rootReducer'
-import { getProjectsIsLoading, getUser } from 'redux/selectors'
+import { getProjectsIsLoading, getUser, getGoogleLoginEnabled } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import DataTable from 'shared/components/table/DataTable'
@@ -154,7 +154,7 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
-const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -175,7 +175,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
+        columns={COLUMNS.slice(0, googleLoginEnabled ? 2 : 1).concat(user.isStaff ? STAFF_COLUMNS.slice(2) : COLUMNS.slice(2))}
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
@@ -187,6 +187,7 @@ ProjectsTable.propTypes = {
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
   load: PropTypes.func,
+  googleLoginEnabled: PropTypes.bool,
 }
 
 export { ProjectsTable as ProjectsTableComponent }
@@ -195,6 +196,7 @@ const mapStateToProps = state => ({
   visibleProjects: getVisibleProjects(state),
   loading: getProjectsIsLoading(state),
   user: getUser(state),
+  googleLoginEnabled: getGoogleLoginEnabled(state),
 })
 
 const mapDispatchToProps = {

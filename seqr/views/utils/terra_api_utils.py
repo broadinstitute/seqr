@@ -48,43 +48,41 @@ class AnvilSession(AuthorizedSession):
             credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
         super(AnvilSession, self).__init__(credentials)
 
-    def get(self, methcall, headers=None, root_url=None, **kwargs):
+    def _make_request(self, method, path, headers, root_url, **kwargs):
+        url, headers = _get_call_args(path, headers, root_url)
+        request_func = getattr(super(AnvilSession, self), method)
+        r = request_func(url, headers = headers)
+        if r.status_code != 200:
+            raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
+                path, r.status_code, r.reason))
+            logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
+        return r
+
+    def get(self, path, headers=None, root_url=None, **kwargs):
         """
         Call Terra API with HTTP GET method with an authentication header.
 
         Args:
-            methcall: A string of API path (start right after the domain name without leading slash (/)
+            path: A string of API path (start right after the domain name without leading slash (/)
             headers (dict): Include additional headers as key-value pairs
             root_url: the url up to the domain name ending with a slash (/)
             kwargs: other parameters for the HTTP call, e.g. queries.
         Return:
             HTTP response
         """
-        url, headers = _get_call_args(methcall, headers, root_url)
-        r = super(AnvilSession, self).get(url, headers = headers, **kwargs)
-        logger.info('GET {} {} {}'.format(url, r.status_code, len(r.text)))
-        return r
+        return self._make_request('get', path, headers, root_url, **kwargs)
 
-    def post(self, methcall, headers=None, root_url=None, **kwargs):
+    def post(self, path, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = _get_call_args(methcall, headers, root_url)
-        r = super(AnvilSession, self).post(url, headers = headers, **kwargs)
-        logger.info('POST {} {} {}'.format(url, r.status_code, len(r.text)))
-        return r
+        return self._make_request('post', path, headers, root_url, **kwargs)
 
-    def put(self, methcall, headers=None, root_url=None, **kwargs):
+    def put(self, path, headers=None, root_url=None, **kwargs):
         """See the __get() method."""
-        url, headers = _get_call_args(methcall, headers, root_url)
-        r = super(AnvilSession, self).put(url, headers = headers, **kwargs)
-        logger.info('PUT {} {} {}'.format(url, r.status_code, len(r.text)))
-        return r
+        return self._make_request('put', path, headers, root_url, **kwargs)
 
-    def delete(self, methcall, headers=None, root_url=None):
+    def delete(self, path, headers=None, root_url=None):
         """See the __get() method."""
-        url, headers = _get_call_args(methcall, headers, root_url)
-        r = super(AnvilSession, self).delete(url, headers = headers)
-        logger.info('DELETE {} {} {}'.format(url, r.status_code, len(r.text)))
-        return r
+        return self._make_request('delete', path, headers, root_url)
 
 
 def get_anvil_billing_projects(user):
@@ -96,7 +94,7 @@ def get_anvil_billing_projects(user):
 
     :returns a list of billing project dictionary
     """
-    session = anvil_session_store.get_session(user)
+    session = _anvil_session_store.get_session(user)
     r = session.get("api/profile/billing")
     if r.status_code != 200:
         raise TerraAPIException(
@@ -110,7 +108,7 @@ def get_anvil_profile(user):
     Args:
         user (User model): who's credentials will be used to access AnVIL
     """
-    session = anvil_session_store.get_session(user)
+    session = _anvil_session_store.get_session(user)
     r = session.get("register")
     if r.status_code != 200:
         raise TerraAPIException(
@@ -129,11 +127,9 @@ def list_anvil_workspaces(user, fields=None):
         keys (e.g., to include {"workspace": {"attributes": {...}}},
         specify "workspace.attributes").
     """
-    session = anvil_session_store.get_session(user)
-    if fields is None:
-        r = session.get("api/workspaces")
-    else:
-        r = session.get("api/workspaces", params = {"fields": fields})
+    session = _anvil_session_store.get_session(user)
+    parms = {"fields": fields} if fields is not None else {}
+    r = session.get("api/workspaces", params = parms)
     if r.status_code != 200:
         raise TerraAPIException(
             'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
@@ -171,30 +167,32 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
           :param workspace_name:
           :param workspace_namespace:
     """
-    if workspace_namespace and workspace_name:
-        uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-        r = anvil_session_store.service_account_session.get(uri)
-        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
-            anvil_session_store.service_account_session = AnvilSession(
-                service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
-            r = anvil_session_store.service_account_session.get(uri)  # retry with the new access code
-        if r.status_code != 200:
-            raise TerraAPIException(
-                'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
-        return json.loads(r.text)['acl']
-    else:
-        return {}
+    uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+    r = _anvil_session_store.service_account_session.get(uri)
+    if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
+        _anvil_session_store.service_account_session = None
+        r = _anvil_session_store.service_account_session.get(uri)  # retry with the new access code
+    if r.status_code != 200:
+        raise TerraAPIException(
+            'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
+    return json.loads(r.text)['acl']
+
+
+def has_anvil_session(user):
+    return user.social_auth.filter(provider = 'google-oauth2') is not None
 
 
 class AnvilSessionStore(object):
     sessions = {}
 
     def __init__(self):
-        self._service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO,
-                                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        self._service_account_session = None
 
     @property
     def service_account_session(self):
+        if not self._service_account_session:
+            self._service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO,
+                                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         return self._service_account_session
 
     @service_account_session.setter
@@ -202,10 +200,7 @@ class AnvilSessionStore(object):
         self._service_account_session = session
 
     def get_session(self, user):
-        social = user.social_auth.filter(provider = 'google-oauth2') if user is not None else None
-        if not social:
-            return
-        social = social.first()
+        social = user.social_auth.get(provider = 'google-oauth2')
         if self.sessions.get(user.username):
             if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(time.time()):  # token expired or expiring?
                 strategy = load_strategy()
@@ -216,12 +211,12 @@ class AnvilSessionStore(object):
                     self.sessions.pop(user.username)
             else:
                 # Todo: change to 'return self.sessions[user.username]' after whitelisted
-                return self._service_account_session  # self.sessions[user.username]
+                return self.service_account_session  # self.sessions[user.username]
         credentials = Credentials(token = social.extra_data['access_token'])
         session = AnvilSession(credentials = credentials)
         self.sessions.update({user.username: session})
         # Todo: change to 'return session' after whitelisted
-        return self._service_account_session  # session
+        return self.service_account_session  # session
 
 
-anvil_session_store = AnvilSessionStore()
+_anvil_session_store = AnvilSessionStore()
