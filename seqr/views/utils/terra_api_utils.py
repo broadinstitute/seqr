@@ -91,6 +91,9 @@ def get_anvil_billing_projects(user):
     """
     Get activation information for the logged-in user.
 
+    Args:
+        user (User model): who's credentials will be used to access AnVIL
+
     :returns a list of billing project dictionary
     """
     session = anvil_session_store.get_session(user)
@@ -102,7 +105,11 @@ def get_anvil_billing_projects(user):
 
 
 def get_anvil_profile(user):
-    """Get activation information for the logged-in user."""
+    """Get activation information for the logged-in user.
+
+    Args:
+        user (User model): who's credentials will be used to access AnVIL
+    """
     session = anvil_session_store.get_session(user)
     r = session.get("register")
     if r.status_code != 200:
@@ -116,6 +123,7 @@ def list_anvil_workspaces(user, fields=None):
     Get all the workspaces accessible by the logged-in user.
 
     Args:
+    user (User model): who's credentials will be used to access AnVIL
     fields (str): a comma-delimited list of values that limits the
         response payload to include only those keys and exclude other
         keys (e.g., to include {"workspace": {"attributes": {...}}},
@@ -166,10 +174,10 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
     if workspace_namespace and workspace_name:
         uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
         r = anvil_session_store.service_account_session.get(uri)
-        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:
+        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
             anvil_session_store.service_account_session = AnvilSession(
                 service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO, scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
-        r = anvil_session_store.service_account_session.get(uri)
+            r = anvil_session_store.service_account_session.get(uri)  # retry with the new access code
         if r.status_code != 200:
             raise TerraAPIException(
                 'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
