@@ -1,7 +1,6 @@
 import re
 from django.http import StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def fetch_igv_track(request, project_guid, igv_track_path):
 
     get_project_and_check_permissions(project_guid, request.user)

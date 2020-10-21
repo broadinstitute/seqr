@@ -3,7 +3,6 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
-from django.views.decorators.csrf import csrf_exempt
 
 
 from reference_data.models import GENOME_VERSION_GRCh37
@@ -23,7 +22,6 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def locus_lists(request):
     if request.user.is_staff:
         locus_list_models = LocusList.objects.all()
@@ -39,7 +37,6 @@ def locus_lists(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def locus_list_info(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
 
@@ -55,7 +52,6 @@ def locus_list_info(request, locus_list_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_locus_list_handler(request):
     request_json = json.loads(request.body)
 
@@ -81,7 +77,6 @@ def create_locus_list_handler(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
     check_user_created_object_permissions(locus_list, request.user)
@@ -103,7 +98,6 @@ def update_locus_list_handler(request, locus_list_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
     check_user_created_object_permissions(locus_list, request.user)
@@ -113,7 +107,6 @@ def delete_locus_list_handler(request, locus_list_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def add_project_locus_lists(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
@@ -128,7 +121,6 @@ def add_project_locus_lists(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_project_locus_lists(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
