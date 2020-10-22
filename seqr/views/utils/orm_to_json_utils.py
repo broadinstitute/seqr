@@ -106,7 +106,6 @@ def _get_json_for_user(user):
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
     user_json['isAnvil'] = is_google_authenticated(user)
     user_json['displayName'] = user.get_full_name()
-
     return user_json
 
 

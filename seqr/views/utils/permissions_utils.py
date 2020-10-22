@@ -90,7 +90,6 @@ def _get_workspaces_user_can_view(user):
 
 def get_projects_user_can_view(user):
     can_view_filter = Q(can_view_group__user=user)
-
     if user.is_staff:
         can_view_filter = can_view_filter | Q(disable_staff_access=False)
 
