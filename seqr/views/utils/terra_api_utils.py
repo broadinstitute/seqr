@@ -96,9 +96,6 @@ def get_anvil_billing_projects(user):
     """
     session = _anvil_session_store.get_session(user)
     r = session.get("api/profile/billing")
-    if r.status_code != 200:
-        raise TerraAPIException(
-            'Error: called Terra API "api/profile/billing" got status: {} with a reason: {}'.format(r.status_code, r.reason))
     return json.loads(r.text)
 
 
@@ -110,9 +107,6 @@ def get_anvil_profile(user):
     """
     session = _anvil_session_store.get_session(user)
     r = session.get("register")
-    if r.status_code != 200:
-        raise TerraAPIException(
-            'Error: called Terra API "register" got status: {} with a reason: {}'.format(r.status_code, r.reason))
     return json.loads(r.text)
 
 
@@ -130,9 +124,6 @@ def list_anvil_workspaces(user, fields=None):
     session = _anvil_session_store.get_session(user)
     params = {"fields": fields} if fields is not None else {}
     r = session.get("api/workspaces", params = params)
-    if r.status_code != 200:
-        raise TerraAPIException(
-            'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
     return json.loads(r.text)
 
 
@@ -172,9 +163,6 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
     if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
         _anvil_session_store._service_account_session = None
         r = _anvil_session_store.service_account_session.get(uri)  # retry with the new access code
-    if r.status_code != 200:
-        raise TerraAPIException(
-            'Error: called Terra API "{}" got status: {} with a reason: {}'.format(uri, r.status_code, r.reason))
     return json.loads(r.text)['acl']
 
 
