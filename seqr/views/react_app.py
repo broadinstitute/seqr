@@ -31,8 +31,7 @@ def _render_app_html(request, initial_json):
     html = loader.render_to_string('app.html')
     ui_version = re.search('static/app-(.*)\.js', html).group(1)
     initial_json['meta'] = {'version': '{}-{}'.format(SEQR_VERSION, ui_version),
-                            'googleLoginEnabled': bool(TERRA_API_ROOT_URL),
-                            'googleLoginFailed': bool(request.GET.get('googleLoginFailed'))}
+                            'googleLoginEnabled': bool(TERRA_API_ROOT_URL)}
 
     html = html.replace(
         "window.initialJSON=null",

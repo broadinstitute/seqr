@@ -51,11 +51,11 @@ class AnvilSession(AuthorizedSession):
     def _make_request(self, method, path, headers, root_url, **kwargs):
         url, headers = _get_call_args(path, headers, root_url)
         request_func = getattr(super(AnvilSession, self), method)
-        r = request_func(url, headers = headers)
+        r = request_func(url, headers = headers, **kwargs)
         if r.status_code != 200:
+            logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
             raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
                 path, r.status_code, r.reason))
-            logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
         return r
 
     def get(self, path, headers=None, root_url=None, **kwargs):
@@ -128,8 +128,8 @@ def list_anvil_workspaces(user, fields=None):
         specify "workspace.attributes").
     """
     session = _anvil_session_store.get_session(user)
-    parms = {"fields": fields} if fields is not None else {}
-    r = session.get("api/workspaces", params = parms)
+    params = {"fields": fields} if fields is not None else {}
+    r = session.get("api/workspaces", params = params)
     if r.status_code != 200:
         raise TerraAPIException(
             'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(r.status_code, r.reason))
@@ -170,7 +170,7 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
     uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     r = _anvil_session_store.service_account_session.get(uri)
     if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
-        _anvil_session_store.service_account_session = None
+        _anvil_session_store._service_account_session = None
         r = _anvil_session_store.service_account_session.get(uri)  # retry with the new access code
     if r.status_code != 200:
         raise TerraAPIException(
@@ -194,10 +194,6 @@ class AnvilSessionStore(object):
             self._service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO,
                                                          scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         return self._service_account_session
-
-    @service_account_session.setter
-    def service_account_session(self, session):
-        self._service_account_session = session
 
     def get_session(self, user):
         social = user.social_auth.get(provider = 'google-oauth2')
