@@ -61,8 +61,11 @@ class LogRequestMiddleware(MiddlewareMixin):
         }
         if request.body:
             try:
-                # TODO don't log passwords?
-                additional_json['post_body'] = json.loads(request.body)
+                body = json.loads(request.body)
+                # TODO update settings in stackdriver so this isn't neccessary
+                if 'password' in body:
+                    body['password'] = '***'
+                additional_json['requestBody'] = body
             except ValueError:
                 pass
 
