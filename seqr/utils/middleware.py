@@ -1,6 +1,7 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.utils.deprecation import MiddlewareMixin
 from requests import HTTPError
+import json
 import logging
 import traceback
 
@@ -47,21 +48,23 @@ class LogRequestMiddleware(MiddlewareMixin):
         # conforms to the httpRequest json spec for stackdriver: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#HttpRequest
         http_json = {
             'requestMethod': request.method,
-            # 'requestUrl': request_env.get('PATH_INFO'),
-            # 'requestSize': size,
+            'requestUrl': request.get_raw_uri(),
             'status': response.status_code,
-            # 'responseSize': request_env.get('CONTENT_LENGTH'),
-            # 'userAgent': request_env.get('HTTP_USER_AGENT'),
-            # 'remoteIp': request_env.get('REMOTE_ADDR'),
-            # 'serverIp': request_env.get(''),
-            # 'referer': request_env.get('HTTP_REFERER'),
-            # 'latency': '',
-            # 'protocol': request_env.get('SERVER_PROTOCOL'),
+            'responseSize': len(response.content),
+            'userAgent': request.META.get('HTTP_USER_AGENT'),
+            'remoteIp': request.META.get('REMOTE_ADDR'),
+            'referer': request.META.get('HTTP_REFERER'),
+            'protocol': request.META.get('SERVER_PROTOCOL'),
         }
         additional_json = {
-            'user': request.user.email if request.user else '',
-            #'post_body': {},
+            'user': request.user.email if request.user.is_authenticated() else '',
         }
+        if request.body:
+            try:
+                # TODO don't log passwords?
+                additional_json['post_body'] = json.loads(request.body)
+            except ValueError:
+                pass
 
         if response.status_code >= 500:
             level = logger.error
