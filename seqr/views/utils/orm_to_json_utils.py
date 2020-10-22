@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions
-from seqr.views.utils.terra_api_utils import has_anvil_session, get_anvil_workspace_acl
+from seqr.views.utils.terra_api_utils import is_google_authenticated, get_anvil_workspace_acl
 logger = logging.getLogger(__name__)
 
 
@@ -104,7 +104,7 @@ def _get_json_for_user(user):
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
                 ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
-    user_json['isAnvil'] = has_anvil_session(user)
+    user_json['isAnvil'] = is_google_authenticated(user)
     user_json['displayName'] = user.get_full_name()
 
     return user_json

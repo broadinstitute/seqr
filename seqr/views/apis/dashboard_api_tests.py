@@ -55,7 +55,7 @@ class DashboardPageTest(AuthenticationTestCase):
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
              'isMmeEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids', 'projectGuid',
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
-             'numVariantTags', }
+             'numVariantTags', 'workspaceName', 'workspaceNamespace'}
         )
 
         # Staff users can see all projects

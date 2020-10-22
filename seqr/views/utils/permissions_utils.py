@@ -4,7 +4,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import has_anvil_session, get_anvil_workspace_acl, list_anvil_workspaces
+from seqr.views.utils.terra_api_utils import is_google_authenticated, get_anvil_workspace_acl, list_anvil_workspaces
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -94,7 +94,7 @@ def get_projects_user_can_view(user):
     if user.is_staff:
         can_view_filter = can_view_filter | Q(disable_staff_access=False)
 
-    if has_anvil_session(user):
+    if is_google_authenticated(user):
         workspaces = _get_workspaces_user_can_view(user)
         anvil_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)

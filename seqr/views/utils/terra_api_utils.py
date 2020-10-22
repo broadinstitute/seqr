@@ -178,8 +178,8 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
     return json.loads(r.text)['acl']
 
 
-def has_anvil_session(user):
-    return user.social_auth.filter(provider = 'google-oauth2') is not None
+def is_google_authenticated(user):
+    return len(user.social_auth.filter(provider = 'google-oauth2'))>0
 
 
 class AnvilSessionStore(object):
