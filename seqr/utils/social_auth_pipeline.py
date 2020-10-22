@@ -13,7 +13,7 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
         credentials = Credentials(token = response['access_token'])
         session = AnvilSession(credentials = credentials)
         try:
-            r = session.get("register")
+            _ = session.get("register")
         except TerraAPIException as et:  # The user hasn't registered on AnVIL, authentication failed
             logger.info('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et)))
             return redirect('/login?googleLoginFailed=true')
