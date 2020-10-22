@@ -88,7 +88,7 @@ class ProjectAPITest(AuthenticationTestCase):
         )
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
-            'discoveryTags',
+            'discoveryTags', 'workspaceName', 'workspaceNamespace'
         }
         project_fields.update(PROJECT_FIELDS)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), project_fields)

@@ -29,7 +29,7 @@ class UsersAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(
             set(first_staff_user),
-            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id'}
+            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id', 'isAnvil'}
         )
         self.assertTrue(first_staff_user['isStaff'])
 
@@ -73,7 +73,7 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             set(collaborators[0].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions', 'id'}
+             'hasViewPermissions', 'hasEditPermissions', 'id', 'isAnvil'}
         )
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
@@ -111,7 +111,7 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {username, 'test_user_manager', 'test_user_non_staff'})
         self.assertSetEqual(
             set(response_json[username].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
+            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isAnvil'}
         )
 
         # calling create again just updates the existing user
