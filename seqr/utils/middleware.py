@@ -27,7 +27,6 @@ def _get_exception_status_code(exception):
     except Exception:
         return 500
 
-
 class JsonErrorMiddleware(MiddlewareMixin):
 
     @staticmethod
@@ -40,3 +39,36 @@ class JsonErrorMiddleware(MiddlewareMixin):
                     exception_json['traceback'] = traceback_message
             return create_json_response(exception_json, status=_get_exception_status_code(exception))
         return None
+
+class LogRequestMiddleware(MiddlewareMixin):
+
+    @staticmethod
+    def process_response(request, response):
+        # conforms to the httpRequest json spec for stackdriver: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#HttpRequest
+        http_json = {
+            'requestMethod': request.method,
+            # 'requestUrl': request_env.get('PATH_INFO'),
+            # 'requestSize': size,
+            'status': response.status_code,
+            # 'responseSize': request_env.get('CONTENT_LENGTH'),
+            # 'userAgent': request_env.get('HTTP_USER_AGENT'),
+            # 'remoteIp': request_env.get('REMOTE_ADDR'),
+            # 'serverIp': request_env.get(''),
+            # 'referer': request_env.get('HTTP_REFERER'),
+            # 'latency': '',
+            # 'protocol': request_env.get('SERVER_PROTOCOL'),
+        }
+        additional_json = {
+            'user': request.user.email if request.user else '',
+            #'post_body': {},
+        }
+
+        if response.status_code >= 500:
+            level = logger.error
+        elif response.status_code >= 400:
+            level = logger.warning
+        else:
+            level = logger.info
+        level('', extra={'http_request_json': http_json, 'additional_http_request_json': additional_json})
+
+        return response

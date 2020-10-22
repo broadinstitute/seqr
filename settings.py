@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
@@ -141,26 +142,34 @@ LOGGING = {
         },
     },
     'handlers': {
-        'console': {
+        'console_json': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'json_log_formatter',
         },
-        'django.server': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'json_log_formatter',
+        'null': {
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
+        # By default, log to console as json. Gunicorn will forward console logs to kubernetes and stackdriver
         '': {
-            'handlers': ['console'],
+            'handlers': ['console_json'],
             'level': 'INFO',
             'propagate': True,
         },
+        # Disable default server logging since we use custom request logging middlewear
         'django.server': {
-            'handlers': ['django.server'],
+            'handlers': ['null'],
+            'propagate': False,
+        },
+        # Log all other django logs to console as json
+        'django': {
+            'handlers': ['console_json'],
             'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console_json'],
             'propagate': False,
         },
     }
