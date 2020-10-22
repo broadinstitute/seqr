@@ -56,16 +56,13 @@ class LogRequestMiddleware(MiddlewareMixin):
             'referer': request.META.get('HTTP_REFERER'),
             'protocol': request.META.get('SERVER_PROTOCOL'),
         }
-        additional_json = {
-            'user': request.user.email if request.user.is_authenticated() else '',
-        }
+        request_body = None
         if request.body:
             try:
-                body = json.loads(request.body)
+                request_body = json.loads(request.body)
                 # TODO update settings in stackdriver so this isn't neccessary
-                if 'password' in body:
-                    body['password'] = '***'
-                additional_json['requestBody'] = body
+                if 'password' in request_body:
+                    request_body['password'] = '***'
             except ValueError:
                 pass
 
@@ -75,6 +72,6 @@ class LogRequestMiddleware(MiddlewareMixin):
             level = logger.warning
         else:
             level = logger.info
-        level('', extra={'http_request_json': http_json, 'additional_http_request_json': additional_json})
+        level('', extra={'http_request_json': http_json, 'request_body': request_body, 'user': request.user})
 
         return response

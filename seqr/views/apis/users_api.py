@@ -1,6 +1,7 @@
 from requests.utils import quote
 
 import json
+import logging
 from anymail.exceptions import AnymailError
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
@@ -14,6 +15,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL, BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 class CreateUserException(Exception):
@@ -86,6 +89,7 @@ def set_password(request, username):
     user.first_name = request_json.get('firstName') or ''
     user.last_name = request_json.get('lastName') or ''
     user.save()
+    logger.info('Set password for user {}'.format(user.email), extra={'user': request.user})
 
     u = authenticate(username=username, password=request_json['password'])
     login(request, u)

@@ -32,12 +32,14 @@ def login_view(request):
         return create_json_response({}, status=401, reason='Invalid credentials')
 
     login(request, u)
+    logger.info('Logged in {}'.format(u.email), extra={'user': u})
 
     return create_json_response({'success': True})
 
 
 def logout_view(request):
     logout(request)
+    logger.info('Logged out {}'.format(request.user.email), extra={'user': request.user})
     return redirect('/login')
 
 
