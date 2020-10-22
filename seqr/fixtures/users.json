@@ -91,5 +91,16 @@
         "groups": [],
         "user_permissions": []
     }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 1,
+    "fields": {
+        "user": 10,
+        "provider": "google-oauth2",
+        "uid": "test_user@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.a0AfH6SMDF_OoB4sYyAwKlhaEa1faY_9yjE0HCLFOMfdegE5lWXUD9ZbZ54dCybU92G5GDl1lludgBiYg4lU9ohkQ0Y-_3mW_6bNme0-kFATmwMQWGwLL0e0FrYv7eNS5PLtsHJYLFFzXT1o3NcPdeEll4alH9vSKL5HQ\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
 }
 ]
