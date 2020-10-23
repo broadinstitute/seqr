@@ -52,6 +52,9 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
+        if not TERRA_API_ROOT_URL:
+            raise TerraAPIException('AnVIL access is not enabled')
+
         if self.started_at is None:
             self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
@@ -94,6 +97,8 @@ class ServiceAccountSession(AuthorizedSession):
 
 
 def is_google_authenticated(user):
+    if not TERRA_API_ROOT_URL:
+        return False
     return len(user.social_auth.filter(provider = 'google-oauth2')) > 0
 
 
