@@ -38,7 +38,7 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 
     if analysis_group_guid:
         analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
-        update_model_from_json(analysis_group, request_json, allow_unknown_keys=True)
+        update_model_from_json(analysis_group, request_json, user=request.user, allow_unknown_keys=True)
     else:
         analysis_group, created = AnalysisGroup.objects.get_or_create(
             project=project,

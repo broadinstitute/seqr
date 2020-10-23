@@ -92,7 +92,7 @@ def update_locus_list_handler(request, locus_list_guid):
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
-    update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
+    update_model_from_json(locus_list, request_json, user=request.user, allow_unknown_keys=True)
     if genes_by_id is not None:
         _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
 

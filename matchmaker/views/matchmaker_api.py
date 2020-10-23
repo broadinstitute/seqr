@@ -248,7 +248,7 @@ def update_mme_submission(request, submission_guid=None):
             label=individual.individual_id,
         )
 
-    update_model_from_json(submission, submission_json, allow_unknown_keys=True)
+    update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
     # search for new matches
     return _search_matches(submission, request.user)
@@ -296,7 +296,7 @@ def update_mme_result_status(request, matchmaker_result_guid):
     check_mme_permissions(result.submission, request.user)
 
     request_json = json.loads(request.body)
-    update_model_from_json(result, request_json, allow_unknown_keys=True)
+    update_model_from_json(result, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
@@ -336,7 +336,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
                 json_body = {'message':message}
         return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
-    update_model_from_json(result, {'weContacted': True})
+    update_model_from_json(result, {'weContacted': True}, user=request.user)
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},

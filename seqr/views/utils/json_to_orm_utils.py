@@ -8,12 +8,12 @@ from seqr.views.utils.json_utils import _to_snake_case
 logger = logging.getLogger(__name__)
 
 
-def update_project_from_json(project, json, allow_unknown_keys=False):
+def update_project_from_json(project, json, user, allow_unknown_keys=False):
 
-    update_model_from_json(project, json, allow_unknown_keys=allow_unknown_keys, immutable_keys=['genome_version'])
+    update_model_from_json(project, json, user, allow_unknown_keys=allow_unknown_keys, immutable_keys=['genome_version'])
 
 
-def update_family_from_json(family, json, user=None, allow_unknown_keys=False):
+def update_family_from_json(family, json, user, allow_unknown_keys=False):
     if json.get('displayName') and json['displayName'] == family.family_id:
         json['displayName'] = ''
 
@@ -23,7 +23,7 @@ def update_family_from_json(family, json, user=None, allow_unknown_keys=False):
     )
 
 
-def update_individual_from_json(individual, json, user=None, allow_unknown_keys=False):
+def update_individual_from_json(individual, json, user, allow_unknown_keys=False):
     if json.get('caseReviewStatus') and json['caseReviewStatus'] != individual.case_review_status:
         json['caseReviewStatusLastModifiedBy'] = user
         json['caseReviewStatusLastModifiedDate'] = timezone.now()
@@ -54,7 +54,7 @@ def _parse_parent_field(json, individual, parent_key, parent_id_key):
             json[parent_key] = Individual.objects.get(individual_id=parent_id, family=individual.family) if parent_id else None
 
 
-def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False, immutable_keys=None, updated_fields=None, verbose=True):
+def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immutable_keys=None, updated_fields=None, verbose=True):
     immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
@@ -69,13 +69,12 @@ def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False,
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
         if getattr(model_obj, orm_key) != value:
-            if orm_key in internal_fields and not (user and user.is_staff):
+            if orm_key in internal_fields and not user.is_staff:
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             updated_fields.add(orm_key)
             setattr(model_obj, orm_key, value)
 
     if updated_fields:
-        # TODO make user required
         model_obj.save()
         if verbose:
             db_entity = type(model_obj).__name__

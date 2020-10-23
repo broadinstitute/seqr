@@ -171,7 +171,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     for project in projects:
         check_project_permissions(project, request.user)
     request_json = json.loads(request.body)
-    update_model_from_json(note, request_json, allow_unknown_keys=True)
+    update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
     note_json['variantGuids'] = variant_guids.split(',')
@@ -266,7 +266,7 @@ def update_variant_functional_data_handler(request, variant_guids):
     for tag in updated_functional_data:
         if tag.get('tagGuid'):
             functional_data = VariantFunctionalData.objects.get(guid=tag.get('tagGuid'))
-            update_model_from_json(functional_data, tag, allow_unknown_keys=True)
+            update_model_from_json(functional_data, tag, user=request.user, allow_unknown_keys=True)
         else:
             functional_data = VariantFunctionalData.objects.create(
                 functional_data_tag=tag.get('name'),

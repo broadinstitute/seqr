@@ -91,7 +91,7 @@ def update_project_handler(request, project_guid):
     check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    update_project_from_json(project, request_json, allow_unknown_keys=True)
+    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True)
 
     return create_json_response({
         'projectsByGuid': {
@@ -136,7 +136,7 @@ def project_page_data(request, project_guid):
         project_guid (string): GUID of the Project to retrieve data for.
     """
     project = get_project_and_check_permissions(project_guid, request.user)
-    update_project_from_json(project, {'last_accessed_date': timezone.now()})
+    update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
 
     response = _get_project_child_entities(project, request.user)
 
