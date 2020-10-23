@@ -3,6 +3,7 @@
 import json
 import logging
 import time
+import requests
 
 from urllib.parse import urljoin
 
@@ -25,33 +26,41 @@ class TerraAPIException(Exception):
     pass
 
 
-def _get_call_args(methcall, headers=None, root_url=None):
+def _get_call_args(path, headers=None, root_url=None):
     if headers is None:
         headers = {"User-Agent": SEQR_USER_AGENT}
+    headers.update({"accept": "application/json"})
     if root_url is None:
         root_url = TERRA_API_ROOT_URL
-    url = urljoin(root_url, methcall)
+    url = urljoin(root_url, path)
     return url, headers
 
 
-class AnvilSession(AuthorizedSession):
+class ServiceAccountSession(AuthorizedSession):
+    def __init__(self):
+        self.started_at = None
 
-    def __init__(self, credentials=None, service_account_info=None, scopes=None):
+    def create_session(self):
         """
         Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
 
-        :param credentials: User credentials
         :param service_account_info: service account secrects
         :param scopes: scopes of the access privilege of the session
         """
-        if credentials is None:
-            credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes = scopes)
-        super(AnvilSession, self).__init__(credentials)
+        credentials = service_account.Credentials.from_service_account_info(GOOGLE_SERVICE_ACCOUNT_INFO,
+                                        scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        super(ServiceAccountSession, self).__init__(credentials)
+        self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
+        if self.started_at is None:
+            self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
-        request_func = getattr(super(AnvilSession, self), method)
+        request_func = getattr(super(ServiceAccountSession, self), method)
         r = request_func(url, headers = headers, **kwargs)
+        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
+            self.create_session()  # create a new service account session
+            r = request_func(url, headers = headers, **kwargs)
         if r.status_code != 200:
             logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
             raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
@@ -85,51 +94,16 @@ class AnvilSession(AuthorizedSession):
         return self._make_request('delete', path, headers, root_url)
 
 
-def get_anvil_billing_projects(user):
+def is_google_authenticated(user):
+    return len(user.social_auth.filter(provider = 'google-oauth2'))>0
+
+
+_service_account_session = ServiceAccountSession()
+
+
+def sa_get_workspace_acl(workspace_namespace, workspace_name):
     """
-    Get activation information for the logged-in user.
-
-    Args:
-        user (User model): who's credentials will be used to access AnVIL
-
-    :returns a list of billing project dictionary
-    """
-    session = _anvil_session_store.get_session(user)
-    r = session.get("api/profile/billing")
-    return json.loads(r.text)
-
-
-def get_anvil_profile(user):
-    """Get activation information for the logged-in user.
-
-    Args:
-        user (User model): who's credentials will be used to access AnVIL
-    """
-    session = _anvil_session_store.get_session(user)
-    r = session.get("register")
-    return json.loads(r.text)
-
-
-def list_anvil_workspaces(user, fields=None):
-    """
-    Get all the workspaces accessible by the logged-in user.
-
-    Args:
-    user (User model): who's credentials will be used to access AnVIL
-    fields (str): a comma-delimited list of values that limits the
-        response payload to include only those keys and exclude other
-        keys (e.g., to include {"workspace": {"attributes": {...}}},
-        specify "workspace.attributes").
-    """
-    session = _anvil_session_store.get_session(user)
-    params = {"fields": fields} if fields is not None else {}
-    r = session.get("api/workspaces", params = params)
-    return json.loads(r.text)
-
-
-def get_anvil_workspace_acl(workspace_namespace, workspace_name):
-    """
-    Request FireCloud access control list for workspace.
+    Request FireCloud access control list for workspace with a service account (sa).
 
     Args:
         workspace_namespace (str): namespace (name of billing project) of the workspace
@@ -159,48 +133,88 @@ def get_anvil_workspace_acl(workspace_namespace, workspace_name):
           :param workspace_namespace:
     """
     uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-    r = _anvil_session_store.service_account_session.get(uri)
-    if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
-        _anvil_session_store._service_account_session = None
-        r = _anvil_session_store.service_account_session.get(uri)  # retry with the new access code
+    r = _service_account_session.get(uri)
     return json.loads(r.text)['acl']
 
 
-def is_google_authenticated(user):
-    return len(user.social_auth.filter(provider = 'google-oauth2'))>0
+class BearerAuth(requests.auth.AuthBase):
+
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers["Authorization"] = "Bearer " + self.token
+        return r
 
 
-class AnvilSessionStore(object):
-    sessions = {}
+def _get_social(user):
+    social = user.social_auth.get(provider = 'google-oauth2')
+    if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
+            time.time()):  # token expired or expiring?
+        strategy = load_strategy()
+        try:
+            social.refresh_token(strategy)
+        except Exception as ee:
+            logger.info('Refresh token failed. {}'.format(str(ee)))
+            raise TerraAPIException('Refresh token failed. {}'.format(str(ee)))
+    return social
 
-    def __init__(self):
-        self._service_account_session = None
+def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
+    if not TERRA_API_ROOT_URL:
+        raise TerraAPIException('AnVIL access is not enabled')
 
-    @property
-    def service_account_session(self):
-        if not self._service_account_session:
-            self._service_account_session = AnvilSession(service_account_info = GOOGLE_SERVICE_ACCOUNT_INFO,
-                                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
-        return self._service_account_session
+    social = _get_social(user)
 
-    def get_session(self, user):
-        social = user.social_auth.get(provider = 'google-oauth2')
-        if self.sessions.get(user.username):
-            if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(time.time()):  # token expired or expiring?
-                strategy = load_strategy()
-                try:
-                    social.refresh_token(strategy)
-                except Exception as ee:
-                    logger.info('Refresh token failed. {}'.format(str(ee)))
-                    self.sessions.pop(user.username)
-            else:
-                # Todo: change to 'return self.sessions[user.username]' after whitelisted
-                return self.service_account_session  # self.sessions[user.username]
-        credentials = Credentials(token = social.extra_data['access_token'])
-        session = AnvilSession(credentials = credentials)
-        self.sessions.update({user.username: session})
-        # Todo: change to 'return session' after whitelisted
-        return self.service_account_session  # session
+    # Todo: remove following two lines after whitelisted
+    request_func = getattr(_service_account_session, method)
+    return request_func(path, headers, root_url, **kwargs)
+
+    url, headers = _get_call_args(path, headers, root_url)
+    request_func = getattr(requests, method)
+    r = request_func(url, headers, auth=BearerAuth(social.extra_data['access_token']), **kwargs)
+    if r.status_code != 200:
+        logger.info('{} {} {} {}'.format(method, url, r.status_code, len(r.text)))
+        raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
+            path, r.status_code, r.reason))
+    return r
 
 
-_anvil_session_store = AnvilSessionStore()
+
+def get_anvil_billing_projects(user):
+    """
+    Get activation information for the logged-in user.
+
+    Args:
+        user (User model): who's credentials will be used to access AnVIL
+
+    :returns a list of billing project dictionary
+    """
+    r = _anvil_call('get', user, 'api/profile/billing')
+    return json.loads(r.text)
+
+
+def get_anvil_profile(user):
+    """Get activation information for the logged-in user.
+
+    Args:
+        user (User model): who's credentials will be used to access AnVIL
+    """
+    r = _anvil_call('get', user, 'register')
+    return json.loads(r.text)
+
+
+def list_anvil_workspaces(user, fields=None):
+    """
+    Get all the workspaces accessible by the logged-in user.
+
+    Args:
+    user (User model): who's credentials will be used to access AnVIL
+    fields (str): a comma-delimited list of values that limits the
+        response payload to include only those keys and exclude other
+        keys (e.g., to include {"workspace": {"attributes": {...}}},
+        specify "workspace.attributes").
+    """
+    params = {"fields": fields} if fields is not None else {}
+    path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
+    r = _anvil_call('get', user, path)
+    return json.loads(r.text)

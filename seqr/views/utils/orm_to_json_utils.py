@@ -16,7 +16,7 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions
-from seqr.views.utils.terra_api_utils import is_google_authenticated, get_anvil_workspace_acl
+from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl
 logger = logging.getLogger(__name__)
 
 
@@ -695,7 +695,7 @@ def get_project_collaborators_by_username(project, include_permissions=True):
         )
 
     if project.workspace_namespace and project.workspace_name:
-        acl = get_anvil_workspace_acl(project.workspace_namespace, project.workspace_name)
+        acl = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name)
         collaborators.update({
             collab.username: _get_collaborator_json(collab, include_permissions, can_edit=acl[collab.email]['accessLevel']=='OWNER', check_anvil=True)
             for collab in User.objects.filter(email__in=acl.keys())
