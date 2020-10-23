@@ -159,6 +159,7 @@ def _get_social(user):
             raise TerraAPIException('Refresh token failed. {}'.format(str(ee)))
     return social
 
+
 def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
     if not TERRA_API_ROOT_URL:
         raise TerraAPIException('AnVIL access is not enabled')
