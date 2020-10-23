@@ -704,7 +704,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         self.check_manager_login(url)
 
-        response = self.client.get(url)
+        response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(
@@ -723,7 +723,7 @@ class SavedVariantAPITest(AuthenticationTestCase):
         update_main_transcript_url = reverse(update_variant_main_transcript, args=[VARIANT_GUID, transcript_id])
         self.check_manager_login(update_main_transcript_url)
 
-        response = self.client.get(update_main_transcript_url)
+        response = self.client.post(update_main_transcript_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'selectedMainTranscriptId': transcript_id}}})
 

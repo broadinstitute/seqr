@@ -40,11 +40,10 @@ def authenticate_mme_request(view_func):
             }, status=401)
 
         return view_func(request, originating_node['name'], *args, **kwargs)
-    return _wrapped_view
+    return csrf_exempt(_wrapped_view)
 
 
 @authenticate_mme_request
-@csrf_exempt
 def mme_metrics_proxy(request, originating_node_name):
     """
     -Proxies public metrics endpoint
@@ -56,7 +55,6 @@ def mme_metrics_proxy(request, originating_node_name):
 
 
 @authenticate_mme_request
-@csrf_exempt
 def mme_match_proxy(request, originating_node_name):
     """
     -Looks for matches for the given individual ONLY in the local MME DB.
