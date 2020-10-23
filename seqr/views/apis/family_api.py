@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_to_orm_utils import update_family_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
@@ -91,7 +91,7 @@ def delete_families_handler(request, project_guid):
     # delete individuals 1st
     individual_guids_to_delete = [i.guid for i in Individual.objects.filter(
         family__project=project, family__guid__in=family_guids_to_delete)]
-    delete_individuals(project, individual_guids_to_delete)
+    delete_individuals(project, individual_guids_to_delete, request.user)
 
     # delete families
     Family.objects.filter(project=project, guid__in=family_guids_to_delete).delete()
@@ -154,8 +154,7 @@ def update_family_assigned_analyst(request, family_guid):
                 {}, status=400, reason="specified user does not exist")
     else:
         assigned_analyst = None
-    family.assigned_analyst = assigned_analyst
-    family.save()
+    update_model_from_json(family, {'assigned_analyst': assigned_analyst}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
@@ -204,8 +203,7 @@ def update_family_pedigree_image(request, family_guid):
     else:
         pedigree_image = next(iter((request.FILES.values())))
 
-    family.pedigree_image = pedigree_image
-    family.save()
+    update_model_from_json(family, {'pedigree_image': pedigree_image}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

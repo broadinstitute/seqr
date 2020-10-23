@@ -20,6 +20,7 @@ from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_functional_data_tag_types, \
     get_json_for_projects, \
@@ -445,10 +446,8 @@ def create_saved_search_handler(request):
         return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
 
     try:
-        saved_search, _ = VariantSearch.objects.get_or_create(
-            search=request_json,
-            created_by=request.user,
-        )
+        saved_search, _ = get_or_create_model_from_json(
+            VariantSearch, {'search': request_json, 'created_by': request.use}, {'name': name}, request.user)
     except MultipleObjectsReturned:
         # Can't create a unique constraint on JSON field, so its possible that a duplicate gets made by accident
         dup_searches = VariantSearch.objects.filter(
@@ -458,8 +457,7 @@ def create_saved_search_handler(request):
         saved_search = dup_searches[0]
         for search in dup_searches:
             search.delete()
-    saved_search.name = name
-    saved_search.save()
+        update_model_from_json(saved_search, {'name': name}, request.user)
 
     return create_json_response({
         'savedSearchesByGuid': {
@@ -480,8 +478,7 @@ def update_saved_search_handler(request, saved_search_guid):
     if not name:
         return create_json_response({}, status=400, reason='"Name" is required')
 
-    search.name = name
-    search.save()
+    update_model_from_json(search, {'name': name}, request.user)
 
     return create_json_response({
         'savedSearchesByGuid': {

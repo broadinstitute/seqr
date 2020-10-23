@@ -12,6 +12,7 @@ from seqr.models import Individual, Sample, Family, IgvSample
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
+from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
@@ -192,9 +193,8 @@ def update_individual_igv_sample(request, individual_guid):
             raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(file_path))
         validate_alignment_dataset_path(file_path)
 
-        sample, created = IgvSample.objects.get_or_create(individual=individual)
-        sample.file_path = file_path
-        sample.save()
+        sample, created = get_or_create_model_from_json(
+            IgvSample, create_json={'individual': individual}, update_json={'file_path': file_path}, user=request.user)
 
         response = {
             'igvSamplesByGuid': {

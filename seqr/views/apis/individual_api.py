@@ -13,7 +13,8 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
+    update_model_from_json
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
@@ -91,12 +92,11 @@ def update_individual_hpo_terms(request, individual_guid):
 
     request_json = json.loads(request.body)
 
-    for feature_key in ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']:
-        orm_key = _to_snake_case(feature_key)
-        value = [get_parsed_feature(feature) for feature in request_json[feature_key]] \
-            if request_json.get(feature_key) else None
-        setattr(individual, orm_key, value)
-    individual.save()
+    update_json = {
+        key: [get_parsed_feature(feature) for feature in request_json[key]] if request_json.get(key) else None
+        for key in ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
+    }
+    update_model_from_json(individual, update_json, user=request.user)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user, add_hpo_details=True)
@@ -223,7 +223,7 @@ def delete_individuals_handler(request, project_guid):
     individual_guids_to_delete = [ind['individualGuid'] for ind in individuals_list]
 
     # delete the individuals
-    families_with_deleted_individuals = delete_individuals(project, individual_guids_to_delete)
+    families_with_deleted_individuals = delete_individuals(project, individual_guids_to_delete, request.user)
 
     deleted_individuals_by_guid = {
         individual_guid: None for individual_guid in individual_guids_to_delete
@@ -371,7 +371,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def _add_or_update_individuals_and_families(project, individual_records, user=None):
+def _add_or_update_individuals_and_families(project, individual_records, user):
     """Add or update individual and family records in the given project.
 
     Args:
@@ -459,7 +459,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
         update_individual_from_json(individual, update, user=user)
 
     # update pedigree images
-    update_pedigree_images(updated_families, project_guid=project.guid)
+    update_pedigree_images(updated_families, user, project_guid=project.guid)
 
     return list(updated_families), list(updated_individuals)
 
@@ -686,9 +686,10 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
 
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COLUMN]]
-        individual.features = [{'id': feature} for feature in record[HPO_TERMS_PRESENT_COLUMN]]
-        individual.absent_features = [{'id': feature} for feature in record[HPO_TERMS_ABSENT_COLUMN]]
-        individual.save()
+        update_model_from_json(individual, {
+            'features': [{'id': feature} for feature in record[HPO_TERMS_PRESENT_COLUMN]],
+            'absent_features': [{'id': feature} for feature in record[HPO_TERMS_ABSENT_COLUMN]],
+        }, user=request.user)
 
     return create_json_response({
         'individualsByGuid': {

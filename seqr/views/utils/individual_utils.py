@@ -16,7 +16,7 @@ __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
 
-def delete_individuals(project, individual_guids):
+def delete_individuals(project, individual_guids, user):
     """Delete one or more individuals
 
     Args:
@@ -37,7 +37,7 @@ def delete_individuals(project, individual_guids):
 
     individuals_to_delete.delete()
 
-    update_pedigree_images(families)
+    update_pedigree_images(families, user)
 
     families_with_deleted_individuals = list(families)
 

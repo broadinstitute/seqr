@@ -54,11 +54,12 @@ def _parse_parent_field(json, individual, parent_key, parent_id_key):
             json[parent_key] = Individual.objects.get(individual_id=parent_id, family=individual.family) if parent_id else None
 
 
-def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False, immutable_keys=None):
+def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False, immutable_keys=None, updated_fields=None, verbose=True):
     immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
-    update_fields = set()
+    if not updated_fields:
+        updated_fields = set()
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
         if orm_key in immutable_keys:
@@ -70,14 +71,36 @@ def update_model_from_json(model_obj, json, user=None, allow_unknown_keys=False,
         if getattr(model_obj, orm_key) != value:
             if orm_key in internal_fields and not (user and user.is_staff):
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
-            update_fields.add(orm_key)
+            updated_fields.add(orm_key)
             setattr(model_obj, orm_key, value)
 
-    if update_fields:
+    if updated_fields:
         # TODO make user required
-        db_entity = type(model_obj).__name__
-        entity_id = getattr(model_obj, 'guid', model_obj.pk)
-        logger.info('Updating {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': {
-            'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'update', 'updateFields': list(update_fields)}})
         model_obj.save()
-    return bool(update_fields)
+        if verbose:
+            db_entity = type(model_obj).__name__
+            entity_id = getattr(model_obj, 'guid', model_obj.pk)
+            db_update = {
+                'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'update',
+                'updateFields': list(updated_fields),
+            }
+            logger.info('Updated {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': db_update})
+    return bool(updated_fields)
+
+
+def get_or_create_model_from_json(model_class, create_json, update_json, user):
+    # TODO use for all get_or_create
+    model, created = model_class.objects.get_or_create(**create_json)
+    if created:
+        update_json['created_by'] = user
+        db_entity = model_class.__name__
+        entity_id = model.guid
+        db_update = {
+            'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'create',
+            'updateFields': list(create_json.keys() + update_json.keys()),
+        }
+        logger.info('Created {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': db_update})
+    update_model_from_json(model, update_json, user, verbose=not created)
+    return model, created
+
+

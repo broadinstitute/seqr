@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.utils.communication_utils import send_welcome_email
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
@@ -86,9 +87,7 @@ def set_password(request, username):
         return create_json_response({}, status=400, reason='Password is required')
 
     user.set_password(request_json['password'])
-    user.first_name = request_json.get('firstName') or ''
-    user.last_name = request_json.get('lastName') or ''
-    user.save()
+    update_model_from_json(user, _get_user_json(request_json), user=user, updated_fields={'password'})
     logger.info('Set password for user {}'.format(user.email), extra={'user': request.user})
 
     u = authenticate(username=username, password=request_json['password'])
@@ -154,10 +153,12 @@ def _create_user(request, is_staff=False):
     return user
 
 
+def _get_user_json(request_json):
+    return {request_json.get(k) or '' for k in ['firstName', 'lastName']}
+
+
 def _update_existing_user(user, project, request_json):
-    user.first_name = request_json.get('firstName') or ''
-    user.last_name = request_json.get('lastName') or ''
-    user.save()
+    update_model_from_json(user, _get_user_json(request_json), user=user)
 
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):

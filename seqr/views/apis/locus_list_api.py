@@ -121,6 +121,9 @@ def add_project_locus_lists(request, project_guid):
     for locus_list in locus_lists:
         locus_list.projects.add(project)
         locus_list.save()
+    logger.info('Updated Project {}'.format(project_guid), extra={'user': request.user, 'db_update': {
+        'dbEntity': 'Project', 'entityId': project_guid, 'updateType': 'update', 'updateFields': ['locus_lists'],
+    }})
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
@@ -136,6 +139,9 @@ def delete_project_locus_lists(request, project_guid):
     for locus_list in locus_lists:
         locus_list.projects.remove(project)
         locus_list.save()
+    logger.info('Updated Project {}'.format(project_guid), extra={'user': request.user, 'db_update': {
+        'dbEntity': 'Project', 'entityId': project_guid, 'updateType': 'update', 'updateFields': ['locus_lists'],
+    }})
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
