@@ -7,7 +7,6 @@ import re
 from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family
@@ -39,7 +38,6 @@ class ErrorsWarningsException(Exception):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_individual_handler(request, individual_guid):
     """Updates a single field in an Individual record.
 
@@ -78,7 +76,6 @@ def update_individual_handler(request, individual_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_individual_hpo_terms(request, individual_guid):
     """Updates features fields for the given Individual
     """
@@ -104,7 +101,6 @@ def update_individual_hpo_terms(request, individual_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
 
@@ -179,7 +175,6 @@ def edit_individuals_handler(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_individuals_handler(request, project_guid):
     """Delete one or more Individual records.
 
@@ -241,7 +236,6 @@ def delete_individuals_handler(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
@@ -340,7 +334,6 @@ def receive_individuals_table_handler(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def save_individuals_table_handler(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
@@ -485,7 +478,6 @@ FEATURES_COLUMN = 'features'
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def receive_hpo_table_handler(request, project_guid):
     """Handler for bulk update of hpo terms. This handler parses the records, but doesn't save them in the database.
     Instead, it saves them to a temporary file and sends a 'uploadedFileId' representing this file back to the client.
@@ -670,7 +662,6 @@ def _parse_individual_hpo_terms(json_records, project):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def save_hpo_table_handler(request, project_guid, upload_file_id):
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_hpo_table_handler
@@ -699,7 +690,6 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_hpo_terms(request, hpo_parent_id):
     """
     Get all the HPO Terms with the given parent ID

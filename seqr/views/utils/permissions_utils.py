@@ -5,6 +5,7 @@ from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
 from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl, list_anvil_workspaces
+from settings import TERRA_API_ROOT_URL
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -24,7 +25,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 def anvil_has_perm(user, permission_level, project):
     collaborators = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name) \
-        if project.workspace_namespace and project.workspace_name else {}
+        if TERRA_API_ROOT_URL and project.workspace_namespace and project.workspace_name else {}
     if user.email in collaborators.keys():
         permission = collaborators[user.email]
         if permission['pending']:

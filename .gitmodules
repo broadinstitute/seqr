@@ -1,4 +1,0 @@
-[submodule "hail_elasticsearch_pipelines"]
-	path = hail_elasticsearch_pipelines
-	url = https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-	branch = master
