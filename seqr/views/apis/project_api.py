@@ -14,7 +14,7 @@ from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantT
     VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_project_from_json
+from seqr.views.utils.json_to_orm_utils import update_project_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
@@ -51,7 +51,7 @@ def create_project_handler(request):
     description = request_json.get('description', '')
     genome_version = request_json.get('genomeVersion')
 
-    project = _create_project(name, description=description, genome_version=genome_version, user=request.user)
+    project = _create_project(name, request.user, description=description, genome_version=genome_version)
 
     return create_json_response({
         'projectsByGuid': {
@@ -333,7 +333,7 @@ def _get_json_for_variant_tag_types(project):
     }
 
 
-def _create_project(name, description=None, genome_version=None, user=None):
+def _create_project(name, user, description=None, genome_version=None):
     """Creates a new project.
 
     Args:
@@ -349,7 +349,7 @@ def _create_project(name, description=None, genome_version=None, user=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = Project.objects.get_or_create(**project_args)
+    project = get_or_create_model_from_json(Project, project_args, update_json=None, user=user)
 
     return project
 

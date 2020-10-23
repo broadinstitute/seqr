@@ -12,7 +12,8 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
+    get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
@@ -53,7 +54,9 @@ def edit_families_handler(request, project_guid):
         elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
             family = Family.objects.get(project=project, family_id=fields[PREVIOUS_FAMILY_ID_FIELD])
         else:
-            family, _ = Family.objects.get_or_create(project=project, family_id=fields[FAMILY_ID_FIELD])
+            family, _ = get_or_create_model_from_json(
+                Family, {'project': project, 'family_id': fields[FAMILY_ID_FIELD]},
+                update_json=None, user=request.user)
 
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)

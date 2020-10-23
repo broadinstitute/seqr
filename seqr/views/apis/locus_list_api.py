@@ -10,7 +10,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions
@@ -72,7 +72,7 @@ def create_locus_list_handler(request):
         is_public=request_json.get('isPublic') or False,
         created_by=request.user,
     )
-    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
+    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -94,7 +94,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     update_model_from_json(locus_list, request_json, user=request.user, allow_unknown_keys=True)
     if genes_by_id is not None:
-        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json)
+        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -148,28 +148,28 @@ def delete_project_locus_lists(request, project_guid):
     })
 
 
-def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json):
+def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
     # Update genes
     locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
     for gene_id in genes_by_id.keys():
-        LocusListGene.objects.get_or_create(
-            locus_list=locus_list,
-            gene_id=gene_id,
-        )
+        get_or_create_model_from_json(
+            LocusListGene, {'locus_list': locus_list, 'gene_id': gene_id}, update_json=None, user=user)
 
     # Update intervals
     genome_version = request_json.get('intervalGenomeVersion') or GENOME_VERSION_GRCh37
     interval_guids = set()
     for interval in intervals:
-        interval_model, _ = LocusListInterval.objects.get_or_create(
-            locus_list=locus_list,
-            chrom=interval['chrom'],
-            start=interval['start'],
-            end=interval['end'],
-            genome_version=genome_version,
-        )
+        interval_model, _ = get_or_create_model_from_json(LocusListInterval, {
+            'locus_list': locus_list,
+            'chrom': interval['chrom'],
+            'start': interval['start'],
+            'end': interval['end'],
+            'genome_version': genome_version,
+        }, update_json=None, user=user)
+
         interval_guids.add(interval_model.guid)
+
     locus_list.locuslistinterval_set.exclude(guid__in=interval_guids).delete()
 
 

@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL
@@ -40,12 +40,12 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
         analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
         update_model_from_json(analysis_group, request_json, user=request.user, allow_unknown_keys=True)
     else:
-        analysis_group, created = AnalysisGroup.objects.get_or_create(
-            project=project,
-            name=request_json['name'],
-            description=request_json.get('description'),
-            created_by=request.user,
-        )
+        analysis_group, created = get_or_create_model_from_json(AnalysisGroup, {
+            'project': project,
+            'name': request_json['name'],
+            'description': request_json.get('description'),
+            'created_by': request.user,
+        }, update_json=None, user=request.user)
         if not created:
             return create_json_response(
                 {}, status=400, reason='An analysis group named "{name}" already exists for project "{project}"'.format(

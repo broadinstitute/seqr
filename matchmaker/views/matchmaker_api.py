@@ -15,7 +15,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
@@ -104,8 +104,7 @@ def _search_matches(submission, user):
             )
             new_results.append(result)
         else:
-            saved_result.result_data = result
-            saved_result.save()
+            update_model_from_json(saved_result, {'result_data': result}, user)
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
@@ -122,8 +121,7 @@ def _search_matches(submission, user):
         saved_result = initial_saved_results[patient_id]
         if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
             if not saved_result.match_removed:
-                saved_result.match_removed = True
-                saved_result.save()
+                update_model_from_json(saved_result, {'match_removed': True}, user)
                 removed_count += 1
             saved_results[patient_id] = saved_result
         else:
@@ -270,9 +268,7 @@ def delete_mme_submission(request, submission_guid):
         )
 
     deleted_date = datetime.now()
-    submission.deleted_date = deleted_date
-    submission.deleted_by = request.user
-    submission.save()
+    update_model_from_json(submission, {'deleted_date': deleted_date, 'deleted_by': request.user}, request.user)
 
     for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
@@ -355,11 +351,12 @@ def update_mme_contact_note(request, institution):
         Status code and results
     """
     institution = institution.strip().lower()
-    note, _ = MatchmakerContactNotes.objects.get_or_create(institution=institution)
-
     request_json = json.loads(request.body)
-    note.comments = request_json.get('comments', '')
-    note.save()
+    note = get_or_create_model_from_json(
+        MatchmakerContactNotes,
+        create_json={'institution': institution},
+        update_json={'comments': request_json.get('comments', '')},
+        user=request.user)
 
     return create_json_response({
         'mmeContactNotes': {institution: _get_json_for_model(note, user=request.user)},

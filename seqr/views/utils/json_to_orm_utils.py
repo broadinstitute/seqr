@@ -88,9 +88,10 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
 
 
 def get_or_create_model_from_json(model_class, create_json, update_json, user):
-    # TODO use for all get_or_create
     model, created = model_class.objects.get_or_create(**create_json)
     if created:
+        if not update_json:
+            update_json = {}
         update_json['created_by'] = user
         db_entity = model_class.__name__
         entity_id = model.guid
@@ -99,7 +100,8 @@ def get_or_create_model_from_json(model_class, create_json, update_json, user):
             'updateFields': list(create_json.keys() + update_json.keys()),
         }
         logger.info('Created {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': db_update})
-    update_model_from_json(model, update_json, user, verbose=not created)
+    if update_json:
+        update_model_from_json(model, update_json, user, verbose=not created)
     return model, created
 
 
