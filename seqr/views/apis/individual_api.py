@@ -14,8 +14,8 @@ from seqr.models import Individual, Family
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
-    update_model_from_json
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+    update_model_from_json, create_model_from_json
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
@@ -391,7 +391,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user):
 
     missing_family_ids = family_ids - set(families_by_id.keys())
     for family_id in missing_family_ids:
-        family = Family.objects.create(project=project, family_id=family_id)
+        family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
         families_by_id[family_id] = family
         updated_families.add(family)
         logger.info('Created family: {}'.format(family))
@@ -421,8 +421,8 @@ def _add_or_update_individuals_and_families(project, individual_records, user):
             individual_id = _get_record_individual_id(record)
             individual = individual_lookup[individual_id].get(family)
             if not individual:
-                individual = Individual.objects.create(
-                    family=family, individual_id=individual_id, case_review_status='I')
+                individual = create_model_from_json(
+                    Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
 
         record['family'] = family
         record.pop('familyId', None)

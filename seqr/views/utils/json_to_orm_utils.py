@@ -77,14 +77,14 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
     if updated_fields:
         model_obj.save()
         if verbose:
-            db_entity = type(model_obj).__name__
-            entity_id = getattr(model_obj, 'guid', model_obj.pk)
-            db_update = {
-                'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'update',
-                'updateFields': list(updated_fields),
-            }
-            logger.info('Updated {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': db_update})
+            _log_model_update(model_obj, user, 'update', updated_fields)
     return bool(updated_fields)
+
+
+def create_model_from_json(model_class, json, user):
+    model = model_class.objects.create(created_by=user, **json)
+    _log_model_update(model, user, 'create', json.keys())
+    return model
 
 
 def get_or_create_model_from_json(model_class, create_json, update_json, user):
@@ -93,15 +93,16 @@ def get_or_create_model_from_json(model_class, create_json, update_json, user):
         if not update_json:
             update_json = {}
         update_json['created_by'] = user
-        db_entity = model_class.__name__
-        entity_id = model.guid
-        db_update = {
-            'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'create',
-            'updateFields': list(create_json.keys() + update_json.keys()),
-        }
-        logger.info('Created {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': db_update})
+        _log_model_update(model, user, 'create', create_json.keys() + update_json.keys())
     if update_json:
         update_model_from_json(model, update_json, user, verbose=not created)
     return model, created
 
 
+def _log_model_update(model, user, update_type, update_fields):
+    db_entity = type(model).__name__
+    entity_id = getattr(model, 'guid', model.pk)
+    db_update = {
+        'dbEntity': db_entity, 'entityId': entity_id, 'updateType': update_type, 'updateFields': list(update_fields),
+    }
+    logger.info('{} {} {}'.format(update_type, db_entity, entity_id), extra={'user': user, 'db_update': db_update})

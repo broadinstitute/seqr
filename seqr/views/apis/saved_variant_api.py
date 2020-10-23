@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusList, LocusListInterval, LocusListGene, Family, GeneNote
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
@@ -75,10 +76,9 @@ def create_saved_variant_handler(request):
                 update_json={'saved_variant_json': single_variant_json}, user=request.user)
             saved_variants.append(saved_variant)
     else:
-        saved_variant = SavedVariant.objects.create(
-            saved_variant_json=variant_json['variant'],
-            **_get_parsed_variant_args(variant_json['variant'], family)
-        )
+        parsed_variant_json = _get_parsed_variant_args(variant_json['variant'], family)
+        parsed_variant_json['saved_variant_json'] = variant_json['variant']
+        saved_variant = create_model_from_json(SavedVariant, parsed_variant_json, request.user)
         saved_variants = [saved_variant]
 
     if variant_json.get('note'):
@@ -140,11 +140,7 @@ def create_variant_note_handler(request, variant_guids):
         gene_id = next(
             (gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
              if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
-        GeneNote.objects.create(
-            note=request_json.get('note'),
-            gene_id=gene_id,
-            created_by=request.user,
-        )
+        create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user)[gene_id],
         }}
@@ -153,12 +149,11 @@ def create_variant_note_handler(request, variant_guids):
 
 
 def _create_variant_note(saved_variants, note_json, user):
-    note = VariantNote.objects.create(
-        note=note_json.get('note'),
-        submit_to_clinvar=note_json.get('submitToClinvar') or False,
-        search_hash=note_json.get('searchHash'),
-        created_by=user,
-    )
+    note = create_model_from_json(VariantNote, {
+        'note': note_json.get('note'),
+        'submit_to_clinvar': note_json.get('submitToClinvar') or False,
+        'search_hash': note_json.get('searchHash'),
+    }, user)
     note.saved_variants.set(saved_variants)
     return note
 
@@ -268,12 +263,11 @@ def update_variant_functional_data_handler(request, variant_guids):
             functional_data = VariantFunctionalData.objects.get(guid=tag.get('tagGuid'))
             update_model_from_json(functional_data, tag, user=request.user, allow_unknown_keys=True)
         else:
-            functional_data = VariantFunctionalData.objects.create(
-                functional_data_tag=tag.get('name'),
-                metadata=tag.get('metadata'),
-                search_hash=request_json.get('searchHash'),
-                created_by=request.user,
-            )
+            functional_data = create_model_from_json(VariantFunctionalData, {
+                'functional_data_tag': tag.get('name'),
+                'metadata': tag.get('metadata'),
+                'search_hash': request_json.get('searchHash'),
+            }, request.user)
             functional_data.saved_variants.set(saved_variants)
         updated_functional_models.append(functional_data)
 
@@ -310,11 +304,10 @@ def _create_new_tags(saved_variants, tags_json, user):
             Q(name=tag['name']),
             Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
         )
-        tag_model = VariantTag.objects.create(
-            variant_tag_type=variant_tag_type,
-            search_hash=tags_json.get('searchHash'),
-            created_by=user,
-        )
+        tag_model = create_model_from_json(VariantTag, {
+            'variant_tag_type': variant_tag_type,
+            'search_hash': tags_json.get('searchHash'),
+        }, user)
         tag_model.saved_variants.set(saved_variants)
         new_tag_models.append(tag_model)
     return new_tag_models

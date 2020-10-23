@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
-    get_or_create_model_from_json
+    get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
@@ -178,7 +178,7 @@ def update_family_analysed_by(request, family_guid):
     # analysed_by can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
 
-    FamilyAnalysedBy.objects.create(family=family, created_by=request.user)
+    create_model_from_json(FamilyAnalysedBy, {'family': family}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

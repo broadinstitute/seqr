@@ -10,7 +10,8 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions
@@ -66,12 +67,11 @@ def create_locus_list_handler(request):
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
-    locus_list = LocusList.objects.create(
-        name=request_json['name'],
-        description=request_json.get('description') or '',
-        is_public=request_json.get('isPublic') or False,
-        created_by=request.user,
-    )
+    locus_list = create_model_from_json(LocusList, {
+        'name': request_json['name'],
+        'description': request_json.get('description') or '',
+        'is_public': request_json.get('isPublic') or False,
+    }, request.user)
     _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
 
     return create_json_response({

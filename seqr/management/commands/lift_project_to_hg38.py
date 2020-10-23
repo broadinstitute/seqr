@@ -42,6 +42,7 @@ class Command(BaseCommand):
 
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
+            user=None,
             sample_ids=sample_ids,
             sample_type=sample_type,
             elasticsearch_index=elasticsearch_index,

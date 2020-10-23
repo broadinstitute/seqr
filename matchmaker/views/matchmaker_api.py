@@ -15,7 +15,8 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
-from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
@@ -95,13 +96,13 @@ def _search_matches(submission, user):
         result_patient_id = result['patient']['id']
         saved_result = initial_saved_results.get(result_patient_id)
         if not saved_result:
-            saved_result = MatchmakerResult.objects.create(
-                submission=submission,
-                originating_submission=local_result_submissions.get(result_patient_id),
-                originating_query=incoming_query,
-                result_data=result,
-                last_modified_by=user,
-            )
+            saved_result = create_model_from_json(MatchmakerResult, {
+                'submission': submission,
+                'originating_submission': local_result_submissions.get(result_patient_id),
+                'originating_query': incoming_query,
+                'result_data': result,
+                'last_modified_by': user,
+            }, user)
             new_results.append(result)
         else:
             update_model_from_json(saved_result, {'result_data': result}, user)
@@ -240,11 +241,11 @@ def update_mme_submission(request, submission_guid=None):
             return create_json_response({}, status=400, reason='Individual is required for a new submission')
         individual = Individual.objects.get(guid=individual_guid)
         check_project_permissions(individual.family.project, request.user)
-        submission = MatchmakerSubmission.objects.create(
-            individual=individual,
-            submission_id=individual.guid,
-            label=individual.individual_id,
-        )
+        submission = create_model_from_json(MatchmakerSubmission, {
+            'individual': individual,
+            'submission_id': individual.guid,
+            'label': individual.individual_id,
+        }, request.user)
 
     update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 

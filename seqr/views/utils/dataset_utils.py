@@ -75,6 +75,7 @@ def _load_mapping_file(file_content):
 
 def match_sample_ids_to_sample_records(
         project,
+        user,
         sample_ids,
         sample_type,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
@@ -154,6 +155,10 @@ def match_sample_ids_to_sample_records(
             sample_id_to_sample_record.update({
                 sample.sample_id: sample for sample in Sample.objects.bulk_create(new_samples)
             })
+            db_update = {
+                'dbEntity': 'Sample', 'entityIds': [s.guid for s in new_samples], 'updateType': 'bulk_create',
+            }
+            logger.info('create {} Samples'.format(len(new_samples)), extra={'user': user, 'db_update': db_update})
 
     return sample_id_to_sample_record
 

@@ -20,7 +20,8 @@ from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_functional_data_tag_types, \
     get_json_for_projects, \
@@ -110,7 +111,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
         if not search_model:
-            search_model = VariantSearch.objects.create(created_by=user, search=search_dict)
+            search_model = create_model_from_json(VariantSearch, {'search': search_dict}, user)
 
         # If a search_context request and results request are dispatched at the same time, its possible the other
         # request already created the model

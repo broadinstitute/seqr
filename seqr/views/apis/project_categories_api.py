@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, ProjectCategory
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import check_project_permissions
@@ -98,7 +99,7 @@ def _update_project_categories(project, user, category_guids):
 
     # create ProjectCategory objects for new categories, and add ProjectCategory => Project mappings for them to this project
     for category_name in project_categories_to_create:
-        project_category = ProjectCategory.objects.create(name=category_name, created_by=user)
+        project_category = create_model_from_json(ProjectCategory, {'name': category_name}, user)
         project_category.projects.add(project)
 
         project_categories_by_guid[project_category.guid] = project_category.json()

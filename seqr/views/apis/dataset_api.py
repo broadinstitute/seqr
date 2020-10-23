@@ -67,6 +67,7 @@ def add_variants_dataset_handler(request, project_guid):
         loaded_date = timezone.now()
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
+            user=request.user,
             sample_ids=sample_ids,
             sample_type=sample_type,
             dataset_type=dataset_type,
