@@ -175,7 +175,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={COLUMNS.slice(0, googleLoginEnabled ? 2 : 1).concat(user.isStaff ? STAFF_COLUMNS.slice(2) : COLUMNS.slice(2))}
+        columns={COLUMNS.slice(0, googleLoginEnabled && user.isAnvil ? 2 : 1).concat(user.isStaff ? STAFF_COLUMNS.slice(2) : COLUMNS.slice(2))}
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
