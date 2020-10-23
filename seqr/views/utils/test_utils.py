@@ -572,3 +572,5 @@ PARSED_SV_VARIANT = {
     'numExon': 2,
     '_sort': [1049045387],
 }
+
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
