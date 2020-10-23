@@ -12,7 +12,6 @@ from social_django.utils import load_strategy
 from google.auth.transport.requests import AuthorizedSession
 from google.auth.transport import DEFAULT_REFRESH_STATUS_CODES
 from google.oauth2 import service_account
-from google.oauth2.credentials import Credentials
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO, SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE
 
@@ -95,7 +94,7 @@ class ServiceAccountSession(AuthorizedSession):
 
 
 def is_google_authenticated(user):
-    return len(user.social_auth.filter(provider = 'google-oauth2'))>0
+    return len(user.social_auth.filter(provider = 'google-oauth2')) > 0
 
 
 _service_account_session = ServiceAccountSession()
@@ -170,6 +169,8 @@ def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
     request_func = getattr(_service_account_session, method)
     return request_func(path, headers, root_url, **kwargs)
 
+    # Todo: remove the comment out
+    """
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     r = request_func(url, headers, auth=BearerAuth(social.extra_data['access_token']), **kwargs)
@@ -178,7 +179,7 @@ def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
         raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
     return r
-
+    """
 
 
 def get_anvil_billing_projects(user):
@@ -215,7 +216,6 @@ def list_anvil_workspaces(user, fields=None):
         keys (e.g., to include {"workspace": {"attributes": {...}}},
         specify "workspace.attributes").
     """
-    params = {"fields": fields} if fields is not None else {}
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
     r = _anvil_call('get', user, path)
     return json.loads(r.text)

@@ -2,7 +2,6 @@ import logging
 import requests
 
 from django.shortcuts import redirect
-from google.oauth2.credentials import Credentials
 
 from seqr.views.utils.terra_api_utils import _get_call_args, BearerAuth
 
