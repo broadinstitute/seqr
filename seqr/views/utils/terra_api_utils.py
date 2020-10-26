@@ -20,6 +20,10 @@ SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 logger = logging.getLogger(__name__)
 
 
+def anvil_enabled():
+    return bool(TERRA_API_ROOT_URL)
+
+
 class TerraAPIException(Exception):
     """For exceptions happen in Terra API calls."""
     pass
@@ -52,7 +56,7 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
-        if not TERRA_API_ROOT_URL:
+        if not anvil_enabled():
             raise TerraAPIException('AnVIL access is not enabled')
 
         if self.started_at is None:
@@ -97,7 +101,7 @@ class ServiceAccountSession(AuthorizedSession):
 
 
 def is_google_authenticated(user):
-    if not TERRA_API_ROOT_URL:
+    if not anvil_enabled():
         return False
     return len(user.social_auth.filter(provider = 'google-oauth2')) > 0
 
@@ -141,16 +145,6 @@ def sa_get_workspace_acl(workspace_namespace, workspace_name):
     return json.loads(r.text)['acl']
 
 
-class BearerAuth(requests.auth.AuthBase):
-
-    def __init__(self, token):
-        self.token = token
-
-    def __call__(self, r):
-        r.headers["Authorization"] = "Bearer " + self.token
-        return r
-
-
 def _get_social(user):
     social = user.social_auth.get(provider = 'google-oauth2')
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
@@ -165,26 +159,26 @@ def _get_social(user):
 
 
 def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
-    if not TERRA_API_ROOT_URL:
+    if not anvil_enabled():
         raise TerraAPIException('AnVIL access is not enabled')
 
     social = _get_social(user)
 
-    # Todo: remove following two lines after whitelisted
-    request_func = getattr(_service_account_session, method)
-    return request_func(path, headers, root_url, **kwargs)
-
-    # Todo: remove the comment out
-    """
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
-    r = request_func(url, headers, auth=BearerAuth(social.extra_data['access_token']), **kwargs)
+    headers.update({'Authorization': 'Bearer {}'.format(social.extra_data['access_token'])})
+    r = request_func(url, headers=headers, **kwargs)
+
+    # Temporarily return a blank dict if the API is unauthorized. Remove it after the client ID is whitelisted
+    if r.status_code == 401:
+        logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
+        return {}
+
     if r.status_code != 200:
-        logger.info('{} {} {} {}'.format(method, url, r.status_code, len(r.text)))
+        logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
         raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
-    return r
-    """
+    return json.loads(r.text)
 
 
 def get_anvil_billing_projects(user):
@@ -196,8 +190,7 @@ def get_anvil_billing_projects(user):
 
     :returns a list of billing project dictionary
     """
-    r = _anvil_call('get', user, 'api/profile/billing')
-    return json.loads(r.text)
+    return _anvil_call('get', user, 'api/profile/billing')
 
 
 def get_anvil_profile(user):
@@ -206,8 +199,7 @@ def get_anvil_profile(user):
     Args:
         user (User model): who's credentials will be used to access AnVIL
     """
-    r = _anvil_call('get', user, 'register')
-    return json.loads(r.text)
+    return _anvil_call('get', user, 'register')
 
 
 def list_anvil_workspaces(user, fields=None):
@@ -222,5 +214,4 @@ def list_anvil_workspaces(user, fields=None):
         specify "workspace.attributes").
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
-    r = _anvil_call('get', user, path)
-    return json.loads(r.text)
+    return _anvil_call('get', user, path)

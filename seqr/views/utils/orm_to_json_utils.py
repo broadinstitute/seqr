@@ -12,11 +12,10 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
-from settings import TERRA_API_ROOT_URL
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions
+from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil
 from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl
 logger = logging.getLogger(__name__)
 
@@ -695,7 +694,7 @@ def get_project_collaborators_by_username(project, include_permissions=True):
             collaborator, include_permissions, can_edit=True
         )
 
-    if TERRA_API_ROOT_URL and project.workspace_namespace and project.workspace_name:
+    if project_has_anvil(project):
         acl = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name)
         collaborators.update({
             collab.username: _get_collaborator_json(collab, include_permissions, can_edit=acl[collab.email]['accessLevel']=='OWNER', check_anvil=True)

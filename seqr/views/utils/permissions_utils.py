@@ -4,8 +4,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl, list_anvil_workspaces
-from settings import TERRA_API_ROOT_URL
+from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl, list_anvil_workspaces, anvil_enabled
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -23,9 +22,12 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
     return project
 
 
+def project_has_anvil(project):
+    return anvil_enabled() and project.workspace_namespace and project.workspace_name
+
+
 def anvil_has_perm(user, permission_level, project):
-    collaborators = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name) \
-        if TERRA_API_ROOT_URL and project.workspace_namespace and project.workspace_name else {}
+    collaborators = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name) if project_has_anvil(project) else {}
     if user.email in collaborators.keys():
         permission = collaborators[user.email]
         if permission['pending']:
@@ -94,12 +96,12 @@ def get_projects_user_can_view(user):
     if user.is_staff:
         can_view_filter = can_view_filter | Q(disable_staff_access=False)
 
-    if is_google_authenticated(user):
+    if is_google_authenticated(user):  # permitted
         workspaces = _get_workspaces_user_can_view(user)
-        anvil_projects = Project.objects.annotate(
+        anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
-        local_projects = Project.objects.filter(can_view_filter & Q(workspace_name__isnull=True))
-        return (anvil_projects | local_projects).distinct()
+        local_permitted_projects = Project.objects.filter(can_view_filter)
+        return (anvil_permitted_projects | local_permitted_projects).distinct()
     else:
         return Project.objects.filter(can_view_filter)
 
