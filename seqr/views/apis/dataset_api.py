@@ -110,7 +110,7 @@ def add_variants_dataset_handler(request, project_guid):
                     ))))
 
         inactivate_sample_guids = _update_variant_samples(
-            matched_sample_id_to_sample_record, elasticsearch_index, loaded_date, dataset_type)
+            matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type)
 
     except Exception as e:
         traceback.print_exc()
@@ -122,6 +122,10 @@ def add_variants_dataset_handler(request, project_guid):
     Family.objects.filter(guid__in=family_guids_to_update).update(
         analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS
     )
+    logger.info('update {} Familys'.format(len(family_guids_to_update)), extra={'user': request.user, 'db_update': {
+        'dbEntity': 'Family', 'entityIds': family_guids_to_update.keys(), 'updateType': 'bulk_update',
+        'updateFields': ['analysis_status'],
+    }})
 
     response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
@@ -211,7 +215,7 @@ def update_individual_igv_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, loaded_date=None,
+def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,
                             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     if not loaded_date:
         loaded_date = timezone.now()
@@ -227,6 +231,10 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
     matched_sample_id_to_sample_record.update({
         sample.sample_id: sample for sample in Sample.objects.filter(id__in=activated_sample_ids)
     })
+    logger.info('update {} Samples'.format(len(samples_to_activate)), extra={'user': user, 'db_update': {
+        'dbEntity': 'Sample', 'entityIds': [s.guid for s in samples_to_activate], 'updateType': 'bulk_update',
+        'updateFields': ['elasticsearch_index', 'is_active', 'loaded_date'],
+    }})
 
     inactivate_samples = Sample.objects.filter(
         individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
@@ -235,6 +243,10 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
     ).exclude(id__in=updated_samples)
     inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
     inactivate_samples.update(is_active=False)
+    logger.info('update {} Samples'.format(len(inactivate_samples)), extra={'user': user, 'db_update': {
+        'dbEntity': 'Sample', 'entityIds': [s.guid for s in inactivate_samples], 'updateType': 'bulk_update',
+        'updateFields': ['is_active'],
+    }})
 
     return inactivate_sample_guids
 
