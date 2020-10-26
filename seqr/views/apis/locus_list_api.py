@@ -106,9 +106,7 @@ def update_locus_list_handler(request, locus_list_guid):
 @csrf_exempt
 def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-    check_user_created_object_permissions(locus_list, request.user)
-
-    locus_list.delete()
+    locus_list.delete_model(request.user)
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
 
 
@@ -150,7 +148,7 @@ def delete_project_locus_lists(request, project_guid):
 
 def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
     # Update genes
-    locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
+    LocusList.bulk_delete(user, queryset=locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()))
 
     for gene_id in genes_by_id.keys():
         get_or_create_model_from_json(
@@ -170,7 +168,7 @@ def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, u
 
         interval_guids.add(interval_model.guid)
 
-    locus_list.locuslistinterval_set.exclude(guid__in=interval_guids).delete()
+    LocusList.bulk_delete(user, queryset=locus_list.locuslistinterval_set.exclude(guid__in=interval_guids))
 
 
 def _get_sorted_project_locus_lists(project, user):

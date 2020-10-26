@@ -450,7 +450,7 @@ def create_saved_search_handler(request):
 
     try:
         saved_search, _ = get_or_create_model_from_json(
-            VariantSearch, {'search': request_json, 'created_by': request.use}, {'name': name}, request.user)
+            VariantSearch, {'search': request_json, 'created_by': request.user}, {'name': name}, request.user)
     except MultipleObjectsReturned:
         # Can't create a unique constraint on JSON field, so its possible that a duplicate gets made by accident
         dup_searches = VariantSearch.objects.filter(
@@ -494,10 +494,7 @@ def update_saved_search_handler(request, saved_search_guid):
 @csrf_exempt
 def delete_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
-    if search.created_by != request.user:
-        return create_json_response({}, status=403, reason='User does not have permission to delete this search')
-
-    search.delete()
+    search.delete_model(request.user)
     return create_json_response({'savedSearchesByGuid': {saved_search_guid: None}})
 
 

@@ -97,7 +97,7 @@ def delete_families_handler(request, project_guid):
     delete_individuals(project, individual_guids_to_delete, request.user)
 
     # delete families
-    Family.objects.filter(project=project, guid__in=family_guids_to_delete).delete()
+    Family.bulk_delete(request.user, project=project, guid__in=family_guids_to_delete)
 
     # send response
     return create_json_response({

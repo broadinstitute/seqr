@@ -126,7 +126,7 @@ def _search_matches(submission, user):
                 removed_count += 1
             saved_results[patient_id] = saved_result
         else:
-            saved_result.delete()
+            saved_result.delete_model(user, user_can_delete=True)
             removed_count += 1
 
     if removed_count:
@@ -273,7 +273,7 @@ def delete_mme_submission(request, submission_guid):
 
     for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
-            saved_result.delete()
+            saved_result.delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'deletedDate': deleted_date}}})
 

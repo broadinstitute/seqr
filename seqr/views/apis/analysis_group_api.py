@@ -65,6 +65,6 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 @csrf_exempt
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete()
+    AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})

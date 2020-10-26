@@ -184,7 +184,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
         check_project_permissions(project, request.user)
-    note.delete()
+    note.delete_model(request.user, user_can_delete=True)
 
     saved_variants_by_guid = {}
     for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids):
@@ -192,7 +192,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
         if not notes:
             if not saved_variant.varianttag_set.count() > 0:
-                saved_variant.delete()
+                saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
@@ -217,7 +217,7 @@ def update_variant_tags_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []))
+    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []), request.user)
     created_tags = _create_new_tags(saved_variants, request_json, request.user)
     tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
     tag_updates.update({guid: None for guid in deleted_tag_guids})
@@ -228,7 +228,7 @@ def update_variant_tags_handler(request, variant_guids):
         saved_variants_by_guid[saved_variant.guid] = {'tagGuids': [t.guid for t in tags]}
         if not tags:
             if not saved_variant.variantnote_set.count() > 0:
-                saved_variant.delete()
+                saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
@@ -255,7 +255,7 @@ def update_variant_functional_data_handler(request, variant_guids):
 
     updated_functional_data = request_json.get('functionalData', [])
     deleted_functional_guids = _delete_removed_tags(
-        saved_variants, all_variant_guids, updated_functional_data, tag_type='functionaldata')
+        saved_variants, all_variant_guids, updated_functional_data, request.user, tag_type='functionaldata')
 
     updated_functional_models = []
     for tag in updated_functional_data:
@@ -282,7 +282,7 @@ def update_variant_functional_data_handler(request, variant_guids):
     })
 
 
-def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, tag_type='tag'):
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type='tag'):
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
     tag_set = getattr(saved_variants[0], 'variant{}_set'.format(tag_type))
@@ -290,7 +290,7 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, tag_typ
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
             deleted_tag_guids.append(tag.guid)
-            tag.delete()
+            tag.delete_model(user, user_can_delete=True)
     return deleted_tag_guids
 
 

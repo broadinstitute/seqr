@@ -30,12 +30,12 @@ def delete_individuals(project, individual_guids, user):
     individuals_to_delete = Individual.objects.filter(
         family__project=project, guid__in=individual_guids)
 
-    Sample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
-    IgvSample.objects.filter(individual__family__project=project, individual__guid__in=individual_guids).delete()
+    Sample.bulk_delete(user, individual__family__project=project, individual__guid__in=individual_guids)
+    IgvSample.bulk_delete(user, individual__family__project=project, individual__guid__in=individual_guids)
 
     families = {individual.family for individual in individuals_to_delete}
 
-    individuals_to_delete.delete()
+    Individual.bulk_delete(user, queryset=individuals_to_delete)
 
     update_pedigree_images(families, user)
 

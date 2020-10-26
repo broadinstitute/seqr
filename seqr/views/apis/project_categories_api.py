@@ -80,7 +80,7 @@ def _update_project_categories(project, user, category_guids):
         if project_category.guid not in category_guids:
             project_category.projects.remove(project)
             if project_category.projects.count() == 0:
-                project_category.delete()
+                project_category.delete_model(user)
                 project_categories_by_guid[project_category.guid] = None
         else:
             # also record the project_category guids for which there's already a ProjectCategory

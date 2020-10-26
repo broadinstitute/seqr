@@ -109,13 +109,11 @@ def delete_project_handler(request, project_guid):
         project_guid (string): GUID of the project to delete
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, is_owner=True)
-
-    _delete_project(project)
+    _delete_project(project_guid, request.user)
 
     return create_json_response({
         'projectsByGuid': {
-            project.guid: None
+            project_guid: None
         },
     })
 
@@ -354,17 +352,20 @@ def _create_project(name, user, description=None, genome_version=None):
     return project
 
 
-def _delete_project(project):
+def _delete_project(project_guid, user):
     """Delete project.
 
     Args:
-        project (object): Django ORM model for the project to delete
+        project_guid (string): GUID of the project to delete
+        user (object): Django ORM model for the user
     """
-    IgvSample.objects.filter(individual__family__project=project).delete()
-    Sample.objects.filter(individual__family__project=project).delete()
+    project = get_project_and_check_permissions(project_guid, user, is_owner=True)
 
-    Individual.objects.filter(family__project=project).delete()
+    IgvSample.bulk_delete(user, individual__family__project=project)
+    Sample.bulk_delete(user, individual__family__project=project)
 
-    Family.objects.filter(project=project).delete()
+    Individual.bulk_delete(user, family__project=project)
 
-    project.delete()
+    Family.bulk_delete(user, project=project)
+
+    project.delete_model(user, user_can_delete=True)

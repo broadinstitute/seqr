@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import uuid
 import json
+import logging
 import random
 
 from django.contrib.auth.models import User, Group
@@ -12,9 +13,12 @@ from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
+from seqr.views.utils.permissions_utils import check_user_created_object_permissions
 from seqr.utils.xpos_utils import get_chrom_pos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
+
+logger = logging.getLogger(__name__)
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -95,6 +99,32 @@ class ModelWithGUID(models.Model):
 
             self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
             super(ModelWithGUID, self).save()
+
+    def delete_model(self, user, user_can_delete=False):
+        """Helper delete method that logs the deletion"""
+
+        db_entity = type(self).__name__
+        entity_id = self.guid
+        if not user_can_delete:
+            check_user_created_object_permissions(self, user)
+        self.delete()
+        logger.info('delete {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': {
+            'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'delete',
+        }})
+
+    @classmethod
+    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
+        """Helper bulk delete method that logs the deletion"""
+
+        if not queryset:
+            queryset = cls.objects.filter(**filter_kwargs)
+        entity_ids = [o.guid for o in queryset]
+        queryset.delete()
+        db_entity = type(cls).__name__
+        logger.info('delete {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
+            'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_delete',
+        }})
+
 
 
 class Project(ModelWithGUID):

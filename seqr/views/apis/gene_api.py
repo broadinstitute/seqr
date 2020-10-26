@@ -62,10 +62,7 @@ def update_gene_note_handler(request, gene_id, note_guid):
 @csrf_exempt
 def delete_gene_note_handler(request, gene_id, note_guid):
     note = GeneNote.objects.get(guid=note_guid)
-    if not _can_edit_note(note, request.user):
-        raise PermissionDenied("User does not have permission to delete this note")
-
-    note.delete()
+    note.delete_model(request.user)
     return create_json_response({'genesById': {gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)
     }}})
