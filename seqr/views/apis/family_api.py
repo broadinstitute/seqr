@@ -6,7 +6,6 @@ import logging
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib.auth.models import User
 
@@ -27,7 +26,6 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
 
@@ -71,7 +69,6 @@ def edit_families_handler(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_families_handler(request, project_guid):
     """Edit or delete one or more Individual records.
 
@@ -111,7 +108,6 @@ def delete_families_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_fields_handler(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -135,7 +131,6 @@ def update_family_fields_handler(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_assigned_analyst(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -165,7 +160,6 @@ def update_family_assigned_analyst(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_analysed_by(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -186,7 +180,6 @@ def update_family_analysed_by(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_pedigree_image(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -214,7 +207,6 @@ def update_family_pedigree_image(request, family_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to

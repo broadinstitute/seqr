@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'hijack',
-    'corsheaders',
     'guardian',
     'anymail',
     'seqr',
@@ -49,7 +48,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -62,16 +61,10 @@ MIDDLEWARE = [
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/'
 
-# cors settings
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'http://localhost:8000',
-)
-CORS_ALLOW_CREDENTIALS = True
-
 ALLOWED_HOSTS = ['*']
 
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_NAME = 'csrf_token'
+CSRF_COOKIE_HTTPONLY = False
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -221,12 +214,20 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
-if os.environ.get('DEPLOYMENT_TYPE') == 'prod':
+if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
 else:
     DEBUG = True
+    # Enable CORS for local development
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+    CORS_ORIGIN_WHITELIST = (
+        'http://localhost:3000',
+        'http://localhost:8000',
+    )
+    CORS_ALLOW_CREDENTIALS = True
 
 
 #########################################################

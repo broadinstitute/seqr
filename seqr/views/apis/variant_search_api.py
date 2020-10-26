@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Q, prefetch_related_objects
-from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 import logging
 
@@ -53,7 +52,6 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
@@ -124,7 +122,6 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
@@ -228,7 +225,6 @@ VARIANT_FAMILY_EXPORT_DATA = [
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
@@ -241,7 +237,6 @@ def get_variant_gene_breakdown(request, search_hash):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
@@ -296,7 +291,6 @@ def _get_field_value(value, config):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def search_context_handler(request):
     """Search variants.
     """
@@ -432,13 +426,11 @@ def _get_projects_details(projects, user, project_category_guid=None):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_saved_search_handler(request):
     return create_json_response(_get_saved_searches(request.user))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_saved_search_handler(request):
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)
@@ -470,7 +462,6 @@ def create_saved_search_handler(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     if search.created_by != request.user:
@@ -491,7 +482,6 @@ def update_saved_search_handler(request, saved_search_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     search.delete_model(request.user)

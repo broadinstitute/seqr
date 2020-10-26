@@ -6,7 +6,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
-from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_individual_mme_matches(request, submission_guid):
     """
     Looks for matches for the given submission. Expects a single patient (MME spec) in the POST
@@ -56,7 +54,6 @@ def get_individual_mme_matches(request, submission_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def search_individual_mme_matches(request, submission_guid):
     """
     Looks for matches for the given submission.
@@ -191,7 +188,6 @@ def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
@@ -254,7 +250,6 @@ def update_mme_submission(request, submission_guid=None):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_mme_submission(request, submission_guid):
     """
     Create or update the submission for the given individual.
@@ -279,7 +274,6 @@ def delete_mme_submission(request, submission_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_mme_result_status(request, matchmaker_result_guid):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
@@ -301,7 +295,6 @@ def update_mme_result_status(request, matchmaker_result_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def send_mme_contact_email(request, matchmaker_result_guid):
     """
     Sends the given email and updates the contacted status for the match
@@ -341,7 +334,6 @@ def send_mme_contact_email(request, matchmaker_result_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_mme_contact_note(request, institution):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
