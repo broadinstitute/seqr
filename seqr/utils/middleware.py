@@ -1,4 +1,5 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
 from requests import HTTPError
 import json
@@ -50,21 +51,21 @@ class LogRequestMiddleware(MiddlewareMixin):
             'requestMethod': request.method,
             'requestUrl': request.get_raw_uri(),
             'status': response.status_code,
-            'responseSize': len(response.content),
+            'responseSize': len(response.content) if hasattr(response, 'content') else request.META.get('CONTENT_LENGTH'),
             'userAgent': request.META.get('HTTP_USER_AGENT'),
             'remoteIp': request.META.get('REMOTE_ADDR'),
             'referer': request.META.get('HTTP_REFERER'),
             'protocol': request.META.get('SERVER_PROTOCOL'),
         }
         request_body = None
-        if request.body:
-            try:
+        try:
+            if request.body:
                 request_body = json.loads(request.body)
                 # TODO update settings in stackdriver so this isn't neccessary
                 if 'password' in request_body:
                     request_body['password'] = '***'
-            except ValueError:
-                pass
+        except (ValueError, RawPostDataException):
+            pass
 
         if response.status_code >= 500:
             level = logger.error

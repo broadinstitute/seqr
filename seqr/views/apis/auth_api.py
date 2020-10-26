@@ -36,8 +36,9 @@ def login_view(request):
 
 
 def logout_view(request):
+    user = request.user
     logout(request)
-    logger.info('Logged out {}'.format(request.user.email), extra={'user': request.user})
+    logger.info('Logged out {}'.format(user.email), extra={'user': user})
     return redirect('/login')
 
 

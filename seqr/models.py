@@ -6,6 +6,7 @@ import random
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import options, ForeignKey
 from django.utils import timezone
@@ -13,7 +14,6 @@ from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.views.utils.permissions_utils import check_user_created_object_permissions
 from seqr.utils.xpos_utils import get_chrom_pos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
@@ -105,8 +105,8 @@ class ModelWithGUID(models.Model):
 
         db_entity = type(self).__name__
         entity_id = self.guid
-        if not user_can_delete:
-            check_user_created_object_permissions(self, user)
+        if not (user_can_delete or user.is_staff or self.created_by == user):
+            raise PermissionDenied('User does not have permission to delete this {}'.format(db_entity))
         self.delete()
         logger.info('delete {} {}'.format(db_entity, entity_id), extra={'user': user, 'db_update': {
             'dbEntity': db_entity, 'entityId': entity_id, 'updateType': 'delete',
@@ -120,7 +120,7 @@ class ModelWithGUID(models.Model):
             model.created_by = user
         models = cls.objects.bulk_create(new_models)
         entity_ids = [o.guid for o in models]
-        db_entity = type(cls).__name__
+        db_entity = cls.__name__
         logger.info('create {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
             'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_create',
         }})
@@ -130,27 +130,28 @@ class ModelWithGUID(models.Model):
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
         """Helper bulk update method that logs the update"""
 
-        if not queryset:
+        if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
+        entity_ids = [o.guid for o in queryset]
+
         queryset.update(**update_json)
 
-        entity_ids = [o.guid for o in queryset]
-        db_entity = type(cls).__name__
+        db_entity = cls.__name__
         logger.info('update {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
             'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_update',
             'updateFields': list(update_json.keys()),
         }})
-        return queryset
+        return entity_ids
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
 
-        if not queryset:
+        if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         entity_ids = [o.guid for o in queryset]
         queryset.delete()
-        db_entity = type(cls).__name__
+        db_entity = cls.__name__
         logger.info('delete {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
             'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_delete',
         }})

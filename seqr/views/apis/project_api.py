@@ -343,7 +343,7 @@ def _create_project(name, user, description=None, genome_version=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project = get_or_create_model_from_json(Project, project_args, update_json=None, user=user)
+    project, _ = get_or_create_model_from_json(Project, project_args, update_json=None, user=user)
 
     return project
 

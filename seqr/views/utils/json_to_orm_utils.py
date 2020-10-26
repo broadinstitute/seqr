@@ -89,13 +89,17 @@ def create_model_from_json(model_class, json, user):
 
 def get_or_create_model_from_json(model_class, create_json, update_json, user):
     model, created = model_class.objects.get_or_create(**create_json)
+    updated_fields = set()
     if created:
-        if not update_json:
-            update_json = {}
-        update_json['created_by'] = user
-        _log_model_update(model, user, 'create', create_json.keys() + update_json.keys())
-    if update_json:
-        update_model_from_json(model, update_json, user, verbose=not created)
+        if 'created_by' not in create_json:
+            model.created_by = user
+            updated_fields.add('created_by')
+        log_update_fields = list(create_json.keys()) + list(updated_fields)
+        if update_json:
+            log_update_fields += list(update_json.keys())
+        _log_model_update(model, user, 'create', log_update_fields)
+    if update_json or updated_fields:
+        update_model_from_json(model, update_json or {}, user, updated_fields=updated_fields, verbose=not created)
     return model, created
 
 

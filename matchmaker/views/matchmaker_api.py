@@ -345,7 +345,7 @@ def update_mme_contact_note(request, institution):
     """
     institution = institution.strip().lower()
     request_json = json.loads(request.body)
-    note = get_or_create_model_from_json(
+    note, _ = get_or_create_model_from_json(
         MatchmakerContactNotes,
         create_json={'institution': institution},
         update_json={'comments': request_json.get('comments', '')},

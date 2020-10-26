@@ -83,7 +83,7 @@ def set_password(request, username):
 
     user.set_password(request_json['password'])
     update_model_from_json(user, _get_user_json(request_json), user=user, updated_fields={'password'})
-    logger.info('Set password for user {}'.format(user.email), extra={'user': request.user})
+    logger.info('Set password for user {}'.format(user.email), extra={'user': user})
 
     u = authenticate(username=username, password=request_json['password'])
     login(request, u)
@@ -147,7 +147,7 @@ def _create_user(request, is_staff=False):
 
 
 def _get_user_json(request_json):
-    return {request_json.get(k) or '' for k in ['firstName', 'lastName']}
+    return {k: request_json.get(k) or '' for k in ['firstName', 'lastName']}
 
 
 def _update_existing_user(user, project, request_json):

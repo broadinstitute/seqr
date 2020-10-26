@@ -212,15 +212,14 @@ def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsea
         loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
 
-    activated_samples = Sample.bulk_update(user, {
+    activated_sample_guids = Sample.bulk_update(user, {
         'elasticsearch_index': elasticsearch_index,
         'is_active': True,
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
-    activated_sample_ids = [sample.id for sample in activated_samples]
 
     matched_sample_id_to_sample_record.update({
-        sample.sample_id: sample for sample in Sample.objects.filter(id__in=activated_sample_ids)
+        sample.sample_id: sample for sample in Sample.objects.filter(guid__in=activated_sample_guids)
     })
 
     inactivate_samples = Sample.objects.filter(
@@ -228,9 +227,10 @@ def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsea
         is_active=True,
         dataset_type=dataset_type,
     ).exclude(id__in=updated_samples)
-    Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
-    return [sample.guid for sample in inactivate_samples]
+    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+
+    return inactivate_sample_guids
 
 
 def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):

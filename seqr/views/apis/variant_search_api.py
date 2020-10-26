@@ -113,7 +113,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         # If a search_context request and results request are dispatched at the same time, its possible the other
         # request already created the model
-        results_model = get_or_create_model_from_json(
+        results_model, _ = get_or_create_model_from_json(
             VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model},
             update_json=None, user=user)
 
@@ -450,7 +450,7 @@ def create_saved_search_handler(request):
             created_by=request.user,
         ).order_by('created_date')
         saved_search = dup_searches[0]
-        for search in dup_searches:
+        for search in dup_searches[1:]:
             search.delete()
         update_model_from_json(saved_search, {'name': name}, request.user)
 
