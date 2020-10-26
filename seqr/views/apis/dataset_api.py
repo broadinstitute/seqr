@@ -119,13 +119,8 @@ def add_variants_dataset_handler(request, project_guid):
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
     ]
-    Family.objects.filter(guid__in=family_guids_to_update).update(
-        analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS
-    )
-    logger.info('update {} Familys'.format(len(family_guids_to_update)), extra={'user': request.user, 'db_update': {
-        'dbEntity': 'Family', 'entityIds': family_guids_to_update.keys(), 'updateType': 'bulk_update',
-        'updateFields': ['analysis_status'],
-    }})
+    Family.bulk_update(
+        request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
@@ -221,34 +216,25 @@ def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsea
         loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
 
-    samples_to_activate = Sample.objects.filter(id__in=updated_samples, is_active=False)
-    activated_sample_ids = [sample.id for sample in samples_to_activate]
-    samples_to_activate.update(
-        elasticsearch_index=elasticsearch_index,
-        is_active=True,
-        loaded_date=loaded_date,
-    )
+    activated_samples = Sample.bulk_update(user, {
+        'elasticsearch_index': elasticsearch_index,
+        'is_active': True,
+        'loaded_date': loaded_date,
+    }, id__in=updated_samples, is_active=False)
+    activated_sample_ids = [sample.id for sample in activated_samples]
+
     matched_sample_id_to_sample_record.update({
         sample.sample_id: sample for sample in Sample.objects.filter(id__in=activated_sample_ids)
     })
-    logger.info('update {} Samples'.format(len(samples_to_activate)), extra={'user': user, 'db_update': {
-        'dbEntity': 'Sample', 'entityIds': [s.guid for s in samples_to_activate], 'updateType': 'bulk_update',
-        'updateFields': ['elasticsearch_index', 'is_active', 'loaded_date'],
-    }})
 
     inactivate_samples = Sample.objects.filter(
         individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
         is_active=True,
         dataset_type=dataset_type,
     ).exclude(id__in=updated_samples)
-    inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
-    inactivate_samples.update(is_active=False)
-    logger.info('update {} Samples'.format(len(inactivate_samples)), extra={'user': user, 'db_update': {
-        'dbEntity': 'Sample', 'entityIds': [s.guid for s in inactivate_samples], 'updateType': 'bulk_update',
-        'updateFields': ['is_active'],
-    }})
+    Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
-    return inactivate_sample_guids
+    return [sample.guid for sample in inactivate_samples]
 
 
 def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):

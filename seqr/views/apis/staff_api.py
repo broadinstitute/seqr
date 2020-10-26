@@ -1451,23 +1451,14 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
                 unknown_pop_filter_flags.add(flag)
 
         if filter_flags or pop_platform_filters:
-            update_individuals = Individual.objects.filter(id__in=record['individual_ids'])
-            update_individuals.update(
-                filter_flags=filter_flags or None, pop_platform_filters=pop_platform_filters or None)
-            logger.info('update {} Individuals'.format(len(update_individuals), extra={'user': user, 'db_update': {
-                'dbEntity': 'Sample', 'entityIds': [i.guid for i in update_individuals], 'updateType': 'bulk_update',
-                'updateFields': ['filter_flags', 'pop_platform_filters'],
-            }}))
+            Individual.bulk_update(user, {
+                'filter_flags': filter_flags or None, 'pop_platform_filters': pop_platform_filters or None,
+            }, id__in=record['individual_ids'])
 
         inidividuals_by_population[record['qc_pop'].upper()] += record['individual_ids']
 
     for population, indiv_ids in inidividuals_by_population.items():
-        update_individuals = Individual.objects.filter(id__in=indiv_ids)
-        update_individuals.update(population=population)
-        logger.info('update {} Individuals'.format(len(update_individuals), extra={'user': user, 'db_update': {
-            'dbEntity': 'Sample', 'entityIds': [i.guid for i in update_individuals], 'updateType': 'bulk_update',
-            'updateFields': ['population'],
-        }}))
+        Individual.bulk_update(user, {'population': population}, id__in=indiv_ids)
 
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
@@ -1494,12 +1485,7 @@ def _update_individuals_sv_qc(json_records, user):
             sv_flags.append('raw_calls:_>100')
         if lt10_highQS_rare_calls == 'FALSE':
             sv_flags.append('high_QS_rare_calls:_>10')
-        update_individuals = Individual.objects.filter(id__in=indiv_ids)
-        update_individuals.update(sv_flags=sv_flags or None)
-        logger.info('update {} Individuals'.format(len(update_individuals), extra={'user': user, 'db_update': {
-            'dbEntity': 'Sample', 'entityIds': [i.guid for i in update_individuals], 'updateType': 'bulk_update',
-            'updateFields': ['sv_flags'],
-        }}))
+        Individual.bulk_update(user, {'sv_flags': sv_flags or None}, id__in=indiv_ids)
 
 
 FILTER_FLAG_COL_MAP = {

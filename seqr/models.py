@@ -113,6 +113,36 @@ class ModelWithGUID(models.Model):
         }})
 
     @classmethod
+    def bulk_create(cls, user, new_models):
+        """Helper bulk create method that logs the creation"""
+
+        for model in new_models:
+            model.created_by = user
+        models = cls.objects.bulk_create(new_models)
+        entity_ids = [o.guid for o in models]
+        db_entity = type(cls).__name__
+        logger.info('create {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
+            'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_create',
+        }})
+        return models
+
+    @classmethod
+    def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
+        """Helper bulk update method that logs the update"""
+
+        if not queryset:
+            queryset = cls.objects.filter(**filter_kwargs)
+        queryset.update(**update_json)
+
+        entity_ids = [o.guid for o in queryset]
+        db_entity = type(cls).__name__
+        logger.info('update {} {}s'.format(len(entity_ids), db_entity), extra={'user': user, 'db_update': {
+            'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_update',
+            'updateFields': list(update_json.keys()),
+        }})
+        return queryset
+
+    @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
 

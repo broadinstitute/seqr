@@ -153,7 +153,7 @@ def match_sample_ids_to_sample_records(
                     loaded_date=loaded_date or timezone.now(),
                 ) for sample_id, individual in sample_id_to_individual_record.items()]
             sample_id_to_sample_record.update({
-                sample.sample_id: sample for sample in Sample.objects.bulk_create(new_samples)
+                sample.sample_id: sample for sample in Sample.bulk_create(user, new_samples)
             })
             db_update = {
                 'dbEntity': 'Sample', 'entityIds': [s.guid for s in new_samples], 'updateType': 'bulk_create',
