@@ -1,9 +1,8 @@
 from django.urls.base import reverse
 import json
-import responses
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, GOOGLE_ACCESS_TOKEN_URL
+from seqr.views.utils.test_utils import AuthenticationTestCase
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -32,7 +31,6 @@ PROJECT_EXPORT_HEADER = [
 class DashboardPageTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    @responses.activate
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
         self.check_require_login(url)
@@ -62,8 +60,6 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # Staff users can see all projects
         self.login_staff_user()
-        content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-        responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = content)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 3)
@@ -82,8 +78,6 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test with access to data
         self.login_staff_user()
-        content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-        responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = content)
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]

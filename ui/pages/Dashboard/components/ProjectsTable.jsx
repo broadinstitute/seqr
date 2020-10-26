@@ -154,6 +154,19 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
+const COLUMNS_NO_ANVIL = [...COLUMNS]
+COLUMNS_NO_ANVIL.splice(1, 1)
+
+const STAFF_COLUMNS_NO_ANVIL = [...STAFF_COLUMNS]
+STAFF_COLUMNS_NO_ANVIL.splice(1, 1)
+
+const getColumns = (googleLoginEnabled, isAnvil, isStaff) => {
+  if (googleLoginEnabled && isAnvil) {
+    return isStaff ? STAFF_COLUMNS : COLUMNS
+  }
+  return isStaff ? STAFF_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
+}
+
 const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
@@ -175,7 +188,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={COLUMNS.slice(0, googleLoginEnabled && user.isAnvil ? 2 : 1).concat(user.isStaff ? STAFF_COLUMNS.slice(2) : COLUMNS.slice(2))}
+        columns={getColumns(googleLoginEnabled, user.isAnvil, user.isStaff)}
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>

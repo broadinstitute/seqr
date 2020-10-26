@@ -572,8 +572,3 @@ PARSED_SV_VARIANT = {
     'numExon': 2,
     '_sort': [1049045387],
 }
-
-GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-GOOGLE_AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/auth'
-GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
-GOOGLE_REVOKE_TOKEN_URL = 'https://accounts.google.com/o/oauth2/revoke'
