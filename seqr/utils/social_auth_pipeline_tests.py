@@ -4,9 +4,11 @@ from unittest import TestCase
 
 from social_core.backends.google import GoogleOAuth2
 from seqr.utils.social_auth_pipeline import validate_anvil_registration
-from settings import TERRA_API_ROOT_URL
+
+TERRA_API_ROOT_URL = 'https://terra.api/'
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TERRA_API_ROOT_URL)
 class SocialAuthPipelineTest(TestCase):
 
     @responses.activate

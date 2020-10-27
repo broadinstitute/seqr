@@ -1,14 +1,15 @@
 import mock
 import responses
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 
 from seqr.views.utils.terra_api_utils import get_anvil_billing_projects, get_anvil_profile, list_anvil_workspaces, sa_get_workspace_acl
-from settings import TERRA_API_ROOT_URL
-from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL
+from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TERRA_API_ROOT_URL)
+@mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
 @mock.patch('seqr.views.utils.terra_api_utils.time')
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users']
@@ -30,11 +31,11 @@ class TerraApiUtilsCase(TestCase):
         self.assertEqual(len(billing_projects), 1)
         self.assertEqual(billing_projects[0]['projectName'], 'my-seqr-billing')
 
-        responses.replace(responses.GET, url, status = 401)
+        responses.replace(responses.GET, url, status = 404)
         with self.assertRaises(Exception) as ec:
             _ = get_anvil_billing_projects(self.user)
         self.assertEqual(str(ec.exception),
-            'Error: called Terra API "api/profile/billing" got status: 401 with a reason: Unauthorized')
+            'Error: called Terra API "api/profile/billing" got status: 404 with a reason: Not Found')
 
     @responses.activate
     def test_get_anvil_profile(self, mock_time):
@@ -80,11 +81,11 @@ class TerraApiUtilsCase(TestCase):
             fields='accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
         self.assertNotIn('public', workspaces[0].keys())
 
-        responses.add(responses.GET, url, status = 401)
+        responses.add(responses.GET, url, status = 404)
         with self.assertRaises(Exception) as ec:
             _ = list_anvil_workspaces(self.user)
         self.assertEqual(str(ec.exception),
-            'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(401, 'Unauthorized'))
+            'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(404, 'Not Found'))
 
     @responses.activate
     def test_get_workspace_acl(self, mock_time):
