@@ -3,7 +3,7 @@ jobs:
     - language: python
       python: 3.7
       addons:
-        postgresql: 12.3
+        postgresql: 9.6
       install:
       - pip install -r requirements.txt --upgrade
       - pip install -r requirements-dev.txt --upgrade
@@ -13,6 +13,7 @@ jobs:
 
     - language: node_js
       node_js: 11.8.0
+      os: darwin
       before_install:
       - cd ui/
       install:
