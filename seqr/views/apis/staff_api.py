@@ -651,37 +651,35 @@ def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offse
     logger.info('Fetched {} {} records from airtable'.format(len(records), record_type))
     return records
 
-
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
-# See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
-HPO_CATEGORY_NAMES = {
-    'HP:0000478': 'Eye Defects',
-    'HP:0025142': 'Constitutional Symptom',
-    'HP:0002664': 'Neoplasm',
-    'HP:0000818': 'Endocrine System',
-    'HP:0000152': 'Head or Neck',
-    'HP:0002715': 'Immune System',
-    'HP:0001507': 'Growth',
-    'HP:0045027': 'Thoracic Cavity',
-    'HP:0001871': 'Blood',
-    'HP:0002086': 'Respiratory',
-    'HP:0000598': 'Ear Defects',
-    'HP:0001939': 'Metabolism/Homeostasis',
-    'HP:0003549': 'Connective Tissue',
-    'HP:0001608': 'Voice',
-    'HP:0000707': 'Nervous System',
-    'HP:0000769': 'Breast',
-    'HP:0001197': 'Prenatal development or birth',
-    'HP:0040064': 'Limbs',
-    'HP:0025031': 'Abdomen',
-    'HP:0003011': 'Musculature',
-    'HP:0001626': 'Cardiovascular System',
-    'HP:0000924': 'Skeletal System',
-    'HP:0500014': 'Test Result',
-    'HP:0001574': 'Integument',
-    'HP:0000119': 'Genitourinary System',
-    'HP:0025354': 'Cellular Phenotype',
+# See https://hpo.jax.org/app/browse/term/HP:0000118
+HPO_CATEGORY_DISCOVERY_COLUMNS = {
+    'HP:0000478': 'eye_defects',
+    'HP:0002664': 'neoplasm',
+    'HP:0000818': 'endocrine_system',
+    'HP:0000152': 'head_or_neck',
+    'HP:0002715': 'immune_system',
+    'HP:0001507': 'growth',
+    'HP:0045027': 'thoracic_cavity',
+    'HP:0001871': 'blood',
+    'HP:0002086': 'respiratory',
+    'HP:0000598': 'ear_defects',
+    'HP:0001939': 'metabolism_homeostasis',
+    'HP:0003549': 'connective_tissue',
+    'HP:0001608': 'voice',
+    'HP:0000707': 'nervous_system',
+    'HP:0000769': 'breast',
+    'HP:0001197': 'prenatal_development_or_birth',
+    'HP:0040064': 'limbs',
+    'HP:0025031': 'abdomen',
+    'HP:0033127': 'musculature',
+    'HP:0001626': 'cardiovascular_system',
+    'HP:0000924': 'skeletal_system',
+    'HP:0001574': 'integument',
+    'HP:0000119': 'genitourinary_system',
 }
+DISCOVERY_SKIP_HPO_CATEGORIES = {'HP:0025354', 'HP:0025142'}
+
 
 DEFAULT_ROW = {
     "t0": None,
@@ -715,31 +713,7 @@ DEFAULT_ROW = {
     "posted_publicly": "NS",
     "komp_early_release": "NS",
 }
-DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in [
-    "connective_tissue",
-    "voice",
-    "nervous_system",
-    "breast",
-    "eye_defects",
-    "prenatal_development_or_birth",
-    "neoplasm",
-    "endocrine_system",
-    "head_or_neck",
-    "immune_system",
-    "growth",
-    "limbs",
-    "thoracic_cavity",
-    "blood",
-    "musculature",
-    "cardiovascular_system",
-    "abdomen",
-    "skeletal_system",
-    "respiratory",
-    "ear_defects",
-    "metabolism_homeostasis",
-    "genitourinary_system",
-    "integument",
-]})
+DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in HPO_CATEGORY_DISCOVERY_COLUMNS.values()})
 
 ADDITIONAL_KINDREDS_FIELD = "n_unrelated_kindreds_with_causal_variants_in_gene"
 OVERLAPPING_KINDREDS_FIELD = "n_kindreds_overlapping_sv_similar_phenotype"
@@ -1221,10 +1195,11 @@ def _update_hpo_categories(rows, errors):
             if not category:
                 category_not_set_on_some_features = True
                 continue
+            if category in DISCOVERY_SKIP_HPO_CATEGORIES:
+                continue
 
-            hpo_category_name = HPO_CATEGORY_NAMES[category]
-            key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-            row[key] = "Y"
+            hpo_category_column_key = HPO_CATEGORY_DISCOVERY_COLUMNS[category]
+            row[hpo_category_column_key] = "Y"
 
         if category_not_set_on_some_features:
             errors.append('HPO category field not set for some HPO terms in {}'.format(row['family_id']))
