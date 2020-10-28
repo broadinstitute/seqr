@@ -3,12 +3,12 @@ import json
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusList, LocusListInterval, LocusListGene, Family, GeneNote
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def saved_variant_data(request, project_guid, variant_guids=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
@@ -58,7 +57,6 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json['familyGuid']
@@ -70,18 +68,14 @@ def create_saved_variant_handler(request):
         # are compound hets
         saved_variants = []
         for single_variant_json in variant_json['variant']:
-            saved_variant, created = SavedVariant.objects.get_or_create(
-                **_get_parsed_variant_args(single_variant_json, family)
-            )
-            if created:
-                saved_variant.saved_variant_json = single_variant_json
-                saved_variant.save()
+            saved_variant, _ = get_or_create_model_from_json(
+                SavedVariant, create_json=_get_parsed_variant_args(single_variant_json, family),
+                update_json={'saved_variant_json': single_variant_json}, user=request.user)
             saved_variants.append(saved_variant)
     else:
-        saved_variant = SavedVariant.objects.create(
-            saved_variant_json=variant_json['variant'],
-            **_get_parsed_variant_args(variant_json['variant'], family)
-        )
+        parsed_variant_json = _get_parsed_variant_args(variant_json['variant'], family)
+        parsed_variant_json['saved_variant_json'] = variant_json['variant']
+        saved_variant = create_model_from_json(SavedVariant, parsed_variant_json, request.user)
         saved_variants = [saved_variant]
 
     if variant_json.get('note'):
@@ -111,7 +105,6 @@ def _get_parsed_variant_args(variant_json, family):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_variant_note_handler(request, variant_guids):
     request_json = json.loads(request.body)
     save_as_gene_note = request_json.get('saveAsGeneNote')
@@ -143,11 +136,7 @@ def create_variant_note_handler(request, variant_guids):
         gene_id = next(
             (gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
              if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
-        GeneNote.objects.create(
-            note=request_json.get('note'),
-            gene_id=gene_id,
-            created_by=request.user,
-        )
+        create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user)[gene_id],
         }}
@@ -156,25 +145,23 @@ def create_variant_note_handler(request, variant_guids):
 
 
 def _create_variant_note(saved_variants, note_json, user):
-    note = VariantNote.objects.create(
-        note=note_json.get('note'),
-        submit_to_clinvar=note_json.get('submitToClinvar') or False,
-        search_hash=note_json.get('searchHash'),
-        created_by=user,
-    )
+    note = create_model_from_json(VariantNote, {
+        'note': note_json.get('note'),
+        'submit_to_clinvar': note_json.get('submitToClinvar') or False,
+        'search_hash': note_json.get('searchHash'),
+    }, user)
     note.saved_variants.set(saved_variants)
     return note
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
         check_project_permissions(project, request.user)
     request_json = json.loads(request.body)
-    update_model_from_json(note, request_json, allow_unknown_keys=True)
+    update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
     note_json['variantGuids'] = variant_guids.split(',')
@@ -185,14 +172,13 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
         check_project_permissions(project, request.user)
-    note.delete()
+    note.delete_model(request.user, user_can_delete=True)
 
     saved_variants_by_guid = {}
     for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids):
@@ -200,7 +186,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
         if not notes:
             if not saved_variant.varianttag_set.count() > 0:
-                saved_variant.delete()
+                saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
@@ -210,7 +196,6 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
     request_json = json.loads(request.body)
 
@@ -225,7 +210,7 @@ def update_variant_tags_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []))
+    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []), request.user)
     created_tags = _create_new_tags(saved_variants, request_json, request.user)
     tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
     tag_updates.update({guid: None for guid in deleted_tag_guids})
@@ -236,7 +221,7 @@ def update_variant_tags_handler(request, variant_guids):
         saved_variants_by_guid[saved_variant.guid] = {'tagGuids': [t.guid for t in tags]}
         if not tags:
             if not saved_variant.variantnote_set.count() > 0:
-                saved_variant.delete()
+                saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
@@ -246,7 +231,6 @@ def update_variant_tags_handler(request, variant_guids):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_functional_data_handler(request, variant_guids):
     request_json = json.loads(request.body)
 
@@ -263,20 +247,19 @@ def update_variant_functional_data_handler(request, variant_guids):
 
     updated_functional_data = request_json.get('functionalData', [])
     deleted_functional_guids = _delete_removed_tags(
-        saved_variants, all_variant_guids, updated_functional_data, tag_type='functionaldata')
+        saved_variants, all_variant_guids, updated_functional_data, request.user, tag_type='functionaldata')
 
     updated_functional_models = []
     for tag in updated_functional_data:
         if tag.get('tagGuid'):
             functional_data = VariantFunctionalData.objects.get(guid=tag.get('tagGuid'))
-            update_model_from_json(functional_data, tag, allow_unknown_keys=True)
+            update_model_from_json(functional_data, tag, user=request.user, allow_unknown_keys=True)
         else:
-            functional_data = VariantFunctionalData.objects.create(
-                functional_data_tag=tag.get('name'),
-                metadata=tag.get('metadata'),
-                search_hash=request_json.get('searchHash'),
-                created_by=request.user,
-            )
+            functional_data = create_model_from_json(VariantFunctionalData, {
+                'functional_data_tag': tag.get('name'),
+                'metadata': tag.get('metadata'),
+                'search_hash': request_json.get('searchHash'),
+            }, request.user)
             functional_data.saved_variants.set(saved_variants)
         updated_functional_models.append(functional_data)
 
@@ -291,7 +274,7 @@ def update_variant_functional_data_handler(request, variant_guids):
     })
 
 
-def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, tag_type='tag'):
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type='tag'):
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
     tag_set = getattr(saved_variants[0], 'variant{}_set'.format(tag_type))
@@ -299,7 +282,7 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, tag_typ
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
             deleted_tag_guids.append(tag.guid)
-            tag.delete()
+            tag.delete_model(user, user_can_delete=True)
     return deleted_tag_guids
 
 
@@ -313,34 +296,30 @@ def _create_new_tags(saved_variants, tags_json, user):
             Q(name=tag['name']),
             Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
         )
-        tag_model = VariantTag.objects.create(
-            variant_tag_type=variant_tag_type,
-            search_hash=tags_json.get('searchHash'),
-            created_by=user,
-        )
+        tag_model = create_model_from_json(VariantTag, {
+            'variant_tag_type': variant_tag_type,
+            'search_hash': tags_json.get('searchHash'),
+        }, user)
         tag_model.saved_variants.set(saved_variants)
         new_tag_models.append(tag_model)
     return new_tag_models
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
-    updated_saved_variant_guids = update_project_saved_variant_json(project)
+    updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
 
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user, can_edit=True)
 
-    saved_variant.selected_main_transcript_id = transcript_id
-    saved_variant.save()
+    update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
 

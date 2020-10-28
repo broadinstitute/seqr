@@ -1,6 +1,6 @@
 FROM postgres:12.3
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 # install wget
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates htop less wget curl \

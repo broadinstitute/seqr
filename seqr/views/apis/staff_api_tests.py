@@ -230,7 +230,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 EXPECTED_DISCOVERY_SHEET_ROW = \
     {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
      'solved': 'TIER 1 GENE', 'head_or_neck': 'N', 'analysis_complete_status': 'complete',
-     'cardiovascular_system': 'Y', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
+     'cardiovascular_system': 'N', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
      'biochemical_function': 'Y', 'omim_number_post_discovery': '615120,615123',
      'genome_wide_linkage': 'NA 2', 'metabolism_homeostasis': 'N', 'growth': 'N',
      't0': '2017-02-05T06:42:55.397Z', 'months_since_t0': 38, 'sample_source': 'CMG',
@@ -238,7 +238,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      'expected_inheritance_model': 'Autosomal recessive inheritance',
      'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
      'protein_interaction': 'N', 'n_kindreds': '1', 'num_individuals_sequenced': 3,
-     'musculature': 'N', 'sequencing_approach': 'WES', 'neoplasm': 'N',
+     'musculature': 'Y', 'sequencing_approach': 'WES', 'neoplasm': 'N',
      'collaborator': '1kg project n\xe5me with uni\xe7\xf8de',
      'actual_inheritance_model': 'de novo', 'novel_mendelian_gene': 'Y',
      'endocrine_system': 'N', 'patient_cells': 'N', 'komp_early_release': 'N',

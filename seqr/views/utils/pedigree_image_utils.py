@@ -15,13 +15,14 @@ import tempfile
 from django.core.files import File
 
 from seqr.models import Individual
+from seqr.utils.logging_utils import log_model_update
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
 
-def update_pedigree_images(families, project_guid=None):
+def update_pedigree_images(families, user, project_guid=None):
     """Regenerate pedigree image for one or more families
 
     Args:
@@ -29,10 +30,10 @@ def update_pedigree_images(families, project_guid=None):
     """
 
     for family in families:
-        _update_pedigree_image(family, project_guid=project_guid)
+        _update_pedigree_image(family, user, project_guid=project_guid)
 
 
-def _get_parsed_individuals(family, project_guid=None):
+def _get_parsed_individuals(family, user, project_guid=None):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
     Args:
@@ -41,8 +42,7 @@ def _get_parsed_individuals(family, project_guid=None):
     individuals = Individual.objects.filter(family=family)
 
     if len(individuals) < 2:
-        family.pedigree_image = None
-        family.save()
+        _save_pedigree_image_file(family, None, user)
         return None
 
     # convert individuals to json
@@ -97,14 +97,14 @@ def _get_parsed_individuals(family, project_guid=None):
     ]
 
 
-def _update_pedigree_image(family, project_guid=None):
+def _update_pedigree_image(family, user, project_guid=None):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
     Args:
          family (object): seqr Family model.
     """
 
-    individual_records = _get_parsed_individuals(family, project_guid)
+    individual_records = _get_parsed_individuals(family, user, project_guid)
     if not individual_records:
         return
 
@@ -128,19 +128,22 @@ def _update_pedigree_image(family, project_guid=None):
 
     if not os.path.isfile(png_file_path):
         logger.error("Failed to generated pedigree image for family: %s" % family_id)
-        family.pedigree_image = None
-        family.save()
+        _save_pedigree_image_file(family, None, user)
         return
 
-    _save_pedigree_image_file(family, png_file_path)
+    _save_pedigree_image_file(family, png_file_path, user)
 
     os.remove(png_file_path)
 
 
-def _save_pedigree_image_file(family, png_file_path):
-    with open(png_file_path, 'rb') as pedigree_image_file:
-        family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
-        family.save()
+def _save_pedigree_image_file(family, png_file_path, user):
+    if png_file_path:
+        with open(png_file_path, 'rb') as pedigree_image_file:
+            family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
+    else:
+        family.pedigree_image = None
+    family.save()
+    log_model_update(logger, family, user, update_type='update', update_fields=['pedigree_image'])
 
 
 def _random_string(size=10):

@@ -7,14 +7,13 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_project_from_json
+from seqr.views.utils.json_to_orm_utils import update_project_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_project_handler(request):
     """Create a new project.
 
@@ -51,7 +49,7 @@ def create_project_handler(request):
     description = request_json.get('description', '')
     genome_version = request_json.get('genomeVersion')
 
-    project = _create_project(name, description=description, genome_version=genome_version, user=request.user)
+    project = _create_project(name, request.user, description=description, genome_version=genome_version)
 
     return create_json_response({
         'projectsByGuid': {
@@ -61,7 +59,6 @@ def create_project_handler(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_project_handler(request, project_guid):
     """Update project metadata - including one or more of these fields: name, description
 
@@ -91,7 +88,7 @@ def update_project_handler(request, project_guid):
     check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    update_project_from_json(project, request_json, allow_unknown_keys=True)
+    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True)
 
     return create_json_response({
         'projectsByGuid': {
@@ -101,7 +98,6 @@ def update_project_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_project_handler(request, project_guid):
     """Delete project - request handler.
 
@@ -109,13 +105,11 @@ def delete_project_handler(request, project_guid):
         project_guid (string): GUID of the project to delete
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, is_owner=True)
-
-    _delete_project(project)
+    _delete_project(project_guid, request.user)
 
     return create_json_response({
         'projectsByGuid': {
-            project.guid: None
+            project_guid: None
         },
     })
 
@@ -136,7 +130,7 @@ def project_page_data(request, project_guid):
         project_guid (string): GUID of the Project to retrieve data for.
     """
     project = get_project_and_check_permissions(project_guid, request.user)
-    update_project_from_json(project, {'last_accessed_date': timezone.now()})
+    update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
 
     response = _get_project_child_entities(project, request.user)
 
@@ -333,7 +327,7 @@ def _get_json_for_variant_tag_types(project):
     }
 
 
-def _create_project(name, description=None, genome_version=None, user=None):
+def _create_project(name, user, description=None, genome_version=None):
     """Creates a new project.
 
     Args:
@@ -349,22 +343,25 @@ def _create_project(name, description=None, genome_version=None, user=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = Project.objects.get_or_create(**project_args)
+    project, _ = get_or_create_model_from_json(Project, project_args, update_json=None, user=user)
 
     return project
 
 
-def _delete_project(project):
+def _delete_project(project_guid, user):
     """Delete project.
 
     Args:
-        project (object): Django ORM model for the project to delete
+        project_guid (string): GUID of the project to delete
+        user (object): Django ORM model for the user
     """
-    IgvSample.objects.filter(individual__family__project=project).delete()
-    Sample.objects.filter(individual__family__project=project).delete()
+    project = get_project_and_check_permissions(project_guid, user, is_owner=True)
 
-    Individual.objects.filter(family__project=project).delete()
+    IgvSample.bulk_delete(user, individual__family__project=project)
+    Sample.bulk_delete(user, individual__family__project=project)
 
-    Family.objects.filter(project=project).delete()
+    Individual.bulk_delete(user, family__project=project)
 
-    project.delete()
+    Family.bulk_delete(user, project=project)
+
+    project.delete_model(user, user_can_delete=True)

@@ -9,8 +9,7 @@ import time
 
 from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
     wait_for_resource, get_resource_name
-# TODO move into seqr repo
-from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
+from deploy.servctl_utils.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')

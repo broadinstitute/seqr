@@ -1,9 +1,9 @@
 """APIs for setting Project categories"""
 import json
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, ProjectCategory
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import check_project_permissions
@@ -11,7 +11,6 @@ from settings import API_LOGIN_REQUIRED_URL
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_project_categories_handler(request, project_guid):
     """Update ProjectCategories for the given project.
 
@@ -79,7 +78,7 @@ def _update_project_categories(project, user, category_guids):
         if project_category.guid not in category_guids:
             project_category.projects.remove(project)
             if project_category.projects.count() == 0:
-                project_category.delete()
+                project_category.delete_model(user, user_can_delete=True)
                 project_categories_by_guid[project_category.guid] = None
         else:
             # also record the project_category guids for which there's already a ProjectCategory
@@ -98,7 +97,7 @@ def _update_project_categories(project, user, category_guids):
 
     # create ProjectCategory objects for new categories, and add ProjectCategory => Project mappings for them to this project
     for category_name in project_categories_to_create:
-        project_category = ProjectCategory.objects.create(name=category_name, created_by=user)
+        project_category = create_model_from_json(ProjectCategory, {'name': category_name}, user)
         project_category.projects.add(project)
 
         project_categories_by_guid[project_category.guid] = project_category.json()

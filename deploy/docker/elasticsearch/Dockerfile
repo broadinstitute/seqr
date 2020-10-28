@@ -1,6 +1,6 @@
 FROM docker.elastic.co/elasticsearch/elasticsearch:7.8.1
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 ENV ELASTICSEARCH_VERSION="7.8.1"
 
