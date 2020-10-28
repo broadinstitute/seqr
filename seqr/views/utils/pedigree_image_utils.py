@@ -15,6 +15,7 @@ import tempfile
 from django.core.files import File
 
 from seqr.models import Individual
+from seqr.utils.logging_utils import log_model_update
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
 
@@ -142,10 +143,7 @@ def _save_pedigree_image_file(family, png_file_path, user):
     else:
         family.pedigree_image = None
     family.save()
-    db_update = {
-        'dbEntity': 'Family', 'entityId': family.guid, 'updateType': 'update', 'updateFields': ['pedigree_image'],
-    }
-    logger.info('Updated Family {}'.format(family.guid), extra={'user': user, 'db_update': db_update})
+    log_model_update(logger, family, user, update_type='update', update_fields=['pedigree_image'])
 
 
 def _random_string(size=10):

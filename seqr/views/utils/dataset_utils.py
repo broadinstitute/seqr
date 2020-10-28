@@ -6,6 +6,7 @@ import random
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.logging_utils import log_model_bulk_update
 from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ def match_sample_ids_to_sample_records(
 
     Args:
         project (object): Django ORM project model
+        user (object): Django ORM User model
         sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
@@ -155,10 +157,7 @@ def match_sample_ids_to_sample_records(
             sample_id_to_sample_record.update({
                 sample.sample_id: sample for sample in Sample.bulk_create(user, new_samples)
             })
-            db_update = {
-                'dbEntity': 'Sample', 'entityIds': [s.guid for s in new_samples], 'updateType': 'bulk_create',
-            }
-            logger.info('create {} Samples'.format(len(new_samples)), extra={'user': user, 'db_update': db_update})
+            log_model_bulk_update(logger, new_samples, user, 'create')
 
     return sample_id_to_sample_record
 

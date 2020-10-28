@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 from seqr.models import Individual
+from seqr.utils.logging_utils import log_model_update
 from seqr.views.utils.json_utils import _to_snake_case
 
 logger = logging.getLogger(__name__)
@@ -77,13 +78,13 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
     if updated_fields:
         model_obj.save()
         if verbose:
-            _log_model_update(model_obj, user, 'update', updated_fields)
+            log_model_update(logger, model_obj, user, 'update', updated_fields)
     return bool(updated_fields)
 
 
 def create_model_from_json(model_class, json, user):
     model = model_class.objects.create(created_by=user, **json)
-    _log_model_update(model, user, 'create', json.keys())
+    log_model_update(logger, model, user, 'create', json.keys())
     return model
 
 
@@ -97,16 +98,7 @@ def get_or_create_model_from_json(model_class, create_json, update_json, user):
         log_update_fields = list(create_json.keys()) + list(updated_fields)
         if update_json:
             log_update_fields += list(update_json.keys())
-        _log_model_update(model, user, 'create', log_update_fields)
+        log_model_update(logger, model, user, 'create', log_update_fields)
     if update_json or updated_fields:
         update_model_from_json(model, update_json or {}, user, updated_fields=updated_fields, verbose=not created)
     return model, created
-
-
-def _log_model_update(model, user, update_type, update_fields):
-    db_entity = type(model).__name__
-    entity_id = getattr(model, 'guid', model.pk)
-    db_update = {
-        'dbEntity': db_entity, 'entityId': entity_id, 'updateType': update_type, 'updateFields': list(update_fields),
-    }
-    logger.info('{} {} {}'.format(update_type, db_entity, entity_id), extra={'user': user, 'db_update': db_update})

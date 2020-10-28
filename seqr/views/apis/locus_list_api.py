@@ -8,6 +8,7 @@ from django.db.models import Q, Count
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
+from seqr.utils.logging_utils import log_model_update
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -112,9 +113,7 @@ def add_project_locus_lists(request, project_guid):
     for locus_list in locus_lists:
         locus_list.projects.add(project)
         locus_list.save()
-    logger.info('Updated Project {}'.format(project_guid), extra={'user': request.user, 'db_update': {
-        'dbEntity': 'Project', 'entityId': project_guid, 'updateType': 'update', 'updateFields': ['locus_lists'],
-    }})
+    log_model_update(logger, project, user=request.user, update_type='update', update_fields=['locus_lists'])
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
@@ -129,9 +128,8 @@ def delete_project_locus_lists(request, project_guid):
     for locus_list in locus_lists:
         locus_list.projects.remove(project)
         locus_list.save()
-    logger.info('Updated Project {}'.format(project_guid), extra={'user': request.user, 'db_update': {
-        'dbEntity': 'Project', 'entityId': project_guid, 'updateType': 'update', 'updateFields': ['locus_lists'],
-    }})
+    log_model_update(logger, project, user=request.user, update_type='update', update_fields=['locus_lists'])
+
 
     return create_json_response({
         'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],

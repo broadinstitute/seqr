@@ -449,9 +449,8 @@ def create_saved_search_handler(request):
             search=request_json,
             created_by=request.user,
         ).order_by('created_date')
-        saved_search = dup_searches[0]
-        for search in dup_searches[1:]:
-            search.delete()
+        saved_search = dup_searches.first()
+        VariantSearch.bulk_delete(request.user, queryset=dup_searches.exclude(guid=saved_search.guid))
         update_model_from_json(saved_search, {'name': name}, request.user)
 
     return create_json_response({
