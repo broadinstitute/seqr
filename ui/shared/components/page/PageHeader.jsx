@@ -152,12 +152,13 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
 
+const NO_HEADER_PAGES = ['/dashboard', '/users', '/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
+
 export default () =>
   <Switch>
-    <Route path="/dashboard" component={() => null} />
-    <Route path="/users" component={() => null} />
-    <Route path="/login" component={() => null} />
-    <Route path="/matchmaker" component={() => null} />
+    {NO_HEADER_PAGES.map(page =>
+      <Route key={page} path={page} component={() => null} />,
+    )}
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
     <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />
