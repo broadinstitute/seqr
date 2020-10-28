@@ -1,6 +1,7 @@
 jobs:
   include:
-    - language: python
+    - name: python_tests
+      language: python
       python: 3.7
       addons:
         postgresql: 9.6
@@ -11,17 +12,18 @@ jobs:
       - coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
       - coverage report --fail-under=99
 
-    - language: node_js
+    - name: javascript_tests
+      language: node_js
       node_js: 11.8.0
-      os: darwin
       before_install:
       - cd ui/
       install:
-      - echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install
+      - echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
       script:
       - npm test
 
-    - services:
+    - name: local_intall_test
+      services:
       - docker
       script:
       - ./test_local_deployment.sh
