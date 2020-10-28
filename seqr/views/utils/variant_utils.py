@@ -4,12 +4,13 @@ import redis
 from seqr.models import SavedVariant, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
 
 
-def update_project_saved_variant_json(project, family_id=None):
+def update_project_saved_variant_json(project, family_id=None, user=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
@@ -32,7 +33,7 @@ def update_project_saved_variant_json(project, family_id=None):
         for family_guid in var['familyGuids']:
             saved_variant = saved_variants_map.get((var['variantId'], family_guid))
             if saved_variant:
-                _update_saved_variant_json(saved_variant, var)
+                update_model_from_json(saved_variant, {'saved_variant_json': var}, user)
                 updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
@@ -76,9 +77,3 @@ def saved_variant_genes(variants):
         if gene:
             gene['locusListGuids'] = []
     return genes
-
-
-def _update_saved_variant_json(saved_variant, saved_variant_json):
-    saved_variant.saved_variant_json = saved_variant_json
-    saved_variant.save()
-

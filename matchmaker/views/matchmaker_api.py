@@ -14,7 +14,8 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
@@ -92,17 +93,16 @@ def _search_matches(submission, user):
         result_patient_id = result['patient']['id']
         saved_result = initial_saved_results.get(result_patient_id)
         if not saved_result:
-            saved_result = MatchmakerResult.objects.create(
-                submission=submission,
-                originating_submission=local_result_submissions.get(result_patient_id),
-                originating_query=incoming_query,
-                result_data=result,
-                last_modified_by=user,
-            )
+            saved_result = create_model_from_json(MatchmakerResult, {
+                'submission': submission,
+                'originating_submission': local_result_submissions.get(result_patient_id),
+                'originating_query': incoming_query,
+                'result_data': result,
+                'last_modified_by': user,
+            }, user)
             new_results.append(result)
         else:
-            saved_result.result_data = result
-            saved_result.save()
+            update_model_from_json(saved_result, {'result_data': result}, user)
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
@@ -119,12 +119,11 @@ def _search_matches(submission, user):
         saved_result = initial_saved_results[patient_id]
         if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
             if not saved_result.match_removed:
-                saved_result.match_removed = True
-                saved_result.save()
+                update_model_from_json(saved_result, {'match_removed': True}, user)
                 removed_count += 1
             saved_results[patient_id] = saved_result
         else:
-            saved_result.delete()
+            saved_result.delete_model(user, user_can_delete=True)
             removed_count += 1
 
     if removed_count:
@@ -238,13 +237,13 @@ def update_mme_submission(request, submission_guid=None):
             return create_json_response({}, status=400, reason='Individual is required for a new submission')
         individual = Individual.objects.get(guid=individual_guid)
         check_project_permissions(individual.family.project, request.user)
-        submission = MatchmakerSubmission.objects.create(
-            individual=individual,
-            submission_id=individual.guid,
-            label=individual.individual_id,
-        )
+        submission = create_model_from_json(MatchmakerSubmission, {
+            'individual': individual,
+            'submission_id': individual.guid,
+            'label': individual.individual_id,
+        }, request.user)
 
-    update_model_from_json(submission, submission_json, allow_unknown_keys=True)
+    update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
     # search for new matches
     return _search_matches(submission, request.user)
@@ -265,13 +264,11 @@ def delete_mme_submission(request, submission_guid):
         )
 
     deleted_date = datetime.now()
-    submission.deleted_date = deleted_date
-    submission.deleted_by = request.user
-    submission.save()
+    update_model_from_json(submission, {'deleted_date': deleted_date, 'deleted_by': request.user}, request.user)
 
     for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
-            saved_result.delete()
+            saved_result.delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'deletedDate': deleted_date}}})
 
@@ -290,7 +287,7 @@ def update_mme_result_status(request, matchmaker_result_guid):
     check_mme_permissions(result.submission, request.user)
 
     request_json = json.loads(request.body)
-    update_model_from_json(result, request_json, allow_unknown_keys=True)
+    update_model_from_json(result, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
@@ -329,7 +326,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
                 json_body = {'message':message}
         return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
-    update_model_from_json(result, {'weContacted': True})
+    update_model_from_json(result, {'weContacted': True}, user=request.user)
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
@@ -347,11 +344,12 @@ def update_mme_contact_note(request, institution):
         Status code and results
     """
     institution = institution.strip().lower()
-    note, _ = MatchmakerContactNotes.objects.get_or_create(institution=institution)
-
     request_json = json.loads(request.body)
-    note.comments = request_json.get('comments', '')
-    note.save()
+    note, _ = get_or_create_model_from_json(
+        MatchmakerContactNotes,
+        create_json={'institution': institution},
+        update_json={'comments': request_json.get('comments', '')},
+        user=request.user)
 
     return create_json_response({
         'mmeContactNotes': {institution: _get_json_for_model(note, user=request.user)},
