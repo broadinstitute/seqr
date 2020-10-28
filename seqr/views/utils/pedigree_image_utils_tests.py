@@ -29,7 +29,7 @@ class PedigreeImageTest(TestCase):
 
         test_families = Family.objects.filter(guid='F000001_1')
 
-        update_pedigree_images(test_families)
+        update_pedigree_images(test_families, None)
         pedigree_image = test_families.first().pedigree_image
         self.assertTrue(bool(pedigree_image))
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
@@ -53,7 +53,7 @@ class PedigreeImageTest(TestCase):
         mock_tempfile_file.write.reset_mock()
         mock_os_system.reset_mock()
 
-        update_pedigree_images(test_families)
+        update_pedigree_images(test_families, None)
         pedigree_image = test_families.first().pedigree_image
         self.assertTrue(bool(pedigree_image))
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
@@ -74,7 +74,7 @@ class PedigreeImageTest(TestCase):
         mock_tempfile_file.write.reset_mock()
         mock_os_system.reset_mock()
         one_individual_families = Family.objects.filter(guid='F000003_3')
-        update_pedigree_images(one_individual_families)
+        update_pedigree_images(one_individual_families, None)
         pedigree_image = one_individual_families.first().pedigree_image
         self.assertFalse(bool(pedigree_image))
         mock_os_system.assert_not_called()
