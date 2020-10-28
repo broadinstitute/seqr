@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'hijack',
-    'corsheaders',
     'guardian',
     'anymail',
     'seqr',
@@ -49,11 +48,12 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
@@ -61,16 +61,10 @@ MIDDLEWARE = [
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/'
 
-# cors settings
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'http://localhost:8000',
-)
-CORS_ALLOW_CREDENTIALS = True
-
 ALLOWED_HOSTS = ['*']
 
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_NAME = 'csrf_token'
+CSRF_COOKIE_HTTPONLY = False
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -136,43 +130,40 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '%(asctime)s %(levelname)s: %(message)s     (%(name)s.%(funcName)s:%(lineno)d)',
+        'json_log_formatter': {
+            '()': 'seqr.utils.logging_utils.JsonLogFormatter',
         },
-        'simple': {
-            'format': '%(asctime)s %(levelname)s:  %(message)s'
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': 'INFO',
-            'filters': ['require_debug_false'],
-            'class': 'logging.FileHandler',
-            'filename': 'django.info.log',
-            'formatter': 'verbose',
-        },
-        'console': {
+        'console_json': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'json_log_formatter',
+        },
+        'null': {
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
+        # By default, log to console as json. Gunicorn will forward console logs to kubernetes and stackdriver
         '': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console_json'],
             'level': 'INFO',
-            'formatter': 'verbose',
             'propagate': True,
+        },
+        # Disable default server logging since we use custom request logging middlewear
+        'django.server': {
+            'handlers': ['null'],
+            'propagate': False,
+        },
+        # Log all other django logs to console as json
+        'django': {
+            'handlers': ['console_json'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console_json'],
+            'propagate': False,
         },
     }
 }
@@ -223,12 +214,20 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
-if os.environ.get('DEPLOYMENT_TYPE') == 'prod':
+if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
 else:
     DEBUG = True
+    # Enable CORS for local development
+    INSTALLED_APPS.append('corsheaders')
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+    CORS_ORIGIN_WHITELIST = (
+        'http://localhost:3000',
+        'http://localhost:8000',
+    )
+    CORS_ALLOW_CREDENTIALS = True
 
 
 #########################################################

@@ -1,6 +1,6 @@
 FROM redis:6.0.6
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 COPY bashrc /root/.bashrc
 

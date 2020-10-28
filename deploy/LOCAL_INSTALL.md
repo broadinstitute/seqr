@@ -27,7 +27,7 @@ The steps below describe how to create a new empty seqr instance with a single A
 ```
 SEQR_DIR=$(pwd)
 
-wget https://raw.githubusercontent.com/macarthur-lab/seqr/master/docker-compose.yml
+wget https://raw.githubusercontent.com/broadinstitute/seqr/master/docker-compose.yml
 
 docker-compose up -d seqr   # start up the seqr docker image in the background after also starting other components it depends on (postgres, redis, elasticsearch). This may take 10+ minutes.
 docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
@@ -59,7 +59,7 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
    SEQR_DIR=$(pwd)
    
-   wget https://raw.githubusercontent.com/macarthur-lab/seqr/master/docker-compose.yml
+   wget https://raw.githubusercontent.com/broadinstitute/seqr/master/docker-compose.yml
    
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
@@ -201,6 +201,7 @@ To run annotation and database loading as 2 separate steps, use the following co
     # load the annotated dataset into your local elasticsearch instance
    python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
         --dest-path /input_vcfs/GRCh38/your-callset.mt \
+        --genome-version 38 \
         --es-host elasticsearch  \
         --es-index your-callset-name
 ```
@@ -218,4 +219,4 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 
 #### Enable read viewing in the browser (optional): 
 
-To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/READVIZ_SETUP.md)**      
+To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/broadinstitute/seqr/blob/master/deploy/READVIZ_SETUP.md)**      

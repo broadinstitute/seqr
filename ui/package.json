@@ -61,11 +61,12 @@
     "why-did-you-update": "^0.1.1"
   },
   "dependencies": {
-    "draft-js": "^0.10.4",
+    "draft-js": "^0.11.7",
     "draftjs-md-converter": "^0.1.6",
     "extend": "^3.0.2",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "igv": "^2.2.2",
+    "js-cookie": "^2.2.1",
     "jsoneditor": "^9.0.2",
     "jsoneditor-react": "^3.0.0",
     "lodash": "^4.17.20",
@@ -200,7 +201,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/macarthur-lab/seqr.git"
+    "url": "git+https://github.com/broadinstitute/seqr.git"
   },
   "license": "AGPL-3.0"
 }

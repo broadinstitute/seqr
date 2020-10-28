@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.7
-# TODO convert to python 3(https://github.com/macarthur-lab/seqr-private/issues/883)
+# TODO convert to python 3 (https://github.com/broadinstitute/seqr-private/issues/883)
 
 import argparse
 import logging
