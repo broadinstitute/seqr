@@ -579,8 +579,6 @@ GOOGLE_AUTHORIZATION_URL = '{}auth'.format(GOOGLE_OAUTH2_URL)
 GOOGLE_ACCESS_TOKEN_URL = '{}token'.format(GOOGLE_OAUTH2_URL)
 GOOGLE_REVOKE_TOKEN_URL = '{}revoke'.format(GOOGLE_OAUTH2_URL)
 
-TERRA_API_ROOT_URL = 'https://terra.api/'
-
 GOOGLE_SERVICE_ACCOUNT_INFO = {
   "type": "service_account",
   "project_id": "my-seqr",
@@ -594,3 +592,5 @@ GOOGLE_SERVICE_ACCOUNT_INFO = {
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sf-seqr%40my-seqr.iam.gserviceaccount.com"
 }
+
+GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
