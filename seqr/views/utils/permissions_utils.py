@@ -27,6 +27,8 @@ def project_has_anvil(project):
 
 
 def anvil_has_perm(user, permission_level, project):
+    if not anvil_enabled():
+        return False
     collaborators = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name) if project_has_anvil(project) else {}
     if user.email in collaborators.keys():
         permission = collaborators[user.email]
@@ -81,7 +83,7 @@ def _get_workspaces_user_can_view(user):
     workspaces = []
     for ws in workspace_list:
         workspace_name = '/'.join([ws['workspace']['namespace'], ws['workspace']['name']])
-        if not ws['public']:
+        if not ws.get('public', True):
             if user.is_staff:
                 workspaces.append(workspace_name)
             else:

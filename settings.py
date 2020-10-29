@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -179,9 +180,6 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-if TERRA_API_ROOT_URL:
-      AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
-
 # set the secret key
 SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
 try:
@@ -316,8 +314,10 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 
 if TERRA_API_ROOT_URL:
-    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web').get('client_id')
-    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web').get('client_secret')
+    AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
+
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
 
     SOCIAL_AUTH_GOOGLE_PLUS_AUTH_EXTRA_ARGUMENTS = {
           'access_type': 'offline'
