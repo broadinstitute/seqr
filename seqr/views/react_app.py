@@ -6,14 +6,23 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
 from django.template import loader
 from django.http import HttpResponse
-from settings import SEQR_VERSION, CSRF_COOKIE_NAME
+from settings import SEQR_VERSION, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, CSRF_COOKIE_NAME
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 
 
 @login_required
 def main_app(request, *args, **kwargs):
     """Loads the react single page app."""
-    return _render_app_html(request, {'user': _get_json_for_user(request.user)})
+    user = request.user
+    user_json = _get_json_for_user(user)
+
+    current_privacy = user.userpolicy.privacy_version if hasattr(user, 'userpolicy') else None
+    current_tos = user.userpolicy.privacy_version if hasattr(user, 'userpolicy') else None
+    user_json.update({
+        'currentPrivacy': current_privacy == SEQR_PRIVACY_VERSION,
+        'currentTos': current_tos == SEQR_TOS_VERSION,
+    })
+    return _render_app_html(request, {'user': user_json})
 
 
 def no_login_main_app(request, *args, **kwargs):

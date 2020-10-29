@@ -136,6 +136,12 @@ class ModelWithGUID(models.Model):
         queryset.delete()
 
 
+class UserPolicy(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    privacy_version = models.DecimalField(max_digits=4, decimal_places=2)
+    tos_version = models.DecimalField(max_digits=4, decimal_places=2)
+
+
 class Project(ModelWithGUID):
     name = models.TextField()  # human-readable project name
     description = models.TextField(null=True, blank=True)
