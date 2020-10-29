@@ -25,6 +25,7 @@ def anvil_enabled():
 
 
 class TerraAPIException(Exception):
+
     """For exceptions happen in Terra API calls."""
 
     pass
@@ -44,12 +45,10 @@ class ServiceAccountSession(AuthorizedSession):
 
     def __init__(self):
         """Init the session start time to None."""
-
         self.started_at = None
 
     def create_session(self):
         """Create a service account session."""
-
         credentials = service_account.Credentials.from_service_account_info(GOOGLE_SERVICE_ACCOUNT_INFO,
                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         super(ServiceAccountSession, self).__init__(credentials)
