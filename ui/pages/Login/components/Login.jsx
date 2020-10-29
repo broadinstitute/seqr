@@ -29,7 +29,7 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
       {location.search === '?googleLoginFailed=true' &&
       <Message visible warning>
         Logging in has failed. Make sure you have registered your account on AnVIL. <br />
-        Click this link <a href="https://anvil.terra.bio">https://anvil.terra.bio</a>, sign in AnVIL with Google, and register your account.
+        Click this link <a href="https://anvil.terra.bio">https://anvil.terra.bio</a>, sign in to AnVIL with Google, and register your account.
       </Message> }
       <a href="/login/google-oauth2">Sign in with Google</a>
     </div>}
