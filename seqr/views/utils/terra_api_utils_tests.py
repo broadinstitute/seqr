@@ -1,7 +1,7 @@
 import mock
 import responses
 
-from django.test import TestCase, override_settings, modify_settings
+from django.test import TestCase
 from django.contrib.auth.models import User
 
 from settings import TERRA_API_ROOT_URL
@@ -9,19 +9,16 @@ from seqr.views.utils.terra_api_utils import get_anvil_billing_projects, get_anv
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACCOUNT_INFO
 
 
-@mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
-@mock.patch('seqr.views.utils.terra_api_utils.time')
-class TerraApiUtilsCase(TestCase):
-    if anvil_enabled():
+if anvil_enabled():
+    @mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
+    @mock.patch('seqr.views.utils.terra_api_utils.time')
+    class TerraApiUtilsCase(TestCase):
         fixtures = ['users', 'social_auth_data']
-    else:
-        fixtures = ['users']
 
-    def setUp(self):
-        self.user = User.objects.get(email = 'test_user@test.com')
-        self.extra_data = {"expires": 3599, "auth_time": 1603287741, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
+        def setUp(self):
+            self.user = User.objects.get(email = 'test_user@test.com')
+            self.extra_data = {"expires": 3599, "auth_time": 1603287741, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
 
-    if anvil_enabled():
         @responses.activate
         def test_get_billing_projects(self, mock_time):
             content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
