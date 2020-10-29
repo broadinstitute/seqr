@@ -26,6 +26,7 @@ def anvil_enabled():
 
 class TerraAPIException(Exception):
     """For exceptions happen in Terra API calls."""
+
     pass
 
 
@@ -40,16 +41,15 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 class ServiceAccountSession(AuthorizedSession):
+
     def __init__(self):
+        """Init the session start time to None."""
+
         self.started_at = None
 
     def create_session(self):
-        """
-        Create an AnVIL session for a user account if credentials are provided, otherwise create one for the service account
+        """Create a service account session."""
 
-        :param service_account_info: service account secrects
-        :param scopes: scopes of the access privilege of the session
-        """
         credentials = service_account.Credentials.from_service_account_info(GOOGLE_SERVICE_ACCOUNT_INFO,
                                         scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         super(ServiceAccountSession, self).__init__(credentials)
@@ -194,7 +194,8 @@ def get_anvil_billing_projects(user):
 
 
 def get_anvil_profile(user):
-    """Get activation information for the logged-in user.
+    """
+    Get activation information for the logged-in user.
 
     Args:
         user (User model): who's credentials will be used to access AnVIL
