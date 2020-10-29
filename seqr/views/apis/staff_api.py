@@ -1357,9 +1357,9 @@ def upload_qc_pipeline_output(request):
     ]
 
     if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        _update_individuals_sv_qc(records_with_individuals)
+        _update_individuals_sv_qc(records_with_individuals, request.user)
     else:
-        _update_individuals_variant_qc(records_with_individuals, data_type, warnings)
+        _update_individuals_variant_qc(records_with_individuals, data_type, warnings, request.user)
 
     message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
     info.append(message)
@@ -1401,7 +1401,7 @@ def _parse_raw_qc_records(json_records):
     return Sample.DATASET_TYPE_VARIANT_CALLS, data_type, records_by_sample_id
 
 
-def _update_individuals_variant_qc(json_records, data_type, warnings):
+def _update_individuals_variant_qc(json_records, data_type, warnings, user):
     unknown_filter_flags = set()
     unknown_pop_filter_flags = set()
 
@@ -1425,13 +1425,14 @@ def _update_individuals_variant_qc(json_records, data_type, warnings):
                 unknown_pop_filter_flags.add(flag)
 
         if filter_flags or pop_platform_filters:
-            Individual.objects.filter(id__in=record['individual_ids']).update(
-                filter_flags=filter_flags or None, pop_platform_filters=pop_platform_filters or None)
+            Individual.bulk_update(user, {
+                'filter_flags': filter_flags or None, 'pop_platform_filters': pop_platform_filters or None,
+            }, id__in=record['individual_ids'])
 
         inidividuals_by_population[record['qc_pop'].upper()] += record['individual_ids']
 
     for population, indiv_ids in inidividuals_by_population.items():
-        Individual.objects.filter(id__in=indiv_ids).update(population=population)
+        Individual.bulk_update(user, {'population': population}, id__in=indiv_ids)
 
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
@@ -1446,7 +1447,7 @@ def _update_individuals_variant_qc(json_records, data_type, warnings):
         warnings.append(message)
 
 
-def _update_individuals_sv_qc(json_records):
+def _update_individuals_sv_qc(json_records, user):
     inidividuals_by_qc = defaultdict(list)
     for record in json_records:
         inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
@@ -1458,7 +1459,7 @@ def _update_individuals_sv_qc(json_records):
             sv_flags.append('raw_calls:_>100')
         if lt10_highQS_rare_calls == 'FALSE':
             sv_flags.append('high_QS_rare_calls:_>10')
-        Individual.objects.filter(id__in=indiv_ids).update(sv_flags=sv_flags or None)
+        Individual.bulk_update(user, {'sv_flags': sv_flags or None}, id__in=indiv_ids)
 
 
 FILTER_FLAG_COL_MAP = {

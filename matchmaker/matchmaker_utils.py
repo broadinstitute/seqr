@@ -6,6 +6,7 @@ from django.db.models import prefetch_related_objects, Q
 from reference_data.models import HumanPhenotypeOntology
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols, get_filtered_gene_ids
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
 logger = logging.getLogger(__name__)
@@ -181,23 +182,23 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
         **get_submission_kwargs
     )
 
-    incoming_query = MatchmakerIncomingQuery.objects.create(
-        institution=patient_data['patient']['contact'].get('institution') or origin_request_host,
-        patient_id=query_patient_id if scored_matches else None,
-    )
+    incoming_query = create_model_from_json(MatchmakerIncomingQuery, {
+        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
+        'patient_id': query_patient_id if scored_matches else None,
+    }, user)
     if not scored_matches:
         return [], incoming_query
 
     prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
-            MatchmakerResult.objects.create(
-                submission=match_submission,
-                originating_submission=originating_submission,
-                originating_query=incoming_query,
-                result_data=patient_data,
-                last_modified_by=user,
-            )
+            create_model_from_json( MatchmakerResult, {
+                'submission': match_submission,
+                'originating_submission': originating_submission,
+                'originating_query': incoming_query,
+                'result_data': patient_data,
+                'last_modified_by': user,
+            }, user)
 
     return [get_submission_json_for_external_match(match_submission, score=score)
             for match_submission, score in scored_matches.items()], incoming_query
