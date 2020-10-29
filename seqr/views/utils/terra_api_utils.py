@@ -7,6 +7,7 @@ import requests
 
 from urllib.parse import urljoin
 
+from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 
 from google.auth.transport.requests import AuthorizedSession
@@ -102,7 +103,11 @@ class ServiceAccountSession(AuthorizedSession):
 def is_google_authenticated(user):
     if not anvil_enabled():
         return False
-    return len(user.social_auth.filter(provider = 'google-oauth2')) > 0
+    try:
+        _ = user.social_auth.get(provider = 'google-oauth2')
+    except UserSocialAuth.DoesNotExist:
+        return False
+    return True
 
 
 _service_account_session = ServiceAccountSession()
