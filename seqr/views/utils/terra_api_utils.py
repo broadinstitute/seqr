@@ -59,6 +59,9 @@ class ServiceAccountSession(AuthorizedSession):
         if not anvil_enabled():
             raise TerraAPIException('AnVIL access is not enabled')
 
+        if not GOOGLE_SERVICE_ACCOUNT_INFO:
+            return {}
+
         if self.started_at is None:
             self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
@@ -71,7 +74,7 @@ class ServiceAccountSession(AuthorizedSession):
             logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
             raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
                 path, r.status_code, r.reason))
-        return r
+        return json.loads(r.text)
 
     def get(self, path, headers=None, root_url=None, **kwargs):
         """
@@ -146,7 +149,7 @@ def sa_get_workspace_acl(workspace_namespace, workspace_name):
     """
     uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     r = _service_account_session.get(uri)
-    return json.loads(r.text)['acl']
+    return r.get('acl', {})
 
 
 def _get_social(user):
@@ -172,11 +175,6 @@ def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(social.extra_data['access_token'])})
     r = request_func(url, headers=headers, **kwargs)
-
-    # Temporarily return a blank dict if the API is unauthorized. Remove it after the client ID is whitelisted
-    if r.status_code == 401:
-        logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
-        return {}
 
     if r.status_code != 200:
         logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
