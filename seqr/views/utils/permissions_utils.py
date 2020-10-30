@@ -23,7 +23,7 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
 
 
 def project_has_anvil(project):
-    return anvil_enabled() and project.workspace_namespace and project.workspace_name
+    return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)
 
 
 def anvil_has_perm(user, permission_level, project):
@@ -34,10 +34,8 @@ def anvil_has_perm(user, permission_level, project):
         permission = collaborators[user.email]
         if permission['pending']:
             return False
-        if permission_level is IS_OWNER:
-            return permission['accessLevel'] == 'OWNER'
-        if permission_level is CAN_EDIT:
-            return (permission['accessLevel'] == 'WRITER') or (permission['accessLevel'] == 'OWNER')
+        if permission_level in [CAN_EDIT, IS_OWNER]:
+            return (permission['accessLevel'] in ['WRITER', 'OWNER'])
         return True  # for CAN_VIEW level
     return False
 
@@ -78,18 +76,8 @@ def check_multi_project_permissions(obj, user):
 
 
 def _get_workspaces_user_can_view(user):
-    requested_fields = 'public,workspace.name,workspace.namespace,workspace.workspaceId'
-    workspace_list = list_anvil_workspaces(user, requested_fields)
-    workspaces = []
-    for ws in workspace_list:
-        workspace_name = '/'.join([ws['workspace']['namespace'], ws['workspace']['name']])
-        if not ws.get('public', True):
-            if user.is_staff:
-                workspaces.append(workspace_name)
-            else:
-                acl = sa_get_workspace_acl(ws['workspace']['namespace'], ws['workspace']['name'])
-                if user.email in acl.keys():
-                    workspaces.append(workspace_name)
+    workspace_list = list_anvil_workspaces(user, fields='public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
+    workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in workspace_list if not ws.get('public', True)]
     return workspaces
 
 
