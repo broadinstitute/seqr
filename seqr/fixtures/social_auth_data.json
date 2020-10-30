@@ -7,6 +7,17 @@
         "permissions": []
     }
 }, {
+    "model": "social_django.usersocialauth",
+    "pk": 1,
+    "fields": {
+        "user": 10,
+        "provider": "google-oauth2",
+        "uid": "test_user@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
     "model": "seqr.project",
     "pk": 4,
     "fields": {
@@ -19,24 +30,13 @@
     "owners_group": 4,
 	"can_edit_group": 4,
 	"can_view_group": 4,
-    "disable_staff_access": true,
     "workspace_name": "seqr-project 1000 Genomes Demo",
     "workspace_namespace": "my-seqr-billing",
+    "disable_staff_access": true,
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
-    }
-}, {
-    "model": "social_django.usersocialauth",
-    "pk": 1,
-    "fields": {
-        "user": 10,
-        "provider": "google-oauth2",
-        "uid": "test_user@test.com",
-        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
-        "created": "2020-03-12T23:09:54.180Z",
-        "modified": "2020-03-12T23:09:54.180Z"
     }
 }
 ]

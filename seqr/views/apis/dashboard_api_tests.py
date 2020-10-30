@@ -7,7 +7,8 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, GOOGLE_ACCESS_TOKEN_URL, GOOGLE_API_TOKEN_URL,\
     GOOGLE_SERVICE_ACCOUNT_INFO, GOOGLE_TOKEN_RESULT, WORKSPACE_WITH_FIELDS_URL, WORKSPACE_RSP_NO_VALID_PROJECT,\
-    WORKSPACE_RSP_ONE_VALID_PROJECT, WORKSPACE_ACL_URL, WORKSPACE_ACL_RSP
+    WORKSPACE_RSP_ONE_VALID_PROJECT, WORKSPACE_ACL_URL, WORKSPACE_ACL_RSP, WORKSPACE1_ACL_URL, WORKSPACE2_ACL_URL,\
+    WORKSPACE2_ACL_RSP
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -62,9 +63,6 @@ class DashboardPageTest(AuthenticationTestCase):
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
              'numVariantTags', 'workspaceName', 'workspaceNamespace'}
         )
-
-    def test_dashboard_page_data_staff(self):
-        url = reverse(dashboard_page_data)
 
         # Staff users can see all projects
         self.login_staff_user()
@@ -136,11 +134,12 @@ if anvil_enabled():
         fixtures = ['users', 'social_auth_data', '1kg_project']
 
         @responses.activate
-        def test_dashboard_page_data_staff(self):
+        def test_dashboard_page_data(self):
             responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_NO_VALID_PROJECT)
-            super(DashboardPageAnvilTest, self).test_dashboard_page_data_staff()
+            responses.add(responses.GET, WORKSPACE2_ACL_URL, status = 200, body = WORKSPACE2_ACL_RSP)
+            super(DashboardPageAnvilTest, self).test_dashboard_page_data()
 
             # Users can see the projects that AnVIL allows
             url = reverse(dashboard_page_data)
@@ -149,6 +148,7 @@ if anvil_enabled():
             responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             responses.replace(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_ONE_VALID_PROJECT)
             responses.add(responses.GET, WORKSPACE_ACL_URL, status = 200, body = WORKSPACE_ACL_RSP)
+            responses.add(responses.GET, WORKSPACE1_ACL_URL, status = 200, body = '{}')
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()['projectsByGuid']), 4)
@@ -170,6 +170,7 @@ if anvil_enabled():
             responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_NO_VALID_PROJECT)
             responses.add(responses.GET, WORKSPACE_ACL_URL, status = 200, body = WORKSPACE_ACL_RSP)
+            responses.add(responses.GET, WORKSPACE1_ACL_URL, status = 200, body = '{}')
             super(DashboardPageAnvilTest, self).test_export_projects_table()
 
             # Test for removed a project permitted by AnVIL

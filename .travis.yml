@@ -14,6 +14,7 @@ install:
 
 script:
 - TERRA_API_ROOT_URL=https://localhost/ coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
+- coverage run -a --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
 - coverage report --fail-under=99
 - cd ui/
 - npm test

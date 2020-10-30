@@ -5,8 +5,9 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from settings import TERRA_API_ROOT_URL
-from seqr.views.utils.terra_api_utils import get_anvil_billing_projects, get_anvil_profile, list_anvil_workspaces, sa_get_workspace_acl, anvil_enabled
-from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACCOUNT_INFO
+from seqr.views.utils.terra_api_utils import get_anvil_billing_projects, get_anvil_profile, list_anvil_workspaces,\
+    sa_get_workspace_acl, anvil_enabled, TerraAPIException
+from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACCOUNT_INFO, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL
 
 
 if anvil_enabled():
@@ -21,8 +22,7 @@ if anvil_enabled():
 
         @responses.activate
         def test_get_billing_projects(self, mock_time):
-            content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = content)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             mock_time.time.return_value = self.extra_data['auth_time'] + 10
 
             url = '{}api/profile/billing'.format(TERRA_API_ROOT_URL)
@@ -40,8 +40,7 @@ if anvil_enabled():
 
         @responses.activate
         def test_get_anvil_profile(self, mock_time):
-            content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = content)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             mock_time.time.return_value = self.extra_data['auth_time'] + 10
 
             url = '{}register'.format(TERRA_API_ROOT_URL)
@@ -55,12 +54,11 @@ if anvil_enabled():
             with self.assertRaises(Exception) as ec:
                 _ = get_anvil_profile(self.user)
             self.assertEqual(str(ec.exception),
-                'Error: called Terra API "register" got status: {} with a reason: {}'.format(404, 'Not Found'))
+                'Error: called Terra API "register" got status: 404 with a reason: Not Found')
 
         @responses.activate
         def test_list_workspaces(self, mock_time):
-            content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = content)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             mock_time.time.return_value = self.extra_data['auth_time'] + 10
 
             url = '{}api/workspaces'.format(TERRA_API_ROOT_URL)
@@ -73,7 +71,7 @@ if anvil_enabled():
             self.assertDictEqual(workspaces[0], {"accessLevel": "PROJECT_OWNER", "public": False, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": False, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}})
 
             responses.reset()
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = content)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
             responses.add(responses.GET, url+'?fields=accessLevel,workspace.name,workspace.namespace,workspace.workspaceId', status = 200,
                 body = '[{"accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }},'
                        '{"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}},'
@@ -82,16 +80,24 @@ if anvil_enabled():
                 fields='accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
             self.assertNotIn('public', workspaces[0].keys())
 
-            responses.add(responses.GET, url, status = 404)
+            responses.add(responses.GET, url, status = 401)
             with self.assertRaises(Exception) as ec:
                 _ = list_anvil_workspaces(self.user)
             self.assertEqual(str(ec.exception),
-                'Error: called Terra API "api/workspaces" got status: {} with a reason: {}'.format(404, 'Not Found'))
+                'Error: called Terra API "api/workspaces" got status: 401 with a reason: Unauthorized')
+
+            mock_time.mock_reset()
+            mock_time.time.return_value = self.extra_data['auth_time'] + 60*60 + 10
+            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 401)
+            with self.assertRaises(TerraAPIException) as te:
+                _ = list_anvil_workspaces(self.user)
+            self.assertEqual(str(te.exception),
+                'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
+
 
         @responses.activate
         def test_get_workspace_acl(self, mock_time):
-            content = b'{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = content)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
 
             url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace/acl'.format(TERRA_API_ROOT_URL)
             responses.add(responses.GET, url, status = 200, body = '{"acl": {"test1@test1.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}')
@@ -103,4 +109,4 @@ if anvil_enabled():
                 _ = sa_get_workspace_acl('my-seqr-billing', 'my-seqr-workspace')
             self.assertEqual(str(ec.exception),
                 'Error: called Terra API "api/workspaces/my-seqr-billing/my-seqr-workspace/acl"'
-                ' got status: {} with a reason: {}'.format(401, 'Unauthorized'))
+                ' got status: 401 with a reason: Unauthorized')
