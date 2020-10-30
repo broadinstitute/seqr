@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import Cookies from 'js-cookie'
 import { Modal } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Route, Switch, Link } from 'react-router-dom'
@@ -9,7 +10,36 @@ import { getUser } from 'redux/selectors'
 import { BooleanCheckbox } from '../form/Inputs'
 import ReduxFormWrapper, { validators } from '../form/ReduxFormWrapper'
 
-const FORM_FIELDS = [
+
+const COOKIE_ACTIONS = [{
+  primary: true,
+  content: 'Accept',
+  onClick: () => {
+    Cookies.set('accepted_cookies', true)
+    window.location.href = window.location.href
+  },
+}]
+
+const AcceptCookies = () =>
+  Cookies.get('accepted_cookies') ||
+  <Modal
+    open
+    size="small"
+    closeOnDimmerClick={false}
+    closeOnEscape={false}
+    header="This website uses cookies"
+    content={
+      <Modal.Content>
+        seqr collects cookies to improve our user experience and ensure the secure functioning of our site. For more
+        details, see our <Link target="_blank" to="/privacy_policy">Privacy Policy</Link>. By
+        clicking &quot;Accept&quot;, you consent to the use of these cookies.
+      </Modal.Content>
+    }
+    actions={COOKIE_ACTIONS}
+  />
+
+
+const POLICY_FORM_FIELDS = [
   {
     name: 'acceptedPolicies',
     component: BooleanCheckbox,
@@ -24,20 +54,20 @@ const FORM_FIELDS = [
   },
 ]
 
-const AcceptPolicies = React.memo(({ user, onSubmit }) =>
-  user && Object.keys(user).length && !user.currentPolicies &&
-  <Modal open size="small" closeOnDimmerClick={false} closeOnEscape={false}>
-    <Modal.Header>Before continuing to use seqr, please read and accept our policies</Modal.Header>
-    <Modal.Content>
-      <ReduxFormWrapper
-        onSubmit={onSubmit}
-        noModal
-        form="acceptPolicies"
-        fields={FORM_FIELDS}
-      />
-    </Modal.Content>
-  </Modal>,
-)
+const AcceptPolicies = React.memo(({ user, onSubmit }) => (
+  (user && Object.keys(user).length && !user.currentPolicies) ?
+    <Modal open size="small" closeOnDimmerClick={false} closeOnEscape={false}>
+      <Modal.Header>Before continuing to use seqr, please read and accept our policies</Modal.Header>
+      <Modal.Content>
+        <ReduxFormWrapper
+          onSubmit={onSubmit}
+          noModal
+          form="acceptPolicies"
+          fields={POLICY_FORM_FIELDS}
+        />
+      </Modal.Content>
+    </Modal> : <AcceptCookies />
+))
 
 AcceptPolicies.propTypes = {
   user: PropTypes.object,
@@ -57,7 +87,7 @@ const NO_POLICIES_PAGES = ['/login', '/matchmaker', '/privacy_policy', '/terms_o
 export default () =>
   <Switch>
     {NO_POLICIES_PAGES.map(page =>
-      <Route key={page} path={page} component={() => null} />,
+      <Route key={page} path={page} component={AcceptCookies} />,
     )}
     <Route component={connect(mapStateToProps, mapDispatchToProps)(AcceptPolicies)} />
   </Switch>
