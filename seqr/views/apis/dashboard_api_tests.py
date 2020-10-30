@@ -135,20 +135,20 @@ if anvil_enabled():
 
         @responses.activate
         def test_dashboard_page_data(self):
-            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_NO_VALID_PROJECT)
-            responses.add(responses.GET, WORKSPACE2_ACL_URL, status = 200, body = WORKSPACE2_ACL_RSP)
+            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status=200, body=WORKSPACE_RSP_NO_VALID_PROJECT)
+            responses.add(responses.GET, WORKSPACE2_ACL_URL, status=200, body=WORKSPACE2_ACL_RSP)
             super(DashboardPageAnvilTest, self).test_dashboard_page_data()
 
             # Users can see the projects that AnVIL allows
             url = reverse(dashboard_page_data)
             self.login_staff_user()
-            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.replace(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_ONE_VALID_PROJECT)
-            responses.add(responses.GET, WORKSPACE_ACL_URL, status = 200, body = WORKSPACE_ACL_RSP)
-            responses.add(responses.GET, WORKSPACE1_ACL_URL, status = 200, body = '{}')
+            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.replace(responses.GET, WORKSPACE_WITH_FIELDS_URL, status=200, body=WORKSPACE_RSP_ONE_VALID_PROJECT)
+            responses.add(responses.GET, WORKSPACE_ACL_URL, status=200, body=WORKSPACE_ACL_RSP)
+            responses.add(responses.GET, WORKSPACE1_ACL_URL, status=200, body='{}')
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.json()['projectsByGuid']), 4)
@@ -166,16 +166,16 @@ if anvil_enabled():
 
         @responses.activate
         def test_export_projects_table(self):
-            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-            responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_NO_VALID_PROJECT)
-            responses.add(responses.GET, WORKSPACE_ACL_URL, status = 200, body = WORKSPACE_ACL_RSP)
-            responses.add(responses.GET, WORKSPACE1_ACL_URL, status = 200, body = '{}')
+            responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+            responses.add(responses.GET, WORKSPACE_WITH_FIELDS_URL, status=200, body=WORKSPACE_RSP_NO_VALID_PROJECT)
+            responses.add(responses.GET, WORKSPACE_ACL_URL, status=200, body=WORKSPACE_ACL_RSP)
+            responses.add(responses.GET, WORKSPACE1_ACL_URL, status=200, body='{}')
             super(DashboardPageAnvilTest, self).test_export_projects_table()
 
             # Test for removed a project permitted by AnVIL
             url = reverse(export_projects_table_handler)
-            responses.replace(responses.GET, WORKSPACE_WITH_FIELDS_URL, status = 200, body = WORKSPACE_RSP_ONE_VALID_PROJECT)
+            responses.replace(responses.GET, WORKSPACE_WITH_FIELDS_URL, status=200, body=WORKSPACE_RSP_ONE_VALID_PROJECT)
             response = self.client.get('{}?file_format=tsv'.format(url))
             self.assertEqual(response.status_code, 200)
             export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
