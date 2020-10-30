@@ -21,15 +21,25 @@ SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 logger = logging.getLogger(__name__)
 
 
-def anvil_enabled():
-    return bool(TERRA_API_ROOT_URL)
-
-
 class TerraAPIException(Exception):
 
     """For exceptions happen in Terra API calls."""
 
     pass
+
+
+def anvil_enabled():
+    return bool(TERRA_API_ROOT_URL)
+
+
+def is_google_authenticated(user):
+    if not anvil_enabled():
+        return False
+    try:
+        _ = user.social_auth.get(provider = 'google-oauth2')
+    except UserSocialAuth.DoesNotExist:  # Exception happen when the user has never logged-in with Google
+        return False
+    return True
 
 
 def _get_call_args(path, headers=None, root_url=None):
@@ -45,7 +55,7 @@ def _get_call_args(path, headers=None, root_url=None):
 class ServiceAccountSession(AuthorizedSession):
 
     def __init__(self):
-        """Init the session start time to None."""
+        """Init the session start time and avoid initializing the base class."""
         self.started_at = None
 
     def create_session(self):
@@ -56,9 +66,6 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
-        if not anvil_enabled():
-            raise TerraAPIException('AnVIL access is not enabled')
-
         if not GOOGLE_SERVICE_ACCOUNT_INFO:
             return {}
 
@@ -101,16 +108,6 @@ class ServiceAccountSession(AuthorizedSession):
     def delete(self, path, headers=None, root_url=None):
         """See the __get() method."""
         return self._make_request('delete', path, headers, root_url)
-
-
-def is_google_authenticated(user):
-    if not anvil_enabled():
-        return False
-    try:
-        _ = user.social_auth.get(provider = 'google-oauth2')
-    except UserSocialAuth.DoesNotExist:
-        return False
-    return True
 
 
 _service_account_session = ServiceAccountSession()
@@ -166,9 +163,6 @@ def _get_social(user):
 
 
 def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
-    if not anvil_enabled():
-        raise TerraAPIException('AnVIL access is not enabled')
-
     social = _get_social(user)
 
     url, headers = _get_call_args(path, headers, root_url)
