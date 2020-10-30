@@ -13,16 +13,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 @login_required
 def main_app(request, *args, **kwargs):
     """Loads the react single page app."""
-    user = request.user
-    user_json = _get_json_for_user(user)
-
-    current_privacy = user.userpolicy.privacy_version if hasattr(user, 'userpolicy') else None
-    current_tos = user.userpolicy.privacy_version if hasattr(user, 'userpolicy') else None
-    user_json.update({
-        'currentPrivacy': current_privacy == SEQR_PRIVACY_VERSION,
-        'currentTos': current_tos == SEQR_TOS_VERSION,
-    })
-    return _render_app_html(request, {'user': user_json})
+    return _render_app_html(request, {'user': _get_json_for_initial_user(request.user)})
 
 
 def no_login_main_app(request, *args, **kwargs):
@@ -30,13 +21,24 @@ def no_login_main_app(request, *args, **kwargs):
     initial_json = {}
     user_token = kwargs.get('user_token')
     if user_token:
-        initial_json['newUser'] = _get_json_for_user(User.objects.get(password=user_token))
+        initial_json['newUser'] = _get_json_for_initial_user(User.objects.get(password=user_token))
     elif not request.user.is_anonymous():
-        initial_json['user'] = _get_json_for_user(request.user)
+        initial_json['user'] = _get_json_for_initial_user(request.user)
     if not request.META.get(CSRF_COOKIE_NAME):
         rotate_token(request)
     return _render_app_html(request, initial_json)
 
+
+def _get_json_for_initial_user(user):
+    user_json = _get_json_for_user(user)
+
+    user_json['currentPolicies'] = False
+    if hasattr(user, 'userpolicy'):
+        current_privacy = user.userpolicy.privacy_version
+        current_tos = user.userpolicy.tos_version
+        user_json['currentPolicies'] = current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
+
+    return user_json
 
 def _render_app_html(request, initial_json):
     html = loader.render_to_string('app.html')

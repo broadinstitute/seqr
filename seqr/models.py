@@ -138,8 +138,8 @@ class ModelWithGUID(models.Model):
 
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    privacy_version = models.DecimalField(max_digits=4, decimal_places=2)
-    tos_version = models.DecimalField(max_digits=4, decimal_places=2)
+    privacy_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
+    tos_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
 
 
 class Project(ModelWithGUID):

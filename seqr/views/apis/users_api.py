@@ -8,13 +8,14 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 
+from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
-from settings import API_LOGIN_REQUIRED_URL, BASE_URL
+from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,22 @@ def set_password(request, username):
     login(request, u)
 
     return create_json_response({'success': True})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def update_policies(request):
+    request_json = json.loads(request.body)
+    if not request_json.get('acceptedPolicies'):
+        message = 'User must accept current policies'
+        return create_json_response({'message': message}, status=400, reason=message)
+
+    get_or_create_model_from_json(
+        UserPolicy, {'user': request.user}, update_json={
+            'privacy_version': SEQR_PRIVACY_VERSION,
+            'tos_version': SEQR_TOS_VERSION,
+        }, user=request.user)
+
+    return create_json_response({'currentPolicies': True})
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)

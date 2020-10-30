@@ -92,7 +92,7 @@ def get_or_create_model_from_json(model_class, create_json, update_json, user):
     model, created = model_class.objects.get_or_create(**create_json)
     updated_fields = set()
     if created:
-        if 'created_by' not in create_json:
+        if 'created_by' not in create_json and hasattr(model, 'created_by'):
             model.created_by = user
             updated_fields.add('created_by')
         log_update_fields = list(create_json.keys()) + list(updated_fields)
