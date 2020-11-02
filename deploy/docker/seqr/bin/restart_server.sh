@@ -1,7 +1,3 @@
 #!/usr/bin/env bash
 
-cd /seqr
-
-touch settings.py
-
-pkill -HUP -f gunicorn
+stop_server.sh ; start_server.sh > /proc/1/fd/1
