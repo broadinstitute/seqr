@@ -6,9 +6,10 @@ from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls.base import reverse
 
+from seqr.models import UserPolicy
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff
+    get_all_staff, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
@@ -261,3 +262,34 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')
 
+    def test_update_policies(self):
+        self.assertEqual(UserPolicy.objects.filter(user=self.no_access_user).count(), 0)
+
+        url = reverse(update_policies)
+        self.check_require_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'User must accept current policies')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'currentPolicies': True})
+
+        new_policy = UserPolicy.objects.get(user=self.no_access_user)
+        self.assertEqual(new_policy.privacy_version, 1.0)
+        self.assertEqual(new_policy.tos_version, 1.0)
+
+        # Test updating user with out of date policies
+        existing_policy = UserPolicy.objects.get(user=self.manager_user)
+        self.assertNotEqual(existing_policy.privacy_version, 1.0)
+        self.assertNotEqual(existing_policy.tos_version, 1.0)
+
+        self.login_manager()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'currentPolicies': True})
+
+        existing_policy = UserPolicy.objects.get(user=self.manager_user)
+        self.assertEqual(existing_policy.privacy_version, 1.0)
+        self.assertEqual(existing_policy.tos_version, 1.0)

@@ -91,5 +91,23 @@
         "groups": [],
         "user_permissions": []
     }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 1,
+  "fields": {
+    "user_id": 10,
+    "privacy_version": 1.0,
+    "tos_version": 1.0
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 2,
+  "fields": {
+    "user_id": 11,
+    "privacy_version": 0.7,
+    "tos_version": 0.3
+  }
 }
 ]
