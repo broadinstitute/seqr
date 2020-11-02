@@ -77,8 +77,7 @@ def check_multi_project_permissions(obj, user):
 
 def _get_workspaces_user_can_view(user):
     workspace_list = list_anvil_workspaces(user, fields='public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
-    workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in workspace_list if not ws.get('public', True)]
-    return workspaces
+    return ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in workspace_list if not ws.get('public', True)]
 
 
 def get_projects_user_can_view(user):
@@ -86,12 +85,11 @@ def get_projects_user_can_view(user):
     if user.is_staff:
         can_view_filter = can_view_filter | Q(disable_staff_access=False)
 
-    if is_google_authenticated(user):  # permitted
+    if is_google_authenticated(user):
         workspaces = _get_workspaces_user_can_view(user)
         anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
-        local_permitted_projects = Project.objects.filter(can_view_filter)
-        return (anvil_permitted_projects | local_permitted_projects).distinct()
+        return (anvil_permitted_projects | Project.objects.filter(can_view_filter)).distinct()
     else:
         return Project.objects.filter(can_view_filter)
 

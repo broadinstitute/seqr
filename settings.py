@@ -315,6 +315,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 if TERRA_API_ROOT_URL:
     AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
 
+    # Use Google sub ID as the user ID, safer than using email
+    USE_UNIQUE_USER_ID = True
+
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
 
