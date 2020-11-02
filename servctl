@@ -7,7 +7,7 @@ import os
 import sys
 
 from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, COMPONENT_GROUP_NAMES, \
-    DEPLOYMENT_TARGETS, resolve_component_groups
+    DEPLOYMENT_TARGETS, resolve_component_groups, redeploy
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
     show_status, wait_for, troubleshoot_component, delete_component, reset_database, delete_all, \
     get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
@@ -20,6 +20,7 @@ logger.setLevel(logging.INFO)
 SET_ENVIRONMENT_COMMAND = 'set-env'
 STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
+REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
 LOG_COMMAND = 'logs'
 TROUBLESHOOT_COMMAND = 'troubleshoot'
@@ -108,6 +109,11 @@ sp = subparsers.add_parser(RESET_COMMAND, description="Delete all data from the 
 sp.add_argument('database', nargs="+", choices=["seqrdb"])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
+## REDEPLOY_COMMAND
+sp = subparsers.add_parser(REDEPLOY_COMMAND, description="Re-deploy one or more components in their existing pod")
+sp.add_argument("components", nargs="+", help="one or more components to re-deploy", choices=COMPONENT_ARG_CHOICES)
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
+
 
 def _check_restore_db_file(path):
     if not os.path.isfile(path):
@@ -136,7 +142,7 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
                     help="if deploying seqr or postgres, this option can be used to specify a SQL database backup from "
                          "which to restore the reference data database.", type=_check_restore_db_file)
 
-    if command_name == DEPLOY_COMMAND:
+    if command_name in [DEPLOY_COMMAND]:
         sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=COMPONENT_ARG_CHOICES)
 
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
@@ -221,6 +227,11 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
             wait_for(procs1 + procs2)
 
     logger.info("==> Done")
+
+elif args.command == REDEPLOY_COMMAND:
+    components = resolve_component_groups(args.deployment_target, args.components)
+    redeploy(args.deployment_target, components)
+    #print_log(components, args.deployment_target, enable_stream_log=True, wait=False)
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
