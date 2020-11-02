@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# From https://github.com/broadinstitute/dsp-appsec-seckb/blob/master/security-kb-gitbook/scripts/configure-gitsecrets.sh
+# Modified from https://github.com/broadinstitute/dsp-appsec-seckb/blob/master/security-kb-gitbook/scripts/configure-gitsecrets.sh
 
 # Usage:
 # IMPORTANT NOTE:  you must have git-secrets installed on your system already
@@ -35,10 +35,4 @@ function updater {
   scan *
 }
 
-if [ "$1" == "" ]; then
-  updater
-else
-  for dir in "$@"; do
-    updater "$dir"
-  done
-fi
+updater
