@@ -54,7 +54,7 @@ const POLICY_FORM_FIELDS = [
   },
 ]
 
-const AcceptPolicies = React.memo(({ user, onSubmit }) => (
+export const AcceptPolicies = React.memo(({ user, onSubmit }) => (
   (user && Object.keys(user).length && !user.currentPolicies) ?
     <Modal open size="small" closeOnDimmerClick={false} closeOnEscape={false}>
       <Modal.Header>Before continuing to use seqr, please read and accept our policies</Modal.Header>
