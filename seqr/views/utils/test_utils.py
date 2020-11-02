@@ -5,7 +5,6 @@ from guardian.shortcuts import assign_perm
 import json
 from urllib3_mock import Responses
 
-from settings import TERRA_API_ROOT_URL
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
@@ -594,13 +593,15 @@ GOOGLE_SERVICE_ACCOUNT_INFO = {
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sf-seqr%40my-seqr.iam.gserviceaccount.com"
 }
 
+TEST_TERRA_API_ROOT_URL =  'https://localhost/'
+
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
 
-WORKSPACE_WITH_FIELDS_URL = '{}api/workspaces?fields=public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'.format(TERRA_API_ROOT_URL)
+WORKSPACE_WITH_FIELDS_URL = '{}api/workspaces?fields=public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'.format(TEST_TERRA_API_ROOT_URL)
 WORKSPACE_RSP_NO_VALID_PROJECT = '[{"public": false, "accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }}, {"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}}, {"accessLevel": "PROJECT_OWNER","workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"}}]'
 WORKSPACE_RSP_ONE_VALID_PROJECT = '[{"public": false, "accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }}, {"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}}, {"public": false, "accessLevel": "PROJECT_OWNER","workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"}}]'
-WORKSPACE_ACL_URL = '{}api/workspaces/my-seqr-billing/seqr-project%201000%20Genomes%20Demo/acl'.format(TERRA_API_ROOT_URL)
+WORKSPACE_ACL_URL = '{}api/workspaces/my-seqr-billing/seqr-project%201000%20Genomes%20Demo/acl'.format(TEST_TERRA_API_ROOT_URL)
 WORKSPACE_ACL_RSP = '{"acl": {"test_user@test.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}'
-WORKSPACE1_ACL_URL = '{}api/workspaces/my-seqr-billing/anvil-project%201000%20Genomes%20Demo/acl'.format(TERRA_API_ROOT_URL)
-WORKSPACE2_ACL_URL = 'http://localhost/api/workspaces/my-seqr-billing/anvil-1kg%20project%20n%C3%A5me%20with%20uni%C3%A7%C3%B8de/acl'
+WORKSPACE1_ACL_URL = '{}api/workspaces/my-seqr-billing/anvil-project%201000%20Genomes%20Demo/acl'.format(TEST_TERRA_API_ROOT_URL)
+WORKSPACE2_ACL_URL = '{}api/workspaces/my-seqr-billing/anvil-1kg%20project%20n%C3%A5me%20with%20uni%C3%A7%C3%B8de/acl'.format(TEST_TERRA_API_ROOT_URL)
 WORKSPACE2_ACL_RSP = '{"acl": {"test_user_no_staff@test.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": true},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}'

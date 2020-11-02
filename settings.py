@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +313,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-if TERRA_API_ROOT_URL:
+if TERRA_API_ROOT_URL or (len(sys.argv) >= 2 and sys.argv[1] == 'test'):
     AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
 
     # Use Google sub ID as the user ID, safer than using email
