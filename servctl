@@ -142,7 +142,7 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
                     help="if deploying seqr or postgres, this option can be used to specify a SQL database backup from "
                          "which to restore the reference data database.", type=_check_restore_db_file)
 
-    if command_name in [DEPLOY_COMMAND]:
+    if command_name == DEPLOY_COMMAND:
         sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=COMPONENT_ARG_CHOICES)
 
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
@@ -231,7 +231,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 elif args.command == REDEPLOY_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
     redeploy(args.deployment_target, components)
-    #print_log(components, args.deployment_target, enable_stream_log=True, wait=False)
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
