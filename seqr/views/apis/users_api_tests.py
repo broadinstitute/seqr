@@ -11,6 +11,7 @@ from seqr.views.apis.users_api import get_all_collaborators, set_password, creat
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase
+from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -277,13 +278,13 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'currentPolicies': True})
 
         new_policy = UserPolicy.objects.get(user=self.no_access_user)
-        self.assertEqual(new_policy.privacy_version, 1.0)
-        self.assertEqual(new_policy.tos_version, 1.0)
+        self.assertEqual(new_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertEqual(new_policy.tos_version, SEQR_TOS_VERSION)
 
         # Test updating user with out of date policies
         existing_policy = UserPolicy.objects.get(user=self.manager_user)
-        self.assertNotEqual(existing_policy.privacy_version, 1.0)
-        self.assertNotEqual(existing_policy.tos_version, 1.0)
+        self.assertNotEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertNotEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
 
         self.login_manager()
         response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
@@ -291,5 +292,5 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'currentPolicies': True})
 
         existing_policy = UserPolicy.objects.get(user=self.manager_user)
-        self.assertEqual(existing_policy.privacy_version, 1.0)
-        self.assertEqual(existing_policy.tos_version, 1.0)
+        self.assertEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertEqual(existing_policy.tos_version, SEQR_TOS_VERSION)

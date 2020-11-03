@@ -54,7 +54,8 @@ const POLICY_FORM_FIELDS = [
   },
 ]
 
-export const AcceptPolicies = React.memo(({ user, onSubmit }) => (
+// exported for testing purposes only
+export const BaseAcceptPolicies = React.memo(({ user, onSubmit }) => (
   (user && Object.keys(user).length && !user.currentPolicies) ?
     <Modal open size="small" closeOnDimmerClick={false} closeOnEscape={false}>
       <Modal.Header>Before continuing to use seqr, please read and accept our policies</Modal.Header>
@@ -69,7 +70,7 @@ export const AcceptPolicies = React.memo(({ user, onSubmit }) => (
     </Modal> : <AcceptCookies />
 ))
 
-AcceptPolicies.propTypes = {
+BaseAcceptPolicies.propTypes = {
   user: PropTypes.object,
   onSubmit: PropTypes.func,
 }
@@ -82,12 +83,15 @@ const mapDispatchToProps = {
   onSubmit: updateUserPolicies,
 }
 
-const NO_POLICIES_PAGES = ['/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
+const NO_COOKIE_PAGES = ['/matchmaker', '/privacy_policy', '/terms_of_service']
+
+const NO_POLICIES_PAGES = ['/login']
 
 export default () =>
   <Switch>
+    {NO_COOKIE_PAGES.map(page => <Route key={page} path={page} component={null} />)}
     {NO_POLICIES_PAGES.map(page =>
       <Route key={page} path={page} component={AcceptCookies} />,
     )}
-    <Route component={connect(mapStateToProps, mapDispatchToProps)(AcceptPolicies)} />
+    <Route component={connect(mapStateToProps, mapDispatchToProps)(BaseAcceptPolicies)} />
   </Switch>
