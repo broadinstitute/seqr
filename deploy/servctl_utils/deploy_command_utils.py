@@ -326,6 +326,19 @@ def deploy_seqr(settings):
     deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
 
 
+def redeploy_seqr(deployment_target):
+    print_separator('re-deploying seqr')
+
+    seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
+    if not seqr_pod_name:
+        raise ValueError('No seqr pod found, unable to re-deploy')
+    sleep_until_pod_is_running('seqr', deployment_target=deployment_target)
+
+    run_in_pod(seqr_pod_name, 'git pull', verbose=True)
+    run_in_pod(seqr_pod_name, './manage.py migrate', verbose=True)
+    run_in_pod(seqr_pod_name, '/usr/local/bin/restart_server.sh')
+
+
 def _drop_seqr_db(postgres_pod_name):
     run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
                errors_to_ignore=["does not exist"],
@@ -436,6 +449,24 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
                 f(settings)
             else:
                 raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
+
+def redeploy(deployment_target, components):
+    if not components:
+        raise ValueError("components list is empty")
+
+    check_kubernetes_context(deployment_target)
+
+    # call redeploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
+    for component in DEPLOYABLE_COMPONENTS:
+        if component in components:
+            # only deploy requested components
+            func_name = "redeploy_" + component.replace("-", "_")
+            f = globals().get(func_name)
+            if f is not None:
+                f(deployment_target)
+            else:
+                raise ValueError(
+                    "'redeploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
 
 
 def prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings):

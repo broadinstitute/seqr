@@ -14,7 +14,7 @@ spec:
     name: seqr
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: seqr
   namespace: {{ NAMESPACE }}
@@ -23,6 +23,9 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: seqr
   template:
     metadata:
       labels:
