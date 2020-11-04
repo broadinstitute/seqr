@@ -18,14 +18,14 @@ class InvalidIndexException(Exception):
     pass
 
 
-def get_es_client(timeout=60):
-    kwargs = {
+def get_es_client(timeout=60, **kwargs):
+    client_kwargs = {
         'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
         'timeout': timeout,
     }
     if ELASTICSEARCH_CREDENTIALS:
-        kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
-    return elasticsearch.Elasticsearch(**kwargs)
+        client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
+    return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
 def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
