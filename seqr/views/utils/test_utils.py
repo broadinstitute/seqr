@@ -91,6 +91,93 @@ class AuthenticationTestCase(TestCase):
 
         self.login_staff_user()
 
+
+ANVIL_WORKSPACES = [{
+    'workspace_namespace': 'test_namespace',
+    'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'test_namespace',
+    'workspace_name': 'anvil-empty project',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'test_namespace',
+    'workspace_name': 'anvil-project 1000 Genomes Demo',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}
+]
+
+
+def get_ws_acl_side_effect(url):
+    workspace_namespace, workspace_name = url.split('/')[2:4]
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    return wss[0]['acl'] if wss else {}
+
+
+def get_workspaces_side_effect(user, fields):
+    return [
+        {
+            'public': ws['public'],
+            'accessLevel': ws['acl'][user.email]['accessLevel'],
+            'workspace':{
+                'namespace': ws['workspace_namespace'],
+                'name': ws['workspace_name']
+            }
+        } for ws in ANVIL_WORKSPACES if user.email in ws['acl'].keys()
+    ]
+
+
+class AnvilAuthenticationTestCase(AuthenticationTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+
+        for project in Project.objects.all():
+            project.workspace_namespace = ANVIL_WORKSPACES[project.pk-1]['workspace_namespace']
+            project.workspace_name = ANVIL_WORKSPACES[project.pk - 1]['workspace_name']
+            project.save()
+
+
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
 # The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
 # methods for easier usage

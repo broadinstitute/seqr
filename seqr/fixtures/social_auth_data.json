@@ -1,12 +1,5 @@
 [
 {
-    "model": "auth.group",
-    "pk": 4,
-    "fields": {
-        "name": "_group_with_no_member",
-        "permissions": []
-    }
-}, {
     "model": "social_django.usersocialauth",
     "pk": 1,
     "fields": {
@@ -18,25 +11,37 @@
         "modified": "2020-03-12T23:09:54.180Z"
     }
 }, {
-    "model": "seqr.project",
+    "model": "social_django.usersocialauth",
+    "pk": 2,
+    "fields": {
+        "user": 11,
+        "provider": "google-oauth2",
+        "uid": "test_user_manager@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 3,
+    "fields": {
+        "user": 12,
+        "provider": "google-oauth2",
+        "uid": "test_user_no_staff@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
+    "model": "social_django.usersocialauth",
     "pk": 4,
     "fields": {
-        "guid": "R0004_test",
-        "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:49.582Z",
-        "name": "Test AnVIL Project",
-        "description": "",
-    "owners_group": 4,
-	"can_edit_group": 4,
-	"can_view_group": 4,
-    "workspace_name": "seqr-project 1000 Genomes Demo",
-    "workspace_namespace": "my-seqr-billing",
-    "disable_staff_access": true,
-	"is_mme_enabled": false,
-	"mme_primary_data_owner": "",
-    "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
-	"last_accessed_date": "2017-09-15T18:15:50.827Z"
+        "user": 13,
+        "provider": "google-oauth2",
+        "uid": "test_user_no_access@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
     }
 }
 ]

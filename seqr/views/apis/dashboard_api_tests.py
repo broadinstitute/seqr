@@ -3,8 +3,11 @@ import json
 import responses
 import mock
 
+from django.test import TestCase
+
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, GOOGLE_ACCESS_TOKEN_URL, GOOGLE_API_TOKEN_URL,\
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, get_ws_acl_side_effect,\
+    get_workspaces_side_effect, GOOGLE_API_TOKEN_URL,\
     GOOGLE_SERVICE_ACCOUNT_INFO, GOOGLE_TOKEN_RESULT, WORKSPACE_WITH_FIELDS_URL, WORKSPACE_RSP_NO_VALID_PROJECT,\
     WORKSPACE_RSP_ONE_VALID_PROJECT, WORKSPACE_ACL_URL, WORKSPACE_ACL_RSP, WORKSPACE1_ACL_URL, WORKSPACE2_ACL_URL,\
     WORKSPACE2_ACL_RSP, TEST_TERRA_API_ROOT_URL
@@ -33,9 +36,7 @@ PROJECT_EXPORT_HEADER = [
 ]
 
 
-class DashboardPageTest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
-
+class DashboardPageTest(object):
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
         self.check_require_login(url)
@@ -127,6 +128,27 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'error': 'Invalid file_format: csv'})
 
 
+class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
+    fixtures = ['users', '1kg_project']
+
+
+@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
+    fixtures = ['users', 'social_auth_data', '1kg_project']
+
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        patcher.start().side_effect = get_workspaces_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
+        patcher.start().get.side_effect = get_ws_acl_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = 1603287741 + 10
+        self.addCleanup(patcher.stop)
+
+
+"""
 @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
 @mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
 class DashboardPageAnvilTest(DashboardPageTest):
@@ -179,3 +201,4 @@ class DashboardPageAnvilTest(DashboardPageTest):
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
         self.assertEqual(len(export_content), 5)
+"""
