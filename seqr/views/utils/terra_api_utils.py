@@ -66,9 +66,6 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
-        if not GOOGLE_SERVICE_ACCOUNT_INFO:
-            return {}
-
         if self.started_at is None:
             self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
