@@ -7,7 +7,8 @@ import subprocess
 import sys
 import time
 
-from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running
+from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
+    wait_for_resource, get_resource_name
 from deploy.servctl_utils.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
 
@@ -21,11 +22,6 @@ COMPONENT_PORTS = {
 
     "elasticsearch":   [9200],
     "kibana":          [5601],
-
-    "es-client":       [9200],
-    "es-master":       [9020],
-    "es-data":         [9020],
-    "es-kibana":       [5601],
 
     "redis":           [6379],
 
@@ -42,7 +38,6 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "cockpit",
     "elasticsearch",
     "kibana",
-    "es-kibana",
     "seqr",
     "pipeline-runner",  # python notebook
 ])
@@ -83,7 +78,7 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
 
     context_is_different = False
     if deployment_target.startswith("gcloud"):
-        suffix = "-%s" % deployment_target.split("-")[-1]  # "dev" or "prod"
+        suffix = "-%s" % deployment_target.split("-")[1]  # "dev" or "prod"
         if not kubectl_current_context.startswith('gke_') or suffix not in kubectl_current_context:
             logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s' which doesn't match %(deployment_target)s. "
                           "To fix this, run:\n\n   "
@@ -225,12 +220,17 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         wait_until_pod_is_running(component_label, deployment_target)
 
         logger.info("Forwarding port %s for %s" % (port, component_label))
-        pod_name = get_pod_name(component_label, deployment_target=deployment_target)
+        if component_label == 'elasticsearch':
+            pod_name = 'service/elasticsearch-es-http'
+        elif component_label == 'kibana':
+            pod_name = 'service/kibana-kb-http'
+        else:
+            pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
         if use_kubectl_proxy:
             command = "kubectl proxy --port 8001"
         else:
-            command = "kubectl port-forward %(pod_name)s %(port)s" % locals()
+            command = 'kubectl port-forward {pod_name} {port}'.format(pod_name=pod_name, port=port)
 
         p = run_in_background(command)
 
@@ -301,8 +301,17 @@ def delete_component(component, deployment_target=None):
     """
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
-    elif component == "es-data":
-        run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
+    elif component == 'elasticsearch':
+        run('kubectl delete elasticsearch elasticsearch', errors_to_ignore=['not found'])
+        # Deleting a released persistent volume does not delete the data on the underlying disk
+        wait_for_resource(
+            component, '{.items[0].status.phase}', 'Released', deployment_target=deployment_target, resource_type='pv')
+        pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
+        while pv:
+            run('kubectl delete pv {}'.format(pv))
+            pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
+    elif component == 'kibana':
+        run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 
@@ -356,7 +365,10 @@ def delete_all(deployment_target):
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
         run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
+        for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
+            for disk_name in  get_disk_names(disk_label, settings):
+                run('gcloud compute disks delete --zone {zone} {disk_name}'.format(
+                    zone=settings['GCLOUD_ZONE'], disk_name=disk_name), is_interactive=True)
     else:
         run('kubectl delete deployments --all')
         run('kubectl delete replicationcontrollers --all')
@@ -366,4 +378,12 @@ def delete_all(deployment_target):
 
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
+
+
+def get_disk_names(disk, settings):
+    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
+    return [
+        '{cluster_name}-{disk}-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+    for i in range(num_disks)]
 
