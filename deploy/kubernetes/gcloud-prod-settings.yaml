@@ -11,8 +11,11 @@ CLUSTER_EXTERNAL_IP: '35.194.17.244'
 CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
 BASE_URL: 'https://seqr.broadinstitute.org/'
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.0.3
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.0.0.122
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
+ELASTICSEARCH_VERSION: 7.8.1
+
+KIBANA_SERVICE_HOSTNAME: kibana-kb-http
 
 GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
@@ -27,11 +30,8 @@ GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'larkin@broadinstitute.org,shall@broadinstitute.org'
-
-# this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
-# this allows cluster administration only from known machines or from machines on google cloud.
-MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26,69.173.127.0/25,69.173.127.240/28,69.173.127.224/30,69.173.127.230/31,69.173.120.0/22,69.173.127.228/32,69.173.126.0/24,69.173.96.0/20,69.173.64.0/19,69.173.127.192/27,69.173.124.0/23'
+# TODO remove in https://github.com/broadinstitute/seqr-private/issues/931
+UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'shall@broadinstitute.org'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

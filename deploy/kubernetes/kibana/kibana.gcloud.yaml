@@ -1,5 +1,5 @@
-kind: Service
-apiVersion: v1
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
 metadata:
   name: kibana
   namespace: {{ NAMESPACE }}
@@ -7,48 +7,21 @@ metadata:
     name: kibana
     deployment: {{ DEPLOY_TO }}
 spec:
-  ports:
-  - name: kibana
-    port: {{ KIBANA_SERVICE_PORT }}
-  selector:
-    name: kibana
----
-kind: Deployment
-apiVersion: extensions/v1beta1
-metadata:
-  name: kibana
-  namespace: {{ NAMESPACE }}
-  labels:
-    name: kibana
-    deployment: {{ DEPLOY_TO }}
-spec:
-  replicas: 1
-  template:
+  version: {{ ELASTICSEARCH_VERSION }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
+  count: 1
+  config:
+    elasticsearch.hosts:
+      - http://{{ ELASTICSEARCH_SERVICE_EXTERNAL_IP }}:{{ ELASTICSEARCH_SERVICE_PORT }}
+    elasticsearch.username: kibana
+  secureSettings:
+    - secretName: kibana-secrets
+  podTemplate:
     metadata:
       labels:
         name: kibana
         deployment: {{ DEPLOY_TO }}
-    spec:
-      containers:
-      - name: kibana-pod
-        ports:
-        - containerPort: {{ KIBANA_SERVICE_PORT }}
-          protocol: TCP
-        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
-        resources:
-          requests:
-            memory: "0.25Gi"
-            cpu: "0.01"
-          limits:
-            memory: "2Gi"
-            cpu: "0.5"
-        env:
-        - name: KIBANA_SERVICE_PORT
-          value: "{{ KIBANA_SERVICE_PORT }}"
-        - name: ELASTICSEARCH_SERVICE_HOSTNAME
-          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
-        - name: ELASTICSEARCH_SERVICE_PORT
-          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-      restartPolicy: Always
-      dnsPolicy: ClusterFirst
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true

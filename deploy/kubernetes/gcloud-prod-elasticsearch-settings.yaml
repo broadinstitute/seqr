@@ -1,0 +1,43 @@
+#####################################################
+####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
+
+CLUSTER_NAME: 'es-cluster-prod'
+CLUSTER_MACHINE_TYPE: 'n1-highmem-4'
+
+# Needs one node per data pod plus one node for everything else
+CLUSTER_NUM_NODES: 4
+CLUSTER_NODE_LABELS: nodeType=data
+
+KUBERNETES_VERSION: '1.16.13-gke.401'
+
+ELASTICSEARCH_VERSION: 7.8.1
+
+ES_DATA_NUM_PODS: 3
+ES_CLIENT_NUM_PODS: 3
+ES_MASTER_NUM_PODS: 3
+ES_LOADING_NUM_PODS: 4
+
+ES_DATA_DISK_SIZE: 3200
+ELASTICSEARCH_JVM_MEMORY: 13g
+ELASTICSEARCH_CONTAINER_MEMORY: 22Gi
+
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+
+DISKS: es-data
+ES_DATA_NUM_DISKS: 3
+ES_DATA_DISK_TYPE: pd-ssd
+
+#ES_DATA_SNAPSHOTS:  es-7-data-snapshot-1,  es-7-data-snapshot-2,  es-7-data-snapshot-3
+
+###########################################################
+####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
+
+NAMESPACE: gcloud-prod-elasticsearch
+
+DEPLOY_TO: 'gcloud-prod-elasticsearch'
+DEPLOY_TO_PREFIX: 'gcloud'
+DEPLOYMENT_TYPE: 'prod'
+
+CLUSTER_EXTERNAL_IP: ''
+CLUSTER_HOSTNAME: ''

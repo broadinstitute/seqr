@@ -1,0 +1,28 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: {{ ES_DATA_DISK_TYPE }}-storage-class
+  namespace: {{ NAMESPACE }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: {{ ES_DATA_DISK_TYPE }}
+  zone: us-central1-b
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ DISK_NAME }}
+  namespace: {{ NAMESPACE }}
+  labels:
+    name: elasticsearch
+    deployment: {{ DEPLOY_TO }}
+spec:
+  capacity:
+    storage: {{ ES_DATA_DISK_SIZE }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
+  gcePersistentDisk:
+    fsType: ext4
+    pdName: {{ DISK_NAME }}

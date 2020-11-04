@@ -48,8 +48,9 @@ class DatasetAPITest(AuthenticationTestCase):
         mock_random.return_value = 98765432101234567890
 
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {}}})
-        urllib3_responses.add_json(
-            '/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {'sample_ids': {'buckets': []}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': []}}
+        }, method=urllib3_responses.POST)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -72,60 +73,60 @@ class DatasetAPITest(AuthenticationTestCase):
             {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
         )
 
-        urllib3_responses.replace_json(
-            '/{}/_search?size=0'.format(INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
-            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'NOT_A_TYPE',
                 'genomeVersion': '37',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}}})
+            }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Sample type not supported: NOT_A_TYPE']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
-            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '38',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}}})
+            }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 38 but this project uses version 37']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
-            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}}})
+            }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
-            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
                 'datasetType': 'SV',
-            }}}}})
+            }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
-            INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
-            }}}}})
+            }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
@@ -138,9 +139,9 @@ class DatasetAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1, NA19678).']})
 
-        urllib3_responses.replace_json(
-            '/{}/_search?size=0'.format(INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19673'}]}}})
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19673'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'datasetType': 'VARIANTS',
@@ -161,7 +162,8 @@ class DatasetAPITest(AuthenticationTestCase):
 
         # Send valid request
         urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
-            'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}}})
+            'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}
+        }}, method=urllib3_responses.POST)
         mock_file_iter.return_value = StringIO('NA19678_1,NA19678\n')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
@@ -213,15 +215,15 @@ class DatasetAPITest(AuthenticationTestCase):
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
         urllib3_responses.add_json('/{}/_mapping'.format(SV_INDEX_NAME), {
-            SV_INDEX_NAME: {'mappings': {'variant': {'_meta': {
+            SV_INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.bed',
                 'datasetType': 'SV',
-            }}}}})
-        urllib3_responses.add_json(
-            '/{}/_search?size=0'.format(SV_INDEX_NAME),
-            {'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}})
+            }}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(SV_INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': SV_INDEX_NAME,
             'datasetType': 'SV',

@@ -1254,7 +1254,7 @@
     "fields": {
         "hpo_id": "HP:0001631",
         "parent_id": "HP:0008800",
-        "category_id": "HP:0001626",
+        "category_id": "HP:0025354",
         "is_category": "f",
         "name": "Defect in the atrial septum",
         "definition": "",
@@ -1293,7 +1293,7 @@
     "fields": {
         "hpo_id": "HP:0001636",
         "parent_id": "HP:0008800",
-        "category_id": "HP:0001626",
+        "category_id": "HP:0033127",
         "is_category": "f",
         "name": "Tetralogy of Fallot",
         "definition": "",

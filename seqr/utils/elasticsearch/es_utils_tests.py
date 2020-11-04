@@ -649,18 +649,18 @@ FIELD_TYPE_MAP = {
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
 INDEX_METADATA = {
-    INDEX_NAME: {'variant': {
+    INDEX_NAME: {
         '_meta': {'genomeVersion': '37'},
         'properties': MAPPING_PROPERTIES,
-    }},
-    SECOND_INDEX_NAME: {'variant': {
+    },
+    SECOND_INDEX_NAME: {
         '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
         'properties': MAPPING_PROPERTIES,
-    }},
-    SV_INDEX_NAME: {'structural_variant': {
+    },
+    SV_INDEX_NAME: {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
-    }},
+    },
 }
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 
@@ -858,7 +858,7 @@ def create_mock_response(search, index=INDEX_NAME):
 
     response_dict = {
         'took': 1,
-        'hits': {'total': 5, 'hits': []}
+        'hits': {'total': {'value': 5}, 'hits': []}
     }
     for index_name in sorted(indices):
         index_hits = mock_hits(
@@ -917,7 +917,7 @@ def get_msearch_callback(request):
 
 def setup_search_response():
     urllib3_responses.add_callback(
-        urllib3_responses.GET, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
+        urllib3_responses.POST, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
         content_type='application/json', match_querystring=True)
 
 def setup_responses():
@@ -925,7 +925,7 @@ def setup_responses():
         urllib3_responses.GET, re.compile('^/[,\w]+/_mapping$'), callback=get_metadata_callback,
         content_type='application/json', match_querystring=True)
     urllib3_responses.add_callback(
-        urllib3_responses.GET, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
+        urllib3_responses.POST, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
         content_type='application/json', match_querystring=True)
     setup_search_response()
 
@@ -1107,7 +1107,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         urllib3_responses.reset()
         urllib3_responses.add(
-            urllib3_responses.GET, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
+            urllib3_responses.POST, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
         urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
             123: {'running_time_in_nanos': 10},
             456: {'running_time_in_nanos': 10 ** 12},
