@@ -12,6 +12,7 @@ import { loadElasticsearchStatus } from '../reducers'
 
 const DISK_STAT_COLUMNS = [
   { name: 'node', content: 'Node name' },
+  { name: 'shards', content: 'Shards' },
   { name: 'diskAvail', content: 'Disk available' },
   { name: 'diskUsed', content: 'Disk used' },
   { name: 'diskPercent', content: 'Disk percentage used' },
@@ -28,7 +29,7 @@ const INDEX_COLUMNS = [
       </div>,
     ) : ''),
   },
-  { name: 'docType', content: 'Caller Type', format: row => (row.docType === 'structural_variant' ? 'SV' : 'SNV') },
+  { name: 'datasetType', content: 'Caller Type', format: row => (row.datasetType === 'SV' ? 'SV' : 'SNV') },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
   { name: 'creationDateString', content: 'Created Date', format: row => row.creationDateString.split('T')[0] },

@@ -38,6 +38,7 @@ export const CATEGORY_NAMES = {
   'HP:0045027': 'Thoracic Cavity',
   'HP:0025354': 'Cellular Phenotype',
   'HP:0025142': 'Constitution',
+  'HP:0033127': 'Musculoskeletal',
 }
 
 export const getHpoTermsForCategory = (features, nonstandardFeatures) => {

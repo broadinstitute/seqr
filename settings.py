@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
@@ -132,43 +133,40 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '%(asctime)s %(levelname)s: %(message)s     (%(name)s.%(funcName)s:%(lineno)d)',
+        'json_log_formatter': {
+            '()': 'seqr.utils.logging_utils.JsonLogFormatter',
         },
-        'simple': {
-            'format': '%(asctime)s %(levelname)s:  %(message)s'
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': 'INFO',
-            'filters': ['require_debug_false'],
-            'class': 'logging.FileHandler',
-            'filename': 'django.info.log',
-            'formatter': 'verbose',
-        },
-        'console': {
+        'console_json': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'json_log_formatter',
+        },
+        'null': {
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
+        # By default, log to console as json. Gunicorn will forward console logs to kubernetes and stackdriver
         '': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console_json'],
             'level': 'INFO',
-            'formatter': 'verbose',
             'propagate': True,
+        },
+        # Disable default server logging since we use custom request logging middlewear
+        'django.server': {
+            'handlers': ['null'],
+            'propagate': False,
+        },
+        # Log all other django logs to console as json
+        'django': {
+            'handlers': ['console_json'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console_json'],
+            'propagate': False,
         },
     }
 }
@@ -260,10 +258,14 @@ ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200'
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
     host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
+SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
+ELASTICSEARCH_CREDENTIALS = ('seqr', SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
+
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
     port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
+KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 

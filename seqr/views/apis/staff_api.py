@@ -1,5 +1,5 @@
+import base64
 from collections import defaultdict
-from elasticsearch_dsl import Index
 import json
 import logging
 import re
@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.elasticsearch.utils import get_es_client
+from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -38,7 +38,8 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL, \
+    KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ MAX_SAVED_VARIANTS = 10000
 def elasticsearch_status(request):
     client = get_es_client()
 
-    disk_fields = ['node', 'disk.avail', 'disk.used', 'disk.percent']
+    disk_fields = ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent']
     disk_status = [{
         _to_camel_case(field.replace('.', '_')): disk[field] for field in disk_fields
     } for disk in client.cat.allocation(format="json", h=','.join(disk_fields))]
@@ -68,7 +69,7 @@ def elasticsearch_status(request):
     for alias in client.cat.aliases(format="json", h='alias,index'):
         aliases[alias['alias']].append(alias['index'])
 
-    mappings = Index('_all', using=client).get_mapping(doc_type='variant,structural_variant')
+    index_metadata = get_index_metadata('_all', client, use_cache=False)
 
     active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
 
@@ -86,10 +87,7 @@ def elasticsearch_status(request):
 
     for index in indices:
         index_name = index['index']
-        index_mappings = mappings[index_name]['mappings']
-        doc_type = 'variant' if 'variant' in index_mappings else 'structural_variant'
-        index.update(index_mappings[doc_type].get('_meta', {}))
-        index['docType'] = doc_type
+        index.update(index_metadata[index_name])
 
         projects_for_index = []
         for index_prefix in list(seqr_index_projects.keys()):
@@ -651,37 +649,35 @@ def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offse
     logger.info('Fetched {} {} records from airtable'.format(len(records), record_type))
     return records
 
-
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
-# See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
-HPO_CATEGORY_NAMES = {
-    'HP:0000478': 'Eye Defects',
-    'HP:0025142': 'Constitutional Symptom',
-    'HP:0002664': 'Neoplasm',
-    'HP:0000818': 'Endocrine System',
-    'HP:0000152': 'Head or Neck',
-    'HP:0002715': 'Immune System',
-    'HP:0001507': 'Growth',
-    'HP:0045027': 'Thoracic Cavity',
-    'HP:0001871': 'Blood',
-    'HP:0002086': 'Respiratory',
-    'HP:0000598': 'Ear Defects',
-    'HP:0001939': 'Metabolism/Homeostasis',
-    'HP:0003549': 'Connective Tissue',
-    'HP:0001608': 'Voice',
-    'HP:0000707': 'Nervous System',
-    'HP:0000769': 'Breast',
-    'HP:0001197': 'Prenatal development or birth',
-    'HP:0040064': 'Limbs',
-    'HP:0025031': 'Abdomen',
-    'HP:0003011': 'Musculature',
-    'HP:0001626': 'Cardiovascular System',
-    'HP:0000924': 'Skeletal System',
-    'HP:0500014': 'Test Result',
-    'HP:0001574': 'Integument',
-    'HP:0000119': 'Genitourinary System',
-    'HP:0025354': 'Cellular Phenotype',
+# See https://hpo.jax.org/app/browse/term/HP:0000118
+HPO_CATEGORY_DISCOVERY_COLUMNS = {
+    'HP:0000478': 'eye_defects',
+    'HP:0002664': 'neoplasm',
+    'HP:0000818': 'endocrine_system',
+    'HP:0000152': 'head_or_neck',
+    'HP:0002715': 'immune_system',
+    'HP:0001507': 'growth',
+    'HP:0045027': 'thoracic_cavity',
+    'HP:0001871': 'blood',
+    'HP:0002086': 'respiratory',
+    'HP:0000598': 'ear_defects',
+    'HP:0001939': 'metabolism_homeostasis',
+    'HP:0003549': 'connective_tissue',
+    'HP:0001608': 'voice',
+    'HP:0000707': 'nervous_system',
+    'HP:0000769': 'breast',
+    'HP:0001197': 'prenatal_development_or_birth',
+    'HP:0040064': 'limbs',
+    'HP:0025031': 'abdomen',
+    'HP:0033127': 'musculature',
+    'HP:0001626': 'cardiovascular_system',
+    'HP:0000924': 'skeletal_system',
+    'HP:0001574': 'integument',
+    'HP:0000119': 'genitourinary_system',
 }
+DISCOVERY_SKIP_HPO_CATEGORIES = {'HP:0025354', 'HP:0025142'}
+
 
 DEFAULT_ROW = {
     "t0": None,
@@ -715,31 +711,7 @@ DEFAULT_ROW = {
     "posted_publicly": "NS",
     "komp_early_release": "NS",
 }
-DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in [
-    "connective_tissue",
-    "voice",
-    "nervous_system",
-    "breast",
-    "eye_defects",
-    "prenatal_development_or_birth",
-    "neoplasm",
-    "endocrine_system",
-    "head_or_neck",
-    "immune_system",
-    "growth",
-    "limbs",
-    "thoracic_cavity",
-    "blood",
-    "musculature",
-    "cardiovascular_system",
-    "abdomen",
-    "skeletal_system",
-    "respiratory",
-    "ear_defects",
-    "metabolism_homeostasis",
-    "genitourinary_system",
-    "integument",
-]})
+DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in HPO_CATEGORY_DISCOVERY_COLUMNS.values()})
 
 ADDITIONAL_KINDREDS_FIELD = "n_unrelated_kindreds_with_causal_variants_in_gene"
 OVERLAPPING_KINDREDS_FIELD = "n_kindreds_overlapping_sv_similar_phenotype"
@@ -1221,10 +1193,11 @@ def _update_hpo_categories(rows, errors):
             if not category:
                 category_not_set_on_some_features = True
                 continue
+            if category in DISCOVERY_SKIP_HPO_CATEGORIES:
+                continue
 
-            hpo_category_name = HPO_CATEGORY_NAMES[category]
-            key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-            row[key] = "Y"
+            hpo_category_column_key = HPO_CATEGORY_DISCOVERY_COLUMNS[category]
+            row[hpo_category_column_key] = "Y"
 
         if category_not_set_on_some_features:
             errors.append('HPO category field not set for some HPO terms in {}'.format(row['family_id']))
@@ -1382,9 +1355,9 @@ def upload_qc_pipeline_output(request):
     ]
 
     if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        _update_individuals_sv_qc(records_with_individuals)
+        _update_individuals_sv_qc(records_with_individuals, request.user)
     else:
-        _update_individuals_variant_qc(records_with_individuals, data_type, warnings)
+        _update_individuals_variant_qc(records_with_individuals, data_type, warnings, request.user)
 
     message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
     info.append(message)
@@ -1426,7 +1399,7 @@ def _parse_raw_qc_records(json_records):
     return Sample.DATASET_TYPE_VARIANT_CALLS, data_type, records_by_sample_id
 
 
-def _update_individuals_variant_qc(json_records, data_type, warnings):
+def _update_individuals_variant_qc(json_records, data_type, warnings, user):
     unknown_filter_flags = set()
     unknown_pop_filter_flags = set()
 
@@ -1450,13 +1423,14 @@ def _update_individuals_variant_qc(json_records, data_type, warnings):
                 unknown_pop_filter_flags.add(flag)
 
         if filter_flags or pop_platform_filters:
-            Individual.objects.filter(id__in=record['individual_ids']).update(
-                filter_flags=filter_flags or None, pop_platform_filters=pop_platform_filters or None)
+            Individual.bulk_update(user, {
+                'filter_flags': filter_flags or None, 'pop_platform_filters': pop_platform_filters or None,
+            }, id__in=record['individual_ids'])
 
         inidividuals_by_population[record['qc_pop'].upper()] += record['individual_ids']
 
     for population, indiv_ids in inidividuals_by_population.items():
-        Individual.objects.filter(id__in=indiv_ids).update(population=population)
+        Individual.bulk_update(user, {'population': population}, id__in=indiv_ids)
 
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
@@ -1471,7 +1445,7 @@ def _update_individuals_variant_qc(json_records, data_type, warnings):
         warnings.append(message)
 
 
-def _update_individuals_sv_qc(json_records):
+def _update_individuals_sv_qc(json_records, user):
     inidividuals_by_qc = defaultdict(list)
     for record in json_records:
         inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
@@ -1483,7 +1457,7 @@ def _update_individuals_sv_qc(json_records):
             sv_flags.append('raw_calls:_>100')
         if lt10_highQS_rare_calls == 'FALSE':
             sv_flags.append('high_QS_rare_calls:_>10')
-        Individual.objects.filter(id__in=indiv_ids).update(sv_flags=sv_flags or None)
+        Individual.bulk_update(user, {'sv_flags': sv_flags or None}, id__in=indiv_ids)
 
 
 FILTER_FLAG_COL_MAP = {
@@ -1522,6 +1496,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def proxy_to_kibana(request):
     headers = _convert_django_meta_to_http_headers(request.META)
     headers['Host'] = KIBANA_SERVER
+    if KIBANA_ELASTICSEARCH_PASSWORD:
+        token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
+        headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
 
     url = "{scheme}://{host}{path}".format(scheme=request.scheme, host=KIBANA_SERVER, path=request.get_full_path())
 
@@ -1554,7 +1531,7 @@ def proxy_to_kibana(request):
 
 
 def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers"""
+    """Converts django request.META dictionary into a dictionary of HTTP headers."""
 
     def convert_key(key):
         # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')

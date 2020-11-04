@@ -3,11 +3,12 @@ django-anymail==7.0.0            # for sending emails using cloud-based mail ser
 django-guardian==1.5.1           # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.0.2       # allows CORS requests for client-side development
-elasticsearch==6.4.0             # elasticsearch client
-elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
 social-auth-app-django==4.0.0    # the package for Django to authenticate users with social medieas
 social-auth-core==3.3.3          # the Python social authentication package. Required by social-auth-app-django
 google-auth==1.22.1              # for Google service account client and secure sessions using access tokens
+
+elasticsearch==7.9.1             # elasticsearch client
+elasticsearch-dsl==7.2.1	     # elasticsearch query utilities
 gunicorn==19.10.0                # web server
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files

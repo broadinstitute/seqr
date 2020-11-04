@@ -14,7 +14,7 @@ spec:
     name: seqr
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: seqr
   namespace: {{ NAMESPACE }}
@@ -23,6 +23,9 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: seqr
   template:
     metadata:
       labels:
@@ -103,6 +106,16 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: django_key
+        - name: SEQR_ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: seqr_es_password
+        - name: KIBANA_ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kibana-secrets
+              key: elasticsearch.password
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
