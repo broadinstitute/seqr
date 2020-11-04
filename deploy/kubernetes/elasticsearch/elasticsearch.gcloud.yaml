@@ -121,12 +121,6 @@ spec:
               memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
             limits:
               memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
-# for use in mounting multiple disks to copy data - should not be used for real in production
-#          volumeMounts:
-#          - name: storage
-#            mountPath: /data
-#        volumes:
-#        - name: storage
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data
@@ -137,15 +131,6 @@ spec:
         resources:
           requests:
             storage: {{ ES_DATA_DISK_SIZE }}
-# for use in mounting multiple disks to copy data - should not be used for real in production
-#    - metadata:
-#        name: storage
-#      spec:
-#        accessModes: [ "ReadWriteOnce" ]
-#        storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
-#        resources:
-#          requests:
-#            storage: {{ ES_DATA_DISK_SIZE }}
 {% if ES_LOADING_NUM_PODS > 0 %}
   - name: data-loading
     count: {{ ES_LOADING_NUM_PODS }}
