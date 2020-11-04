@@ -25,21 +25,27 @@ services:
 
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch:gcloud-prod
+    image: gcr.io/seqr-project/elasticsearch:gcloud-prod-elasticsearch
     volumes:
-      - ./data/elasticsearch:/elasticsearch-data
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    container_name: elasticsearch
+    environment:
+      - http.host=0.0.0.0
+      - discovery.type=single-node
+      - cluster.routing.allocation.disk.threshold_enabled=false
     healthcheck:
-      test: bash -c "curl -s elasticsearch:9200 | grep search"
+      test: bash -c "curl -s elasticsearch:9200/_cat/health | grep green"
       interval: 3s
       timeout: 5s
       retries: 100
+    ports:
+      - 9200:9200
 
 
   kibana:
     image: gcr.io/seqr-project/kibana:gcloud-prod
     environment:
-      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
-      - ELASTICSEARCH_SERVICE_PORT=9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       elasticsearch:
         condition: service_healthy

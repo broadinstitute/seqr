@@ -1,29 +1,33 @@
-language: python
+jobs:
+  include:
+    - name: python_tests
+      language: python
+      python: 3.7
+      addons:
+        postgresql: 9.6
+      install:
+      - pip install -r requirements.txt --upgrade
+      - pip install -r requirements-dev.txt --upgrade
+      script:
+      - coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
+      - coverage report --fail-under=99
 
-python:
-- '3.7'
+    - name: javascript_tests
+      language: node_js
+      node_js: 11.8.0
+      before_install:
+      - cd ui/
+      install:
+      - echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
+      script:
+      - npm test
 
-node_js:
-- '11.8.0'
-
-services:
-- docker
-
-install:
-- ./install_dependencies.sh
-
-script:
-- coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
-- coverage report --fail-under=99
-- cd ui/
-- npm test
-- cd ..
-- ./test_local_deployment.sh
-
-addons:
-  postgresql: '9.6'
+    - name: local_intall_test
+      services:
+      - docker
+      script:
+      - ./test_local_deployment.sh
 
 notifications:
   slack:
     secure: tYNwi4kff+8FWbv+nWqKZt28Qez0Dv77rJG6nvdiaO7QgPZmaiG5l8NqYdxV63CMgNzHwTFAz8ca9uOoh06o7+HuiFNNiqXEAu8umLvlnvkKT6itSDyImxxD7ypitUwcBEKkNy1fxhrLRPQVLjxz37885kA/VtWpm19A5vQ8A7w=
-

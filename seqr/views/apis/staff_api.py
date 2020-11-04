@@ -1,5 +1,5 @@
+import base64
 from collections import defaultdict
-from elasticsearch_dsl import Index
 import json
 import logging
 import re
@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
-from seqr.utils.elasticsearch.utils import get_es_client
+from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -38,7 +38,8 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL, \
+    KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ MAX_SAVED_VARIANTS = 10000
 def elasticsearch_status(request):
     client = get_es_client()
 
-    disk_fields = ['node', 'disk.avail', 'disk.used', 'disk.percent']
+    disk_fields = ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent']
     disk_status = [{
         _to_camel_case(field.replace('.', '_')): disk[field] for field in disk_fields
     } for disk in client.cat.allocation(format="json", h=','.join(disk_fields))]
@@ -68,7 +69,7 @@ def elasticsearch_status(request):
     for alias in client.cat.aliases(format="json", h='alias,index'):
         aliases[alias['alias']].append(alias['index'])
 
-    mappings = Index('_all', using=client).get_mapping(doc_type='variant,structural_variant')
+    index_metadata = get_index_metadata('_all', client, use_cache=False)
 
     active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
 
@@ -86,10 +87,7 @@ def elasticsearch_status(request):
 
     for index in indices:
         index_name = index['index']
-        index_mappings = mappings[index_name]['mappings']
-        doc_type = 'variant' if 'variant' in index_mappings else 'structural_variant'
-        index.update(index_mappings[doc_type].get('_meta', {}))
-        index['docType'] = doc_type
+        index.update(index_metadata[index_name])
 
         projects_for_index = []
         for index_prefix in list(seqr_index_projects.keys()):
@@ -1498,6 +1496,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def proxy_to_kibana(request):
     headers = _convert_django_meta_to_http_headers(request.META)
     headers['Host'] = KIBANA_SERVER
+    if KIBANA_ELASTICSEARCH_PASSWORD:
+        token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
+        headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
 
     url = "{scheme}://{host}{path}".format(scheme=request.scheme, host=KIBANA_SERVER, path=request.get_full_path())
 
@@ -1530,7 +1531,7 @@ def proxy_to_kibana(request):
 
 
 def _convert_django_meta_to_http_headers(request_meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers"""
+    """Converts django request.META dictionary into a dictionary of HTTP headers."""
 
     def convert_key(key):
         # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')

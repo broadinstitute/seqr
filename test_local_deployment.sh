@@ -2,6 +2,11 @@
 
 set -ex
 
+# Due to travis filesystem issues, need to explicitly grant permissions for the volume mount from the container
+# This is not required to use docker-compose locally, only for testing
+docker-compose up -d elasticsearch
+docker-compose exec elasticsearch chmod 777 ./data
+
 docker-compose up -d seqr
 docker-compose logs postgres
 docker-compose logs elasticsearch

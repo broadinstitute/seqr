@@ -6,8 +6,7 @@ import logging
 import os
 import sys
 
-from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, COMPONENT_GROUP_NAMES, \
-    DEPLOYMENT_TARGETS, resolve_component_groups
+from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
     show_status, wait_for, troubleshoot_component, delete_component, reset_database, delete_all, \
     get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
@@ -20,6 +19,7 @@ logger.setLevel(logging.INFO)
 SET_ENVIRONMENT_COMMAND = 'set-env'
 STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
+REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
 LOG_COMMAND = 'logs'
 TROUBLESHOOT_COMMAND = 'troubleshoot'
@@ -37,7 +37,7 @@ RESET_COMMAND = 'reset-database'
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
-COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS + COMPONENT_GROUP_NAMES
+COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
 DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_TARGETS.keys())
 
 ## ENVIRONMENT_COMMAND
@@ -107,6 +107,11 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kuber
 sp = subparsers.add_parser(RESET_COMMAND, description="Delete all data from the given database")
 sp.add_argument('database', nargs="+", choices=["seqrdb"])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
+
+## REDEPLOY_COMMAND
+sp = subparsers.add_parser(REDEPLOY_COMMAND, description="Re-deploy one or more components in their existing pod")
+sp.add_argument("components", nargs="+", help="one or more components to re-deploy", choices=COMPONENT_ARG_CHOICES)
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
 
 
 def _check_restore_db_file(path):
@@ -179,7 +184,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     #email = password = None
     if args.command == DEPLOY_COMMAND:
-        components_to_deploy = resolve_component_groups(args.deployment_target, args.components)
+        components_to_deploy = args.components
 
     elif args.command == DEPLOY_ALL_COMMAND:
         # compute which components to deploy
@@ -222,19 +227,23 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     logger.info("==> Done")
 
+elif args.command == REDEPLOY_COMMAND:
+    components = args.components
+    redeploy(args.deployment_target, components)
+
 elif args.command == LOG_COMMAND:
-    components = resolve_component_groups(args.deployment_target, args.components)
+    components = args.components
     print_log(components, args.deployment_target, args.stream_log, previous=args.previous)
 
 elif args.command == PORT_FORWARD_COMMAND:
-    component_port_pairs = get_component_port_pairs(resolve_component_groups(args.deployment_target, args.components))
+    component_port_pairs = get_component_port_pairs(args.components)
     port_forward(component_port_pairs, deployment_target=args.deployment_target)
 
 elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
-    component_port_pairs = get_component_port_pairs(resolve_component_groups(args.deployment_target, args.components))
+    component_port_pairs = get_component_port_pairs(args.components)
     if component_port_pairs:
         procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-        procs2 = print_log(resolve_component_groups(args.deployment_target, args.components), args.deployment_target, enable_stream_log=True, wait=False)
+        procs2 = print_log(args.components, args.deployment_target, enable_stream_log=True, wait=False)
 
         wait_for(procs1 + procs2)
 
@@ -256,7 +265,7 @@ elif args.command == DASHBOARD_COMMAND:
     show_dashboard()
 
 elif args.command == DELETE_COMMAND:
-    for component in resolve_component_groups(args.deployment_target, args.components):
+    for component in args.components:
         delete_component(component, deployment_target=args.deployment_target)
 
 elif args.command == RESET_COMMAND:

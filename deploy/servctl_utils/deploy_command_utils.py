@@ -4,12 +4,12 @@ import logging
 import os
 from pprint import pformat
 
-import tempfile
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
-    wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready
+    wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
+    wait_for_resource, wait_for_not_resource
 from deploy.servctl_utils.yaml_settings_utils import process_jinja_template, load_settings
 from deploy.servctl_utils.shell_utils import run
 
@@ -25,7 +25,7 @@ DEPLOYABLE_COMPONENTS = [
 
     "external-elasticsearch-connector",
 
-    "elasticsearch",  # a single elasticsearch instance
+    "elasticsearch",
     "postgres",
     "redis",
     "seqr",
@@ -34,12 +34,6 @@ DEPLOYABLE_COMPONENTS = [
     "pipeline-runner",
 
     "kube-scan",
-
-    # components of a sharded elasticsearch cluster based on https://github.com/pires/kubernetes-elasticsearch-cluster
-    "es-client",
-    "es-master",
-    "es-data",
-    "es-kibana",
 ]
 
 DEPLOYMENT_TARGETS = {}
@@ -59,16 +53,45 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
 
 
 DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
-#"gcloud-prod-elasticsearch",
-DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
-    "init-cluster",
-    "settings",
-    "es-master",
-    "es-client",
-    "es-data",
-    "es-kibana",
-    "kube-scan",
+
+DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch'] = [
+    'init-cluster',
+    'settings',
+    'secrets',
+    'elasticsearch',
+    'kube-scan',
 ]
+DEPLOYMENT_TARGETS['gcloud-dev-es'] = DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch']
+
+GCLOUD_CLIENT = 'gcloud-client'
+
+SECRETS = {
+    'elasticsearch': ['users', 'users_roles', 'roles.yml'],
+    GCLOUD_CLIENT: ['service-account-key.json'],
+    'kibana': ['elasticsearch.password'],
+    'matchbox': ['{deploy_to}/config.json'],
+    'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
+    'postgres': ['postgres.username', 'postgres.password'],
+    'seqr': [
+        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
+    ],
+}
+
+DEPLOYMENT_TARGET_SECRETS = {
+    'gcloud-prod': [
+        'seqr',
+        'postgres',
+        'nginx',
+        'matchbox',
+        'kibana',
+        GCLOUD_CLIENT,
+    ],
+    'gcloud-prod-elasticsearch': [
+        'elasticsearch',
+    ],
+}
+DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
+DEPLOYMENT_TARGET_SECRETS['gcloud-dev-es'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod-elasticsearch']
 
 
 def deploy_init_cluster(settings):
@@ -142,54 +165,20 @@ def deploy_secrets(settings):
     create_namespace(settings)
 
     # deploy secrets
-    for secret_label in [
-        "seqr-secrets",
-        "postgres-secrets",
-        "nginx-secrets",
-        "matchbox-secrets",
-        "gcloud-client-secrets"
-    ]:
-        run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
+    secret_labels = DEPLOYMENT_TARGET_SECRETS[settings['DEPLOY_TO']]
+    for secret_label in secret_labels:
+        run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    run(" ".join([
-        "kubectl create secret generic seqr-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/airtable_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic postgres-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.username",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.password",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic nginx-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.crt",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/%(DEPLOY_TO)s/config.json",
-    ]) % settings, errors_to_ignore=["already exists"])
-
-    account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
-    if not os.path.isfile(account_key_path):
-        account_key_path = "deploy/secrets/shared/gcloud/service-account-key.json"
-    if os.path.isfile(account_key_path):
-        run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets",
-            "--from-file %(account_key_path)s",
-            "--from-file deploy/secrets/shared/gcloud/boto",
-        ]) % {'account_key_path': account_key_path}, errors_to_ignore=["already exists"])
-    else:
-        run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
-        ]), errors_to_ignore=["already exists"])
+    for secret_label in secret_labels:
+        secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
+        secret_command += [
+            '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
+                secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
+            for file in SECRETS[secret_label]
+        ]
+        if secret_label == GCLOUD_CLIENT:
+            secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
+        run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
 
 
 def deploy_external_elasticsearch_connector(settings):
@@ -213,8 +202,44 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
-    deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
+    _set_elasticsearch_kubernetes_resources()
 
+    # create persistent volumes
+    pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
+    disk_names = get_disk_names('es-data', settings)
+    for disk_name in disk_names:
+        volume_settings = {'DISK_NAME': disk_name}
+        volume_settings.update(settings)
+        _process_templates(volume_settings, [pv_template_path])
+        run('kubectl create -f {}/{}'.format(settings['DEPLOYMENT_TEMP_DIR'], pv_template_path),
+            print_command=True, errors_to_ignore=['already exists'])
+
+    deploy_pod("elasticsearch", settings, wait_until_pod_is_running=False)
+
+    wait_for_not_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.phase}', invalid_status='Invalid',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch status')
+
+    total_pods = 0
+    for num_pods in ['ES_DATA_NUM_PODS', 'ES_CLIENT_NUM_PODS', 'ES_MASTER_NUM_PODS', 'ES_LOADING_NUM_PODS']:
+        total_pods += settings.get(num_pods, 0)
+    for pod_number_i in range(total_pods):
+        sleep_until_pod_is_running('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+    for pod_number_i in range(total_pods):
+        sleep_until_pod_is_ready('elasticsearch', deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+
+    wait_for_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.phase}', expected_status='Ready',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch status')
+
+    wait_for_resource(
+        'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
+
+def _set_elasticsearch_kubernetes_resources():
+    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    if not has_kube_resource:
+        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 def deploy_postgres(settings):
     print_separator("postgres")
@@ -301,6 +326,19 @@ def deploy_seqr(settings):
     deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
 
 
+def redeploy_seqr(deployment_target):
+    print_separator('re-deploying seqr')
+
+    seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
+    if not seqr_pod_name:
+        raise ValueError('No seqr pod found, unable to re-deploy')
+    sleep_until_pod_is_running('seqr', deployment_target=deployment_target)
+
+    run_in_pod(seqr_pod_name, 'git pull', verbose=True)
+    run_in_pod(seqr_pod_name, './manage.py migrate', verbose=True)
+    run_in_pod(seqr_pod_name, '/usr/local/bin/restart_server.sh')
+
+
 def _drop_seqr_db(postgres_pod_name):
     run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
                errors_to_ignore=["does not exist"],
@@ -334,9 +372,15 @@ def _restore_seqr_db_from_backup(postgres_pod_name, seqrdb_backup, reference_dat
 def deploy_kibana(settings):
     print_separator("kibana")
 
-    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
+    docker_build("kibana", settings)
+
+    _set_elasticsearch_kubernetes_resources()
 
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
+
+    wait_for_resource(
+        'kibana', resource_type='kibana', json_path='{.items[0].status.health}', expected_status='green',
+        deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
 
 
 def deploy_nginx(settings):
@@ -348,14 +392,6 @@ def deploy_nginx(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
-
-
-def deploy_kibana(settings):
-    print_separator("kibana")
-
-    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
-
-    deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_pipeline_runner(settings):
@@ -378,71 +414,6 @@ def deploy_kube_scan(settings):
             return
 
     run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
-
-
-def deploy_es_client(settings):
-    deploy_elasticsearch_sharded(settings, "es-client")
-
-
-def deploy_es_master(settings):
-    deploy_elasticsearch_sharded(settings, "es-master")
-
-
-def deploy_es_data(settings):
-    deploy_elasticsearch_sharded(settings, "es-data")
-
-
-def deploy_es_kibana(settings):
-    deploy_elasticsearch_sharded(settings, "es-kibana")
-
-
-def deploy_elasticsearch_sharded(settings, component):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator(component)
-
-    if component == "es-master":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
-        ]
-    elif component == "es-client":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
-        ]
-    elif component == "es-data":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
-        ]
-    elif component == "es-kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
-        ]
-    elif component == "kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/kibana/kibana.%(DEPLOY_TO_PREFIX)s.yaml",
-        ]
-    else:
-        raise ValueError("Unexpected component: " + component)
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        for config_file in config_files:
-            run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
-
-    for config_file in config_files:
-        run("kubectl apply -f " + config_file % settings)
-
-    if component in ["es-client", "es-master", "es-data", "es-kibana"]:
-        # wait until all replicas are running
-        num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
-        for pod_number_i in range(num_pods):
-            sleep_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
-
-    if component == "es-client":
-       run("kubectl describe svc elasticsearch")
 
 
 def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
@@ -479,6 +450,24 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
             else:
                 raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
 
+def redeploy(deployment_target, components):
+    if not components:
+        raise ValueError("components list is empty")
+
+    check_kubernetes_context(deployment_target)
+
+    # call redeploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
+    for component in DEPLOYABLE_COMPONENTS:
+        if component in components:
+            # only deploy requested components
+            func_name = "redeploy_" + component.replace("-", "_")
+            f = globals().get(func_name)
+            if f is not None:
+                f(deployment_target)
+            else:
+                raise ValueError(
+                    "'redeploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
+
 
 def prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings):
     # parse settings files
@@ -510,16 +499,18 @@ def prepare_settings_for_deployment(deployment_target, output_dir, runtime_setti
     logger.addHandler(sh)
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
+    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + glob.glob("deploy/kubernetes/*/*.yaml")
+    _process_templates(settings, template_file_paths)
+
+    return settings
+
+
+def _process_templates(settings, template_file_paths):
     # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
     input_base_dir = settings["BASE_DIR"]
     output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
-    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
-                          glob.glob("deploy/kubernetes/*/*.yaml") + \
-                          glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
     for file_path in template_file_paths:
         process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
-
-    return settings
 
 def print_separator(label):
     message = "       DEPLOY %s       " % (label,)
@@ -577,21 +568,24 @@ def _init_cluster_gcloud(settings):
     num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
     while num_nodes_remaining_to_create > 0:
         i += 1
-        run(" ".join([
+        command = [
             "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
             "--cluster %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--node-version %(KUBERNETES_VERSION)s",
-            "--no-enable-legacy-authorization",
+            #"--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
             "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]) % settings, verbose=False, errors_to_ignore=["lready exists"])
+        ]
+        if settings.get('CLUSTER_NODE_LABELS'):
+            command += ['--node-labels', settings['CLUSTER_NODE_LABELS']]
+        run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
 
         num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
@@ -601,76 +595,32 @@ def _init_cluster_gcloud(settings):
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
 
-    # create disks from snapshots
-    created_disks = []
-    for i, snapshot_name in enumerate([d.strip() for d in settings.get("CREATE_FROM_SNAPSHOTS", "").split(",") if d]):
-        disk_name = "es-data-%d" % (i+1)
-        run(" ".join([
-            "gcloud compute disks create " + disk_name,
-            "--zone %(GCLOUD_ZONE)s",
-            "--type pd-ssd",
-            "--source-snapshot " + snapshot_name,
-        ]) % settings, errors_to_ignore=["lready exists"])
+    _init_gcloud_disks(settings)
 
-        created_disks.append(disk_name)
+def _init_gcloud_disks(settings):
+    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
+        setting_prefix = disk_label.upper().replace('-', '_')
 
-    if created_disks:
-        settings["CREATE_WITH_EXISTING_DISKS"] = ",".join(created_disks)
+        disk_names = get_disk_names(disk_label, settings)
 
-    # create PersistentVolume objects for disk
-    namespace = settings["NAMESPACE"]
-    for i, existing_disk_name in enumerate([d.strip() for d in settings.get("CREATE_WITH_EXISTING_DISKS", "").split(",") if d]):
-        file_path = None
-        existing_disk_name = existing_disk_name.strip()
-        elasticsearch_disk_size = settings["ELASTICSEARCH_DISK_SIZE"]
-        with tempfile.NamedTemporaryFile("w") as f:
-            f.write("""apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: %(existing_disk_name)s
-  namespace: %(namespace)s
-spec:
-  capacity:
-    storage: %(elasticsearch_disk_size)s
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: ssd-storage-class
-  gcePersistentDisk:
-    fsType: ext4
-    pdName: %(existing_disk_name)s
-""" % locals())
-            f.flush()
-            file_path = f.name
-            run("kubectl create -f %(file_path)s"  % locals(), print_command=True, errors_to_ignore=["already exists"])
+        snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
+        if snapshots and len(snapshots) != len(disk_names):
+            raise Exception('Invalid configuration for {}: {} disks to create and {} snapshots'.format(
+                disk_label, len(disk_names), len(snapshots)
+            ))
 
-    # create elasticsearch disks storage class
-    #run(" ".join([
-    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
-    #]))
+        for i, disk_name in enumerate(disk_names):
+            command = [
+                'gcloud compute disks create', disk_name, '--zone', settings['GCLOUD_ZONE'],
+            ]
+            if settings.get('{}_DISK_TYPE'.format(setting_prefix)):
+                command += ['--type', settings['{}_DISK_TYPE'.format(setting_prefix)]]
+            if snapshots:
+                command += ['--source-snapshot', snapshots[i]]
+            else:
+                command += ['--size', str(settings['{}_DISK_SIZE'.format(setting_prefix)])]
 
-    #run(" ".join([
-    #    "gcloud compute disks create %(CLUSTER_NAME)s-elasticsearch-disk-0  --type=pd-ssd --zone=us-central1-b --size=%(ELASTICSEARCH_DISK_SIZE)sGi" % settings,
-    #]), errors_to_ignore=["already exists"])
-
-    #run(" ".join([
-    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-persistent-volume.yaml" % settings,
-    #]))
-
-
-    # if cluster was already created previously, update its size to match CLUSTER_NUM_NODES
-    #run(" ".join([
-    #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
-    #]), is_interactive=True)
-
-    # create persistent disks
-    for label in ("postgres", "seqr-static-files"):
-        run(" ".join([
-            "gcloud compute disks create",
-            "--zone %(GCLOUD_ZONE)s",
-            "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
-            "%(CLUSTER_NAME)s-"+label+"-disk",
-            ]) % settings, verbose=True, errors_to_ignore=["already exists"])
+            run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
 
 
 def docker_build(component_label, settings, custom_build_args=()):
@@ -770,24 +720,3 @@ def create_vpc(gcloud_project, network_name):
         "--allow tcp:22,tcp:3389,icmp",
         "--source-ranges 10.0.0.0/8",
     ]) % locals(), errors_to_ignore=["already exists"])
-
-
-def _get_component_group_to_component_name_mapping():
-    result = {
-        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
-    }
-    return result
-
-
-def resolve_component_groups(deployment_target, components_or_groups):
-    component_groups = _get_component_group_to_component_name_mapping()
-
-    return [
-        component
-        for component_or_group in components_or_groups
-        for component in component_groups.get(component_or_group, [component_or_group])
-    ]
-
-
-COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
-

@@ -1,8 +1,6 @@
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
-VARIANT_DOC_TYPE = 'variant'
-SV_DOC_TYPE = 'structural_variant'
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 7500
