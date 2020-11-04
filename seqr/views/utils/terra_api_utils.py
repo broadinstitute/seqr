@@ -203,12 +203,15 @@ def list_anvil_workspaces(user, fields=None):
     """
     Get all the workspaces accessible by the logged-in user.
 
-    Args:
+    :param
     user (User model): who's credentials will be used to access AnVIL
     fields (str): a comma-delimited list of values that limits the
         response payload to include only those keys and exclude other
         keys (e.g., to include {"workspace": {"attributes": {...}}},
         specify "workspace.attributes").
+    :return
+    A list of workspaces that the user has access (OWNER, WRITER, or READER). Each of the workspace has
+    the fields that specified by the 'fields' parameter or all the fields that AnVIL provides.
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
     return _anvil_call('get', user, path)
