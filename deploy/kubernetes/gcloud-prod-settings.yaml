@@ -11,8 +11,11 @@ CLUSTER_EXTERNAL_IP: '35.194.17.244'
 CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
 BASE_URL: 'https://seqr.broadinstitute.org/'
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.0.3
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.0.0.122
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
+ELASTICSEARCH_VERSION: 7.8.1
+
+KIBANA_SERVICE_HOSTNAME: kibana-kb-http
 
 GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
@@ -27,7 +30,8 @@ GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'larkin@broadinstitute.org,shall@broadinstitute.org'
+# TODO remove in https://github.com/broadinstitute/seqr-private/issues/931
+UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'shall@broadinstitute.org'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

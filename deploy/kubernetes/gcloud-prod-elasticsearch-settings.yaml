@@ -15,7 +15,7 @@ ELASTICSEARCH_VERSION: 7.8.1
 ES_DATA_NUM_PODS: 3
 ES_CLIENT_NUM_PODS: 3
 ES_MASTER_NUM_PODS: 3
-ES_LOADING_NUM_PODS: 3
+ES_LOADING_NUM_PODS: 4
 
 ES_DATA_DISK_SIZE: 3200
 ELASTICSEARCH_JVM_MEMORY: 13g
@@ -28,7 +28,7 @@ DISKS: es-data
 ES_DATA_NUM_DISKS: 3
 ES_DATA_DISK_TYPE: pd-ssd
 
-#ES_DATA_SNAPSHOTS:  es-snapshot-1,  es-snapshot-2,  es-snapshot-3
+#ES_DATA_SNAPSHOTS:  es-7-data-snapshot-1,  es-7-data-snapshot-2,  es-7-data-snapshot-3
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

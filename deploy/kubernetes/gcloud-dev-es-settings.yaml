@@ -3,11 +3,12 @@
 
 CLUSTER_NAME: 'gcloud-dev-es'
 CLUSTER_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-# Need s one node per data pod
+
+# Needs one node per data pod
 CLUSTER_NUM_NODES: 4
 CLUSTER_NODE_LABELS: nodeType=data
 
-KUBERNETES_VERSION: '1.16.13-gke.1'
+KUBERNETES_VERSION: '1.16.13-gke.401'
 
 ES_DATA_NUM_PODS: 3
 ES_CLIENT_NUM_PODS: 2
@@ -32,7 +33,6 @@ ES_DATA_DISK_TYPE: pd-ssd
 
 NAMESPACE: gcloud-dev-es
 
-ES_CLUSTER_NAME: gcloud-dev-es
 ELASTICSEARCH_VERSION: 7.8.1
 
 DEPLOY_TO: 'gcloud-dev-es'
