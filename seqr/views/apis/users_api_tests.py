@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -27,10 +27,7 @@ class UsersAPITest(AuthenticationTestCase):
         all_staff_usernames = list(response_json.keys())
         first_staff_user = response_json[all_staff_usernames[0]]
 
-        self.assertSetEqual(
-            set(first_staff_user),
-            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id'}
-        )
+        self.assertSetEqual(set(first_staff_user), USER_FIELDS)
         self.assertTrue(first_staff_user['isStaff'])
 
     def test_get_all_collaborators(self):
@@ -70,11 +67,9 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 3)
-        self.assertSetEqual(
-            set(collaborators[0].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions', 'id'}
-        )
+        expected_fields = {'hasEditPermissions', 'hasViewPermissions'}
+        expected_fields.update(USER_FIELDS)
+        self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
         self.assertFalse(collaborators[0]['isStaff'])
@@ -109,10 +104,7 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {username, 'test_user_manager', 'test_user_non_staff'})
-        self.assertSetEqual(
-            set(response_json[username].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
-        )
+        self.assertSetEqual(set(response_json[username].keys()), USER_FIELDS)
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
