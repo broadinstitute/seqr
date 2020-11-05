@@ -172,6 +172,8 @@ DISCOVERY_TABLE_VARIANT_COLUMNS = [
     'Gene', 'Gene_Class', 'inheritance_description', 'Zygosity', 'variant_genome_build', 'Chrom', 'Pos', 'Ref',
     'Alt', 'hgvsc', 'hgvsp', 'Transcript', 'sv_name', 'sv_type', 'significance',
 ]
+DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS = DISCOVERY_TABLE_VARIANT_COLUMNS + [
+    'novel_mendelian_gene', 'phenotype_class']
 
 PHENOTYPE_PROJECT_CATEGORIES = [
     'Muscle', 'Eye', 'Renal', 'Neuromuscular', 'IBD', 'Epilepsy', 'Orphan', 'Hematologic',
@@ -234,18 +236,17 @@ def anvil_export(request, project_guid):
         project, request.GET.get('loadedBefore'),
     )
 
-    subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants = _parse_anvil_metadata(
+    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
         project, individual_samples, include_collaborator=False)
 
-    variant_columns = []
-    for i in range(max_saved_variants):
-        variant_columns += ['{}-{}'.format(k, i + 1) for k in DISCOVERY_TABLE_VARIANT_COLUMNS]
+    # Flatten lists of discovery rows so there is one row per variant
+    discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
 
     return export_multiple_files([
         ['{}_PI_Subject'.format(project.name), SUBJECT_TABLE_COLUMNS, subject_rows],
         ['{}_PI_Sample'.format(project.name), SAMPLE_TABLE_COLUMNS, sample_rows],
         ['{}_PI_Family'.format(project.name), FAMILY_TABLE_COLUMNS, family_rows],
-        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + variant_columns, discovery_rows],
+        ['{}_PI_Discovery'.format(project.name), DISCOVERY_TABLE_CORE_COLUMNS + DISCOVERY_TABLE_VARIANT_COLUMNS, discovery_rows],
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
@@ -258,15 +259,22 @@ def sample_metadata_export(request, project_guid):
     individual_samples = _get_loaded_before_date_project_individual_samples(
         project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
-    subject_rows, sample_rows, family_rows, discovery_rows, _ = _parse_anvil_metadata(
+    subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
         project, individual_samples, include_collaborator=True)
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
-    for rows in [sample_rows, discovery_rows]:
-        for row in rows:
-            rows_by_subject_id[row['subject_id']].update(row)
+    for row in sample_rows:
+        rows_by_subject_id[row['subject_id']].update(row)
 
+    for rows in discovery_rows:
+        for i, row in enumerate(rows):
+            if row:
+                parsed_row = {k: row[k] for k in DISCOVERY_TABLE_CORE_COLUMNS}
+                parsed_row.update({
+                    '{}-{}'.format(k, i + 1): row[k] for k in DISCOVERY_TABLE_METADATA_VARIANT_COLUMNS if row.get(k)
+                })
+                rows_by_subject_id[row['subject_id']].update(parsed_row)
 
     rows = list(rows_by_subject_id.values())
     all_features = set()
@@ -307,7 +315,7 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
     sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), include_collaborator=include_collaborator)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family.keys()))
-    compound_het_gene_id_by_family, gene_ids, max_saved_variants = _process_saved_variants(
+    compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
         saved_variants_by_family, family_individual_affected_guids)
     genes_by_id = get_genes(gene_ids)
 
@@ -382,10 +390,10 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
             sample_row = _get_sample_row(sample, has_dbgap_submission, airtable_metadata)
             sample_rows.append(sample_row)
 
-            discovery_row = _get_discovery_row(sample, parsed_variants, male_individual_guids)
+            discovery_row = _get_discovery_rows(sample, parsed_variants, male_individual_guids)
             discovery_rows.append(discovery_row)
 
-    return subject_rows, sample_rows, family_rows, discovery_rows, max_saved_variants
+    return subject_rows, sample_rows, family_rows, discovery_rows
 
 
 def _get_variant_main_transcript(variant):
@@ -420,9 +428,7 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
     compound_het_gene_id_by_family = {}
     gene_ids = set()
-    max_saved_variants = 1
     for family_guid, saved_variants in saved_variants_by_family.items():
-        max_saved_variants = max(max_saved_variants, len(saved_variants))
         potential_com_het_gene_variants = defaultdict(list)
         for variant in saved_variants:
             variant['main_transcript'] = _get_variant_main_transcript(variant)
@@ -450,7 +456,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
                         if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
                             compound_het_gene_id_by_family[family_guid] = gene_id
                             gene_ids.add(gene_id)
-    return compound_het_gene_id_by_family, gene_ids, max_saved_variants
+    return compound_het_gene_id_by_family, gene_ids
 
 
 def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id):
@@ -548,13 +554,14 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
 
-def _get_discovery_row(sample, parsed_variants, male_individual_guids):
+def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     individual = sample.individual
     discovery_row = {
         'entity:discovery_id': individual.individual_id,
         'subject_id': individual.individual_id,
         'sample_id': sample.sample_id,
     }
+    discovery_rows = []
     for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
         genotype = genotypes.get(individual.guid, {})
         is_x_linked = "X" in parsed_variant.get('Chrom', '')
@@ -565,8 +572,11 @@ def _get_discovery_row(sample, parsed_variants, male_individual_guids):
                 'Zygosity': zygosity,
             }
             variant_discovery_row.update(parsed_variant)
-            discovery_row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_discovery_row.items()})
-    return discovery_row
+            variant_discovery_row.update(discovery_row)
+            discovery_rows.append(variant_discovery_row)
+        else:
+            discovery_rows.append(None)
+    return discovery_rows
 
 
 MAX_FILTER_IDS = 500
