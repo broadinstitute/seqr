@@ -3,6 +3,7 @@ from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
+import mock
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
@@ -93,7 +94,7 @@ class AuthenticationTestCase(TestCase):
 
 
 ANVIL_WORKSPACES = [{
-    'workspace_namespace': 'test_namespace',
+    'workspace_namespace': 'my-seqr-billing',
     'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
     'public': False,
     'acl': {
@@ -111,25 +112,7 @@ ANVIL_WORKSPACES = [{
         }
     }
 }, {
-    'workspace_namespace': 'test_namespace',
-    'workspace_name': 'anvil-empty project',
-    'public': False,
-    'acl': {
-        'test_user_manager@test.com': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        },
-        'test_user_no_staff@test.com': {
-            "accessLevel": "READER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        }
-    }
-}, {
-    'workspace_namespace': 'test_namespace',
+    'workspace_namespace': 'my-seqr-billing',
     'workspace_name': 'anvil-project 1000 Genomes Demo',
     'public': False,
     'acl': {
@@ -142,6 +125,11 @@ ANVIL_WORKSPACES = [{
     }
 }
 ]
+
+TEST_TERRA_API_ROOT_URL =  'https://localhost/'
+
+# the time must the same as that in 'auth_time' in the social_auth fixture data
+TOKEN_AUTH_TIME = 1603287741
 
 
 def get_ws_acl_side_effect(url):
@@ -164,6 +152,7 @@ def get_workspaces_side_effect(user, fields):
     ]
 
 
+@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
@@ -172,10 +161,81 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         cls.collaborator_user = User.objects.get(username='test_user_non_staff')
         cls.no_access_user = User.objects.get(username='test_user_no_access')
 
-        for project in Project.objects.all():
-            project.workspace_namespace = ANVIL_WORKSPACES[project.pk-1]['workspace_namespace']
-            project.workspace_name = ANVIL_WORKSPACES[project.pk - 1]['workspace_name']
-            project.save()
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = TOKEN_AUTH_TIME + 10
+        # self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        self.list_ws_patcher = patcher.start()
+        self.list_ws_patcher.side_effect = get_workspaces_side_effect
+        # self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
+        self.service_account_patcher = patcher.start()
+        self.service_account_patcher.get.side_effect = get_ws_acl_side_effect
+        # self.addCleanup(patcher.stop)
+
+
+MIX_TEST_WORKSPACES = [
+        {
+            'public': False,
+            'accessLevel': 'READER',
+            'workspace': {
+                'namespace': 'my-seqr-billing',
+                'name': 'anvil-project 1000 Genomes Demo'
+            }
+        }, {
+           'public': False,
+           'accessLevel': 'OWNER',
+           'workspace': {
+               'namespace': 'my-seqr-billing',
+               'name': 'anvil-no-project-workspace'
+           }
+        }, {
+           'public': True,
+           'accessLevel': 'READER',
+           'workspace': {
+               'namespace': 'my-seqr-billing',
+               'name': 'anvil-no-project-workspace'
+           }
+        },
+    ]
+
+MIX_TEST_ALCS = {'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}
+
+
+@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+class MixAuthenticationTestCase(AuthenticationTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super(MixAuthenticationTestCase, cls).setUpTestData()
+
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        self.list_ws_patcher = patcher.start()
+        self.list_ws_patcher.return_value = MIX_TEST_WORKSPACES
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
+        self.service_account_patcher = patcher.start()
+        self.service_account_patcher.get.return_value = MIX_TEST_ALCS
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = TOKEN_AUTH_TIME + 10
+        self.addCleanup(patcher.stop)
+
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -679,8 +739,6 @@ GOOGLE_SERVICE_ACCOUNT_INFO = {
   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sf-seqr%40my-seqr.iam.gserviceaccount.com"
 }
-
-TEST_TERRA_API_ROOT_URL =  'https://localhost/'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
 

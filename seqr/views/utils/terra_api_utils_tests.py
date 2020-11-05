@@ -14,7 +14,7 @@ from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACC
 @mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
 @mock.patch('seqr.views.utils.terra_api_utils.time')
 class TerraApiUtilsCase(TestCase):
-    fixtures = ['users', 'social_auth_data']
+    fixtures = ['users', 'social_auth']
 
     def setUp(self):
         self.user = User.objects.get(email = 'test_user@test.com')

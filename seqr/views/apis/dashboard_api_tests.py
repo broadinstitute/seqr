@@ -5,8 +5,7 @@ import mock
 from django.contrib.auth.models import User
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, get_ws_acl_side_effect,\
-    get_workspaces_side_effect, TEST_TERRA_API_ROOT_URL
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -51,7 +50,7 @@ class DashboardPageTest(object):
             set(next(iter(response_json['projectCategoriesByGuid'].values())).keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
         )
-        self.assertEqual(len(response_json['projectsByGuid']), 2)
+        self.assertEqual(len(response_json['projectsByGuid']), self.NUM_COLLABORATOR_PROJECTS)
         self.assertSetEqual(
             set(next(iter(response_json['projectsByGuid'].values())).keys()),
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
@@ -64,7 +63,7 @@ class DashboardPageTest(object):
         self.login_staff_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), 3)
+        self.assertEqual(len(response.json()['projectsByGuid']), self.NUM_STAFF_PROJECTS)
 
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
@@ -83,7 +82,7 @@ class DashboardPageTest(object):
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 4)
+        self.assertEqual(len(export_content), self.NUM_STAFF_EXPORT_TSV_LINES)
         self.assertListEqual(export_content[0], PROJECT_EXPORT_HEADER)
         self.assertListEqual(
             export_content[1],
@@ -104,7 +103,7 @@ class DashboardPageTest(object):
         self.assertEqual(response.get('Content-Type'), 'application/json')
         self.assertEqual(response.get('Content-Disposition'), 'attachment; filename="projects.json"')
         export_content = [json.loads(row) for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 3)
+        self.assertEqual(len(export_content), self.NUM_STAFF_EXPORT_RECS)
         self.assertDictEqual(export_content[0], {
             'project': '1kg project n\u00e5me with uni\u00e7\u00f8de',
             'description': '1000 genomes project description with uni\u00e7\u00f8de',
@@ -128,110 +127,34 @@ class DashboardPageTest(object):
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
 
+    def setUp(self):
+        self.NUM_COLLABORATOR_PROJECTS = 2
+        self.NUM_STAFF_PROJECTS = 3
+        self.NUM_STAFF_EXPORT_RECS = 3
+        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
+
 
 # Test for permissions from AnVIL only
-@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
 class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
-    fixtures = ['users', 'social_auth_data', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project']
 
     def setUp(self):
-        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
-        patcher.start().side_effect = get_workspaces_side_effect
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-        patcher.start().get.side_effect = get_ws_acl_side_effect
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
-        patcher.start().return_value = 1603287741 + 10
-        self.addCleanup(patcher.stop)
+        self.NUM_COLLABORATOR_PROJECTS = 1
+        self.NUM_STAFF_PROJECTS = 2
+        self.NUM_STAFF_EXPORT_RECS = 2
+        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
+
+        super(AnvilAuthenticationTestCase, self).setUp()
 
 
-MIX_TEST_WORKSPACES = [
-        {
-            'public': False,
-            'accessLevel': 'READER',
-            'workspace': {
-                'namespace': 'my-seqr-billing',
-                'name': 'anvil-project 1000 Genomes Demo'
-            }
-        },
-    ]
+# Test for permissions from AnVIL and local
+class MixDashboardPageTest(MixAuthenticationTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project']
 
-MIX_TEST_ALCS = {'acl': {
-        'test_user_manager@test.com': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        },
-        'test_user_no_staff@test.com': {
-            "accessLevel": "READER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        }
-    }
-}
+    def setUp(self):
+        self.NUM_COLLABORATOR_PROJECTS = 3
+        self.NUM_STAFF_PROJECTS = 3
+        self.NUM_STAFF_EXPORT_RECS = 3
+        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
 
-
-@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
-class MixDashboardPageTest(AuthenticationTestCase):
-    fixtures = ['users', 'social_auth_data', '1kg_project']
-
-    @mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
-    @mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-    @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_dashboard_page_data(self, mock_time, mock_service_account_session, mock_list_anvil_workspaces):
-        # Users can see the projects that AnVIL allows
-        url = reverse(dashboard_page_data)
-        self.login_collaborator()
-        mock_time.time.return_value = 1603287741 + 10
-        mock_service_account_session.get.return_value = MIX_TEST_ALCS
-        mock_list_anvil_workspaces.return_value = MIX_TEST_WORKSPACES
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), 3)
-        mock_service_account_session.get.assert_called_with('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
-        mock_list_anvil_workspaces.assert_called_with(User.objects.get(username=self.collaborator_user),
-            fields='public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
-        self.assertDictEqual(response.json()['projectsByGuid']['R0003_test'],
-                             {'analysisStatusCounts': {'Q': 2},
-                              'canEdit': False, 'createdDate': '2017-03-12T19:27:08.156Z', 'description': '',
-                              'genomeVersion': '37', 'isMmeEnabled': False,
-                              'lastAccessedDate': '2017-09-15T18:15:50.827Z',
-                              'lastModifiedDate': '2017-03-13T09:07:49.582Z',
-                              'mmeContactInstitution': 'Broad Center for Mendelian Genomics',
-                              'mmeContactUrl': 'mailto:seqr-test@gmail.com,test@broadinstitute.org',
-                              'mmePrimaryDataOwner': '', 'name': 'Test Reprocessed Project', 'numFamilies': 2,
-                              'numIndividuals': 3, 'numVariantTags': 2,
-                              'projectCategoryGuids': ['PC000003_test_category_name', 'PC000004_demo'],
-                              'projectGuid': 'R0003_test', 'sampleTypeCounts': {'WES': 3},
-                              'workspaceName': 'anvil-project 1000 Genomes Demo',
-                              'workspaceNamespace': 'my-seqr-billing'})
-
-    @mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
-    @mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-    @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_export_projects_table(self, mock_time, mock_service_account_session, mock_list_anvil_workspaces):
-        # Test for removed a project permitted by AnVIL
-        url = reverse(export_projects_table_handler)
-        self.login_collaborator()
-        mock_time.time.return_value = 1603287741 + 10
-        mock_service_account_session.get.return_value = MIX_TEST_ALCS
-        mock_list_anvil_workspaces.return_value = MIX_TEST_WORKSPACES
-
-        response = self.client.get('{}?file_format=tsv'.format(url))
-        self.assertEqual(response.status_code, 200)
-        export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 4)
-        self.assertListEqual(export_content[0], PROJECT_EXPORT_HEADER)
-        self.maxDiff = None
-        self.assertListEqual(
-            export_content[3],
-            ['Test Reprocessed Project',
-             '',
-             'test category name, Demo',
-             '2017-03-12 19:27:08.156000+00:00', '2', '3', '2', '3', '0', '0', '0', '0', '0', '0', '0', '0', '0',
-             '0', '0', '0', '2'],
-        )
+        super(MixAuthenticationTestCase, self).setUp()
