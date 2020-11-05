@@ -2,10 +2,10 @@ import elasticsearch
 from elasticsearch_dsl import Q
 import logging
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -18,15 +18,22 @@ class InvalidIndexException(Exception):
     pass
 
 
-def get_es_client(timeout=60):
-    return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
+def get_es_client(timeout=60, **kwargs):
+    client_kwargs = {
+        'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
+        'timeout': timeout,
+    }
+    if ELASTICSEARCH_CREDENTIALS:
+        client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
+    return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
-def get_index_metadata(index_name, client, include_fields=False):
-    cache_key = 'index_metadata__{}'.format(index_name)
-    cached_metadata = safe_redis_get_json(cache_key)
-    if cached_metadata:
-        return cached_metadata
+def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
+    if use_cache:
+        cache_key = 'index_metadata__{}'.format(index_name)
+        cached_metadata = safe_redis_get_json(cache_key)
+        if cached_metadata:
+            return cached_metadata
 
     try:
         mappings = client.indices.get_mapping(index=index_name)
@@ -35,13 +42,14 @@ def get_index_metadata(index_name, client, include_fields=False):
             index_name, e.error if hasattr(e, 'error') else str(e)))
     index_metadata = {}
     for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE) or mapping['mappings'].get(SV_DOC_TYPE, {})
+        variant_mapping = mapping['mappings']
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         if include_fields:
             index_metadata[index_name]['fields'] = {
                 field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
             }
-    safe_redis_set_json(cache_key, index_metadata)
+    if use_cache:
+        safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 
 

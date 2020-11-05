@@ -4,6 +4,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
 from seqr.views.react_app import main_app, no_login_main_app
+from seqr.views.status import status_view
 from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \
     add_variants_dataset_handler, \
@@ -266,7 +267,7 @@ api_endpoints = {
 
 }
 
-urlpatterns = []
+urlpatterns = [url('^status', status_view)]
 
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
@@ -282,13 +283,11 @@ urlpatterns += [
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
-#urlpatterns += [
-#   url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
-
-kibana_urls = '^(?:%s)' % ('|'.join([
-    "app", "bundles", "elasticsearch", "plugins", "ui", "api/apm", "api/console", "api/index_management", "api/index_patterns",
-    "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
-    "es_admin",
+kibana_urls = '^(?:{})'.format('|'.join([
+    'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
+    'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
+    'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
+    'api/timelion', 'api/ui_metric', 'api/xpack',
 ]))
 
 urlpatterns += [

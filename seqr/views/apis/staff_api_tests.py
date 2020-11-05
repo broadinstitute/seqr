@@ -24,11 +24,13 @@ PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
 
 ES_CAT_ALLOCATION=[{
     'node': 'node-1',
+    'shards': '113',
     'disk.used': '67.2gb',
     'disk.avail': '188.6gb',
     'disk.percent': '26'
 },
     {'node': 'UNASSIGNED',
+     'shards': '2',
      'disk.used': None,
      'disk.avail': None,
      'disk.percent': None
@@ -36,11 +38,13 @@ ES_CAT_ALLOCATION=[{
 
 EXPECTED_DISK_ALLOCATION = [{
     'node': 'node-1',
+    'shards': '113',
     'diskUsed': '67.2gb',
     'diskAvail': '188.6gb',
     'diskPercent': '26'
 },
     {'node': 'UNASSIGNED',
+     'shards': '2',
      'diskUsed': None,
      'diskAvail': None,
      'diskPercent': None
@@ -91,80 +95,70 @@ ES_CAT_ALIAS = [
 ES_INDEX_MAPPING = {
     "test_index": {
         "mappings": {
-            "variant": {
-                "_meta": {
-                    "gencodeVersion": "25",
-                    "genomeVersion": "38",
-                    "sampleType": "WES",
-                    "sourceFilePath": "test_index_file_path",
-                },
-                "_all": {
-                    "enabled": False
-                }
+            "_meta": {
+                "gencodeVersion": "25",
+                "genomeVersion": "38",
+                "sampleType": "WES",
+                "sourceFilePath": "test_index_file_path",
+            },
+            "_all": {
+                "enabled": False
             }
         }
     },
     "test_index_alias_1": {
         "mappings": {
-            "variant": {
-                "_meta": {
-                    "gencodeVersion": "25",
-                    "hail_version": "0.2.24",
-                    "genomeVersion": "37",
-                    "sampleType": "WGS",
-                    "sourceFilePath": "test_index_alias_1_path",
-                },
-                "_all": {
-                    "enabled": False
-                },
-            }
+            "_meta": {
+                "gencodeVersion": "25",
+                "hail_version": "0.2.24",
+                "genomeVersion": "37",
+                "sampleType": "WGS",
+                "sourceFilePath": "test_index_alias_1_path",
+            },
+            "_all": {
+                "enabled": False
+            },
         }
     },
     "test_index_alias_2": {
         "mappings": {
-            "variant": {
-                "_meta": {
-                    "gencodeVersion": "19",
-                    "genomeVersion": "37",
-                    "sampleType": "WES",
-                    "datasetType": "VARIANTS",
-                    "sourceFilePath": "test_index_alias_2_path"
-                },
-                "_all": {
-                    "enabled": False
-                },
-            }
+            "_meta": {
+                "gencodeVersion": "19",
+                "genomeVersion": "37",
+                "sampleType": "WES",
+                "datasetType": "VARIANTS",
+                "sourceFilePath": "test_index_alias_2_path"
+            },
+            "_all": {
+                "enabled": False
+            },
         }
     },
     "test_index_no_project": {
         "mappings": {
-            "variant": {
-                "_meta": {
-                    "gencodeVersion": "19",
-                    "genomeVersion": "37",
-                    "sampleType": "WGS",
-                    "datasetType": "VARIANTS",
-                    "sourceFilePath": "test_index_no_project_path"
-                },
-                "_all": {
-                    "enabled": False
-                },
-            }
+            "_meta": {
+                "gencodeVersion": "19",
+                "genomeVersion": "37",
+                "sampleType": "WGS",
+                "datasetType": "VARIANTS",
+                "sourceFilePath": "test_index_no_project_path"
+            },
+            "_all": {
+                "enabled": False
+            },
         }
     },
     "test_index_sv": {
         "mappings": {
-            "structural_variant": {
-                "_meta": {
-                    "gencodeVersion": "29",
-                    "genomeVersion": "38",
-                    "sampleType": "WES",
-                    "datasetType": "SV",
-                    "sourceFilePath": "test_sv_index_path"
-                },
-            }
+            "_meta": {
+                "gencodeVersion": "29",
+                "genomeVersion": "38",
+                "sampleType": "WES",
+                "datasetType": "SV",
+                "sourceFilePath": "test_sv_index_path"
+            },
         }
-    },
+},
 }
 
 EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_13', 'success_story_types': ['A'], 'family_id': 'no_individuals', 'success_story': 'Treatment is now available on compassionate use protocol (nucleoside replacement protocol)', 'row_id': 'F000013_13'}
@@ -178,7 +172,6 @@ TEST_INDEX_EXPECTED_DICT = {
     "storeSize": "14.9gb",
     "creationDateString": "2019-11-04T19:33:47.522Z",
     "gencodeVersion": "25",
-    "docType": "variant",
     "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
 }
 
@@ -191,7 +184,6 @@ TEST_SV_INDEX_EXPECTED_DICT = {
     "storeSize": "233.4mb",
     "creationDateString": "2019-10-03T19:53:53.846Z",
     "gencodeVersion": "29",
-    "docType": "structural_variant",
     "datasetType": "SV",
     "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
 }
@@ -206,7 +198,6 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "creationDateString": "2019-10-03T19:53:53.846Z",
     "datasetType": "VARIANTS",
     "gencodeVersion": "19",
-    "docType": "variant",
     "projects": []
 }
 
@@ -220,7 +211,6 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "creationDateString": "2019-10-03T19:53:53.846Z",
     "datasetType": "VARIANTS",
     "gencodeVersion": "19",
-    "docType": "variant",
     "projects": []
 }
 
@@ -471,11 +461,11 @@ class StaffAPITest(AuthenticationTestCase):
         self.check_staff_login(url)
 
         urllib3_responses.add_json(
-            '/_cat/allocation?format=json&h=node,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
+            '/_cat/allocation?format=json&h=node,shards,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
         urllib3_responses.add_json(
            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
         urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
-        urllib3_responses.add_json('/_all/_mapping/variant,structural_variant', ES_INDEX_MAPPING)
+        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -832,6 +822,7 @@ class StaffAPITest(AuthenticationTestCase):
             Individual.objects.get(individual_id='HG00733').sv_flags,
             ['raw_calls:_>100', 'high_QS_rare_calls:_>10'])
 
+    @mock.patch('seqr.views.apis.staff_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
     @responses.activate
     def test_kibana_proxy(self):
         url = '/api/kibana/random/path'
@@ -863,10 +854,12 @@ class StaffAPITest(AuthenticationTestCase):
 
         get_request = responses.calls[0].request
         self.assertEqual(get_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
 
         post_request = responses.calls[1].request
         self.assertEqual(post_request.headers['Host'], 'localhost:5601')
+        self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '24')
         self.assertEqual(post_request.body, data.encode('utf-8'))

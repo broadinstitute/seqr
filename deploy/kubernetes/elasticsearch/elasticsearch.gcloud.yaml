@@ -1,5 +1,5 @@
-kind: Service
-apiVersion: v1
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
 metadata:
   name: elasticsearch
   namespace: {{ NAMESPACE }}
@@ -7,57 +7,163 @@ metadata:
     name: elasticsearch
     deployment: {{ DEPLOY_TO }}
 spec:
-  ports:
-  - name: elasticsearch
-    port: {{ ELASTICSEARCH_SERVICE_PORT }}
-  selector:
-    name: elasticsearch
----
-kind: Deployment
-apiVersion: extensions/v1beta1
-metadata:
-  name: elasticsearch
-  namespace: {{ NAMESPACE }}
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        name: elasticsearch
-        deployment: {{ DEPLOY_TO }}
-    spec:
-      volumes:
-      - name: elasticsearch-dbpath
-        gcePersistentDisk:
-          # This disk must already exist.
-          pdName: {{ CLUSTER_NAME }}-elasticsearch-disk
-          fsType: ext4
-      initContainers:
-      - name: init-sysctl
-        image: busybox
-        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        command: ["sysctl", "-w", "vm.max_map_count=262144"]
-        securityContext:
-          privileged: true
-      containers:
-      - name: elasticsearch-pod
-        ports:
-        - containerPort: {{ ELASTICSEARCH_SERVICE_PORT }}
-          protocol: TCP
-        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+  version: {{ ELASTICSEARCH_VERSION }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+  auth:
+    roles:
+      - secretName: elasticsearch-secrets
+    fileRealm:
+      - secretName: elasticsearch-secrets
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  nodeSets:
+  - name: master
+    count: {{ ES_MASTER_NUM_PODS }}
+    config:
+      node.master: true
+      node.data: false
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+  - name: client
+    count: {{ ES_CLIENT_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: false
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+  - name: data
+    count:  {{ ES_DATA_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
+      cluster.routing.allocation.disk.watermark.low: '90%'
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: In
+                  values:
+                  - data
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+          env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
+          resources:
+            requests:
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
+            limits:
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "0.01"
-          limits:
-            memory: "15Gi"
-            cpu: "2"
-        volumeMounts:
-        - name: elasticsearch-dbpath
-          mountPath: /elasticsearch-data
-        env:
-        - name: ELASTICSEARCH_SERVICE_PORT
-          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-      restartPolicy: Always
-      dnsPolicy: ClusterFirst
+            storage: {{ ES_DATA_DISK_SIZE }}
+{% if ES_LOADING_NUM_PODS > 0 %}
+  - name: data-loading
+    count: {{ ES_LOADING_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: true
+      node.ml: false
+      node.remote_cluster_client: false
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: NotIn
+                  values:
+                  - data
+        initContainers:
+          - name: sysctl
+            securityContext:
+              privileged: true
+            command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        volumes:
+        - name: elasticsearch-data
+          emptyDir: {}
+{% endif %}
