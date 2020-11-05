@@ -21,7 +21,7 @@ const COOKIE_ACTIONS = [{
 }]
 
 const AcceptCookies = () =>
-  Cookies.get('accepted_cookies') ||
+  Cookies.get('accepted_cookies') ? null :
   <Modal
     open
     size="small"
