@@ -97,6 +97,7 @@ from seqr.views.apis.users_api import \
     update_project_collaborator, \
     delete_project_collaborator, \
     set_password, \
+    update_policies, \
     forgot_password, \
     create_staff_user
 
@@ -139,6 +140,9 @@ no_login_react_app_pages = [
     'users/set_password/(?P<user_token>.+)',
     'matchmaker/matchbox',
     'matchmaker/disclaimer',
+    'privacy_policy',
+    'terms_of_service',
+
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -232,6 +236,7 @@ api_endpoints = {
     'login': login_view,
     'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/update_policies': update_policies,
 
     'users/get_all': get_all_collaborators,
     'users/get_all_staff': get_all_staff,

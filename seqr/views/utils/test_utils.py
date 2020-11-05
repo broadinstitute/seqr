@@ -47,6 +47,9 @@ class AuthenticationTestCase(TestCase):
     def login_collaborator(self):
         self.client.force_login(self.collaborator_user)
 
+    def login_manager(self):
+        self.client.force_login(self.manager_user)
+
     def login_staff_user(self):
         self.client.force_login(self.staff_user)
 

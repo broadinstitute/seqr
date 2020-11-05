@@ -8,6 +8,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 
+import AcceptPolicies from './AcceptPolicies'
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
@@ -26,6 +27,7 @@ const BaseLayout = ({ children }) =>
   <LayoutContainer>
     <Header />
     <ContentGrid>
+      <AcceptPolicies />
       <PageHeader />
       <Grid.Row>
         <Grid.Column width={1} />
