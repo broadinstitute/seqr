@@ -235,6 +235,8 @@ else:
 #########################################################
 
 SEQR_VERSION = 'v1.0'
+SEQR_PRIVACY_VERSION = 1.0
+SEQR_TOS_VERSION = 1.0
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 

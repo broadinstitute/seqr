@@ -20,6 +20,8 @@ import SetPassword from 'pages/Login/components/SetPassword'
 import LandingPage from 'pages/Public/LandingPage'
 import MatchmakerDisclaimer from 'pages/Public/MatchmakerDisclaimer'
 import MatchmakerInfo from 'pages/Public/MatchmakerInfo'
+import PrivacyPolicy from 'pages/Public/PrivacyPolicy'
+import TermsOfService from 'pages/Public/TermsOfService'
 import rootReducer from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
 import { configureStore } from 'redux/utils/configureStore'
@@ -61,6 +63,8 @@ ReactDOM.render(
             <Route path="/users/set_password" component={SetPassword} />
             <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
             <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
+            <Route path="/privacy_policy" component={PrivacyPolicy} />
+            <Route path="/terms_of_service" component={TermsOfService} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>

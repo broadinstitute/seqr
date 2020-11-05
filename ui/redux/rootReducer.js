@@ -34,6 +34,7 @@ const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
+const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 
@@ -94,6 +95,19 @@ export const loadUserOptions = (staffOnly) => {
 }
 
 export const loadStaffOptions = () => loadUserOptions(true)
+
+export const updateUserPolicies = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/users/update_policies',
+      (responseJson) => {
+        dispatch({ type: UPDATE_USER, updates: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
 
 export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
   return (dispatch, getState) => {
@@ -397,7 +411,7 @@ const rootReducer = combineReducers(Object.assign({
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
-  user: zeroActionsReducer,
+  user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
