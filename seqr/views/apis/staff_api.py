@@ -562,7 +562,7 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
         'sample_id': sample.sample_id,
     }
     discovery_rows = []
-    for i, (genotypes, parsed_variant) in enumerate(parsed_variants):
+    for genotypes, parsed_variant in parsed_variants:
         genotype = genotypes.get(individual.guid, {})
         is_x_linked = "X" in parsed_variant.get('Chrom', '')
         zygosity = _get_genotype_zygosity(
