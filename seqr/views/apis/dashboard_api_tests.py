@@ -135,6 +135,28 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 1
 
+    def test_dashboard_page_data(self):
+        super(AnvilDashboardPageTest, self).test_dashboard_page_data()
+        calls = [
+            mock.call(self.collaborator_user, WORKSPACE_FIELDS),
+            mock.call(self.staff_user, WORKSPACE_FIELDS)
+        ]
+        self.mock_list_workspaces.asset_has_calls(calls)
+        calls = [
+            mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+            mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        ]
+        self.mock_service_account.get.asset_has_calls(calls)
+
+    def test_export_projects_table(self):
+        super(AnvilDashboardPageTest, self).test_export_projects_table()
+        self.mock_list_workspaces.asset_called_with(self.staff_user, WORKSPACE_FIELDS)
+        calls = [
+            mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+            mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        ]
+        self.mock_service_account.get.asset_has_calls(calls)
+
 
 # Test for permissions from AnVIL and local
 class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
