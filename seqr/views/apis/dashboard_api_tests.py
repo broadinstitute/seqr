@@ -1,8 +1,12 @@
-from django.urls.base import reverse
 import json
+import mock
+
+from django.urls.base import reverse
+from django.contrib.auth.models import User
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
+    WORKSPACE_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -145,3 +149,17 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
     NUM_STAFF_PROJECTS = 3
     NUM_STAFF_EXPORT_RECS = 3
     NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
+
+    def test_dashboard_page_data(self):
+        super(MixDashboardPageTest, self).test_dashboard_page_data()
+        calls = [
+            mock.call(self.collaborator_user, WORKSPACE_FIELDS),
+            mock.call(self.staff_user, WORKSPACE_FIELDS)
+        ]
+        self.mock_list_workspaces.asset_has_calls(calls)
+        calls = [
+            mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+            mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        ]
+        self.mock_service_account.get.asset_has_calls(calls)
+

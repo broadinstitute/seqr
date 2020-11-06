@@ -130,6 +130,7 @@ TEST_TERRA_API_ROOT_URL =  'https://localhost/'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
+WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
 
 
 def get_ws_acl_side_effect(url):
@@ -160,6 +161,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         cls.collaborator_user = User.objects.get(username='test_user_non_staff')
         cls.no_access_user = User.objects.get(username='test_user_no_access')
 
+    # mock the terra apis
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
         patcher.start()
@@ -168,15 +170,16 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher.start().return_value = TOKEN_AUTH_TIME + 10
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
-        self.list_ws_patcher = patcher.start()
-        self.list_ws_patcher.side_effect = get_workspaces_side_effect
+        self.mock_list_workspaces = patcher.start()
+        self.mock_list_workspaces.side_effect = get_workspaces_side_effect
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-        self.service_account_patcher = patcher.start()
-        self.service_account_patcher.get.side_effect = get_ws_acl_side_effect
+        self.mock_service_account = patcher.start()
+        self.mock_service_account.get.side_effect = get_ws_acl_side_effect
         self.addCleanup(patcher.stop)
 
 
+# the workspace list returned by mocked terra api. It makes the results of the mixed tests unique to local and anvil tests
 MIX_TEST_WORKSPACES = [
         {
             'public': False,
@@ -190,57 +193,28 @@ MIX_TEST_WORKSPACES = [
            'accessLevel': 'OWNER',
            'workspace': {
                'namespace': 'my-seqr-billing',
-               'name': 'anvil-no-project-workspace'
+               'name': 'anvil-no-project-workspace1'
            }
         }, {
            'public': True,
            'accessLevel': 'READER',
            'workspace': {
                'namespace': 'my-seqr-billing',
-               'name': 'anvil-no-project-workspace'
+               'name': 'anvil-no-project-workspace2'
            }
         },
     ]
 
-MIX_TEST_ALCS = {'acl': {
-        'test_user_manager@test.com': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        },
-        'test_user_no_staff@test.com': {
-            "accessLevel": "READER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
-        }
-    }
-}
 
-
-class MixAuthenticationTestCase(AuthenticationTestCase):
+class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
-        super(MixAuthenticationTestCase, cls).setUpTestData()
+        AuthenticationTestCase.setUpTestData()
 
     def setUp(self):
-        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
-        self.list_ws_patcher = patcher.start()
-        self.list_ws_patcher.side_effect = lambda user, fields: MIX_TEST_WORKSPACES\
+        super(MixAuthenticationTestCase, self).setUp()
+        self.mock_list_workspaces.side_effect = lambda user, fields: MIX_TEST_WORKSPACES\
             if user.username == 'test_user_non_staff' else []
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-        self.service_account_patcher = patcher.start()
-        self.service_account_patcher.get.return_value = MIX_TEST_ALCS
-        self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
-        patcher.start().return_value = TOKEN_AUTH_TIME + 10
-        self.addCleanup(patcher.stop)
-
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
