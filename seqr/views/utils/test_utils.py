@@ -103,12 +103,6 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
-        },
-        'test_user_no_staff@test.com': {
-            "accessLevel": "READER",
-            "pending": False,
-            "canShare": True,
-            "canCompute": True
         }
     }
 }, {
@@ -121,10 +115,47 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace1',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace2',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
         }
     }
 }
 ]
+
 
 TEST_TERRA_API_ROOT_URL =  'https://localhost/'
 
@@ -179,42 +210,13 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.addCleanup(patcher.stop)
 
 
-# the workspace list returned by mocked terra api. It makes the results of the mixed tests unique to local and anvil tests
-MIX_TEST_WORKSPACES = [
-        {
-            'public': False,
-            'accessLevel': 'READER',
-            'workspace': {
-                'namespace': 'my-seqr-billing',
-                'name': 'anvil-project 1000 Genomes Demo'
-            }
-        }, {
-           'public': False,
-           'accessLevel': 'OWNER',
-           'workspace': {
-               'namespace': 'my-seqr-billing',
-               'name': 'anvil-no-project-workspace1'
-           }
-        }, {
-           'public': True,
-           'accessLevel': 'READER',
-           'workspace': {
-               'namespace': 'my-seqr-billing',
-               'name': 'anvil-no-project-workspace2'
-           }
-        },
-    ]
-
-
+# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
 class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
+
+    # use the local permissions set-up by AuthenticationTestCase
     @classmethod
     def setUpTestData(cls):
         AuthenticationTestCase.setUpTestData()
-
-    def setUp(self):
-        super(MixAuthenticationTestCase, self).setUp()
-        self.mock_list_workspaces.side_effect = lambda user, fields: MIX_TEST_WORKSPACES\
-            if user.username == 'test_user_non_staff' else []
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)

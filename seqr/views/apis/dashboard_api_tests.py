@@ -64,7 +64,7 @@ class DashboardPageTest(object):
         self.login_staff_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), self.NUM_STAFF_PROJECTS)
+        self.assertEqual(len(response.json()['projectsByGuid']), 3)
 
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
@@ -83,7 +83,7 @@ class DashboardPageTest(object):
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), self.NUM_STAFF_EXPORT_TSV_LINES)
+        self.assertEqual(len(export_content), 4)
         self.assertListEqual(export_content[0], PROJECT_EXPORT_HEADER)
         self.assertListEqual(
             export_content[1],
@@ -104,7 +104,7 @@ class DashboardPageTest(object):
         self.assertEqual(response.get('Content-Type'), 'application/json')
         self.assertEqual(response.get('Content-Disposition'), 'attachment; filename="projects.json"')
         export_content = [json.loads(row) for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), self.NUM_STAFF_EXPORT_RECS)
+        self.assertEqual(len(export_content), 3)
         self.assertDictEqual(export_content[0], {
             'project': '1kg project n\u00e5me with uni\u00e7\u00f8de',
             'description': '1000 genomes project description with uni\u00e7\u00f8de',
@@ -128,27 +128,18 @@ class DashboardPageTest(object):
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 2
-    NUM_STAFF_PROJECTS = 3
-    NUM_STAFF_EXPORT_RECS = 3
-    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
 
 
 # Test for permissions from AnVIL only
 class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 1
-    NUM_STAFF_PROJECTS = 3
-    NUM_STAFF_EXPORT_RECS = 3
-    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
 
 
 # Test for permissions from AnVIL and local
 class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 3
-    NUM_STAFF_PROJECTS = 3
-    NUM_STAFF_EXPORT_RECS = 3
-    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
 
     def test_dashboard_page_data(self):
         super(MixDashboardPageTest, self).test_dashboard_page_data()
