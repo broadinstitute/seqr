@@ -66,6 +66,7 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
+        """Parameter "method" is string which can be "get", "post", or "delete". """
         if self.started_at is None:
             self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
@@ -93,18 +94,6 @@ class ServiceAccountSession(AuthorizedSession):
             HTTP response
         """
         return self._make_request('get', path, headers, root_url, **kwargs)
-
-    def post(self, path, headers=None, root_url=None, **kwargs):
-        """See the __get() method."""
-        return self._make_request('post', path, headers, root_url, **kwargs)
-
-    def put(self, path, headers=None, root_url=None, **kwargs):
-        """See the __get() method."""
-        return self._make_request('put', path, headers, root_url, **kwargs)
-
-    def delete(self, path, headers=None, root_url=None):
-        """See the __get() method."""
-        return self._make_request('delete', path, headers, root_url)
 
 
 _service_account_session = ServiceAccountSession()
@@ -172,28 +161,6 @@ def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
         raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
     return json.loads(r.text)
-
-
-def get_anvil_billing_projects(user):
-    """
-    Get activation information for the logged-in user.
-
-    Args:
-        user (User model): who's credentials will be used to access AnVIL
-
-    :returns a list of billing project dictionary
-    """
-    return _anvil_call('get', user, 'api/profile/billing')
-
-
-def get_anvil_profile(user):
-    """
-    Get activation information for the logged-in user.
-
-    Args:
-        user (User model): who's credentials will be used to access AnVIL
-    """
-    return _anvil_call('get', user, 'register')
 
 
 def list_anvil_workspaces(user, fields=None):

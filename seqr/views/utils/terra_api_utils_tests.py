@@ -5,8 +5,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
-from seqr.views.utils.terra_api_utils import get_anvil_billing_projects, get_anvil_profile, list_anvil_workspaces,\
-    sa_get_workspace_acl, TerraAPIException
+from seqr.views.utils.terra_api_utils import list_anvil_workspaces, sa_get_workspace_acl, TerraAPIException
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACCOUNT_INFO, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL
 
 
@@ -19,42 +18,6 @@ class TerraApiUtilsCase(TestCase):
     def setUp(self):
         self.user = User.objects.get(email = 'test_user@test.com')
         self.extra_data = {"expires": 3599, "auth_time": 1603287741, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
-
-    @responses.activate
-    def test_get_billing_projects(self, mock_time):
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-        mock_time.time.return_value = self.extra_data['auth_time'] + 10
-
-        url = '{}api/profile/billing'.format(TEST_TERRA_API_ROOT_URL)
-        responses.add(responses.GET, url, status = 200, body = '[{"creationStatus": "Ready","projectName": "my-seqr-billing","role": "Owner"}]')
-
-        billing_projects = get_anvil_billing_projects(self.user)
-        self.assertEqual(len(billing_projects), 1)
-        self.assertEqual(billing_projects[0]['projectName'], 'my-seqr-billing')
-
-        responses.replace(responses.GET, url, status = 404)
-        with self.assertRaises(Exception) as ec:
-            _ = get_anvil_billing_projects(self.user)
-        self.assertEqual(str(ec.exception),
-            'Error: called Terra API "api/profile/billing" got status: 404 with a reason: Not Found')
-
-    @responses.activate
-    def test_get_anvil_profile(self, mock_time):
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-        mock_time.time.return_value = self.extra_data['auth_time'] + 10
-
-        url = '{}register'.format(TEST_TERRA_API_ROOT_URL)
-        responses.add(responses.GET, url, status = 200, body = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"sf-seqr@my-seqr.iam.gserviceaccount.com","userSubjectId":"108344681601016521986"}}')
-
-        profile = get_anvil_profile(self.user)
-        self.assertDictEqual(profile, {'enabled': {'ldap': True, 'allUsersGroup': True, 'google': True},
-            'userInfo': {'userEmail': 'sf-seqr@my-seqr.iam.gserviceaccount.com', 'userSubjectId': '108344681601016521986'}})
-
-        responses.replace(responses.GET, url, status = 404)
-        with self.assertRaises(Exception) as ec:
-            _ = get_anvil_profile(self.user)
-        self.assertEqual(str(ec.exception),
-            'Error: called Terra API "register" got status: 404 with a reason: Not Found')
 
     @responses.activate
     def test_list_workspaces(self, mock_time):
