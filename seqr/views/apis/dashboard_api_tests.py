@@ -163,3 +163,11 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
         ]
         self.mock_service_account.get.asset_has_calls(calls)
 
+    def test_export_projects_table(self):
+        super(MixDashboardPageTest, self).test_export_projects_table()
+        self.mock_list_workspaces.asset_called_with(self.staff_user, WORKSPACE_FIELDS)
+        calls = [
+            mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+            mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        ]
+        self.mock_service_account.get.asset_has_calls(calls)
