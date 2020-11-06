@@ -216,15 +216,17 @@ if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
 else:
     DEBUG = True
     # Enable CORS and hijak for local development
-    INSTALLED_APPS = ['corsheaders', 'hijack'] + INSTALLED_APPS
+    INSTALLED_APPS += ['corsheaders', 'hijack']
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
     CORS_ORIGIN_WHITELIST = (
         'http://localhost:3000',
         'http://localhost:8000',
     )
     CORS_ALLOW_CREDENTIALS = True
+    CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
     HIJACK_DISPLAY_WARNING = True
+    HIJACK_ALLOW_GET_REQUESTS = True
     HIJACK_LOGIN_REDIRECT_URL = '/'
 
 #########################################################
