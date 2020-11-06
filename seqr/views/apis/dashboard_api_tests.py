@@ -1,8 +1,5 @@
 from django.urls.base import reverse
 import json
-import mock
-
-from django.contrib.auth.models import User
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
@@ -126,35 +123,25 @@ class DashboardPageTest(object):
 # Tests for AnVIL access disabled
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
-
-    def setUp(self):
-        self.NUM_COLLABORATOR_PROJECTS = 2
-        self.NUM_STAFF_PROJECTS = 3
-        self.NUM_STAFF_EXPORT_RECS = 3
-        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
+    NUM_COLLABORATOR_PROJECTS = 2
+    NUM_STAFF_PROJECTS = 3
+    NUM_STAFF_EXPORT_RECS = 3
+    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
 
 
 # Test for permissions from AnVIL only
 class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
-
-    def setUp(self):
-        self.NUM_COLLABORATOR_PROJECTS = 1
-        self.NUM_STAFF_PROJECTS = 2
-        self.NUM_STAFF_EXPORT_RECS = 2
-        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
-
-        super(AnvilAuthenticationTestCase, self).setUp()
+    NUM_COLLABORATOR_PROJECTS = 1
+    NUM_STAFF_PROJECTS = 3
+    NUM_STAFF_EXPORT_RECS = 3
+    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1
 
 
 # Test for permissions from AnVIL and local
-class MixDashboardPageTest(MixAuthenticationTestCase):
+class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
-
-    def setUp(self):
-        self.NUM_COLLABORATOR_PROJECTS = 3
-        self.NUM_STAFF_PROJECTS = 3
-        self.NUM_STAFF_EXPORT_RECS = 3
-        self.NUM_STAFF_EXPORT_TSV_LINES = self.NUM_STAFF_EXPORT_RECS + 1
-
-        super(MixAuthenticationTestCase, self).setUp()
+    NUM_COLLABORATOR_PROJECTS = 3
+    NUM_STAFF_PROJECTS = 3
+    NUM_STAFF_EXPORT_RECS = 3
+    NUM_STAFF_EXPORT_TSV_LINES = NUM_STAFF_EXPORT_RECS + 1

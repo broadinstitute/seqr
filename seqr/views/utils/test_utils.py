@@ -152,7 +152,6 @@ def get_workspaces_side_effect(user, fields):
     ]
 
 
-@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
@@ -162,17 +161,20 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         cls.no_access_user = User.objects.get(username='test_user_no_access')
 
     def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
         patcher.start().return_value = TOKEN_AUTH_TIME + 10
-        # self.addCleanup(patcher.stop)
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
         self.list_ws_patcher = patcher.start()
         self.list_ws_patcher.side_effect = get_workspaces_side_effect
-        # self.addCleanup(patcher.stop)
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
         self.service_account_patcher = patcher.start()
         self.service_account_patcher.get.side_effect = get_ws_acl_side_effect
-        # self.addCleanup(patcher.stop)
+        self.addCleanup(patcher.stop)
 
 
 MIX_TEST_WORKSPACES = [
@@ -217,16 +219,19 @@ MIX_TEST_ALCS = {'acl': {
 }
 
 
-@mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
 class MixAuthenticationTestCase(AuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
         super(MixAuthenticationTestCase, cls).setUpTestData()
 
     def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
         self.list_ws_patcher = patcher.start()
-        self.list_ws_patcher.return_value = MIX_TEST_WORKSPACES
+        self.list_ws_patcher.side_effect = lambda user, fields: MIX_TEST_WORKSPACES\
+            if user.username == 'test_user_non_staff' else []
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
         self.service_account_patcher = patcher.start()
