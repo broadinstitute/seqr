@@ -80,7 +80,7 @@ class LogRequestMiddleware(MiddlewareMixin):
         if response.status_code >= 500:
             level = logger.error
             message = error
-        elif response.status_code >= 400:
+        elif response.status_code >= 400 or response.status_code == 504:
             level = logger.warning
             message = error
         else:

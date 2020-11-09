@@ -309,7 +309,10 @@ def _create_new_tags(saved_variants, tags_json, user):
 def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
-    updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
+    try:
+        updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
+    except Exception as e:
+        logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
 
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
