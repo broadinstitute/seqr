@@ -69,8 +69,11 @@ class LogRequestMiddleware(MiddlewareMixin):
 
         error = ''
         try:
-            error = response.json().get('error')
-        except AttributeError:
+            response_json = json.loads(response.content)
+            error = response_json.get('error')
+            if response_json.get('errors'):
+                error = '; '.join(response_json['errors'])
+        except (ValueError, AttributeError):
             pass
 
         message = ''

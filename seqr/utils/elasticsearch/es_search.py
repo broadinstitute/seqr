@@ -1037,7 +1037,7 @@ def _liftover_grch38_to_grch37():
         try:
             LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
         except Exception as e:
-            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
+            logger.error('WARNING: Unable to set up liftover. {}'.format(e))
     return LIFTOVER_GRCH38_TO_GRCH37
 
 
@@ -1048,7 +1048,7 @@ def _liftover_grch37_to_grch38():
         try:
             LIFTOVER_GRCH37_TO_GRCH38 = LiftOver('hg19', 'hg38')
         except Exception as e:
-            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
+            logger.error('WARNING: Unable to set up liftover. {}'.format(e))
     return LIFTOVER_GRCH37_TO_GRCH38
 
 
