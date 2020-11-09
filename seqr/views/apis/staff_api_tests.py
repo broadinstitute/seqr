@@ -665,7 +665,7 @@ class StaffAPITest(AuthenticationTestCase):
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
-        self.assertIn(response.json()['message'], ['Unable to retrieve airtable data: No JSON object could be decoded',
+        self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
                                         'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
 
         responses.reset()
@@ -678,7 +678,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
         self.assertEqual(
-            response.json()['message'],
+            response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 2)
         self.assertIsNone(responses.calls[0].request.params.get('offset'))
@@ -700,7 +700,7 @@ class StaffAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['message'], 'Select a gene to filter variants')
+        self.assertEqual(response.json()['error'], 'Select a gene to filter variants')
 
         response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)

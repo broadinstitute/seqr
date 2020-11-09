@@ -126,7 +126,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         invalid_url = reverse(get_individual_mme_matches, args=[INVALID_PROJECT_SUBMISSION_GUID])
         response = self.client.get(invalid_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['message'], 'Matchmaker is not enabled')
+        self.assertEqual(response.json()['error'], 'Matchmaker is not enabled')
 
         response = self.client.get(url)
 
@@ -830,7 +830,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 402)
         self.assertEqual(response.reason_phrase, 'email error')
-        self.assertDictEqual(response.json(), {'message': 'email error'})
+        self.assertDictEqual(response.json(), {'error': 'email error'})
 
         mock_email.return_value.send.side_effect = EmailException(json={'error': 'no connection'})
         response = self.client.post(url, content_type='application/json', data=json.dumps({

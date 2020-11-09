@@ -313,6 +313,7 @@ def update_saved_variant_json(request, project_guid):
         updated_saved_variant_guids = update_project_saved_variant_json(project, user=request.user)
     except Exception as e:
         logger.error('Unable to reset saved variant json for {}: {}'.format(project_guid, e))
+        updated_saved_variant_guids = []
 
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
