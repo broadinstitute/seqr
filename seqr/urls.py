@@ -9,7 +9,7 @@ from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \
     add_variants_dataset_handler, \
     receive_igv_table_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, DEBUG
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.admindocs.urls
@@ -295,13 +295,17 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url(r'^hijack/', include('hijack.urls')),
     url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
     }),
 ]
+
+if DEBUG:
+    urlpatterns += [
+        url(r'^hijack/', include('hijack.urls')),
+    ]
 
 # django debug toolbar
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
