@@ -170,7 +170,7 @@ def _search_external_matches(nodes_to_query, patient_data):
                         invalid_results.append(result)
                 if invalid_results:
                     error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
-                    logger.error(error_message)
+                    logger.warning(error_message)
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], str(e), json.dumps(patient_data))

@@ -986,7 +986,7 @@ class EsSearch(object):
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:
             canceled = self._delete_long_running_tasks()
-            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled))
             raise e
 
     def _delete_long_running_tasks(self):

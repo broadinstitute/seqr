@@ -34,11 +34,11 @@ class JsonErrorMiddleware(MiddlewareMixin):
     @staticmethod
     def process_exception(request, exception):
         if request.path.startswith('/api'):
-            exception_json = {'message': str(exception)}
-            traceback_message = traceback.format_exc()
-            logger.error(traceback_message)
+            exception_json = {'error': str(exception)}
             if DEBUG:
-                    exception_json['traceback'] = traceback_message
+                traceback_message = traceback.format_exc()
+                logger.error(traceback_message)
+                exception_json['traceback'] = traceback_message
             return create_json_response(exception_json, status=_get_exception_status_code(exception))
         return None
 
@@ -67,12 +67,21 @@ class LogRequestMiddleware(MiddlewareMixin):
         except (ValueError, RawPostDataException):
             pass
 
+        error = ''
+        try:
+            error = response.json().get('error')
+        except AttributeError:
+            pass
+
+        message = ''
         if response.status_code >= 500:
             level = logger.error
+            message = error
         elif response.status_code >= 400:
             level = logger.warning
+            message = error
         else:
             level = logger.info
-        level('', extra={'http_request_json': http_json, 'request_body': request_body, 'user': request.user})
+        level(message, extra={'http_request_json': http_json, 'request_body': request_body, 'user': request.user})
 
         return response
