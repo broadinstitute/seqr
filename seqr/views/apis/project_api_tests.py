@@ -1,5 +1,4 @@
 import json
-import mock
 from datetime import datetime
 from django.urls.base import reverse
 
@@ -8,7 +7,7 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
     project_page_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase, WORKSPACE_FIELDS
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'

@@ -8,8 +8,7 @@ from io import StringIO
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
-from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, WORKSPACE_FIELDS
+from seqr.views.utils.test_utils import urllib3_responses, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'

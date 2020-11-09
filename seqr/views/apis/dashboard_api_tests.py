@@ -2,7 +2,6 @@ import json
 import mock
 
 from django.urls.base import reverse
-from django.contrib.auth.models import User
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
