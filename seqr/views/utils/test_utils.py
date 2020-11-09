@@ -103,6 +103,12 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
         }
     }
 }, {
@@ -168,7 +174,7 @@ def get_ws_acl_side_effect(url):
     workspace_namespace, workspace_name = url.split('/')[2:4]
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
-    return wss[0]['acl'] if wss else {}
+    return {'acl': wss[0]['acl']} if wss else {}
 
 
 def get_workspaces_side_effect(user, fields):
