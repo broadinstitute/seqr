@@ -8,7 +8,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase, WORKSPACE_FIELDS
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
