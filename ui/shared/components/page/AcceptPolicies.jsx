@@ -20,7 +20,7 @@ const COOKIE_ACTIONS = [{
   },
 }]
 
-const AcceptCookies = () =>
+const AcceptCookies = () => (
   Cookies.get('accepted_cookies') ? null :
   <Modal
     open
@@ -37,6 +37,7 @@ const AcceptCookies = () =>
     }
     actions={COOKIE_ACTIONS}
   />
+)
 
 
 const POLICY_FORM_FIELDS = [
