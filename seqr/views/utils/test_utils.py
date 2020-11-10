@@ -79,7 +79,7 @@ class BasicAuthTestCase(TestCase):
         self.login_staff_user()
 
 
-class AuthenticationTestCase(object):
+class AuthenticationTestCase(BasicAuthTestCase):
 
     @classmethod
     def setUpTestData(cls):
