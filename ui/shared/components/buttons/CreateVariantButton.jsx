@@ -12,7 +12,7 @@ import { Select, IntegerInput, LargeMultiselect } from '../form/Inputs'
 import { validators, configuredField } from '../form/ReduxFormWrapper'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from '../../utils/constants'
 
-const BASE_FORM_ID = 'addVariant-'
+const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 
 const ZygosityInput = React.memo(({ individuals, name, error }) =>
@@ -44,11 +44,11 @@ ZygosityInput.propTypes = {
 }
 
 const mapZygosityInputStateToProps = (state, ownProps) => ({
-  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.replace(BASE_FORM_ID, '')],
+  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]],
 })
 
 const mapTagInputStateToProps = (state, ownProps) => {
-  const family = getFamiliesByGuid(state)[ownProps.meta.form.replace(BASE_FORM_ID, '')]
+  const family = getFamiliesByGuid(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]]
   const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
   return {
     options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
@@ -94,7 +94,7 @@ const POS_FIELD = {
   validate: validators.required, component: IntegerInput, inline: true, width: 7, min: 0,
 }
 
-const FIELDS = [
+const SNV_FIELDS = [
   {
     name: 'chrom',
     label: 'Chrom',
@@ -121,35 +121,39 @@ const FIELDS = [
   ZYGOSITY_FIELD,
 ]
 
-const CreateVariantButton = React.memo(({ project, family, user, onSubmit }) => (
+const SV_FIELDS = [...SNV_FIELDS]
+
+const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
   user.isStaff ? <UpdateButton
-    modalTitle={`Add a Manual Variant for Family ${family.displayName}`}
-    modalId={`${BASE_FORM_ID}${family.familyGuid}`}
-    buttonText="Add Manual Variant"
+    key={`manual${variantType}`}
+    modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
+    modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+    buttonText={`Add Manual ${variantType}`}
     editIconName="plus"
-    initialValues={project}
-    onSubmit={onSubmit}
-    formFields={FIELDS}
     showErrorPanel
+    {...props}
   /> : null
 ))
 
-CreateVariantButton.propTypes = {
-  project: PropTypes.object,
+BaseCreateVariantButton.propTypes = {
+  variantType: PropTypes.string,
   family: PropTypes.object,
   user: PropTypes.object,
+  initialValues: PropTypes.object,
+  formFields: PropTypes.array,
   onSubmit: PropTypes.func,
 }
 
+
 const mapStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  project: getProjectsByGuid(state)[ownProps.family.projectGuid],
+  initialValues: getProjectsByGuid(state)[ownProps.family.projectGuid],
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     onSubmit: (values) => {
-      const variant = FIELDS.map(({ name }) => name).filter(name => name !== TAG_FIELD_NAME).reduce(
+      const variant = ownProps.formFields.map(({ name }) => name).filter(name => name !== TAG_FIELD_NAME).reduce(
         (acc, name) => ({ ...acc, [name]: values[name] }), {},
       )
       variant.variantId = values.svName
@@ -164,4 +168,17 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(CreateVariantButton)
+const CreateVariantButton = connect(mapStateToProps, mapDispatchToProps)(BaseCreateVariantButton)
+
+
+const CreateVariantButtons = React.memo(({ family }) => ([
+  <CreateVariantButton key="SNV" family={family} variantType="Variant" formFields={SNV_FIELDS} />,
+  <CreateVariantButton key="SV" family={family} variantType="SV" formFields={SV_FIELDS} />,
+]))
+
+CreateVariantButtons.propTypes = {
+  family: PropTypes.object,
+}
+
+
+export default CreateVariantButtons
