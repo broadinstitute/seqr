@@ -695,8 +695,9 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
+    @mock.patch('seqr.views.apis.saved_variant_api.logger')
     @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
-    def test_update_saved_variant_json(self, mock_get_variants):
+    def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
         mock_get_variants.side_effect = lambda families, variant_ids: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
              for variant_id in variant_ids]
@@ -717,6 +718,13 @@ class SavedVariantAPITest(AuthenticationTestCase):
             [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')],
             ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G']
         )
+        mock_logger.error.assert_not_called()
+
+        # Test handles update error
+        mock_get_variants.side_effect = Exception('Unable to fetch variants')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        mock_logger.error.assert_called_with('Unable to reset saved variant json for R0001_1kg: Unable to fetch variants')
 
     def test_update_variant_main_transcript(self):
         transcript_id = 'ENST00000438943'

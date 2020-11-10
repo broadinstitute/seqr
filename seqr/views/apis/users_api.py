@@ -97,7 +97,7 @@ def update_policies(request):
     request_json = json.loads(request.body)
     if not request_json.get('acceptedPolicies'):
         message = 'User must accept current policies'
-        return create_json_response({'message': message}, status=400, reason=message)
+        return create_json_response({'error': message}, status=400, reason=message)
 
     get_or_create_model_from_json(
         UserPolicy, {'user': request.user}, update_json={

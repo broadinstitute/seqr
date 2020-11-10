@@ -4,7 +4,6 @@ import os
 import json
 import logging
 import tempfile
-import traceback
 import openpyxl as xl
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
@@ -86,7 +85,6 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         rows = [dict(zip(header, row)) for row in rows]
     except Exception as e:
-        traceback.print_exc()
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -103,7 +101,6 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
-        traceback.print_exc()
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 

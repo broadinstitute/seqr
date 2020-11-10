@@ -72,7 +72,8 @@ def _search_matches(submission, user):
     nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
     if not nodes_to_query:
         message = 'No external MME nodes are configured'
-        return create_json_response({'message': message}, status=400, reason=message)
+        logger.error(message)
+        return create_json_response({'error': message}, status=400, reason=message)
 
     external_results = _search_external_matches(nodes_to_query, patient_data)
     local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
@@ -170,7 +171,7 @@ def _search_external_matches(nodes_to_query, patient_data):
                         invalid_results.append(result)
                 if invalid_results:
                     error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
-                    logger.error(error_message)
+                    logger.warning(error_message)
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], str(e), json.dumps(patient_data))
@@ -323,7 +324,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
             try:
                 json_body = e.response.json()
             except Exception:
-                json_body = {'message':message}
+                json_body = {'error': message}
         return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
     update_model_from_json(result, {'weContacted': True}, user=request.user)
