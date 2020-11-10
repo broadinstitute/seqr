@@ -11,7 +11,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    BasicAuthTestCase, MixAuthenticationTestCase, WORKSPACE_FIELDS
+    MixAuthenticationTestCase, WORKSPACE_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -52,8 +52,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-class TestHelpers(object):
-  class VariantSearchAPITest(BasicAuthTestCase):
+class VariantSearchAPITest(object):
     multi_db = True
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
@@ -477,7 +476,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalVariantSearchAPITest(AuthenticationTestCase, TestHelpers.VariantSearchAPITest):
+class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
 
 
@@ -490,7 +489,7 @@ def assert_no_list_ws_has_acl(self, acl_call_count, path=None):
 
 
 # Test for permissions from AnVIL only
-class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, TestHelpers.VariantSearchAPITest):
+class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 
     def test_query_variants(self):
@@ -528,7 +527,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, TestHelpers.Variant
 
 
 # Test for permissions from AnVIL and local
-class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, TestHelpers.VariantSearchAPITest):
+class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 
     def test_query_variants(self):

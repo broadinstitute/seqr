@@ -8,7 +8,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS,\
-    BasicAuthTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -74,8 +74,7 @@ COMPOUND_HET_5_JSON = {
 }
 
 
-class TestHelpers(object):
-  class SavedVariantAPITest(BasicAuthTestCase):
+class SavedVariantAPITest(object):
 
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=['R0001_1kg'])
@@ -733,7 +732,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalSavedVariantAPITest(AuthenticationTestCase, TestHelpers.SavedVariantAPITest):
+class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', '1kg_project']
 
 
@@ -745,7 +744,7 @@ def assert_no_list_ws_has_acl(self, acl_call_count):
 
 
 # Test for permissions from AnVIL only
-class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, TestHelpers.SavedVariantAPITest):
+class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_saved_variant_data(self):
@@ -802,7 +801,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, TestHelpers.SavedVar
 
 
 # Test for permissions from AnVIL and local
-class MixSavedVariantAPITest(MixAuthenticationTestCase, TestHelpers.SavedVariantAPITest):
+class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_saved_variant_data(self):

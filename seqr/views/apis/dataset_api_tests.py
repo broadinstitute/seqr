@@ -9,7 +9,7 @@ from io import StringIO
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    BasicAuthTestCase, MixAuthenticationTestCase
+    MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -18,8 +18,7 @@ SV_INDEX_NAME = 'test_new_sv_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
-class TestHelpers(object):
-  class DatasetAPITest(BasicAuthTestCase):
+class DatasetAPITest(object):
 
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', mock.MagicMock())
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
@@ -348,7 +347,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalDatasetAPITest(AuthenticationTestCase, TestHelpers.DatasetAPITest):
+class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', '1kg_project']
 
 
@@ -360,7 +359,7 @@ def assert_no_list_ws_has_acl(self, acl_call_count):
 
 
 # Test for permissions from AnVIL only
-class AnvilDatasetAPITest(AnvilAuthenticationTestCase, TestHelpers.DatasetAPITest):
+class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_add_variants_dataset(self):
@@ -377,7 +376,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, TestHelpers.DatasetAPITes
 
 
 # Test for permissions from AnVIL and local
-class MixDatasetAPITest(MixAuthenticationTestCase, TestHelpers.DatasetAPITest):
+class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_add_variants_dataset(self):

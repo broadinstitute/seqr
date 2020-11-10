@@ -9,12 +9,26 @@ from urllib3_mock import Responses
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
-class BasicAuthTestCase(TestCase):
+class AuthenticationTestCase(TestCase):
 
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+
+        edit_group = Group.objects.get(pk=2)
+        view_group = Group.objects.get(pk=3)
+        edit_group.user_set.add(cls.manager_user)
+        view_group.user_set.add(cls.manager_user, cls.collaborator_user)
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
     def check_require_login(self, url):
         self._check_login(url, self.AUTHENTICATED_USER)
@@ -77,23 +91,6 @@ class BasicAuthTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.login_staff_user()
-
-
-class AuthenticationTestCase(BasicAuthTestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.staff_user = User.objects.get(username='test_user')
-        cls.manager_user = User.objects.get(username='test_user_manager')
-        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
-        cls.no_access_user = User.objects.get(username='test_user_no_access')
-
-        edit_group = Group.objects.get(pk=2)
-        view_group = Group.objects.get(pk=3)
-        edit_group.user_set.add(cls.manager_user)
-        view_group.user_set.add(cls.manager_user, cls.collaborator_user)
-        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
-        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
 
 ANVIL_WORKSPACES = [{

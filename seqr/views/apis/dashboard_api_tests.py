@@ -5,7 +5,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
-    BasicAuthTestCase, WORKSPACE_FIELDS
+    WORKSPACE_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -31,8 +31,8 @@ PROJECT_EXPORT_HEADER = [
 ]
 
 
-class TestHelpers(object):
-  class DashboardPageTest(BasicAuthTestCase):
+class DashboardPageTest(object):
+
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
         self.check_require_login(url)
@@ -125,7 +125,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalDashboardPageTest(AuthenticationTestCase, TestHelpers.DashboardPageTest):
+class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 2
 
@@ -145,7 +145,7 @@ def assert_has_anvil_calls(self):
 
 
 # Test for permissions from AnVIL only
-class AnvilDashboardPageTest(AnvilAuthenticationTestCase, TestHelpers.DashboardPageTest):
+class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 2
 
@@ -160,7 +160,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, TestHelpers.DashboardP
 
 
 # Test for permissions from AnVIL and local
-class MixDashboardPageTest(MixAuthenticationTestCase, TestHelpers.DashboardPageTest):
+class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 3
 

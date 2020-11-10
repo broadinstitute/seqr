@@ -8,15 +8,13 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
     project_page_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase, BasicAuthTestCase
-
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
 
 
-class TestHelpers(object):
-  class ProjectAPITest(BasicAuthTestCase):
+class ProjectAPITest(object):
     multi_db = True
 
     def test_create_update_and_delete_project(self):
@@ -172,7 +170,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalProjectAPITest(AuthenticationTestCase, TestHelpers.ProjectAPITest):
+class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
@@ -186,7 +184,7 @@ class LocalProjectAPITest(AuthenticationTestCase, TestHelpers.ProjectAPITest):
 
 
 # Test for permissions from AnVIL only
-class AnvilProjectAPITest(AnvilAuthenticationTestCase, TestHelpers.ProjectAPITest):
+class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
@@ -218,7 +216,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, TestHelpers.ProjectAPITes
 
 
 # Test for permissions from AnVIL and local
-class MixProjectAPITest(MixAuthenticationTestCase, TestHelpers.ProjectAPITest):
+class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',

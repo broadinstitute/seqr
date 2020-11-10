@@ -9,15 +9,14 @@ from django.urls.base import reverse
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff
-from seqr.views.utils.test_utils import AuthenticationTestCase, BasicAuthTestCase, AnvilAuthenticationTestCase,\
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
 
 
-class TestHelpers(object):
-  class GetUsersAPITest(BasicAuthTestCase):
+class GetUsersAPITest(object):
 
     def test_get_all_collaborators(self):
         url = reverse(get_all_collaborators)
@@ -40,7 +39,7 @@ class TestHelpers(object):
 
 
 # Tests for AnVIL access disabled
-class LocalGetUsersAPITest(AuthenticationTestCase, TestHelpers.GetUsersAPITest):
+class LocalGetUsersAPITest(AuthenticationTestCase, GetUsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
 
@@ -58,7 +57,7 @@ def assert_has_anvil_calls(self):
     self.mock_service_account.get.asssert_has_calls(calls)
 
 
-class AnvilGetUsersAPITest(AnvilAuthenticationTestCase, TestHelpers.GetUsersAPITest):
+class AnvilGetUsersAPITest(AnvilAuthenticationTestCase, GetUsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
     
@@ -67,7 +66,7 @@ class AnvilGetUsersAPITest(AnvilAuthenticationTestCase, TestHelpers.GetUsersAPIT
         assert_has_anvil_calls(self)
 
 
-class MixGetUsersAPITest(MixAuthenticationTestCase, TestHelpers.GetUsersAPITest):
+class MixGetUsersAPITest(MixAuthenticationTestCase, GetUsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
 
