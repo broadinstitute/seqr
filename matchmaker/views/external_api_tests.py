@@ -74,36 +74,36 @@ class ExternalAPITest(TestCase):
         response = self._make_mme_request(url, 'post')
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['message'])
-        self.assertEqual(response_json['message'], 'No JSON object could be decoded')
+        self.assertListEqual(list(response_json.keys()), ['error'])
+        self.assertEqual(response_json['error'], 'No JSON object could be decoded')
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data='Invalid body')
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['message'])
-        self.assertEqual(response_json['message'], 'No JSON object could be decoded')
+        self.assertListEqual(list(response_json.keys()), ['error'])
+        self.assertEqual(response_json['error'], 'No JSON object could be decoded')
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': '"patient" object is required'})
+        self.assertDictEqual(response.json(), {'error': '"patient" object is required'})
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
             'patient': {}
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': '"id" is required'})
+        self.assertDictEqual(response.json(), {'error': '"id" is required'})
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
             'patient': {'id': 123}
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': '"contact" is required'})
+        self.assertDictEqual(response.json(), {'error': '"contact" is required'})
 
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
             'patient': {'id': 123, 'contact': {'href': 'test@test.com'}}
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'message': '"features" or "genomicFeatures" are required'})
+        self.assertDictEqual(response.json(), {'error': '"features" or "genomicFeatures" are required'})
 
         # Test valid request
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
