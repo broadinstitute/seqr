@@ -8,7 +8,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    BasicAuthTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -74,7 +74,8 @@ COMPOUND_HET_5_JSON = {
 }
 
 
-class SavedVariantAPITest(object):
+class TestHelpers(object):
+  class SavedVariantAPITest(BasicAuthTestCase):
 
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=['R0001_1kg'])
@@ -732,126 +733,126 @@ class SavedVariantAPITest(object):
 
 
 # Tests for AnVIL access disabled
-class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
+class LocalSavedVariantAPITest(AuthenticationTestCase, TestHelpers.SavedVariantAPITest):
     fixtures = ['users', '1kg_project']
 
 
-def assertions(self, call_count):
+def assert_no_list_ws_has_acl(self, acl_call_count):
     self.mock_list_workspaces.assert_not_called()
     self.mock_service_account.get.assert_called_with(
         'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
-    self.assertEqual(self.mock_service_account.get.call_count, call_count)
+    self.assertEqual(self.mock_service_account.get.call_count, acl_call_count)
 
 
 # Test for permissions from AnVIL only
-class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
+class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, TestHelpers.SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assertions(self, 5)
+        assert_no_list_ws_has_acl(self, 5)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_create_saved_sv_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_create_saved_compound_hets(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_compound_hets()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assertions(self, 6)
+        assert_no_list_ws_has_acl(self, 6)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
-        assertions(self, 7)
+        assert_no_list_ws_has_acl(self, 7)
 
     def test_update_variant_tags(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
-        assertions(self, 3)
+        assert_no_list_ws_has_acl(self, 3)
 
     def test_update_variant_functional_data(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_update_compound_hets_variant_tags(self):
         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
-        assertions(self, 3)
+        assert_no_list_ws_has_acl(self, 3)
 
     def test_update_compound_hets_variant_functional_data(self):
         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
-        assertions(self, 3)
+        assert_no_list_ws_has_acl(self, 3)
 
     def test_update_saved_variant_json(self):
         super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
     def test_update_variant_main_transcript(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
-        assertions(self, 2)
+        assert_no_list_ws_has_acl(self, 2)
 
 
 # Test for permissions from AnVIL and local
-class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
+class MixSavedVariantAPITest(MixAuthenticationTestCase, TestHelpers.SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     def test_saved_variant_data(self):
         super(MixSavedVariantAPITest, self).test_saved_variant_data()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_saved_variant(self):
         super(MixSavedVariantAPITest, self).test_create_saved_variant()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_saved_sv_variant(self):
         super(MixSavedVariantAPITest, self).test_create_saved_sv_variant()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_saved_compound_hets(self):
         super(MixSavedVariantAPITest, self).test_create_saved_compound_hets()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_update_and_delete_variant_note(self):
         super(MixSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(MixSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         super(MixSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_variant_tags(self):
         super(MixSavedVariantAPITest, self).test_update_variant_tags()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_variant_functional_data(self):
         super(MixSavedVariantAPITest, self).test_update_variant_functional_data()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_compound_hets_variant_tags(self):
         super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_compound_hets_variant_functional_data(self):
         super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_saved_variant_json(self):
         super(MixSavedVariantAPITest, self).test_update_saved_variant_json()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)
 
     def test_update_variant_main_transcript(self):
         super(MixSavedVariantAPITest, self).test_update_variant_main_transcript()
-        assertions(self, 1)
+        assert_no_list_ws_has_acl(self, 1)

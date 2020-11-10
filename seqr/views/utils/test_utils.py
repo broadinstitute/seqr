@@ -9,26 +9,12 @@ from urllib3_mock import Responses
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
-class AuthenticationTestCase(TestCase):
+class BasicAuthTestCase(TestCase):
 
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.staff_user = User.objects.get(username='test_user')
-        cls.manager_user = User.objects.get(username='test_user_manager')
-        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
-        cls.no_access_user = User.objects.get(username='test_user_no_access')
-
-        edit_group = Group.objects.get(pk=2)
-        view_group = Group.objects.get(pk=3)
-        edit_group.user_set.add(cls.manager_user)
-        view_group.user_set.add(cls.manager_user, cls.collaborator_user)
-        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
-        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
     def check_require_login(self, url):
         self._check_login(url, self.AUTHENTICATED_USER)
@@ -91,6 +77,23 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.login_staff_user()
+
+
+class AuthenticationTestCase(object):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+
+        edit_group = Group.objects.get(pk=2)
+        view_group = Group.objects.get(pk=3)
+        edit_group.user_set.add(cls.manager_user)
+        view_group.user_set.add(cls.manager_user, cls.collaborator_user)
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
 
 
 ANVIL_WORKSPACES = [{
@@ -728,12 +731,3 @@ GOOGLE_SERVICE_ACCOUNT_INFO = {
 }
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-
-WORKSPACE_WITH_FIELDS_URL = '{}api/workspaces?fields=public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'.format(TEST_TERRA_API_ROOT_URL)
-WORKSPACE_RSP_NO_VALID_PROJECT = '[{"public": false, "accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }}, {"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}}, {"accessLevel": "PROJECT_OWNER","workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"}}]'
-WORKSPACE_RSP_ONE_VALID_PROJECT = '[{"public": false, "accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }}, {"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}}, {"public": false, "accessLevel": "PROJECT_OWNER","workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"}}]'
-WORKSPACE_ACL_URL = '{}api/workspaces/my-seqr-billing/seqr-project%201000%20Genomes%20Demo/acl'.format(TEST_TERRA_API_ROOT_URL)
-WORKSPACE_ACL_RSP = '{"acl": {"test_user@test.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}'
-WORKSPACE1_ACL_URL = '{}api/workspaces/my-seqr-billing/anvil-project%201000%20Genomes%20Demo/acl'.format(TEST_TERRA_API_ROOT_URL)
-WORKSPACE2_ACL_URL = '{}api/workspaces/my-seqr-billing/anvil-1kg%20project%20n%C3%A5me%20with%20uni%C3%A7%C3%B8de/acl'.format(TEST_TERRA_API_ROOT_URL)
-WORKSPACE2_ACL_RSP = '{"acl": {"test_user_no_staff@test.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": true},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}'

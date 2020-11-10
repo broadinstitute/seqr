@@ -1,10 +1,12 @@
 import mock
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase, WORKSPACE_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
+    BasicAuthTestCase, WORKSPACE_FIELDS
 
 
-class AwesomebarAPITest(object):
+class TestHelpers(object):
+  class AwesomebarAPITest(BasicAuthTestCase):
     multi_db = True
 
     def test_awesomebar_autocomplete_handler(self):
@@ -35,12 +37,12 @@ class AwesomebarAPITest(object):
 
 
 # Tests for AnVIL access disabled
-class LocalAwesomebarAPITest(AuthenticationTestCase, AwesomebarAPITest):
+class LocalAwesomebarAPITest(AuthenticationTestCase, TestHelpers.AwesomebarAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
 
 # Test for permissions from AnVIL only
-class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
+class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, TestHelpers.AwesomebarAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     def test_awesomebar_autocomplete_handler(self):
@@ -55,7 +57,7 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
 
 
 # Test for permissions from AnVIL and local
-class MixAwesomebarAPITest(MixAuthenticationTestCase, AwesomebarAPITest):
+class MixAwesomebarAPITest(MixAuthenticationTestCase, TestHelpers.AwesomebarAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     def test_awesomebar_autocomplete_handler(self):
