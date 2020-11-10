@@ -221,11 +221,15 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
 # inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
 class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
+    LOCAL_USER = 'local_user'
 
     # use the local permissions set-up by AuthenticationTestCase
     @classmethod
     def setUpTestData(cls):
         AuthenticationTestCase.setUpTestData()
+        cls.local_user = User.objects.get(username = 'test_local_user')
+        view_group = Group.objects.get(pk=3)
+        view_group.user_set.add(cls.local_user)
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)

@@ -9,10 +9,71 @@ from django.urls.base import reverse
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, BasicAuthTestCase, AnvilAuthenticationTestCase,\
+    MixAuthenticationTestCase, WORKSPACE_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
+
+
+class TestHelpers(object):
+  class GetUsersAPITest(BasicAuthTestCase):
+
+    def test_get_all_collaborators(self):
+        url = reverse(get_all_collaborators)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json().keys()), [])
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json().keys()), self.COLLABORATOR_NAMES)
+
+        self.login_staff_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json().keys()), {
+            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user'})
+
+
+# Tests for AnVIL access disabled
+class LocalGetUsersAPITest(AuthenticationTestCase, TestHelpers.GetUsersAPITest):
+    fixtures = ['users', '1kg_project']
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
+
+
+def assert_has_anvil_calls(self):
+    calls = [
+        mock.call(self.no_access_user, fields = WORKSPACE_FIELDS),
+        mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+    ]
+    self.mock_list_workspaces.assert_has_calls(calls)
+    calls = [
+        mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+        mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl'),
+    ]
+    self.mock_service_account.get.asssert_has_calls(calls)
+
+
+class AnvilGetUsersAPITest(AnvilAuthenticationTestCase, TestHelpers.GetUsersAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
+    
+    def test_get_all_collaborators(self):
+        super(AnvilGetUsersAPITest, self).test_get_all_collaborators()
+        assert_has_anvil_calls(self)
+
+
+class MixGetUsersAPITest(MixAuthenticationTestCase, TestHelpers.GetUsersAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
+
+    def test_get_all_collaborators(self):
+        super(MixGetUsersAPITest, self).test_get_all_collaborators()
+        assert_has_anvil_calls(self)
 
 
 class UsersAPITest(AuthenticationTestCase):
@@ -32,27 +93,6 @@ class UsersAPITest(AuthenticationTestCase):
             {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id', 'isAnvil'}
         )
         self.assertTrue(first_staff_user['isStaff'])
-
-    def test_get_all_collaborators(self):
-        url = reverse(get_all_collaborators)
-        self.check_require_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(list(response.json().keys()), [])
-
-        self.login_collaborator()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json().keys()), {'test_user_manager', 'test_user_non_staff'})
-
-        self.login_staff_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json().keys()), {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user'})
-
-
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
