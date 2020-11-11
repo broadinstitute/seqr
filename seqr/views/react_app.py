@@ -6,7 +6,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
 from django.template import loader
 from django.http import HttpResponse
-from settings import SEQR_VERSION, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, CSRF_COOKIE_NAME, HIJACK_DISPLAY_WARNING
+from settings import SEQR_VERSION, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, CSRF_COOKIE_NAME, DEBUG
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 
 
@@ -45,7 +45,7 @@ def _render_app_html(request, initial_json):
     ui_version = re.search('static/app-(.*)\.js', html).group(1)
     initial_json['meta'] = {
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
-        'hijakEnabled': HIJACK_DISPLAY_WARNING or False,
+        'hijakEnabled': DEBUG or False,
     }
 
     html = html.replace(
