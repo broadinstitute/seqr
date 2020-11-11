@@ -638,10 +638,10 @@ class StaffAPITest(AuthenticationTestCase):
 
         discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
         self.assertEqual(discovery_file[0], '\t'.join([
-            'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene-1', '04-Gene_Class-1',
-            '05-inheritance_description-1', '06-Zygosity-1', '07-variant_genome_build-1', '08-Chrom-1', '09-Pos-1',
-            '10-Ref-1', '11-Alt-1', '12-hgvsc-1', '13-hgvsp-1', '14-Transcript-1', '15-sv_name-1', '16-sv_type-1',
-            '17-significance-1']))
+            'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
+            '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
+            '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
+            '17-significance']))
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
@@ -665,7 +665,7 @@ class StaffAPITest(AuthenticationTestCase):
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
-        self.assertIn(response.json()['message'], ['Unable to retrieve airtable data: No JSON object could be decoded',
+        self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
                                         'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
 
         responses.reset()
@@ -678,7 +678,7 @@ class StaffAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
         self.assertEqual(
-            response.json()['message'],
+            response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 2)
         self.assertIsNone(responses.calls[0].request.params.get('offset'))
@@ -700,7 +700,7 @@ class StaffAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['message'], 'Select a gene to filter variants')
+        self.assertEqual(response.json()['error'], 'Select a gene to filter variants')
 
         response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)

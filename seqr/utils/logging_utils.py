@@ -12,7 +12,8 @@ class JsonLogFormatter(logging.Formatter):
             log_json['httpRequest'] = record.http_request_json
             if getattr(record, 'request_body', None):
                 log_json['requestBody'] = record.request_body
-        else:
+
+        if record.message:
             log_json['message'] = record.message
 
         if getattr(record, 'user', None) and record.user.is_authenticated():

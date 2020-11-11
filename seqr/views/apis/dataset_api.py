@@ -1,6 +1,5 @@
 import json
 import logging
-import traceback
 from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
@@ -111,7 +110,6 @@ def add_variants_dataset_handler(request, project_guid):
             matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type)
 
     except Exception as e:
-        traceback.print_exc()
         return create_json_response({'errors': [str(e)]}, status=400)
 
     family_guids_to_update = [
@@ -158,7 +156,6 @@ def receive_igv_table_handler(request, project_guid):
                                       if i.individual_id not in unchanged_individual_ids}
 
     except Exception as e:
-        traceback.print_exc()
         return create_json_response({'errors': [str(e)]}, status=400)
 
     response = {

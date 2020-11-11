@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.staticfiles',
-    'hijack',
     'guardian',
     'anymail',
     'seqr',
@@ -56,10 +55,6 @@ MIDDLEWARE = [
     'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
-
-# django-hijack plugin
-HIJACK_DISPLAY_WARNING = True
-HIJACK_LOGIN_REDIRECT_URL = '/'
 
 ALLOWED_HOSTS = ['*']
 
@@ -220,21 +215,27 @@ if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
     DEBUG = False
 else:
     DEBUG = True
-    # Enable CORS for local development
-    INSTALLED_APPS.append('corsheaders')
+    # Enable CORS and hijak for local development
+    INSTALLED_APPS += ['corsheaders', 'hijack']
     MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
     CORS_ORIGIN_WHITELIST = (
         'http://localhost:3000',
         'http://localhost:8000',
     )
     CORS_ALLOW_CREDENTIALS = True
-
+    CORS_REPLACE_HTTPS_REFERER = True
+    # django-hijack plugin
+    HIJACK_DISPLAY_WARNING = True
+    HIJACK_ALLOW_GET_REQUESTS = True
+    HIJACK_LOGIN_REDIRECT_URL = '/'
 
 #########################################################
 #  seqr specific settings
 #########################################################
 
 SEQR_VERSION = 'v1.0'
+SEQR_PRIVACY_VERSION = 1.0
+SEQR_TOS_VERSION = 1.0
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 
