@@ -342,7 +342,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         
     def test_update_policies(self):
         super(AnvilUsersAPITest, self).test_update_policies()
-        # Todo: add assertions
+        self.mock_list_workspaces.asssert_not_called()
+        self.mock_service_account.get.asssert_not_called()
 
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
@@ -381,5 +382,5 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         
     def test_update_policies(self):
         super(MixUsersAPITest, self).test_update_policies()
-        # Todo: add assertions 
-        
+        self.mock_list_workspaces.asssert_not_called()
+        self.mock_service_account.get.asssert_not_called()

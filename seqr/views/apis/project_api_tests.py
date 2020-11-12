@@ -174,11 +174,11 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isAnvil': False,
+                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': False,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isAnvil': False,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
                               'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '',
                               'username': 'test_user_non_staff'}]
 
@@ -188,11 +188,11 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isAnvil': True,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isAnvil': True,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'}]
 
     def test_create_update_and_delete_project(self):
@@ -220,15 +220,15 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isAnvil': True,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isAnvil': True,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User',
                               'email': 'test_local_user@test.com', 'firstName': 'Test seqr local User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14, 'isAnvil': False,
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14, 'isActive': True, 'isAnvil': False,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
                              ]
 

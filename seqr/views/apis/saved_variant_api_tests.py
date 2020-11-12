@@ -801,7 +801,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_update_saved_variant_json(self):
         super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json()
-        assert_no_list_ws_has_acl(self, 2)
+        assert_no_list_ws_has_acl(self, 3)
 
     def test_update_variant_main_transcript(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
