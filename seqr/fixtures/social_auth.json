@@ -1,0 +1,47 @@
+[
+{
+    "model": "social_django.usersocialauth",
+    "pk": 1,
+    "fields": {
+        "user": 10,
+        "provider": "google-oauth2",
+        "uid": "test_user@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 2,
+    "fields": {
+        "user": 11,
+        "provider": "google-oauth2",
+        "uid": "test_user_manager@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 3,
+    "fields": {
+        "user": 12,
+        "provider": "google-oauth2",
+        "uid": "test_user_no_staff@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 4,
+    "fields": {
+        "user": 13,
+        "provider": "google-oauth2",
+        "uid": "test_user_no_access@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
+}
+]

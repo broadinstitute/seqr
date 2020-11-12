@@ -3,6 +3,7 @@ from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
+import mock
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
@@ -93,6 +94,143 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.login_staff_user()
+
+
+ANVIL_WORKSPACES = [{
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-project 1000 Genomes Demo',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace1',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace2',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}
+]
+
+
+TEST_TERRA_API_ROOT_URL =  'https://localhost/'
+
+# the time must the same as that in 'auth_time' in the social_auth fixture data
+TOKEN_AUTH_TIME = 1603287741
+WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
+
+
+def get_ws_acl_side_effect(url):
+    workspace_namespace, workspace_name = url.split('/')[2:4]
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    return {'acl': wss[0]['acl']} if wss else {}
+
+
+def get_workspaces_side_effect(user, fields):
+    return [
+        {
+            'public': ws['public'],
+            'accessLevel': ws['acl'][user.email]['accessLevel'],
+            'workspace':{
+                'namespace': ws['workspace_namespace'],
+                'name': ws['workspace_name']
+            }
+        } for ws in ANVIL_WORKSPACES if user.email in ws['acl'].keys()
+    ]
+
+
+class AnvilAuthenticationTestCase(AuthenticationTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+
+    # mock the terra apis
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = TOKEN_AUTH_TIME + 10
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        self.mock_list_workspaces = patcher.start()
+        self.mock_list_workspaces.side_effect = get_workspaces_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
+        self.mock_service_account = patcher.start()
+        self.mock_service_account.get.side_effect = get_ws_acl_side_effect
+        self.addCleanup(patcher.stop)
+
+
+# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
+class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
+    LOCAL_USER = 'local_user'
+
+    # use the local permissions set-up by AuthenticationTestCase
+    @classmethod
+    def setUpTestData(cls):
+        AuthenticationTestCase.setUpTestData()
+        cls.local_user = User.objects.get(username = 'test_local_user')
+        view_group = Group.objects.get(pk=3)
+        view_group.user_set.add(cls.local_user)
+
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
 # The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
@@ -577,3 +715,25 @@ PARSED_SV_VARIANT = {
     'numExon': 2,
     '_sort': [1049045387],
 }
+
+GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_OAUTH2_URL = 'https://accounts.google.com/o/oauth2/'
+GOOGLE_AUTHORIZATION_URL = '{}auth'.format(GOOGLE_OAUTH2_URL)
+GOOGLE_ACCESS_TOKEN_URL = '{}token'.format(GOOGLE_OAUTH2_URL)
+GOOGLE_REVOKE_TOKEN_URL = '{}revoke'.format(GOOGLE_OAUTH2_URL)
+
+GOOGLE_SERVICE_ACCOUNT_INFO = {
+  "type": "service_account",
+  "project_id": "my-seqr",
+  "private_key_id": "12345",
+  # generated private key for test only
+  "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAsIrRMWhsh1D/QU8QTR0GDabAGhfUTOVR7ZR0svZV6XLjG3XZ\n0mlWXgxCwUFeM/VEsIM3AP9kR3KaGCQjxoyFIC4XwHt3odVFui8GvNadx6e/uhI7\nmoxkMnodeTxFkmHGBfOWMIQhVZkk7Y/qbBxHaNVGU14+nm0M/6Emk9Wmg+HttGd2\nJ+LNmMU/oNyRlqAWpkb5HNEwS6IiTCnCfrBMnBdS7DrtlKPZy+Glzvzdt91LBFhc\ncSFZ/KnR7pt2Lj1asnBy/u1Dd9YEp9n2MhCE7pnCgtNBKD2x3+JESFJtcAKW/0OF\nbWa2sKFJON3+qJVOLYgOPJm2ff/TwIkO9tODZQIDAQABAoIBABclzHIPABPqAd39\nUOTbhlyp3YxOTY7bjpd5HKgOdotKfg6usCXPm/xu3R3bxU9IvH3sZnzh/7MCisPZ\nkTtKV3Y1tPWO+sukXCUiX17JQRzZmOD73QbRm52mt1CbH4AnA8DqBGpOGNTRZK8l\nbJZKSu6q8DKkK8+3+rlV1uoRXGj0MeWAZatV6YvrBOrBDPB0djHjrZDjAzH6yvf5\njosrXKDe7M1QWfH25l9NRUEiZUQnrvB5SOcehd8VToka9AZ7KrMYY/OJ195lhgs3\n0EaaDAfPYbSXgG5avDqnV8TCsxCS5CdqQD/N0WWeZqTvD5b3iDzTMMzwiK6YSwBz\nb8ttSGECgYEA2ILZCc6lP1yn3n+W1pgViWU9vGLibNpi7RCkpyY+OHYyiQ9TLXKV\n3n4/vyqKx9CMOxq6lf2vk+nPNIbzxNDreqXiRSlpx3M8RHbbQiehuI9AwIHD7dgw\nORlIDxStZMMydHzDsCJ9zCbaZQ/IerN8PWqOzufHKrRqf2zoEfvdbCkCgYEA0L3G\n7tgbHrMlP9RhiQTBd+IIvzoUTGy/q9cTlcSIXnEKqdwJaEw258ifh+SJum07V1kt\n9Kz1ocyR7zr7lRRLb085/IBJI+MSwGC5uIbkk2o9OgNoQMG7ljpqWYtlpHKZ86sI\npYjvIvr9yhzRkyZ9KNKZ/BZtvgMr4PsazJKohN0CgYBFUgeZez8vPURGGcW6qXDj\nz7VndqWWQom/6z88gSMUwstFVNHF0FUpqnRQiZdriFsNpW4uDc5EZmzAHaE418c9\nOpVqnWrPwBaAuSlUUgoWZE9QE3wez8QI1A5dPbqSc2jZIQUqhLCQR7RO/TGsD4Fs\nzIwytMTw6FjcuYrID0MCmQKBgCL01P6khA4lFATXbSoD+N45pRtY/5M41vRRBT+c\ndPXT2mRNq+miccNpDoY0WHg22KwtDAwgdtYMqxez+fOiPWu7ictmNFllKnu69v8W\n3+pr7Srs7SWDDAYBbFPoizH52xw6NS17fAiQnbWeE96foHAYrJ7RprkeUNfRVVCS\n8tOlAoGACW9IwNembuBC9VLnnVBidL5yQVNiBpenMuVcSKxSYUeFrIAE2zPtzuhp\n7JSO308VlWX1rUV5PhX6ul41Eu/pzjo9omM3BbjiBs1rhnpjjQShGNYtAYjAkXM1\nG3TgTLUG+Bj5Bq2/YBZX2juOGim3mouOe+h/2adHIPJdI47J5a8=\n-----END RSA PRIVATE KEY-----",
+  "client_email": "abcd@my-seqr.iam.gserviceaccount.com",
+  "client_id": "678910",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sf-seqr%40my-seqr.iam.gserviceaccount.com"
+}
+
+GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'

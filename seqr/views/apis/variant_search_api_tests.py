@@ -10,7 +10,8 @@ from seqr.utils.elasticsearch.utils import InvalidIndexException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
-from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
+    MixAuthenticationTestCase, WORKSPACE_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -51,8 +52,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-class VariantSearchAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
+class VariantSearchAPITest(object):
     multi_db = True
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
@@ -473,3 +473,89 @@ class VariantSearchAPITest(AuthenticationTestCase):
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[global_saved_search_guid])
         response = self.client.get(delete_saved_search_url)
         self.assertEqual(response.status_code, 403)
+
+
+# Tests for AnVIL access disabled
+class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
+
+
+def assert_no_list_ws_has_acl(self, acl_call_count, path=None):
+    self.mock_list_workspaces.assert_not_called()
+    if not path:
+        path = 'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'
+    self.mock_service_account.get.assert_called_with(path)
+    self.assertEqual(self.mock_service_account.get.call_count, acl_call_count)
+
+
+# Test for permissions from AnVIL only
+class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+
+    def test_query_variants(self):
+        super(AnvilVariantSearchAPITest, self).test_query_variants()
+        assert_no_list_ws_has_acl(self, 9)
+
+    def test_query_all_projects_variants(self):
+        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants()
+        calls = [
+            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        ]
+        self.mock_list_workspaces.assert_has_calls(calls)
+        self.mock_service_account.get.assert_called_with(
+            'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
+        self.assertEqual(self.mock_service_account.get.call_count, 1)
+
+    def test_query_all_project_families_variants(self):
+        super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants()
+        assert_no_list_ws_has_acl(self, 2, path='api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        # self.mock_list_workspaces.assert_not_called() self.mock_service_account.get.assert_not_called()
+
+    def test_search_context(self):
+        super(AnvilVariantSearchAPITest, self).test_search_context()
+        assert_no_list_ws_has_acl(self, 15)
+
+    def test_query_single_variant(self):
+        super(AnvilVariantSearchAPITest, self).test_query_single_variant()
+        assert_no_list_ws_has_acl(self, 3)
+
+    def test_saved_search(self):
+        super(AnvilVariantSearchAPITest, self).test_saved_search()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_service_account.get.assert_not_called()
+
+
+# Test for permissions from AnVIL and local
+class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+
+    def test_query_variants(self):
+        super(MixSavedVariantSearchAPITest, self).test_query_variants()
+        assert_no_list_ws_has_acl(self, 1)
+
+    def test_query_all_projects_variants(self):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants()
+        calls = [
+            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        ]
+        self.mock_list_workspaces.assert_has_calls(calls)
+        self.mock_service_account.get.assert_not_called()
+
+    def test_query_all_project_families_variants(self):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_project_families_variants()
+        assert_no_list_ws_has_acl(self, 1, path='api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+
+    def test_search_context(self):
+        super(MixSavedVariantSearchAPITest, self).test_search_context()
+        assert_no_list_ws_has_acl(self, 8)
+
+    def test_query_single_variant(self):
+        super(MixSavedVariantSearchAPITest, self).test_query_single_variant()
+        assert_no_list_ws_has_acl(self, 2)
+
+    def test_saved_search(self):
+        super(MixSavedVariantSearchAPITest, self).test_saved_search()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_service_account.get.assert_not_called()
