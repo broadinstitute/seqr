@@ -8,6 +8,8 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 INITIAL_JSON_REGEX = r'\(window\.initialJSON=(?P<initial_json>[^)]+)'
 
+MAIN_APP_USER_FIELDS = {'currentPolicies'}
+MAIN_APP_USER_FIELDS.update(USER_FIELDS)
 
 class DashboardPageTest(AuthenticationTestCase):
     fixtures = ['users']
@@ -26,8 +28,9 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), USER_FIELDS)
+        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
         self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
+        self.assertFalse(initial_json['user']['currentPolicies'])
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
@@ -58,8 +61,9 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'newUser'})
-        self.assertSetEqual(set(initial_json['newUser'].keys()), USER_FIELDS)
+        self.assertSetEqual(set(initial_json['newUser'].keys()), MAIN_APP_USER_FIELDS)
         self.assertEqual(initial_json['newUser']['username'], 'test_user_manager')
+        self.assertFalse(initial_json['newUser']['currentPolicies'])
 
         with self.assertRaises(ObjectDoesNotExist):
             self.client.get('/users/set_password/invalid_pwd')
@@ -70,7 +74,6 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), USER_FIELDS)
+        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
         self.assertEqual(initial_json['user']['username'], 'test_user')
-
-
+        self.assertTrue(initial_json['user']['currentPolicies'])

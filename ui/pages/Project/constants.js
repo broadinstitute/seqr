@@ -277,10 +277,11 @@ export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...INTERNAL_FAMIL
 
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
-export const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
-export const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
-export const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
-export const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
+const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
+const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
+const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
+const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
+const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
 export const FAMILY_SORT_OPTIONS = [
   {
@@ -321,6 +322,14 @@ export const FAMILY_SORT_OPTIONS = [
     name: 'Analysis Status',
     createSortKeyGetter: () => family =>
       FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
+  },
+  {
+    value: SORT_BY_ANALYSED_DATE,
+    name: 'Date Last Analysed',
+    createSortKeyGetter: () => family =>
+      family.analysedBy.map(
+        ({ lastModifiedDate }) => lastModifiedDate,
+      ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
   },
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,

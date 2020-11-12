@@ -6,17 +6,31 @@ from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls.base import reverse
 
+from seqr.models import UserPolicy
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff
+    get_all_staff, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, WORKSPACE_FIELDS
+    MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
 PROJECT_GUID = 'R0001_1kg'
 
 
 class UsersAPITest(object):
+
+    def test_get_all_staff(self):
+        get_all_staff_url = reverse(get_all_staff)
+        self.check_require_login(get_all_staff_url)
+        response = self.client.get(get_all_staff_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        all_staff_usernames = list(response_json.keys())
+        first_staff_user = response_json[all_staff_usernames[0]]
+
+        self.assertSetEqual(set(first_staff_user), USER_FIELDS)
+        self.assertTrue(first_staff_user['isStaff'])
 
     def test_get_all_collaborators(self):
         url = reverse(get_all_collaborators)
@@ -37,21 +51,6 @@ class UsersAPITest(object):
         self.assertSetEqual(set(response.json().keys()), {
             'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user'})
 
-    def test_get_all_staff(self):
-        get_all_staff_url = reverse(get_all_staff)
-        self.check_require_login(get_all_staff_url)
-        response = self.client.get(get_all_staff_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        all_staff_usernames = list(response_json.keys())
-        first_staff_user = response_json[all_staff_usernames[0]]
-
-        self.assertSetEqual(
-            set(first_staff_user),
-            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id', 'isAnvil'}
-        )
-        self.assertTrue(first_staff_user['isStaff'])
-
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
         create_url = reverse(create_project_collaborator, args=[PROJECT_GUID])
@@ -68,11 +67,9 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), self.NUM_USERS)
-        self.assertSetEqual(
-            set(collaborators[0].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions', 'id', 'isAnvil'}
-        )
+        expected_fields = {'hasEditPermissions', 'hasViewPermissions'}
+        expected_fields.update(USER_FIELDS)
+        self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
         self.assertFalse(collaborators[0]['isStaff'])
@@ -107,10 +104,7 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {username} | self.COLLABORATOR_NAMES)
-        self.assertSetEqual(
-            set(response_json[username].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isAnvil'}
-        )
+        self.assertSetEqual(set(response_json[username].keys()), USER_FIELDS)
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
@@ -258,6 +252,38 @@ class UsersAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')
+        
+    def test_update_policies(self):
+        self.assertEqual(UserPolicy.objects.filter(user=self.no_access_user).count(), 0)
+
+        url = reverse(update_policies)
+        self.check_require_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'User must accept current policies')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'currentPolicies': True})
+
+        new_policy = UserPolicy.objects.get(user=self.no_access_user)
+        self.assertEqual(new_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertEqual(new_policy.tos_version, SEQR_TOS_VERSION)
+
+        # Test updating user with out of date policies
+        existing_policy = UserPolicy.objects.get(user=self.manager_user)
+        self.assertNotEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertNotEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
+
+        self.login_manager()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'currentPolicies': True})
+
+        existing_policy = UserPolicy.objects.get(user=self.manager_user)
+        self.assertEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
+        self.assertEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
 
 
 # Tests for AnVIL access disabled
@@ -313,6 +339,10 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_forgot_password()
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
+        
+    def test_update_policies(self):
+        super(AnvilUsersAPITest, self).test_update_policies()
+        # Todo: add assertions
 
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
@@ -348,3 +378,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_forgot_password()
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
+        
+    def test_update_policies(self):
+        super(MixUsersAPITest, self).test_update_policies()
+        # Todo: add assertions 
+        

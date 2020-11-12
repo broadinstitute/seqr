@@ -144,7 +144,7 @@ class ProjectAPITest(object):
         invalid_url = reverse(project_page_data, args=['FAKE_GUID'])
         response = self.client.get(invalid_url)
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()['message'], 'Project matching query does not exist.')
+        self.assertEqual(response.json()['error'], 'Project matching query does not exist.')
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])

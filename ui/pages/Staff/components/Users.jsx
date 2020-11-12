@@ -4,9 +4,11 @@ import { connect } from 'react-redux'
 import { Icon, Button } from 'semantic-ui-react'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getAllUsers, getUserOptionsIsLoading } from 'redux/selectors'
+import { getAllUsers, getUserOptionsIsLoading, getHijakEnabled } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
+
+const CheckIcon = () => <Icon color="green" name="check circle" />
 
 const COLUMNS = [
   { name: 'email', content: 'Email' },
@@ -14,7 +16,16 @@ const COLUMNS = [
   { name: 'username', content: 'Username' },
   { name: 'dateJoined', content: 'Date Joined', format: ({ dateJoined }) => (dateJoined || '').slice(0, 10) },
   { name: 'lastLogin', content: 'Last Login', format: ({ lastLogin }) => (lastLogin || '').slice(0, 10) },
-  { name: 'isStaff', content: 'Staff?', format: val => (val.isStaff && <Icon color="green" name="check circle" />) },
+  { name: 'isStaff', content: 'Staff?', format: val => (val.isStaff && val.isActive && <CheckIcon />) },
+  {
+    name: 'isActive',
+    content: 'Active?',
+    format: val => (val.isActive ? <CheckIcon /> : <Icon color="red" name="times circle" />),
+  },
+]
+
+const HIJAK_COLUMNS = [
+  ...COLUMNS,
   {
     name: 'id',
     format: val =>
@@ -29,7 +40,7 @@ const COLUMNS = [
 
 const getUserFilterVal = ({ email, displayName }) => `${email}-${displayName}`
 
-const Users = React.memo(({ users, loading, load }) =>
+const Users = React.memo(({ users, loading, load, hijak }) =>
   <DataLoader load={load} content loading={false}>
     <DataTable
       striped
@@ -37,7 +48,7 @@ const Users = React.memo(({ users, loading, load }) =>
       defaultSortColumn="email"
       loading={loading}
       data={users}
-      columns={COLUMNS}
+      columns={hijak ? HIJAK_COLUMNS : COLUMNS}
       getRowFilterVal={getUserFilterVal}
     />
   </DataLoader>,
@@ -47,12 +58,14 @@ Users.propTypes = {
   users: PropTypes.array,
   loading: PropTypes.bool,
   load: PropTypes.func,
+  hijak: PropTypes.bool,
 }
 
 
 const mapStateToProps = state => ({
   users: getAllUsers(state),
   loading: getUserOptionsIsLoading(state),
+  hijak: getHijakEnabled(state),
 })
 
 const mapDispatchToProps = {

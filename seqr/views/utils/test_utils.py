@@ -48,6 +48,9 @@ class AuthenticationTestCase(TestCase):
     def login_collaborator(self):
         self.client.force_login(self.collaborator_user)
 
+    def login_manager(self):
+        self.client.force_login(self.manager_user)
+
     def login_staff_user(self):
         self.client.force_login(self.staff_user)
 
@@ -251,7 +254,9 @@ class Urllib3Responses(Responses):
 urllib3_responses = Urllib3Responses()
 
 
-USER_FIELDS = {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isAnvil'}
+USER_FIELDS = {
+    'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isActive', 'isAnvil'
+}
 
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',

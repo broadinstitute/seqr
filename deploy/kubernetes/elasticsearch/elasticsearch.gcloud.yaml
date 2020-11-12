@@ -96,6 +96,7 @@ spec:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+      {% if ES_DATA_NUM_PODS > 1 %}
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -105,6 +106,7 @@ spec:
                   operator: In
                   values:
                   - data
+      {% endif %}
         initContainers:
         - name: sysctl
           securityContext:
