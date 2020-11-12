@@ -1,8 +1,11 @@
-from django.urls.base import reverse
 import json
+import mock
+
+from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
+    WORKSPACE_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -28,8 +31,7 @@ PROJECT_EXPORT_HEADER = [
 ]
 
 
-class DashboardPageTest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+class DashboardPageTest(object):
 
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
@@ -49,13 +51,13 @@ class DashboardPageTest(AuthenticationTestCase):
             set(next(iter(response_json['projectCategoriesByGuid'].values())).keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
         )
-        self.assertEqual(len(response_json['projectsByGuid']), 2)
+        self.assertEqual(len(response_json['projectsByGuid']), self.NUM_COLLABORATOR_PROJECTS)
         self.assertSetEqual(
             set(next(iter(response_json['projectsByGuid'].values())).keys()),
             {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
              'isMmeEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids', 'projectGuid',
              'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
-             'numVariantTags', }
+             'numVariantTags', 'workspaceName', 'workspaceNamespace'}
         )
 
         # Staff users can see all projects
@@ -120,3 +122,53 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get('{}?file_format=csv'.format(url))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Invalid file_format: csv'})
+
+
+# Tests for AnVIL access disabled
+class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
+    fixtures = ['users', '1kg_project']
+    NUM_COLLABORATOR_PROJECTS = 2
+
+
+def assert_has_anvil_calls(self):
+    calls = [
+        mock.call(self.no_access_user, fields = WORKSPACE_FIELDS),
+        mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        mock.call(self.staff_user, fields = WORKSPACE_FIELDS)
+    ]
+    self.mock_list_workspaces.assert_has_calls(calls)
+    calls = [
+        mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
+        mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+    ]
+    self.mock_service_account.get.assert_has_calls(calls)
+
+
+# Test for permissions from AnVIL only
+class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    NUM_COLLABORATOR_PROJECTS = 2
+
+    def test_dashboard_page_data(self):
+        super(AnvilDashboardPageTest, self).test_dashboard_page_data()
+        assert_has_anvil_calls(self)
+
+    def test_export_projects_table(self):
+        super(AnvilDashboardPageTest, self).test_export_projects_table()
+        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_service_account.get.assert_not_called()
+
+
+# Test for permissions from AnVIL and local
+class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+    NUM_COLLABORATOR_PROJECTS = 3
+
+    def test_dashboard_page_data(self):
+        super(MixDashboardPageTest, self).test_dashboard_page_data()
+        assert_has_anvil_calls(self)
+
+    def test_export_projects_table(self):
+        super(MixDashboardPageTest, self).test_export_projects_table()
+        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_service_account.get.assert_not_called()

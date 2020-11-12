@@ -8,7 +8,8 @@ from io import StringIO
 
 from seqr.models import Sample
 from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
-from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
+from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
+    MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -17,8 +18,7 @@ SV_INDEX_NAME = 'test_new_sv_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
-class DatasetAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+class DatasetAPITest(object):
 
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', mock.MagicMock())
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
@@ -344,3 +344,49 @@ class DatasetAPITest(AuthenticationTestCase):
             {sample_guid}
         )
         mock_subprocess.assert_called_with('gsutil ls gs://readviz/NA19679.bam', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+
+
+# Tests for AnVIL access disabled
+class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
+    fixtures = ['users', '1kg_project']
+
+
+def assert_no_list_ws_has_acl(self, acl_call_count):
+    self.mock_list_workspaces.assert_not_called()
+    self.mock_service_account.get.assert_called_with(
+        'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
+    self.assertEqual(self.mock_service_account.get.call_count, acl_call_count)
+
+
+# Test for permissions from AnVIL only
+class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def test_add_variants_dataset(self):
+        super(AnvilDatasetAPITest, self).test_add_variants_dataset()
+        assert_no_list_ws_has_acl(self, 15)
+
+    def test_receive_alignment_table_handler(self):
+        super(AnvilDatasetAPITest, self).test_receive_alignment_table_handler()
+        assert_no_list_ws_has_acl(self, 4)
+
+    def test_add_alignment_sample(self):
+        super(AnvilDatasetAPITest, self).test_add_alignment_sample()
+        assert_no_list_ws_has_acl(self, 7)
+
+
+# Test for permissions from AnVIL and local
+class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def test_add_variants_dataset(self):
+        super(MixDatasetAPITest, self).test_add_variants_dataset()
+        assert_no_list_ws_has_acl(self, 1)
+
+    def test_receive_alignment_table_handler(self):
+        super(MixDatasetAPITest, self).test_receive_alignment_table_handler()
+        assert_no_list_ws_has_acl(self, 1)
+
+    def test_add_alignment_sample(self):
+        super(MixDatasetAPITest, self).test_add_alignment_sample()
+        assert_no_list_ws_has_acl(self, 1)

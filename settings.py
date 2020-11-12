@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,8 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -162,6 +165,8 @@ LOGGING = {
         },
     }
 }
+
+TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -286,3 +291,57 @@ MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
+
+#########################################################
+#  AnVIL Terra API specific settings
+#########################################################
+GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
+
+GOOGLE_AUTH_CLIENT_CONFIG = {}
+GOOGLE_SERVICE_ACCOUNT_INFO = {}
+if GOOGLE_AUTH_CONFIG_DIR:
+    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'client_secret.json'), 'r') as f:
+        GOOGLE_AUTH_CLIENT_CONFIG = json.load(f)
+    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'service_account.json'), 'r') as f:
+        GOOGLE_SERVICE_ACCOUNT_INFO = json.load(f)
+
+#########################################################
+#  Social auth specific settings
+#########################################################
+SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/cloud-billing',
+    'openid'
+]
+
+if TERRA_API_ROOT_URL or (len(sys.argv) >= 2 and sys.argv[1] == 'test'):
+    AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
+
+    # Use Google sub ID as the user ID, safer than using email
+    USE_UNIQUE_USER_ID = True
+
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
+
+    SOCIAL_AUTH_GOOGLE_PLUS_AUTH_EXTRA_ARGUMENTS = {
+          'access_type': 'offline'
+    }
+
+    SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+    SOCIAL_AUTH_URL_NAMESPACE = 'social'
+    SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+    SOCIAL_AUTH_PIPELINE = (
+        'seqr.utils.social_auth_pipeline.validate_anvil_registration',
+        'social_core.pipeline.social_auth.social_details',
+        'social_core.pipeline.social_auth.social_uid',
+        'social_core.pipeline.social_auth.social_user',
+        'social_core.pipeline.user.get_username',
+        'social_core.pipeline.social_auth.associate_by_email',
+        'social_core.pipeline.user.create_user',
+        'social_core.pipeline.social_auth.associate_user',
+        'social_core.pipeline.social_auth.load_extra_data',
+        'social_core.pipeline.user.user_details',
+    )
+    INSTALLED_APPS.append('social_django')

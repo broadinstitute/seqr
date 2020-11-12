@@ -3,6 +3,9 @@ django-anymail==7.0.0            # for sending emails using cloud-based mail ser
 django-guardian==1.5.1           # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.0.2       # allows CORS requests for client-side development
+social-auth-app-django==4.0.0    # the package for Django to authenticate users with social medieas
+social-auth-core==3.3.3          # the Python social authentication package. Required by social-auth-app-django
+google-auth==1.22.1              # for Google service account client and secure sessions using access tokens
 
 elasticsearch==7.9.1             # elasticsearch client
 elasticsearch-dsl==7.2.1	     # elasticsearch query utilities
@@ -19,3 +22,4 @@ slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling. Behind a major version due to missing Python 2 support
+

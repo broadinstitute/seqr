@@ -10,11 +10,13 @@ from collections import defaultdict
 from copy import copy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions
+from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil
+from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl
 logger = logging.getLogger(__name__)
 
 
@@ -87,7 +89,7 @@ def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
-def _get_json_for_user(user):
+def _get_json_for_user(user, check_anvil=True):
     """Returns JSON representation of the given User object
 
     Args:
@@ -104,6 +106,7 @@ def _get_json_for_user(user):
         _to_camel_case(field): getattr(user, field) for field in [
         'username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'is_active', 'date_joined', 'id',
     ]}
+    user_json['isAnvil'] = is_google_authenticated(user) if check_anvil else False
     user_json['displayName'] = user.get_full_name()
     return user_json
 
@@ -693,11 +696,18 @@ def get_project_collaborators_by_username(project, include_permissions=True):
             collaborator, include_permissions, can_edit=True
         )
 
+    if project_has_anvil(project):
+        acl = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name)
+        collaborators.update({
+            collab.username: _get_collaborator_json(collab, include_permissions, can_edit=acl[collab.email]['accessLevel']=='OWNER', check_anvil=True)
+            for collab in User.objects.filter(email__in=acl.keys())
+        })
+
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit):
-    collaborator_json = _get_json_for_user(collaborator)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, check_anvil=False):
+    collaborator_json = _get_json_for_user(collaborator, check_anvil=check_anvil)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,
