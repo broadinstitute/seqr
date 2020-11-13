@@ -166,12 +166,12 @@ ANVIL_WORKSPACES = [{
 ]
 
 
-TEST_TERRA_API_ROOT_URL =  'https://localhost/'
+TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
 WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
-
+REGISTER_RESPONSE = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"test@test.com","userSubjectId":"123456"}}'
 
 def get_ws_acl_side_effect(url):
     workspace_namespace, workspace_name = url.split('/')[2:4]

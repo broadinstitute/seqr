@@ -22,8 +22,11 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
+    """
+    For exceptions happen in Terra API calls.
 
-    """For exceptions happen in Terra API calls."""
+    Exception for the Terra API utilities.
+    """
 
     pass
 
@@ -66,7 +69,7 @@ class ServiceAccountSession(AuthorizedSession):
         self.started_at = time.time()
 
     def _make_request(self, method, path, headers, root_url, **kwargs):
-        """Parameter "method" is string which can be "get", "post", or "delete". """
+        """Parameter "method" is string which can be "get", "post", or "delete"."""
         if self.started_at is None:
             self.create_session()
         url, headers = _get_call_args(path, headers, root_url)
@@ -85,12 +88,12 @@ class ServiceAccountSession(AuthorizedSession):
         """
         Call Terra API with HTTP GET method with an authentication header.
 
-        Args:
+        :param
             path: A string of API path (start right after the domain name without leading slash (/)
             headers (dict): Include additional headers as key-value pairs
             root_url: the url up to the domain name ending with a slash (/)
             kwargs: other parameters for the HTTP call, e.g. queries.
-        Return:
+        :return
             HTTP response
         """
         return self._make_request('get', path, headers, root_url, **kwargs)
@@ -135,7 +138,7 @@ def sa_get_workspace_acl(workspace_namespace, workspace_name):
     return r.get('acl', {})
 
 
-def _get_social(user):
+def _get_social_access_token(user):
     social = user.social_auth.get(provider = 'google-oauth2')
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
@@ -145,15 +148,16 @@ def _get_social(user):
         except Exception as ee:
             logger.info('Refresh token failed. {}'.format(str(ee)))
             raise TerraAPIException('Refresh token failed. {}'.format(str(ee)))
-    return social
+    return social.extra_data['access_token']
 
 
-def _anvil_call(method, user, path, headers=None, root_url=None, **kwargs):
-    social = _get_social(user)
+def anvil_call(method, path, user=None, headers=None, root_url=None, access_token=None, **kwargs):
+    if user:
+        access_token = _get_social_access_token(user)
 
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
-    headers.update({'Authorization': 'Bearer {}'.format(social.extra_data['access_token'])})
+    headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, headers=headers, **kwargs)
 
     if r.status_code != 200:
@@ -178,4 +182,4 @@ def list_anvil_workspaces(user, fields=None):
     the fields that specified by the 'fields' parameter or all the fields that AnVIL provides.
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
-    return _anvil_call('get', user, path)
+    return anvil_call('get', path, user=user)

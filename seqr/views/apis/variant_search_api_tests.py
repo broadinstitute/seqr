@@ -492,12 +492,12 @@ def assert_no_list_ws_has_acl(self, acl_call_count, path=None):
 class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 
-    def test_query_variants(self):
-        super(AnvilVariantSearchAPITest, self).test_query_variants()
+    def test_query_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
         assert_no_list_ws_has_acl(self, 9)
 
-    def test_query_all_projects_variants(self):
-        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants()
+    def test_query_all_projects_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
         calls = [
             mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
             mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
@@ -507,8 +507,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
             'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
         self.assertEqual(self.mock_service_account.get.call_count, 1)
 
-    def test_query_all_project_families_variants(self):
-        super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants()
+    def test_query_all_project_families_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
         assert_no_list_ws_has_acl(self, 2, path='api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
         # self.mock_list_workspaces.assert_not_called() self.mock_service_account.get.assert_not_called()
 
@@ -516,8 +516,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         super(AnvilVariantSearchAPITest, self).test_search_context()
         assert_no_list_ws_has_acl(self, 15)
 
-    def test_query_single_variant(self):
-        super(AnvilVariantSearchAPITest, self).test_query_single_variant()
+    def test_query_single_variant(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
         assert_no_list_ws_has_acl(self, 3)
 
     def test_saved_search(self):
@@ -530,12 +530,12 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
 
-    def test_query_variants(self):
-        super(MixSavedVariantSearchAPITest, self).test_query_variants()
+    def test_query_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_variants(*args)
         assert_no_list_ws_has_acl(self, 1)
 
-    def test_query_all_projects_variants(self):
-        super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants()
+    def test_query_all_projects_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
         calls = [
             mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
             mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
@@ -543,16 +543,16 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_service_account.get.assert_not_called()
 
-    def test_query_all_project_families_variants(self):
-        super(MixSavedVariantSearchAPITest, self).test_query_all_project_families_variants()
+    def test_query_all_project_families_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
         assert_no_list_ws_has_acl(self, 1, path='api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
 
     def test_search_context(self):
         super(MixSavedVariantSearchAPITest, self).test_search_context()
         assert_no_list_ws_has_acl(self, 8)
 
-    def test_query_single_variant(self):
-        super(MixSavedVariantSearchAPITest, self).test_query_single_variant()
+    def test_query_single_variant(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
         assert_no_list_ws_has_acl(self, 2)
 
     def test_saved_search(self):

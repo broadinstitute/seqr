@@ -799,8 +799,8 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
         assert_no_list_ws_has_acl(self, 3)
 
-    def test_update_saved_variant_json(self):
-        super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json()
+    def test_update_saved_variant_json(self, *args):
+        super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json(*args)
         assert_no_list_ws_has_acl(self, 3)
 
     def test_update_variant_main_transcript(self):
@@ -856,8 +856,8 @@ class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
         super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
         assert_no_list_ws_has_acl(self, 1)
 
-    def test_update_saved_variant_json(self):
-        super(MixSavedVariantAPITest, self).test_update_saved_variant_json()
+    def test_update_saved_variant_json(self, *args):
+        super(MixSavedVariantAPITest, self).test_update_saved_variant_json(*args)
         assert_no_list_ws_has_acl(self, 1)
 
     def test_update_variant_main_transcript(self):

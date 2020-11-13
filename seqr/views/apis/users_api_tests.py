@@ -320,13 +320,13 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
-    def test_create_update_and_delete_project_collaborator(self):
-        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator()
+    def test_create_update_and_delete_project_collaborator(self, *args):
+        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
         self.assertEqual(self.mock_service_account.get.call_count, 12)
 
-    def test_create_staff_user(self):
-        super(AnvilUsersAPITest, self).test_create_staff_user()
+    def test_create_staff_user(self, *args):
+        super(AnvilUsersAPITest, self).test_create_staff_user(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
@@ -335,8 +335,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
-    def test_forgot_password(self):
-        super(AnvilUsersAPITest, self).test_forgot_password()
+    def test_forgot_password(self, *args):
+        super(AnvilUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
         
@@ -360,13 +360,13 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
-    def test_create_update_and_delete_project_collaborator(self):
-        super(MixUsersAPITest, self).test_create_update_and_delete_project_collaborator()
+    def test_create_update_and_delete_project_collaborator(self, *args):
+        super(MixUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
         self.assertEqual(self.mock_service_account.get.call_count, 7)
 
-    def test_create_staff_user(self):
-        super(MixUsersAPITest, self).test_create_staff_user()
+    def test_create_staff_user(self, *args):
+        super(MixUsersAPITest, self).test_create_staff_user(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
@@ -375,8 +375,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
-    def test_forgot_password(self):
-        super(MixUsersAPITest, self).test_forgot_password()
+    def test_forgot_password(self, *args):
+        super(MixUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
         

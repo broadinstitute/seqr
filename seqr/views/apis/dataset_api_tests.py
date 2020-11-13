@@ -362,16 +362,16 @@ def assert_no_list_ws_has_acl(self, acl_call_count):
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_add_variants_dataset(self):
-        super(AnvilDatasetAPITest, self).test_add_variants_dataset()
+    def test_add_variants_dataset(self, *args):
+        super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
         assert_no_list_ws_has_acl(self, 15)
 
     def test_receive_alignment_table_handler(self):
         super(AnvilDatasetAPITest, self).test_receive_alignment_table_handler()
         assert_no_list_ws_has_acl(self, 4)
 
-    def test_add_alignment_sample(self):
-        super(AnvilDatasetAPITest, self).test_add_alignment_sample()
+    def test_add_alignment_sample(self, *args):
+        super(AnvilDatasetAPITest, self).test_add_alignment_sample(*args)
         assert_no_list_ws_has_acl(self, 7)
 
 
@@ -379,14 +379,14 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
 class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_add_variants_dataset(self):
-        super(MixDatasetAPITest, self).test_add_variants_dataset()
+    def test_add_variants_dataset(self, *args):
+        super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
         assert_no_list_ws_has_acl(self, 1)
 
     def test_receive_alignment_table_handler(self):
         super(MixDatasetAPITest, self).test_receive_alignment_table_handler()
         assert_no_list_ws_has_acl(self, 1)
 
-    def test_add_alignment_sample(self):
-        super(MixDatasetAPITest, self).test_add_alignment_sample()
+    def test_add_alignment_sample(self, *args):
+        super(MixDatasetAPITest, self).test_add_alignment_sample(*args)
         assert_no_list_ws_has_acl(self, 1)
