@@ -22,12 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
-    """
-    For exceptions happen in Terra API calls.
-
-    Exception for the Terra API utilities.
-    """
-
     pass
 
 

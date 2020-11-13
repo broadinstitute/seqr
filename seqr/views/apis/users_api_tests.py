@@ -252,7 +252,7 @@ class UsersAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')
-        
+
     def test_update_policies(self):
         self.assertEqual(UserPolicy.objects.filter(user=self.no_access_user).count(), 0)
 
