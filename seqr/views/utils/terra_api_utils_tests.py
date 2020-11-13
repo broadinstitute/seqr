@@ -22,26 +22,15 @@ class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
 
     @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_anvil_call(self, mock_time, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
-        mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
-
-        url = '{}api/workspaces'.format(TEST_TERRA_API_ROOT_URL)
-        responses.add(responses.GET, url, status=200, body = LIST_WORKSPACE_RESPONSE)
-        r = anvil_call('get', 'api/workspaces', user=user)
-        self.assertEqual(len(r), 3)
-        self.assertDictEqual(r[0], {"accessLevel": "PROJECT_OWNER", "public": False, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": False, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}})
-
+    def test_anvil_call(self, mock_logger):
         url = '{}register'.format(TEST_TERRA_API_ROOT_URL)
         responses.add(responses.GET, url, status=200, body=REGISTER_RESPONSE)
-        r = anvil_call('get', 'register', access_token='ya.TEST_TOKEN')
+        r = anvil_call('get', 'register', 'ya.EXAMPLE')
         self.assertDictEqual(r['userInfo'], { "userEmail": "test@test.com", "userSubjectId": "123456"})
 
         responses.replace(responses.GET, url, status=404, body='{"causes": [], "message": "google subject Id 123456 not found in sam", "source": "sam", "stackTrace": [], "statusCode": 404, "timestamp": 1605282720182}')
         with self.assertRaises(TerraAPIException) as te:
-            _ = anvil_call('get', 'register', access_token='ya.TEST_TOKEN')
+            _ = anvil_call('get', 'register', 'ya.EXAMPLE')
         self.assertEqual(str(te.exception), 'Error: called Terra API "register" got status: 404 with a reason: Not Found')
         mock_logger.info.assert_called_with('GET https://terra.api/register 404 152')
 

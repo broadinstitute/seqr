@@ -6,6 +6,7 @@ django-cors-headers==3.0.2       # allows CORS requests for client-side developm
 social-auth-app-django==4.0.0    # the package for Django to authenticate users with social medieas
 social-auth-core==3.3.3          # the Python social authentication package. Required by social-auth-app-django
 google-auth==1.22.1              # for Google service account client and secure sessions using access tokens
+rsa==4.6                         # required by google-auth
 
 elasticsearch==7.9.1             # elasticsearch client
 elasticsearch-dsl==7.2.1	     # elasticsearch query utilities

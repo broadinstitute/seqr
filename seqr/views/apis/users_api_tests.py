@@ -320,8 +320,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
 
-    def test_create_update_and_delete_project_collaborator(self, *args):
-        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
+    def test_create_update_and_delete_project_collaborator(self):
+        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator()
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
         self.assertEqual(self.mock_service_account.get.call_count, 12)
 
@@ -339,7 +339,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_service_account.get.asssert_not_called()
-        
+
     def test_update_policies(self):
         super(AnvilUsersAPITest, self).test_update_policies()
         self.mock_list_workspaces.asssert_not_called()

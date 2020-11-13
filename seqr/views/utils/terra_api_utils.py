@@ -79,8 +79,7 @@ class ServiceAccountSession(AuthorizedSession):
         return json.loads(r.text)
 
     def get(self, path, headers=None, root_url=None, **kwargs):
-        """
-        Call Terra API with HTTP GET method with an authentication header.
+        """Call Terra API with HTTP GET method with an authentication header.
 
         :param
             path: A string of API path (start right after the domain name without leading slash (/)
@@ -145,10 +144,7 @@ def _get_social_access_token(user):
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, user=None, headers=None, root_url=None, access_token=None, **kwargs):
-    if user:
-        access_token = _get_social_access_token(user)
-
+def anvil_call(method, path, access_token, headers=None, root_url=None, **kwargs):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
@@ -159,6 +155,11 @@ def anvil_call(method, path, user=None, headers=None, root_url=None, access_toke
         raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
     return json.loads(r.text)
+
+
+def _user_anvil_call(method, path, user, **kwargs):
+    access_token = _get_social_access_token(user)
+    return anvil_call(method, path, access_token, **kwargs)
 
 
 def list_anvil_workspaces(user, fields=None):
@@ -176,4 +177,4 @@ def list_anvil_workspaces(user, fields=None):
     the fields that specified by the 'fields' parameter or all the fields that AnVIL provides.
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
-    return anvil_call('get', path, user=user)
+    return _user_anvil_call('get', path, user)

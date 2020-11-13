@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def validate_anvil_registration(backend, response, *args, **kwargs):
     if backend.name == 'google-oauth2':
         try:
-            anvil_call('get', 'register', access_token=response['access_token'])
+            anvil_call('get', 'register', response['access_token'])
         except TerraAPIException as et:
             logger.info('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et)))
             return redirect('/login?googleLoginFailed=true')
