@@ -96,7 +96,8 @@ _service_account_session = ServiceAccountSession()
 
 
 def sa_get_workspace_acl(workspace_namespace, workspace_name):
-    """Requests AnVIL access control list for a workspace with a service account (sa).
+    """
+    Requests AnVIL access control list for a workspace with a service account (sa).
 
     The workspace of AnVIL is identified by its namespace and name.
 
@@ -164,8 +165,7 @@ def _user_anvil_call(method, path, user, **kwargs):
 
 
 def list_anvil_workspaces(user, fields=None):
-    """
-    Get all the workspaces accessible by the logged-in user.
+    """Get all the workspaces accessible by the logged-in user.
 
     :param
     user (User model): who's credentials will be used to access AnVIL
