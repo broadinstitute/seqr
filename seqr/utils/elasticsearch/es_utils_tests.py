@@ -11,7 +11,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException
+    get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, TRANSCRIPT_2
 
@@ -1046,7 +1046,7 @@ class EsUtilsTest(TestCase):
             size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
         )
 
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_single_es_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
@@ -1059,14 +1059,14 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(family_id='no_individuals'))
 
-        with self.assertRaises(InvalidIndexException) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'No es index found')
+        self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
 
         search_model.search = {'inheritance': {'mode': 'recessive'}}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
         self.assertEqual(
             str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
@@ -1075,25 +1075,25 @@ class EsUtilsTest(TestCase):
         search_model.search['annotations'] = {'structural': ['DEL']}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
         error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
         self.assertEqual(str(cm.exception), error)
 
         results_model.families.set(self.families)
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model, page=200)
         self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
         search_model.search = {'inheritance': {'mode': 'compound_het'}}
         search_model.save()
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
         self.assertEqual(
             str(cm.exception),
             'This search returned too many compound heterozygous variants. Please add stricter filters')
 
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variant_gene_counts(results_model)
         self.assertEqual(str(cm.exception), 'This search returned too many genes')
 
@@ -1205,12 +1205,12 @@ class EsUtilsTest(TestCase):
 
         # Test invalid locations
         search_model.search['locus'] = {'rawItems': 'chr27:1234-5678, ENSG00012345', 'rawVariantItems': 'chr2-A-C'}
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, ENSG00012345')
 
         search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678'
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
         search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
@@ -2852,6 +2852,6 @@ class EsUtilsTest(TestCase):
         })
 
         # Affected specified with no other inheritance
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(InvalidSearchException) as cm:
             _execute_inheritance_search(inheritance_filter={'affected': custom_affected})
         self.assertEqual(str(cm.exception), 'Inheritance must be specified if custom affected status is set')

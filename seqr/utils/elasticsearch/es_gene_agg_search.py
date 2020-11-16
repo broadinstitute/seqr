@@ -58,7 +58,8 @@ class EsGeneAggSearch(EsSearch):
 
     def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            raise Exception('This search returned too many genes')
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('This search returned too many genes')
 
         gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int), 'sample_ids': set()})
         for gene_agg in response.aggregations.genes.buckets:

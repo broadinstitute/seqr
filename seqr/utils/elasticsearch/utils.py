@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 class InvalidIndexException(Exception):
     pass
 
+class InvalidSearchException(Exception):
+    pass
+
 
 def get_es_client(timeout=60, **kwargs):
     client_kwargs = {
@@ -58,7 +61,7 @@ def get_single_es_variant(families, variant_id, return_all_queried_families=Fals
         families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
-        raise Exception('Variant {} not found'.format(variant_id))
+        raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
@@ -91,10 +94,10 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
 
     es_search = es_search_cls(
         search_model.families.all(),
