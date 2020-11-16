@@ -1,3 +1,4 @@
+from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging
@@ -131,7 +132,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
 
     variant_results = es_search.search(**search_kwargs)
 
-    safe_redis_set_json(cache_key, es_search.previous_search_results)
+    safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, es_search.previous_search_results['total_results']
 

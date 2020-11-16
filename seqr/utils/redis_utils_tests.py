@@ -42,6 +42,12 @@ class RedisUtilsTest(TestCase):
     def test_safe_redis_set_json(self, mock_redis, mock_logger):
         safe_redis_set_json('test_key', {'a': 1})
         mock_redis.return_value.set.assert_called_with('test_key', '{"a": 1}')
+        mock_redis.return_value.expire.assert_not_called()
+        mock_logger.error.assert_not_called()
+
+        safe_redis_set_json('test_key', {'a': 1}, expire=100)
+        mock_redis.return_value.set.assert_called_with('test_key', '{"a": 1}')
+        mock_redis.return_value.expire.assert_called_with('test_key', 100)
         mock_logger.error.assert_not_called()
 
         # test with redis connection error

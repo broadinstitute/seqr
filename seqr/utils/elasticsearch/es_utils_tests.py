@@ -4,6 +4,7 @@ import jmespath
 import json
 import re
 from collections import defaultdict
+from datetime import timedelta
 from django.test import TestCase
 from elasticsearch.exceptions import ConnectionTimeout
 from sys import maxsize
@@ -995,7 +996,9 @@ class EsUtilsTest(TestCase):
             self.assertSetEqual(SOURCE_FIELDS, set(source))
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
-        self.assertDictEqual(json.loads(REDIS_CACHE.get('search_results__{}__{}'.format(results_model.guid, sort))), expected_results)
+        cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
+        self.assertDictEqual(json.loads(REDIS_CACHE.get(cache_key)), expected_results)
+        MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     @urllib3_responses.activate
     def test_get_es_variants_for_variant_tuples(self):
