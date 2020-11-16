@@ -96,8 +96,9 @@ _service_account_session = ServiceAccountSession()
 
 
 def sa_get_workspace_acl(workspace_namespace, workspace_name):
-    """
-    Request FireCloud access control list for workspace with a service account (sa).
+    """Requests AnVIL access control list for a workspace with a service account (sa).
+
+    The workspace of AnVIL is identified by its namespace and name.
 
     Args:
         workspace_namespace (str): namespace (name of billing project) of the workspace

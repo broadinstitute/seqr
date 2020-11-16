@@ -496,8 +496,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
         assert_no_list_ws_has_acl(self, 9)
 
-    def test_query_all_projects_variants(self, *args):
-        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
+    def test_query_all_projects_variants(self, *args, **kwargs):
+        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args, **kwargs)
         calls = [
             mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
             mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
