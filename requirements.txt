@@ -5,7 +5,6 @@ django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.0.2       # allows CORS requests for client-side development
 social-auth-app-django==4.0.0    # the package for Django to authenticate users with social medieas
 social-auth-core==3.3.3          # the Python social authentication package. Required by social-auth-app-django
-google-auth==1.23.0              # for Google service account client and secure sessions using access tokens
 
 elasticsearch==7.9.1             # elasticsearch client
 elasticsearch-dsl==7.2.1	     # elasticsearch query utilities

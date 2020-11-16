@@ -4,7 +4,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
-from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl, list_anvil_workspaces, anvil_enabled
+from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces, anvil_enabled
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -26,18 +26,34 @@ def project_has_anvil(project):
     return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)
 
 
+def _anvil_to_seqr_permission(anvil_permission):
+    if anvil_permission['pending']:
+        return None
+    if anvil_permission['accessLevel'] in ['WRITER', 'OWNER']:
+        return CAN_EDIT
+    return CAN_VIEW
+
+
 def anvil_has_perm(user, permission_level, project):
-    if not anvil_enabled():
+    if not project_has_anvil(project):
         return False
-    collaborators = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name) if project_has_anvil(project) else {}
-    if user.email in collaborators.keys():
-        permission = collaborators[user.email]
-        if permission['pending']:
-            return False
-        if permission_level in [CAN_EDIT, IS_OWNER]:
-            return (permission['accessLevel'] in ['WRITER', 'OWNER'])
-        return True  # for CAN_VIEW level
+    workspace_acl = user_get_workspace_acl(user, project.workspace_namespace, project.workspace_name)
+    if user.email in workspace_acl.keys():
+        permission = _anvil_to_seqr_permission(workspace_acl[user.email])
+        if permission_level == IS_OWNER:
+            return permission == CAN_EDIT
+        return permission == permission_level
     return False
+
+
+def get_workspace_collaborators(user, workspace_namespace, workspace_name):
+    workspace_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
+    collaborators = {}
+    for email in workspace_acl.keys():
+        permission = _anvil_to_seqr_permission(workspace_acl[email])
+        if permission:
+            collaborators.update({email: permission})
+    return collaborators
 
 
 def has_project_permissions(project, user, can_edit=False, is_owner=False):

@@ -10,11 +10,7 @@ from urllib.parse import urljoin
 from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 
-from google.auth.transport.requests import AuthorizedSession
-from google.auth.transport import DEFAULT_REFRESH_STATUS_CODES
-from google.oauth2 import service_account
-
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL, GOOGLE_SERVICE_ACCOUNT_INFO, SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -47,90 +43,6 @@ def _get_call_args(path, headers=None, root_url=None):
         root_url = TERRA_API_ROOT_URL
     url = urljoin(root_url, path)
     return url, headers
-
-
-class ServiceAccountSession(AuthorizedSession):
-
-    def __init__(self):
-        """Init the session start time and avoid initializing the base class."""
-        self.started_at = None
-
-    def create_session(self):
-        """Create a service account session."""
-        credentials = service_account.Credentials.from_service_account_info(GOOGLE_SERVICE_ACCOUNT_INFO,
-                                        scopes = SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
-        super(ServiceAccountSession, self).__init__(credentials)
-        self.started_at = time.time()
-
-    def _make_request(self, method, path, headers, root_url, **kwargs):
-        """Parameter "method" is string which can be "get", "post", or "delete"."""
-        if self.started_at is None:
-            self.create_session()
-        url, headers = _get_call_args(path, headers, root_url)
-        request_func = getattr(super(ServiceAccountSession, self), method)
-        r = request_func(url, headers = headers, **kwargs)
-        if r.status_code in DEFAULT_REFRESH_STATUS_CODES:  # has failed in refreshing the access code
-            self.create_session()  # create a new service account session
-            r = request_func(url, headers = headers, **kwargs)
-        if r.status_code != 200:
-            logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
-            raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
-                path, r.status_code, r.reason))
-        return json.loads(r.text)
-
-    def get(self, path, headers=None, root_url=None, **kwargs):
-        """Call Terra API with HTTP GET method with an authentication header.
-
-        :param
-            path: A string of API path (start right after the domain name without leading slash (/)
-            headers (dict): Include additional headers as key-value pairs
-            root_url: the url up to the domain name ending with a slash (/)
-            kwargs: other parameters for the HTTP call, e.g. queries.
-        :return
-            HTTP response
-        """
-        return self._make_request('get', path, headers, root_url, **kwargs)
-
-
-_service_account_session = ServiceAccountSession()
-
-
-def sa_get_workspace_acl(workspace_namespace, workspace_name):
-    """
-    Requests AnVIL access control list for a workspace with a service account (sa).
-
-    The workspace of AnVIL is identified by its namespace and name.
-
-    Args:
-        workspace_namespace (str): namespace (name of billing project) of the workspace
-        workspace_name (str): the name of the workspace
-    Returns:
-        {
-            "user1Email": {
-              "accessLevel": "string",
-              "pending": true,
-              "canShare": true,
-              "canCompute": true
-            },
-            "user2Email": {
-              "accessLevel": "string",
-              "pending": true,
-              "canShare": true,
-              "canCompute": true
-            },
-            "user3Email": {
-              "accessLevel": "string",
-              "pending": true,
-              "canShare": true,
-              "canCompute": true
-            }
-          }
-          :param workspace_name:
-          :param workspace_namespace:
-    """
-    uri = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-    r = _service_account_session.get(uri)
-    return r.get('acl', {})
 
 
 def _get_social_access_token(user):
@@ -179,3 +91,40 @@ def list_anvil_workspaces(user, fields=None):
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
     return _user_anvil_call('get', path, user)
+
+
+def user_get_workspace_acl(user, workspace_namespace, workspace_name):
+    """
+    Requests AnVIL access control list for a workspace with a service account (sa).
+
+    The workspace of AnVIL is identified by its namespace and name.
+
+    Args:
+        user (User object): the user who makes the request
+        workspace_namespace (str): namespace (name of billing project) of the workspace
+        workspace_name (str): the name of the workspace
+    Returns:
+        {
+            "user1Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            },
+            "user2Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            },
+            "user3Email": {
+              "accessLevel": "string",
+              "pending": true,
+              "canShare": true,
+              "canCompute": true
+            }
+          }
+    """
+    path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+    r = _user_anvil_call('get', path, user)
+    return r.get('acl', {})

@@ -13,10 +13,11 @@ from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil
-from seqr.views.utils.terra_api_utils import is_google_authenticated, sa_get_workspace_acl
+from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_workspace_collaborators
+from seqr.views.utils.terra_api_utils import is_google_authenticated
+
 logger = logging.getLogger(__name__)
 
 
@@ -675,14 +676,14 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_project_collaborator_list(project):
+def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(project).values())
+    collaborator_list = list(get_project_collaborators_by_username(user, project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def get_project_collaborators_by_username(project, include_permissions=True):
+def get_project_collaborators_by_username(user, project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
@@ -697,10 +698,12 @@ def get_project_collaborators_by_username(project, include_permissions=True):
         )
 
     if project_has_anvil(project):
-        acl = sa_get_workspace_acl(project.workspace_namespace, project.workspace_name)
+        anvil_collaborators = get_workspace_collaborators(user, project.workspace_namespace, project.workspace_name)
         collaborators.update({
-            collab.username: _get_collaborator_json(collab, include_permissions, can_edit=acl[collab.email]['accessLevel']=='OWNER', check_anvil=True)
-            for collab in User.objects.filter(email__in=acl.keys())
+            collab.username: _get_collaborator_json(collab, include_permissions,
+                                                    can_edit = anvil_collaborators[collab.email] == CAN_EDIT,
+                                                    check_anvil = True)
+            for collab in User.objects.filter(email__in = anvil_collaborators.keys())
         })
 
     return collaborators
