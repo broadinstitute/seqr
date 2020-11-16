@@ -10,6 +10,7 @@ import collections
 import logging
 import os
 import random
+import subprocess
 import tempfile
 
 from django.core.files import File
@@ -124,12 +125,18 @@ def _update_pedigree_image(family, user, project_guid=None):
         haplopainter_command = "perl " + os.path.join(BASE_DIR, "seqr/management/commands/HaploPainter1.043.pl")
         haplopainter_command += " -b -outformat png -pedfile {fam_file_path} -family {family_id} -outfile {png_file_path}".format(
             fam_file_path=fam_file_path, family_id=family_id, png_file_path=png_file_path)
-        os.system(haplopainter_command)
+        completed_process = subprocess.run(haplopainter_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     if not os.path.isfile(png_file_path):
-        logger.error("Failed to generated pedigree image for family: %s" % family_id)
+        logger.error('Failed to generate pedigree image for family {}: {}'.format(family_id, completed_process.stdout))
         _save_pedigree_image_file(family, None, user)
         return
+
+    if completed_process.returncode:
+        logger.error('Generated pedigree image for family {} with exit status {}: {}'.format(
+            family_id, completed_process.returncode, completed_process.stdout))
+    elif completed_process.stdout:
+        logger.info(completed_process.stdout)
 
     _save_pedigree_image_file(family, png_file_path, user)
 
