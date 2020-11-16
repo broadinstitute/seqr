@@ -54,6 +54,8 @@ class PedigreeImageTest(TestCase):
             mock.call('\n'),
         ])
         mock_logger.info.assert_any_call('Generated pedigree')
+        mock_logger.warning.assert_not_called()
+        mock_logger.error.assert_not_called()
 
         # Create placeholder when only has one parent
         Sample.objects.get(guid='S000130_na19678').delete()
@@ -81,21 +83,35 @@ class PedigreeImageTest(TestCase):
             mock.call('\t'.join(['1', 'placeholder_123456', '0', '0', '1', '9'])),
             mock.call('\n'),
         ])
+        mock_logger.warning.assert_not_called()
         mock_logger.error.assert_called_with('Generated pedigree image for family 1 with exit status 1: Error!')
 
         # Do not generate for families with one individual
         mock_tempfile_file.write.reset_mock()
         mock_run.reset_mock()
-        mock_logger.reset_mock()
+        mock_logger.warning.reset_mock()
+        mock_logger.error.reset_mock()
         one_individual_families = Family.objects.filter(guid='F000003_3')
         update_pedigree_images(one_individual_families, None)
         pedigree_image = one_individual_families.first().pedigree_image
         self.assertFalse(bool(pedigree_image))
         mock_run.assert_not_called()
         mock_tempfile_file.write.assert_not_called()
-        mock_logger.assert_not_called()
+        mock_logger.warning.assert_not_called()
+        mock_logger.error.assert_not_called()
+
+        # Do not generate for families with no parental inheritance specified
+        two_individual_families = Family.objects.filter(guid='F000012_12')
+        update_pedigree_images(two_individual_families, None)
+        pedigree_image = two_individual_families.first().pedigree_image
+        self.assertFalse(bool(pedigree_image))
+        mock_run.assert_not_called()
+        mock_tempfile_file.write.assert_not_called()
+        mock_logger.warning.assert_called_with('Unable to generate for pedigree image for family 12: no parents specified')
+        mock_logger.error.assert_not_called()
 
         # Alert when generation fails
+        mock_logger.warning.reset_mock()
         mock_run.side_effect = lambda *args, **kwargs: MOCK_PAINT_PROCESS
         update_pedigree_images(test_families, None)
         pedigree_image = test_families.first().pedigree_image
@@ -112,5 +128,6 @@ class PedigreeImageTest(TestCase):
             mock.call('\t'.join(['1', 'placeholder_123456', '0', '0', '1', '9'])),
             mock.call('\n'),
         ])
+        mock_logger.warning.assert_not_called()
         mock_logger.error.assert_called_with('Failed to generate pedigree image for family 1: Error!')
 

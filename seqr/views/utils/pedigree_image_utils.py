@@ -60,6 +60,11 @@ def _get_parsed_individuals(family, user, project_guid=None):
         key = (individual_json['paternalId'], individual_json['maternalId'])
         parent_ids_to_children_map[key].append(individual_json)
 
+    if not parent_ids_to_children_map:
+        logger.warning('Unable to generate for pedigree image for family {}: no parents specified'.format(family.family_id))
+        _save_pedigree_image_file(family, None, user)
+        return None
+
     # generate placeholder individuals as needed, since HaploPainter1.043.pl doesn't support families with only 1 parent
     for ((paternal_id, maternal_id), children) in parent_ids_to_children_map.items():
 
