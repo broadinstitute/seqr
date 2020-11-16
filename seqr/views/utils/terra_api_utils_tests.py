@@ -5,9 +5,9 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
-from seqr.views.utils.terra_api_utils import list_anvil_workspaces, sa_get_workspace_acl, TerraAPIException, anvil_call
-from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_SERVICE_ACCOUNT_INFO, GOOGLE_TOKEN_RESULT,\
-    GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE
+from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl, TerraAPIException, anvil_call
+from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
+    TOKEN_AUTH_TIME, REGISTER_RESPONSE
 
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
 LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": false, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}},\
@@ -16,7 +16,6 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 
 
 @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
-@mock.patch('seqr.views.utils.terra_api_utils.GOOGLE_SERVICE_ACCOUNT_INFO', GOOGLE_SERVICE_ACCOUNT_INFO)
 @mock.patch('seqr.views.utils.terra_api_utils.logger')
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
@@ -74,19 +73,21 @@ class TerraApiUtilsCase(TestCase):
             'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
         mock_logger.info.assert_called_with('Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
 
-
     @responses.activate
-    def test_get_workspace_acl(self, mock_logger):
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
+    @mock.patch('seqr.views.utils.terra_api_utils.time')
+    def test_get_workspace_acl(self, mock_time, mock_logger):
+        user = User.objects.get(email='test_user@test.com')
+        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
+        mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
         url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace/acl'.format(TEST_TERRA_API_ROOT_URL)
         responses.add(responses.GET, url, status = 200, body = '{"acl": {"test1@test1.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"sf-seqr@my-seqr.iam.gserviceaccount.com": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test2@test2.org": {"accessLevel": "OWNER","canCompute": true,"canShare": true,"pending": false},"test3@test3.com": {"accessLevel": "READER","canCompute": false,"canShare": false,"pending": false}}}')
-        acl = sa_get_workspace_acl('my-seqr-billing', 'my-seqr-workspace')
+        acl = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertIn('test3@test3.com', acl.keys())
 
         responses.replace(responses.GET, url, status = 401)
         with self.assertRaises(Exception) as ec:
-            _ = sa_get_workspace_acl('my-seqr-billing', 'my-seqr-workspace')
+            _ = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertEqual(str(ec.exception),
             'Error: called Terra API "api/workspaces/my-seqr-billing/my-seqr-workspace/acl" got status: 401 with a reason: Unauthorized')
         mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 401 0')

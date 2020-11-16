@@ -300,10 +300,10 @@ def assert_has_anvil_calls(self):
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     calls = [
-        mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
-        mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl'),
+        mock.call(self.no_access_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+        mock.call(self.no_access_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
     ]
-    self.mock_service_account.get.asssert_has_calls(calls)
+    self.mock_get_ws_acl.asssert_has_calls(calls)
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
@@ -318,32 +318,32 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     def test_get_all_staff(self):
         super(AnvilUsersAPITest, self).test_get_all_staff()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
-    def test_create_update_and_delete_project_collaborator(self):
-        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator()
+    def test_create_update_and_delete_project_collaborator(self, *args):
+        super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_service_account.get.call_count, 12)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 12)
 
     def test_create_staff_user(self, *args):
         super(AnvilUsersAPITest, self).test_create_staff_user(*args)
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_forgot_password(self, *args):
         super(AnvilUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_update_policies(self):
         super(AnvilUsersAPITest, self).test_update_policies()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
@@ -358,29 +358,29 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     def test_get_all_staff(self):
         super(MixUsersAPITest, self).test_get_all_staff()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_create_update_and_delete_project_collaborator(self, *args):
         super(MixUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_service_account.get.call_count, 7)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 7)
 
     def test_create_staff_user(self, *args):
         super(MixUsersAPITest, self).test_create_staff_user(*args)
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_set_password(self):
         super(MixUsersAPITest, self).test_set_password()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
 
     def test_forgot_password(self, *args):
         super(MixUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()
         
     def test_update_policies(self):
         super(MixUsersAPITest, self).test_update_policies()
         self.mock_list_workspaces.asssert_not_called()
-        self.mock_service_account.get.asssert_not_called()
+        self.mock_get_ws_acl.asssert_not_called()

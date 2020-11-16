@@ -138,10 +138,10 @@ def assert_has_anvil_calls(self):
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     calls = [
-        mock.call('api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl'),
-        mock.call('api/workspaces/my-seqr-billing/anvil-project 1000 Genomes Demo/acl')
+        mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+        mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo')
     ]
-    self.mock_service_account.get.assert_has_calls(calls)
+    self.mock_get_ws_acl.assert_has_calls(calls)
 
 
 # Test for permissions from AnVIL only
@@ -156,7 +156,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     def test_export_projects_table(self):
         super(AnvilDashboardPageTest, self).test_export_projects_table()
         self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
 
 # Test for permissions from AnVIL and local
@@ -171,4 +171,4 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
     def test_export_projects_table(self):
         super(MixDashboardPageTest, self).test_export_projects_table()
         self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()

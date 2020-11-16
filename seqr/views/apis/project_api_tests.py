@@ -188,7 +188,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
+                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
@@ -198,14 +198,14 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     def test_create_update_and_delete_project(self):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_service_account.get.assert_called_with(
-            'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
-        self.assertEqual(self.mock_service_account.get.call_count, 5)
+        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_acl.call_count, 5)
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -220,7 +220,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
+                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
@@ -235,16 +235,16 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     def test_create_update_and_delete_project(self):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_project_page_data(self):
         super(MixProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_service_account.get.assert_called_with(
-            'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
-        self.assertEqual(self.mock_service_account.get.call_count, 4)
+        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
 
     def test_empty_project_page_data(self):
         super(MixProjectAPITest, self).test_empty_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()

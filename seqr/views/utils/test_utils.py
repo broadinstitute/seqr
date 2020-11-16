@@ -173,11 +173,11 @@ TOKEN_AUTH_TIME = 1603287741
 WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
 REGISTER_RESPONSE = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"test@test.com","userSubjectId":"123456"}}'
 
-def get_ws_acl_side_effect(url):
-    workspace_namespace, workspace_name = url.split('/')[2:4]
+
+def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
-    return {'acl': wss[0]['acl']} if wss else {}
+    return wss[0]['acl'] if wss else {}
 
 
 def get_workspaces_side_effect(user, fields):
@@ -213,9 +213,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_list_workspaces = patcher.start()
         self.mock_list_workspaces.side_effect = get_workspaces_side_effect
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.utils.terra_api_utils._service_account_session')
-        self.mock_service_account = patcher.start()
-        self.mock_service_account.get.side_effect = get_ws_acl_side_effect
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_acl')
+        self.mock_get_ws_acl = patcher.start()
+        self.mock_get_ws_acl.side_effect = get_ws_acl_side_effect
         self.addCleanup(patcher.stop)
 
 
@@ -721,19 +721,5 @@ GOOGLE_OAUTH2_URL = 'https://accounts.google.com/o/oauth2/'
 GOOGLE_AUTHORIZATION_URL = '{}auth'.format(GOOGLE_OAUTH2_URL)
 GOOGLE_ACCESS_TOKEN_URL = '{}token'.format(GOOGLE_OAUTH2_URL)
 GOOGLE_REVOKE_TOKEN_URL = '{}revoke'.format(GOOGLE_OAUTH2_URL)
-
-GOOGLE_SERVICE_ACCOUNT_INFO = {
-  "type": "service_account",
-  "project_id": "my-seqr",
-  "private_key_id": "12345",
-  # generated private key for test only
-  "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAsIrRMWhsh1D/QU8QTR0GDabAGhfUTOVR7ZR0svZV6XLjG3XZ\n0mlWXgxCwUFeM/VEsIM3AP9kR3KaGCQjxoyFIC4XwHt3odVFui8GvNadx6e/uhI7\nmoxkMnodeTxFkmHGBfOWMIQhVZkk7Y/qbBxHaNVGU14+nm0M/6Emk9Wmg+HttGd2\nJ+LNmMU/oNyRlqAWpkb5HNEwS6IiTCnCfrBMnBdS7DrtlKPZy+Glzvzdt91LBFhc\ncSFZ/KnR7pt2Lj1asnBy/u1Dd9YEp9n2MhCE7pnCgtNBKD2x3+JESFJtcAKW/0OF\nbWa2sKFJON3+qJVOLYgOPJm2ff/TwIkO9tODZQIDAQABAoIBABclzHIPABPqAd39\nUOTbhlyp3YxOTY7bjpd5HKgOdotKfg6usCXPm/xu3R3bxU9IvH3sZnzh/7MCisPZ\nkTtKV3Y1tPWO+sukXCUiX17JQRzZmOD73QbRm52mt1CbH4AnA8DqBGpOGNTRZK8l\nbJZKSu6q8DKkK8+3+rlV1uoRXGj0MeWAZatV6YvrBOrBDPB0djHjrZDjAzH6yvf5\njosrXKDe7M1QWfH25l9NRUEiZUQnrvB5SOcehd8VToka9AZ7KrMYY/OJ195lhgs3\n0EaaDAfPYbSXgG5avDqnV8TCsxCS5CdqQD/N0WWeZqTvD5b3iDzTMMzwiK6YSwBz\nb8ttSGECgYEA2ILZCc6lP1yn3n+W1pgViWU9vGLibNpi7RCkpyY+OHYyiQ9TLXKV\n3n4/vyqKx9CMOxq6lf2vk+nPNIbzxNDreqXiRSlpx3M8RHbbQiehuI9AwIHD7dgw\nORlIDxStZMMydHzDsCJ9zCbaZQ/IerN8PWqOzufHKrRqf2zoEfvdbCkCgYEA0L3G\n7tgbHrMlP9RhiQTBd+IIvzoUTGy/q9cTlcSIXnEKqdwJaEw258ifh+SJum07V1kt\n9Kz1ocyR7zr7lRRLb085/IBJI+MSwGC5uIbkk2o9OgNoQMG7ljpqWYtlpHKZ86sI\npYjvIvr9yhzRkyZ9KNKZ/BZtvgMr4PsazJKohN0CgYBFUgeZez8vPURGGcW6qXDj\nz7VndqWWQom/6z88gSMUwstFVNHF0FUpqnRQiZdriFsNpW4uDc5EZmzAHaE418c9\nOpVqnWrPwBaAuSlUUgoWZE9QE3wez8QI1A5dPbqSc2jZIQUqhLCQR7RO/TGsD4Fs\nzIwytMTw6FjcuYrID0MCmQKBgCL01P6khA4lFATXbSoD+N45pRtY/5M41vRRBT+c\ndPXT2mRNq+miccNpDoY0WHg22KwtDAwgdtYMqxez+fOiPWu7ictmNFllKnu69v8W\n3+pr7Srs7SWDDAYBbFPoizH52xw6NS17fAiQnbWeE96foHAYrJ7RprkeUNfRVVCS\n8tOlAoGACW9IwNembuBC9VLnnVBidL5yQVNiBpenMuVcSKxSYUeFrIAE2zPtzuhp\n7JSO308VlWX1rUV5PhX6ul41Eu/pzjo9omM3BbjiBs1rhnpjjQShGNYtAYjAkXM1\nG3TgTLUG+Bj5Bq2/YBZX2juOGim3mouOe+h/2adHIPJdI47J5a8=\n-----END RSA PRIVATE KEY-----",
-  "client_email": "abcd@my-seqr.iam.gserviceaccount.com",
-  "client_id": "678910",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sf-seqr%40my-seqr.iam.gserviceaccount.com"
-}
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'

@@ -52,7 +52,7 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
             mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
 
 # Test for permissions from AnVIL and local
@@ -67,4 +67,4 @@ class MixAwesomebarAPITest(MixAuthenticationTestCase, AwesomebarAPITest):
             mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_service_account.get.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()

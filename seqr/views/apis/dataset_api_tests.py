@@ -353,9 +353,9 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
 
 def assert_no_list_ws_has_acl(self, acl_call_count):
     self.mock_list_workspaces.assert_not_called()
-    self.mock_service_account.get.assert_called_with(
-        'api/workspaces/my-seqr-billing/anvil-1kg project n\u00e5me with uni\u00e7\u00f8de/acl')
-    self.assertEqual(self.mock_service_account.get.call_count, acl_call_count)
+    self.mock_get_ws_acl.assert_called_with(mock.ANY,
+        'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+    self.assertEqual(self.mock_get_ws_acl.call_count, acl_call_count)
 
 
 # Test for permissions from AnVIL only
