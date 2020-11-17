@@ -16,11 +16,11 @@ class SocialAuthPipelineTest(TestCase):
         url = TEST_TERRA_API_ROOT_URL + 'register'
         responses.add(responses.GET, url, status=404)
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
-        mock_logger.info.assert_called_with('User test@seqr.org is trying to login without registration on AnVIL. Error: called Terra API "register" got status: 404 with a reason: Not Found')
+        mock_logger.warning.assert_called_with('User test@seqr.org is trying to login without registration on AnVIL. Warning: called Terra API: /register got status: 404 with a reason: Not Found')
         self.assertEqual(r.url, '/login?googleLoginFailed=true')
 
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status=200, body=REGISTER_RESPONSE)
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
-        mock_logger.info.assert_not_called()
+        mock_logger.warning.assert_not_called()
         self.assertIsNone(r)

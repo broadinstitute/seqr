@@ -21,6 +21,14 @@ class TerraAPIException(Exception):
     pass
 
 
+class TerraNotFoundException(TerraAPIException):
+    pass
+
+
+class TerraErrorException(TerraAPIException):
+    pass
+
+
 def anvil_enabled():
     return bool(TERRA_API_ROOT_URL)
 
@@ -53,27 +61,38 @@ def _get_social_access_token(user):
         try:
             social.refresh_token(strategy)
         except Exception as ee:
-            logger.info('Refresh token failed. {}'.format(str(ee)))
+            logger.warning('Refresh token failed. {}'.format(str(ee)))
             raise TerraAPIException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, headers=None, root_url=None, **kwargs):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, **kwargs):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, headers=headers, **kwargs)
 
-    if r.status_code != 200:
-        logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
-        raise TerraAPIException('Error: called Terra API "{}" got status: {} with a reason: {}'.format(
+    if r.status_code == 404:
+        raise TerraNotFoundException('Warning: called Terra API: /{} got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
+
+    if r.status_code != 200:
+        logger.error('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
+        raise TerraErrorException('Error: called Terra API: /{} got status: {} with a reason: {}'.format(
+            path, r.status_code, r.reason))
+
+    logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
+
     return json.loads(r.text)
 
 
 def _user_anvil_call(method, path, user, **kwargs):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, **kwargs)
+    try:
+        return anvil_call(method, path, access_token, user=user, **kwargs)
+    except TerraNotFoundException as et:
+        logger.warning(str(et))
+        return {}
 
 
 def list_anvil_workspaces(user, fields=None):

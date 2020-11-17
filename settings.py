@@ -343,5 +343,6 @@ if TERRA_API_ROOT_URL or (len(sys.argv) >= 2 and sys.argv[1] == 'test'):
         'social_core.pipeline.social_auth.associate_user',
         'social_core.pipeline.social_auth.load_extra_data',
         'social_core.pipeline.user.user_details',
+        'seqr.utils.social_auth_pipeline.log_signed_in',
     )
     INSTALLED_APPS.append('social_django')
