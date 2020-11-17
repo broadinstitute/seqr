@@ -91,15 +91,15 @@ const JsonSelectPropsWithAll = (options, all) => ({
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-const pathogenicityPanel = isStaff => ({
+const pathogenicityPanel = isAnalyst => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
-  fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isAnalyst ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
+  fields: isAnalyst ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
 
-export const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true)
+export const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true) // TODO rename
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})

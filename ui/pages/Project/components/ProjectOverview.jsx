@@ -132,7 +132,7 @@ const ProjectOverview = React.memo((
   }
 
   let editIndividualsButton = null
-  if (user.isStaff) {
+  if (user.isPM) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
   } else if (project.canEdit) {
     editIndividualsButton = <EditHpoTermsButton />
@@ -179,7 +179,7 @@ const ProjectOverview = React.memo((
         {datasetSections.map((sectionProps, i) =>
           <DetailSection
             {...sectionProps}
-            button={(datasetSections.length - 1 === i && project.canEdit) ? <EditDatasetsButton /> : null}
+            button={(datasetSections.length - 1 === i && user.isDataManager) ? <EditDatasetsButton /> : null}
           />,
         )}
       </Grid.Column>

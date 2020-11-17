@@ -117,7 +117,8 @@ urllib3_responses = Urllib3Responses()
 
 
 USER_FIELDS = {
-    'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isActive',
+    'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive',
+    'isAnalyst', 'isDataManager', 'isPM', 'isSuperuser',
 }
 
 PROJECT_FIELDS = {

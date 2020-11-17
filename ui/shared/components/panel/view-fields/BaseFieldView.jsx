@@ -40,7 +40,7 @@ class BaseFieldView extends React.PureComponent {
     if (this.props.isVisible !== undefined && !this.props.isVisible) {
       return null
     }
-    if (this.props.isPrivate && !this.props.user.isStaff) {
+    if (this.props.isPrivate && !this.props.user.isAnalyst) { // TODO get rid of private fields
       return null
     }
     const fieldValue = this.props.fieldValue || this.props.initialValues[this.props.field]

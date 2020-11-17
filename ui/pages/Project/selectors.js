@@ -427,9 +427,9 @@ export const getAnalystOptions = createSelector(
   getCollaborators,
   getAllUsers,
   (collaborators, users) => {
-    const staff = users.filter(user => user.isStaff)
-    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
-    return [...uniqueCollaborators, ...staff].map(
+    const analyst = users.filter(user => user.isAnalyst)
+    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isAnalyst)
+    return [...uniqueCollaborators, ...analyst].map(
       user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
     )
   },
@@ -514,14 +514,13 @@ const getSearchType = ({ breadcrumb, variantPage }) => {
 }
 
 export const getPageHeaderEntityLinks = createSelector(
-  getUser,
   getCurrentProject,
   getPageHeaderFamily,
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
   getHasActiveVariantSampleByFamily,
-  (user, project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -542,7 +541,7 @@ export const getPageHeaderEntityLinks = createSelector(
       popup: disabled ? 'Search is disabled until data is loaded' : null,
 
     }]
-    if (user.isStaff) {
+    if (project.hasCaseReview) {
       entityLinks.push({
         to: `/project/${project.projectGuid}/case_review`,
         content: 'Case Review',

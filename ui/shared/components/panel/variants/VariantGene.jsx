@@ -232,8 +232,9 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
     summaryDetail = (
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        {user.isStaff && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
-        {user.isStaff && <NavLink to={`/staff/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
+        {/* TODO should be available to all users */}
+        {user.isAnalyst && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
+        {user.isAnalyst && <NavLink to={`/staff/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
         {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
         {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
       </GeneLinks>

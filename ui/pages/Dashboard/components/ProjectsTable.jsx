@@ -133,8 +133,8 @@ const COLUMNS = [
   },
 ]
 
-const STAFF_COLUMNS = [...COLUMNS]
-STAFF_COLUMNS.splice(3, 0, {
+const SUPERUSER_COLUMNS = [...COLUMNS]
+SUPERUSER_COLUMNS.splice(3, 0, {
   name: 'lastAccessedDate',
   width: 2,
   content: 'Last Accessed',
@@ -163,8 +163,8 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
-        footer={user.isStaff ? <CreateProjectButton /> : null}
+        columns={user.isSuperuser ? SUPERUSER_COLUMNS : COLUMNS}
+        footer={user.isPM ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
   </DataLoader>,

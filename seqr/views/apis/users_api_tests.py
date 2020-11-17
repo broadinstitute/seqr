@@ -29,7 +29,7 @@ class UsersAPITest(AuthenticationTestCase):
         first_staff_user = response_json[all_staff_usernames[0]]
 
         self.assertSetEqual(set(first_staff_user), USER_FIELDS)
-        self.assertTrue(first_staff_user['isStaff'])
+        self.assertTrue(first_staff_user['isAnalyst'])
 
     def test_get_all_collaborators(self):
         url = reverse(get_all_collaborators)
@@ -73,7 +73,10 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
-        self.assertFalse(collaborators[0]['isStaff'])
+        self.assertFalse(collaborators[0]['isSuperuser'])
+        self.assertFalse(collaborators[0]['isAnalyst'])
+        self.assertFalse(collaborators[0]['isDataManager'])
+        self.assertFalse(collaborators[0]['isPM'])
         self.assertTrue(collaborators[0]['hasViewPermissions'])
         self.assertFalse(collaborators[0]['hasEditPermissions'])
 
@@ -125,7 +128,7 @@ class UsersAPITest(AuthenticationTestCase):
         self.assertEqual(len(collaborators), 3)
         self.assertEqual(collaborators[2]['email'], 'test@test.com')
         self.assertEqual(collaborators[2]['displayName'], 'Edited Collaborator')
-        self.assertFalse(collaborators[2]['isStaff'])
+        self.assertFalse(collaborators[2]['isSuperuser'])
         self.assertTrue(collaborators[2]['hasViewPermissions'])
         self.assertTrue(collaborators[2]['hasEditPermissions'])
 

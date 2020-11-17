@@ -102,9 +102,14 @@ def _get_json_for_user(user):
 
     user_json = {
         _to_camel_case(field): getattr(user, field) for field in [
-        'username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'is_active', 'date_joined', 'id',
+        'username', 'email', 'first_name', 'last_name', 'last_login', 'is_superuser', 'is_active', 'date_joined', 'id',
     ]}
     user_json['displayName'] = user.get_full_name()
+    user_json.update({
+        'isAnalyst': user.is_staff,
+        'isDataManager': user.is_staff,
+        'isPM': user.is_staff,
+    })
     return user_json
 
 
@@ -163,7 +168,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     def _process_result(result, family):
         result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},  # TODO rename to CMG
+            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': ab.created_by.is_staff},  # TODO rename to CMG
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
