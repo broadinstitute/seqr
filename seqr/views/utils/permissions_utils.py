@@ -76,7 +76,7 @@ def check_project_permissions(project, user, **kwargs):
 
 
 def check_user_created_object_permissions(obj, user):
-    if user.is_staff or obj.created_by == user:
+    if obj.created_by == user:
         return
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
