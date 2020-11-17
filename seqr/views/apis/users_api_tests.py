@@ -7,9 +7,8 @@ from django.contrib.auth.models import User
 from django.urls.base import reverse
 
 from seqr.models import UserPolicy
-from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
-    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff, update_policies
+from seqr.views.apis.users_api import get_all_collaborators, set_password, get_all_staff, update_policies, \
+    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -140,54 +139,6 @@ class UsersAPITest(AuthenticationTestCase):
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)
-
-    @mock.patch('django.contrib.auth.models.send_mail')
-    def test_create_staff_user(self, mock_send_mail):
-        create_url = reverse(create_staff_user)
-        self.check_staff_login(create_url)
-
-        # send invalid request
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
-
-        # create
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com', 'firstName': 'Test', 'lastName': 'Staff'}))
-        self.assertEqual(response.status_code, 200)
-        user = User.objects.get(email='test_staff@test.com')
-        self.assertTrue(user.is_staff)
-
-        expected_email_content = """
-    Hi there Test Staff--
-
-    Test User has added you as a collaborator in seqr.
-
-    Please click this link to set up your account:
-    /users/set_password/{password_token}
-
-    Thanks!
-    """.format(password_token=user.password)
-        mock_send_mail.assert_called_with(
-            'Set up your seqr account',
-            expected_email_content,
-            None,
-            ['test_staff@test.com'],
-            fail_silently=False,
-        )
-
-        # calling create again fails
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'This user already exists')
-
-        # Test email failure
-        mock_send_mail.side_effect = AnymailError('Connection err')
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff_new@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Connection err')
 
     def test_set_password(self):
         username = 'test_new_user'
