@@ -29,7 +29,7 @@ class CreateUserException(Exception):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_collaborators(request):
-    if request.user.is_staff:
+    if request.user.is_staff: # TODO
         collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
     else:
         collaborators = {}
@@ -41,6 +41,7 @@ def get_all_collaborators(request):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_staff(request):
+    # TODO is this needed?
     staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
 
     return create_json_response(staff_analysts)
@@ -127,7 +128,7 @@ def create_project_collaborator(request, project_guid):
     })
 
 
-def _create_user(request, is_staff=False):
+def _create_user(request, is_staff=False):  # TODO clean up?
     request_json = json.loads(request.body)
     if not request_json.get('email'):
         raise CreateUserException('Email is required')

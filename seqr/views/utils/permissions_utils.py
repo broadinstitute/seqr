@@ -26,7 +26,7 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)
+    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)  # TODO
 
 
 def check_project_permissions(project, user, **kwargs):
@@ -38,7 +38,7 @@ def check_project_permissions(project, user, **kwargs):
 
 
 def check_user_created_object_permissions(obj, user):
-    if user.is_staff or obj.created_by == user:
+    if obj.created_by == user:
         return
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
@@ -55,7 +55,7 @@ def check_multi_project_permissions(obj, user):
 
 def get_projects_user_can_view(user):
     can_view_filter = Q(can_view_group__user=user)
-    if user.is_staff:
+    if user.is_staff:  # TODO
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
         return Project.objects.filter(can_view_filter)

@@ -36,7 +36,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
     model_class = type(models[0])
     fields = copy(model_class._meta.json_fields)
-    if user and user.is_staff:
+    if user and user.is_staff:  # TODO
         fields += getattr(model_class._meta, 'internal_json_fields', [])
     if additional_model_fields:
         fields += additional_model_fields
@@ -163,7 +163,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     def _process_result(result, family):
         result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
+            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},  # TODO rename to CMG
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
@@ -608,7 +608,7 @@ def get_json_for_gene_notes(notes, user):
 
     def _process_result(result, note):
         result.update({
-            'editable': user.is_staff or user == note.created_by,
+            'editable': user == note.created_by,
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
@@ -778,7 +778,7 @@ def get_json_for_gene(gene, **kwargs):
 def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-staff users
-        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
+        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):  # TODO
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }

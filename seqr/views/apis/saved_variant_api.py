@@ -38,7 +38,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
     discovery_tags_query = None
-    if request.user.is_staff:
+    if request.user.is_staff:  # TODO
         discovery_tags_query = Q()
         for variant in variant_query:
             discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))

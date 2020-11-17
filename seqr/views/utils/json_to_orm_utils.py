@@ -70,7 +70,7 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
         if getattr(model_obj, orm_key) != value:
-            if orm_key in internal_fields and not user.is_staff:
+            if orm_key in internal_fields and not user.is_staff:  # TODO
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             updated_fields.add(orm_key)
             setattr(model_obj, orm_key, value)

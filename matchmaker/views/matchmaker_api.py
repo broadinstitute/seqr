@@ -364,7 +364,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
-        if user.is_staff and result_model.originating_submission:
+        if user.is_staff and result_model.originating_submission: # TODO should just check permission on originating submission project
             result['originatingSubmission'] = {
                 'originatingSubmissionGuid': result_model.originating_submission.guid,
                 'familyGuid': result_model.originating_submission.individual.family.guid,

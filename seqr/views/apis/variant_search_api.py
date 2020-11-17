@@ -58,7 +58,7 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
+    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:  # TODO
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:
@@ -142,7 +142,7 @@ def _process_variants(variants, families, user):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff) # TODO
 
     response_json.update({
         'searchedVariants': variants,
