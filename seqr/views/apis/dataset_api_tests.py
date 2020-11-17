@@ -351,11 +351,12 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', '1kg_project']
 
 
-def assert_no_list_ws_has_acl(self, acl_call_count):
+def assert_no_list_ws_has_al(self, acl_call_count):
     self.mock_list_workspaces.assert_not_called()
-    self.mock_get_ws_acl.assert_called_with(mock.ANY,
+    self.mock_get_ws_access_level .assert_called_with(mock.ANY,
         'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-    self.assertEqual(self.mock_get_ws_acl.call_count, acl_call_count)
+    self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    self.mock_get_ws_acl.assert_not_called()
 
 
 # Test for permissions from AnVIL only
@@ -364,15 +365,15 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_list_ws_has_acl(self, 15)
+        assert_no_list_ws_has_al(self, 15)
 
     def test_receive_alignment_table_handler(self):
         super(AnvilDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_list_ws_has_acl(self, 4)
+        assert_no_list_ws_has_al(self, 4)
 
     def test_add_alignment_sample(self, *args):
         super(AnvilDatasetAPITest, self).test_add_alignment_sample(*args)
-        assert_no_list_ws_has_acl(self, 7)
+        assert_no_list_ws_has_al(self, 7)
 
 
 # Test for permissions from AnVIL and local
@@ -381,12 +382,12 @@ class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_list_ws_has_acl(self, 1)
+        assert_no_list_ws_has_al(self, 1)
 
     def test_receive_alignment_table_handler(self):
         super(MixDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_list_ws_has_acl(self, 1)
+        assert_no_list_ws_has_al(self, 1)
 
     def test_add_alignment_sample(self, *args):
         super(MixDatasetAPITest, self).test_add_alignment_sample(*args)
-        assert_no_list_ws_has_acl(self, 1)
+        assert_no_list_ws_has_al(self, 1)

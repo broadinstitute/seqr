@@ -141,7 +141,8 @@ def assert_has_anvil_calls(self):
         mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
         mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo')
     ]
-    self.mock_get_ws_acl.assert_has_calls(calls)
+    self.mock_get_ws_access_level.assert_has_calls(calls)
+    self.mock_get_ws_acl.assert_not_called()
 
 
 # Test for permissions from AnVIL only

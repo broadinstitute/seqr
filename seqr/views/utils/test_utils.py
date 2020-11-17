@@ -180,6 +180,15 @@ def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
     return wss[0]['acl'] if wss else {}
 
 
+def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    acl = wss[0]['acl'] if wss else {}
+    if user.email in acl.keys():
+        return {'accessLevel': acl[user.email]['accessLevel']}
+    return {}
+
+
 def get_workspaces_side_effect(user, fields):
     return [
         {
@@ -216,6 +225,10 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_acl')
         self.mock_get_ws_acl = patcher.start()
         self.mock_get_ws_acl.side_effect = get_ws_acl_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
+        self.mock_get_ws_access_level = patcher.start()
+        self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
 
 

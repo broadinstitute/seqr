@@ -304,6 +304,7 @@ def assert_has_anvil_calls(self):
         mock.call(self.no_access_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
     ]
     self.mock_get_ws_acl.asssert_has_calls(calls)
+    self.mock_get_ws_access_level.assert_not_called()
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
@@ -323,7 +324,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     def test_create_update_and_delete_project_collaborator(self, *args):
         super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_get_ws_acl.call_count, 12)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 6)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
 
     def test_create_staff_user(self, *args):
         super(AnvilUsersAPITest, self).test_create_staff_user(*args)
@@ -363,7 +365,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     def test_create_update_and_delete_project_collaborator(self, *args):
         super(MixUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
         self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_get_ws_acl.call_count, 7)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 6)
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
     def test_create_staff_user(self, *args):
         super(MixUsersAPITest, self).test_create_staff_user(*args)

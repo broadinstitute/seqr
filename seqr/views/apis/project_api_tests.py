@@ -199,13 +199,17 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
 
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.staff_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 5)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 3)
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -213,7 +217,9 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
@@ -236,15 +242,20 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
 
     def test_project_page_data(self):
         super(MixProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.staff_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
 
     def test_empty_project_page_data(self):
         super(MixProjectAPITest, self).test_empty_project_page_data()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()

@@ -3,7 +3,7 @@ import responses
 from unittest import TestCase
 
 from social_core.backends.google import GoogleOAuth2
-from seqr.utils.social_auth_pipeline import validate_anvil_registration
+from seqr.utils.social_auth_pipeline import validate_anvil_registration, log_signed_in
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, REGISTER_RESPONSE
 
 
@@ -24,3 +24,8 @@ class SocialAuthPipelineTest(TestCase):
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
         mock_logger.warning.assert_not_called()
         self.assertIsNone(r)
+
+    @mock.patch('seqr.utils.social_auth_pipeline.logger')
+    def test_log_signed_in(self, mock_logger):
+        log_signed_in('backend', {'email': 'test_user@test.com'})
+        mock_logger.info.assert_called_with('Logged in test_user@test.com(AnVIL)')
