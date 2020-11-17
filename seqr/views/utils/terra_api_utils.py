@@ -21,7 +21,7 @@ class TerraAPIException(Exception):
     pass
 
 
-class TerraNotFoundException(TerraAPIException):
+class TerraNoAccessException(TerraAPIException):
     pass
 
 
@@ -72,8 +72,9 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, headers=headers, **kwargs)
 
-    if r.status_code == 404:
-        raise TerraNotFoundException('Warning: called Terra API: /{} got status: {} with a reason: {}'.format(
+    if r.status_code == 404 or r.status_code == 403:
+        logger.warning('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
+        raise TerraNoAccessException('Warning: called Terra API: /{} got status: {} with a reason: {}'.format(
             path, r.status_code, r.reason))
 
     if r.status_code != 200:
@@ -90,8 +91,7 @@ def _user_anvil_call(method, path, user, **kwargs):
     access_token = _get_social_access_token(user)
     try:
         return anvil_call(method, path, access_token, user=user, **kwargs)
-    except TerraNotFoundException as et:
-        logger.warning(str(et))
+    except TerraNoAccessException:
         return {}
 
 
@@ -109,6 +109,11 @@ def list_anvil_workspaces(user, fields=None):
     the fields that specified by the 'fields' parameter or all the fields that AnVIL provides.
     """
     path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
+    return _user_anvil_call('get', path, user)
+
+
+def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
+    path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
     return _user_anvil_call('get', path, user)
 
 
