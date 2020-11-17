@@ -730,9 +730,6 @@ PARSED_SV_VARIANT = {
 }
 
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
-GOOGLE_OAUTH2_URL = 'https://accounts.google.com/o/oauth2/'
-GOOGLE_AUTHORIZATION_URL = '{}auth'.format(GOOGLE_OAUTH2_URL)
-GOOGLE_ACCESS_TOKEN_URL = '{}token'.format(GOOGLE_OAUTH2_URL)
-GOOGLE_REVOKE_TOKEN_URL = '{}revoke'.format(GOOGLE_OAUTH2_URL)
+GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'

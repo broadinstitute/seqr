@@ -113,7 +113,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
-                'social_django.context_processors.backends',
+                'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],
         },
@@ -298,12 +298,9 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
 
 GOOGLE_AUTH_CLIENT_CONFIG = {}
-GOOGLE_SERVICE_ACCOUNT_INFO = {}
 if GOOGLE_AUTH_CONFIG_DIR:
     with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'client_secret.json'), 'r') as f:
         GOOGLE_AUTH_CLIENT_CONFIG = json.load(f)
-    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'service_account.json'), 'r') as f:
-        GOOGLE_SERVICE_ACCOUNT_INFO = json.load(f)
 
 #########################################################
 #  Social auth specific settings
