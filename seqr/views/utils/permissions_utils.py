@@ -28,7 +28,7 @@ def project_has_anvil(project):
 
 
 def _map_anvil_seqr_permission(anvil_permission):
-    if anvil_permission['pending']:
+    if anvil_permission.get('pending'):
         return None
     if anvil_permission['accessLevel'] in ['WRITER', 'OWNER', 'PROJECT_OWNER']:
         return CAN_EDIT
@@ -41,7 +41,6 @@ def anvil_has_perm(user, permission_level, project):
     workspace_permission = user_get_workspace_access_level(user, project.workspace_namespace, project.workspace_name)
     if not workspace_permission:
         return False
-    workspace_permission['pending'] = False
     permission = _map_anvil_seqr_permission(workspace_permission)
     return True if permission == CAN_EDIT else permission == permission_level
 

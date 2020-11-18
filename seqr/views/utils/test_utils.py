@@ -112,6 +112,12 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+        'test_user_not_registered@test.com': {
+            "accessLevel": "READER",
+            "pending": True,
+            "canShare": False,
+            "canCompute": True
         }
     }
 }, {
@@ -129,7 +135,7 @@ ANVIL_WORKSPACES = [{
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
-            "canCompute": True
+            "canCompute": False
         }
     }
 }, {
@@ -146,7 +152,7 @@ ANVIL_WORKSPACES = [{
         'test_user_no_staff@test.com': {
             "accessLevel": "READER",
             "pending": False,
-            "canShare": True,
+            "canShare": False,
             "canCompute": True
         }
     }
