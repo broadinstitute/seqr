@@ -164,7 +164,10 @@ def deploy_secrets(settings):
 
     create_namespace(settings)
 
+    deploy_pod('config-connector', settings, wait_until_pod_is_running=False)
+
     # deploy secrets
+    # TODO redo this
     secret_labels = DEPLOYMENT_TARGET_SECRETS[settings['DEPLOY_TO']]
     for secret_label in secret_labels:
         run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
@@ -388,7 +391,7 @@ def deploy_nginx(settings):
         return
 
     print_separator("nginx")
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml" % locals())
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.41.2/deploy/static/provider/cloud/deploy.yaml" % locals())
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
@@ -554,9 +557,10 @@ def _init_cluster_gcloud(settings):
         "--no-issue-client-certificate",
         "--enable-master-authorized-networks",
         "--master-authorized-networks %(MASTER_AUTHORIZED_NETWORKS)s",
-        #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-        #"--local-ssd-count 1",
         "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
+        '--addons ConfigConnector',
+        '--workload-pool %(GCLOUD_PROJECT)s.svc.id.goog',
+        '--release-channel regular',
     ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
 
     # create cluster nodes - breaking them up into node pools of several machines each.
