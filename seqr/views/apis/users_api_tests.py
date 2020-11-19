@@ -112,8 +112,8 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), self.NUM_USERS)
-        self.assertEqual(collaborators[self.NUM_USERS-1]['username'], username)
-        self.assertEqual(collaborators[self.NUM_USERS-1]['displayName'], 'Test User')
+        self.assertEqual(collaborators[self.NEW_USER_IDX]['username'], username)
+        self.assertEqual(collaborators[self.NEW_USER_IDX]['displayName'], 'Test User')
         mock_send_mail.assert_not_called()
 
         # update the user
@@ -122,11 +122,11 @@ class UsersAPITest(object):
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), self.NUM_USERS)
-        self.assertEqual(collaborators[self.NUM_USERS-1]['email'], 'test@test.com')
-        self.assertEqual(collaborators[self.NUM_USERS-1]['displayName'], 'Edited Collaborator')
-        self.assertFalse(collaborators[self.NUM_USERS-1]['isStaff'])
-        self.assertTrue(collaborators[self.NUM_USERS-1]['hasViewPermissions'])
-        self.assertTrue(collaborators[self.NUM_USERS-1]['hasEditPermissions'])
+        self.assertEqual(collaborators[self.NEW_USER_IDX]['email'], 'test@test.com')
+        self.assertEqual(collaborators[self.NEW_USER_IDX]['displayName'], 'Edited Collaborator')
+        self.assertFalse(collaborators[self.NEW_USER_IDX]['isStaff'])
+        self.assertTrue(collaborators[self.NEW_USER_IDX]['hasViewPermissions'])
+        self.assertTrue(collaborators[self.NEW_USER_IDX]['hasEditPermissions'])
 
         # delete the project collaborator
         delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
@@ -291,6 +291,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
     NUM_USERS = 3
+    NEW_USER_IDX = NUM_USERS - 1
 
 
 def assert_has_anvil_calls(self):
@@ -309,8 +310,9 @@ def assert_has_anvil_calls(self):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
-    NUM_USERS = 3
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_user_pure_anvil@test.com'}
+    NUM_USERS = 4
+    NEW_USER_IDX = NUM_USERS - 2
 
     def test_get_all_collaborators(self):
         super(AnvilUsersAPITest, self).test_get_all_collaborators()
@@ -350,8 +352,9 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
-    NUM_USERS = 4
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user', 'test_user_pure_anvil@test.com'}
+    NUM_USERS = 5
+    NEW_USER_IDX = NUM_USERS - 2
 
     def test_get_all_collaborators(self):
         super(MixUsersAPITest, self).test_get_all_collaborators()

@@ -188,12 +188,20 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
                               'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
+                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True,
+                              'isAnvil': True,
                               'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
                               'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': True,
-                              'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'}]
+                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True,
+                              'isAnvil': True,
+                              'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '',
+                              'username': 'test_user_non_staff'},
+                             {'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com',
+                              'email': 'test_user_pure_anvil@test.com', 'first_name': '', 'hasEditPermissions': False,
+                              'hasViewPermissions': True, 'id': '', 'isAnvil': True, 'is_active': True,
+                              'is_staff': False, 'lastName': 'test_user_pure_anvil@test.com', 'last_login': '',
+                              'username': 'test_user_pure_anvil@test.com'}]
 
     def test_create_update_and_delete_project(self):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
@@ -235,7 +243,12 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
                              {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User',
                               'email': 'test_local_user@test.com', 'firstName': 'Test seqr local User',
                               'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14, 'isActive': True, 'isAnvil': False,
-                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
+                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_local_user'},
+                             {'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com',
+                              'email': 'test_user_pure_anvil@test.com', 'first_name': '', 'hasEditPermissions': False,
+                              'hasViewPermissions': True, 'id': '', 'isAnvil': True, 'is_active': True,
+                              'is_staff': False, 'lastName': 'test_user_pure_anvil@test.com', 'last_login': '',
+                              'username': 'test_user_pure_anvil@test.com'}
                              ]
 
     def test_create_update_and_delete_project(self):
