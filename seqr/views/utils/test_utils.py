@@ -118,6 +118,12 @@ ANVIL_WORKSPACES = [{
             "pending": True,
             "canShare": False,
             "canCompute": True
+        },
+        'test_user_pure_anvil@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
         }
     }
 }, {

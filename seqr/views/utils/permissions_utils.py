@@ -30,9 +30,10 @@ def project_has_anvil(project):
 def _map_anvil_seqr_permission(anvil_permission):
     if anvil_permission.get('pending'):
         return None
-    if anvil_permission['accessLevel'] in ['WRITER', 'OWNER', 'PROJECT_OWNER']:
+    access_level = anvil_permission.get('accessLevel')
+    if access_level in ['WRITER', 'OWNER', 'PROJECT_OWNER']:
         return CAN_EDIT
-    return CAN_VIEW if anvil_permission['accessLevel'] == 'READER' else None
+    return CAN_VIEW if access_level == 'READER' else None
 
 
 def anvil_has_perm(user, permission_level, project):
@@ -45,7 +46,7 @@ def anvil_has_perm(user, permission_level, project):
     return True if permission == CAN_EDIT else permission == permission_level
 
 
-def get_collaborator_permission_levels(user, workspace_namespace, workspace_name):
+def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     workspace_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
     permission_levels = {}
     for email in workspace_acl.keys():

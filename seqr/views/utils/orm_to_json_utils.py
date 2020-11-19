@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_collaborator_permission_levels
+from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_workspace_collaborator_perms
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 logger = logging.getLogger(__name__)
@@ -698,18 +698,30 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
         )
 
     if project_has_anvil(project):
-        permission_levels = get_collaborator_permission_levels(user, project.workspace_namespace, project.workspace_name)
-        collaborators.update({
-            collab.username: _get_collaborator_json(collab, include_permissions,
-                                                    can_edit = permission_levels[collab.email] == CAN_EDIT,
-                                                    is_anvil = True)
-            for collab in User.objects.filter(email__in = permission_levels.keys())
-        })
+        permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
+        for email, permission in permission_levels.items():
+            collaborator = User.objects.filter(email=email)
+            if len(collaborator)>0:
+                collaborators.update({collaborator[0].username: _get_collaborator_json(collaborator[0],
+                    include_permissions, can_edit=permission==CAN_EDIT, is_anvil=True)})
+            else:
+                collaborators[email] = {
+                    'username': email,  # to ensure everything has a unique ID
+                    'email': email,
+                    'isAnvil': True,
+                    'hasViewPermissions': True,
+                    'hasEditPermissions': permission == CAN_EDIT,
+                    'displayName': email,
+                    'lastName': email,
+                    'is_staff': False,
+                    'is_active': True,
+                    'first_name': '', 'last_login': '', 'date_joined': '', 'id': '',
+                }
 
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=None):
+def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False):
     collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil)
     if include_permissions:
         collaborator_json.update({
