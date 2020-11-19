@@ -89,8 +89,7 @@ class PedigreeImageTest(TestCase):
         # Do not generate for families with one individual
         mock_tempfile_file.write.reset_mock()
         mock_run.reset_mock()
-        mock_logger.warning.reset_mock()
-        mock_logger.error.reset_mock()
+        mock_logger.reset_mock()
         one_individual_families = Family.objects.filter(guid='F000003_3')
         update_pedigree_images(one_individual_families, None)
         pedigree_image = one_individual_families.first().pedigree_image
@@ -111,7 +110,7 @@ class PedigreeImageTest(TestCase):
         mock_logger.error.assert_not_called()
 
         # Alert when generation fails
-        mock_logger.warning.reset_mock()
+        mock_logger.reset_mock()
         mock_run.side_effect = lambda *args, **kwargs: MOCK_PAINT_PROCESS
         update_pedigree_images(test_families, None)
         pedigree_image = test_families.first().pedigree_image
