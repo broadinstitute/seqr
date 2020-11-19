@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: seqr-ingress
+  namespace: {{ NAMESPACE }}
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: {{ CLUSTER_STATIC_IP_NAME }}
+    networking.gke.io/v1beta1.FrontendConfig: "seqr-frontend-config"
+    networking.gke.io/managed-certificates: "seqr-tls-certificate"
+spec:
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: seqr
+            servicePort: {{ SEQR_SERVICE_PORT }}
