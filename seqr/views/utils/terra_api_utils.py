@@ -69,16 +69,14 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, headers=headers, **kwargs)
 
-    if r.status_code == 404 or r.status_code == 403:
-        logger.warning('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
-        message = 'Warning: called Terra API: /{} got status: {} with a reason: {}'.format(path, r.status_code, r.reason)
-        if r.status_code == 404:
-            raise TerraNotFoundException(message)
-        raise PermissionDenied(message)
+    if r.status_code == 404:
+        raise TerraNotFoundException('Warning: called Terra API: {} /{} got status 404 with reason: {}'.format(method.upper(), path, r.reason))
+    if r.status_code == 403:
+        raise PermissionDenied('Access denied (403) from Terra API: {} /{} with reason: {}'.format(method.upper(), path, r.reason))
 
     if r.status_code != 200:
         logger.error('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
-        raise TerraAPIException('Error: called Terra API: /{} got status: {} with a reason: {}'.format(
+        raise TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
             path, r.status_code, r.reason))
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
@@ -151,7 +149,5 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     try:
         return _user_anvil_call('get', path, user).get('acl', {})
-    except TerraNotFoundException:
-        return {}
-    except PermissionDenied:
+    except (TerraNotFoundException, PermissionDenied):
         return {}
