@@ -703,7 +703,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
         for email, permission in permission_levels.items():
             collaborator = users_by_email.get(email)
             if collaborator:
-                collaborators.update({collaborator[0].username: _get_collaborator_json(collaborator[0], include_permissions,
+                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
                     can_edit=permission==CAN_EDIT, is_anvil=True)})
             else:
                 collaborators[email] = {
