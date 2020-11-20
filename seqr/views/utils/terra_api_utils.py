@@ -7,6 +7,7 @@ import requests
 
 from urllib.parse import urljoin
 
+from django.core.exceptions import PermissionDenied
 from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 
@@ -18,10 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
-    pass
-
-
-class TerraForbiddenException(TerraAPIException):
     pass
 
 
@@ -77,7 +74,7 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
         message = 'Warning: called Terra API: /{} got status: {} with a reason: {}'.format(path, r.status_code, r.reason)
         if r.status_code == 404:
             raise TerraNotFoundException(message)
-        raise TerraForbiddenException(message)
+        raise PermissionDenied(message)
 
     if r.status_code != 200:
         logger.error('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)))
@@ -115,7 +112,7 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
     try:
         return _user_anvil_call('get', path, user)
-    except TerraNotFoundException as et:
+    except TerraNotFoundException:
         return {}
 
 
@@ -154,7 +151,7 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     try:
         return _user_anvil_call('get', path, user).get('acl', {})
-    except TerraNotFoundException as et:
+    except TerraNotFoundException:
         return {}
-    except TerraForbiddenException as et:
+    except PermissionDenied:
         return {}
