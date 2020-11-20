@@ -699,11 +699,12 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
 
     if project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
+        users_by_email = {u.email: u for u in User.objects.filter(email__in = permission_levels.keys())}
         for email, permission in permission_levels.items():
-            collaborator = User.objects.filter(email=email)
-            if len(collaborator)>0:
-                collaborators.update({collaborator[0].username: _get_collaborator_json(collaborator[0],
-                    include_permissions, can_edit=permission==CAN_EDIT, is_anvil=True)})
+            collaborator = users_by_email.get(email)
+            if collaborator:
+                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
+                    can_edit=permission==CAN_EDIT, is_anvil=True)})
             else:
                 collaborators[email] = {
                     'username': email,  # to ensure everything has a unique ID
