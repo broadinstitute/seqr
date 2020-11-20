@@ -20,11 +20,11 @@ ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType
 class DatasetAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', mock.MagicMock())
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.utils.file_utils.open')
     @urllib3_responses.activate
-    def test_add_variants_dataset(self, mock_open, mock_random):
+    def test_add_variants_dataset(self, mock_open, mock_random, mock_redis):
         mock_file_iter = mock_open.return_value.__enter__.return_value.__iter__
 
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -172,6 +172,8 @@ class DatasetAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 200)
         mock_open.assert_called_with('mapping.csv', 'r')
+        mock_redis.return_value.get.assert_called_with('index_metadata__test_index')
+        mock_redis.return_value.set.assert_not_called()
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
