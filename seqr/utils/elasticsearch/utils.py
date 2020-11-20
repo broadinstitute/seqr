@@ -52,7 +52,8 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
             index_metadata[index_name]['fields'] = {
                 field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
             }
-    if use_cache:
+    if use_cache and include_fields:
+        # Only cache metadata with fields
         safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 

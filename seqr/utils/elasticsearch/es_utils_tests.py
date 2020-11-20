@@ -1150,6 +1150,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
+        self.assertTrue('index_metadata__{},{}'.format(INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
 
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'])
 
@@ -1976,6 +1977,8 @@ class EsUtilsTest(TestCase):
             },
             'total_results': 11,
         })
+        self.assertTrue('index_metadata__{}'.format(INDEX_NAME) in REDIS_CACHE)
+        self.assertTrue('index_metadata__{}'.format(SECOND_INDEX_NAME) in REDIS_CACHE)
 
         project_2_search = dict(
             filters=[
