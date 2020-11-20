@@ -1,3 +1,4 @@
+from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class InvalidIndexException(Exception):
+    pass
+
+class InvalidSearchException(Exception):
     pass
 
 
@@ -48,7 +52,8 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
             index_metadata[index_name]['fields'] = {
                 field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
             }
-    if use_cache:
+    if use_cache and include_fields:
+        # Only cache metadata with fields
         safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 
@@ -58,7 +63,7 @@ def get_single_es_variant(families, variant_id, return_all_queried_families=Fals
         families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
-        raise Exception('Variant {} not found'.format(variant_id))
+        raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
@@ -91,10 +96,10 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
 
     es_search = es_search_cls(
         search_model.families.all(),
@@ -131,7 +136,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
 
     variant_results = es_search.search(**search_kwargs)
 
-    safe_redis_set_json(cache_key, es_search.previous_search_results)
+    safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, es_search.previous_search_results['total_results']
 

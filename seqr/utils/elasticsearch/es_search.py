@@ -31,7 +31,7 @@ class EsSearch(object):
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False,
                  return_all_queried_families=False):
-        from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException
+        from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -40,7 +40,8 @@ class EsSearch(object):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
         if len(self.samples_by_family_index) < 1:
-            raise InvalidIndexException('No es index found')
+            raise InvalidSearchException('No es index found for families {}'.format(
+                ', '.join([f.family_id for f in families])))
 
         self._skipped_sample_count = defaultdict(int)
         if skip_unaffected_families:
@@ -62,7 +63,7 @@ class EsSearch(object):
                     del self.samples_by_family_index[index]
 
             if len(self.samples_by_family_index) < 1:
-                raise Exception('Inheritance based search is disabled in families with no affected individuals')
+                raise InvalidSearchException('Inheritance based search is disabled in families with no affected individuals')
 
         self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
@@ -118,7 +119,8 @@ class EsSearch(object):
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
                     dataset_type
                 )
-                raise Exception(error)
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException(error)
             self._indices = new_indices
         self._set_index_name()
         return self
@@ -320,7 +322,8 @@ class EsSearch(object):
                 inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
             if list(inheritance_filter.keys()) == ['affected']:
-                raise Exception('Inheritance must be specified if custom affected status is set')
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
@@ -606,7 +609,8 @@ class EsSearch(object):
                             genotypes[sample.individual.guid]['cn'] = 1
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes and all((gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
+        if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
+                (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
             start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
             end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
             num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
@@ -691,7 +695,8 @@ class EsSearch(object):
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            raise Exception('This search returned too many compound heterozygous variants. Please add stricter filters')
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('This search returned too many compound heterozygous variants. Please add stricter filters')
 
         family_unaffected_individual_guids = {
             family_guid: {individual_guid for individual_guid, affected_status in individual_affected_status.items() if
@@ -970,7 +975,8 @@ class EsSearch(object):
                     start_index = end_index - num_results
                 if end_index > MAX_VARIANTS:
                     # ES request size limits are limited by offset + size, which is the same as end_index
-                    raise Exception(
+                    from seqr.utils.elasticsearch.utils import InvalidSearchException
+                    raise InvalidSearchException(
                         'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
                 search = search[start_index:end_index]
