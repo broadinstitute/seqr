@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -183,7 +184,7 @@ except IOError:
         with open(SECRET_FILE, 'w') as f:
             f.write(SECRET_KEY)
     except IOError as e:
-        logger.warn('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
         SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 ROOT_URLCONF = 'seqr.urls'
