@@ -65,6 +65,7 @@ OMIM_ENTRIES = {
 
 
 class UpdateOmimTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
     multi_db = True
 

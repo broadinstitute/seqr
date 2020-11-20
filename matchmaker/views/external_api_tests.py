@@ -12,6 +12,7 @@ TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
 @mock.patch('matchmaker.views.external_api.MME_NODES', TEST_MME_NODES)
 class ExternalAPITest(TestCase):
+    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 

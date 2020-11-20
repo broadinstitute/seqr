@@ -932,6 +932,7 @@ def setup_responses():
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
 class EsUtilsTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 

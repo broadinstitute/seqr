@@ -16,6 +16,7 @@ GNOMAD_LOF_METRICS_DATA = [
 
 
 class UpdateGeneConstraintTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
     multi_db = True
 

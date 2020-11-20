@@ -115,6 +115,7 @@ class EmailException(Exception):
 
 
 class MatchmakerAPITest(AuthenticationTestCase):
+    databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 

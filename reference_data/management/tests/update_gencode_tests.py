@@ -36,6 +36,7 @@ GTF_DATA = [
 
 
 class UpdateGencodeTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
     multi_db = True
 
