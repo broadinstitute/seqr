@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
-from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl, TerraAPIException,\
+from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
     anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
     TOKEN_AUTH_TIME, REGISTER_RESPONSE
