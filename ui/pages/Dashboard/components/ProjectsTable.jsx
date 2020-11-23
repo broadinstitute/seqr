@@ -4,9 +4,10 @@ import styled from 'styled-components'
 import Timeago from 'timeago.js'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { fetchProjects } from 'redux/rootReducer'
-import { getProjectsIsLoading, getUser } from 'redux/selectors'
+import { getProjectsIsLoading, getUser, getGoogleLoginEnabled } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import DataTable from 'shared/components/table/DataTable'
@@ -54,6 +55,17 @@ const COLUMNS = [
     name: 'projectCategoryGuids',
     width: 1,
     format: project => <CategoryIndicator project={project} />,
+  },
+  {
+    name: 'anvil',
+    width: 1,
+    content: 'AnVIL',
+    format: project => (
+      <div>
+        {project.workspaceName &&
+        <Popup content={`AnVIL workspace: ${project.workspaceNamespace}/${project.workspaceName}`} position="top center" trigger={<Icon name="fire" />} />}
+      </div>
+    ),
   },
   {
     name: 'name',
@@ -142,7 +154,20 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
-const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
+const COLUMNS_NO_ANVIL = [...COLUMNS]
+COLUMNS_NO_ANVIL.splice(1, 1)
+
+const STAFF_COLUMNS_NO_ANVIL = [...STAFF_COLUMNS]
+STAFF_COLUMNS_NO_ANVIL.splice(1, 1)
+
+const getColumns = (googleLoginEnabled, isAnvil, isStaff) => {
+  if (googleLoginEnabled && isAnvil) {
+    return isStaff ? STAFF_COLUMNS : COLUMNS
+  }
+  return isStaff ? STAFF_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
+}
+
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -163,7 +188,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user }) =>
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
+        columns={getColumns(googleLoginEnabled, user.isAnvil, user.isStaff)}
         footer={user.isStaff ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
@@ -175,6 +200,7 @@ ProjectsTable.propTypes = {
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
   load: PropTypes.func,
+  googleLoginEnabled: PropTypes.bool,
 }
 
 export { ProjectsTable as ProjectsTableComponent }
@@ -183,6 +209,7 @@ const mapStateToProps = state => ({
   visibleProjects: getVisibleProjects(state),
   loading: getProjectsIsLoading(state),
   user: getUser(state),
+  googleLoginEnabled: getGoogleLoginEnabled(state),
 })
 
 const mapDispatchToProps = {
