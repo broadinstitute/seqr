@@ -48,7 +48,12 @@ metadata:
   namespace: ingress-nginx
 data:
   enable-modsecurity: "true"
-  enable-owasp-modsecurity-crs: "true"
+  modsecurity-snippet: |
+    SecAuditLogType Serial
+    SecAuditLog /dev/stdout
+    SecAuditLogFormat JSON
+    SecRuleRemoveById 920350
+    Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 ---
 # docs @ https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/
 kind: Ingress
@@ -59,7 +64,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/enable-modsecurity: "true"
-    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine DetectionOnly
 spec:
   tls:
     - hosts:
