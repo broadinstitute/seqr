@@ -21,9 +21,11 @@ def safe_redis_get_json(cache_key):
     return None
 
 
-def safe_redis_set_json(cache_key, value):
+def safe_redis_set_json(cache_key, value, expire=None):
     try:
         redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
         redis_client.set(cache_key, json.dumps(value))
+        if expire:
+            redis_client.expire(cache_key, expire)
     except Exception as e:
         logger.error('Unable to write to redis host {}: {}'.format(REDIS_SERVICE_HOSTNAME, str(e)))

@@ -6,7 +6,7 @@ from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
-from seqr.utils.elasticsearch.utils import InvalidIndexException
+from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
@@ -55,9 +55,10 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 class VariantSearchAPITest(object):
     multi_db = True
 
+    @mock.patch('seqr.views.apis.variant_search_api.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -69,10 +70,12 @@ class VariantSearchAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid search hash: {}'.format(SEARCH_HASH))
+        mock_error_logger.assert_not_called()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'search': SEARCH}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid search: no projects/ families specified')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = InvalidIndexException('Invalid index')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -80,6 +83,16 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid index')
+        mock_error_logger.assert_called_with('InvalidIndexException: Invalid index')
+
+        mock_get_variants.side_effect = InvalidSearchException('Invalid search')
+        mock_error_logger.reset_mock()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid search')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = ConnectionTimeout()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -87,6 +100,7 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 504)
         self.assertEqual(response.reason_phrase, 'Query Time Out')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants
 
@@ -127,16 +141,19 @@ class VariantSearchAPITest(object):
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test sort
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
@@ -158,6 +175,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
+        mock_error_logger.assert_not_called()
 
         # Test gene breakdown
         gene_counts = {
@@ -193,6 +211,7 @@ class VariantSearchAPITest(object):
             set(response_json['genesById'].keys()),
             {'ENSG00000233653'}
         )
+        mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for staff users
         self.login_staff_user()
@@ -207,6 +226,7 @@ class VariantSearchAPITest(object):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants
@@ -223,6 +243,7 @@ class VariantSearchAPITest(object):
                 'totalResults': 0,
             }
         })
+        mock_error_logger.assert_not_called()
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_projects_variants(self, mock_get_variants):
