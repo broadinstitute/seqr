@@ -74,8 +74,9 @@ def create_saved_variant_handler(request):
             saved_variants.append(saved_variant)
     else:
         parsed_variant_json = _get_parsed_variant_args(variant_json['variant'], family)
-        parsed_variant_json['saved_variant_json'] = variant_json['variant']
-        saved_variant = create_model_from_json(SavedVariant, parsed_variant_json, request.user)
+        # Due to concurrency issues/ leaving tabs open sometimes a variant has been created despite not having a guid
+        saved_variant, _ = get_or_create_model_from_json(
+            SavedVariant, parsed_variant_json, {'saved_variant_json': variant_json['variant']}, request.user)
         saved_variants = [saved_variant]
 
     if variant_json.get('note'):

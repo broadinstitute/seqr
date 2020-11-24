@@ -160,7 +160,7 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        variant_json = {
+        core_variant_json = {
             'alt': 'A',
             'chrom': '2',
             'genotypes': {},
@@ -183,7 +183,7 @@ class SavedVariantAPITest(object):
             'tags': [{'name': 'Review'}],
             'note': '',
             'functionalData': [],
-            'variant': variant_json,
+            'variant': core_variant_json,
         }
 
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
@@ -193,7 +193,8 @@ class SavedVariantAPITest(object):
         variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        variant_json.update({'xpos': 2061413835})
+        variant_json = {'xpos': 2061413835}
+        variant_json.update(core_variant_json)
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
@@ -210,6 +211,11 @@ class SavedVariantAPITest(object):
 
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
+
+        # creating again without specifying the guid should not error and should not create a duplicate
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
     def test_create_saved_sv_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -762,7 +768,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 2)
+        assert_no_list_ws_has_al(self, 3)
 
     def test_create_saved_sv_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()

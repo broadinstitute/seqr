@@ -26,11 +26,11 @@ class StatusTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'version': 'v1.0', 'dependent_services_ok': False})
         mock_logger.error.assert_has_calls([
-            mock.call('Unable to connect to database "default": No connection'),
-            mock.call('Unable to connect to database "reference_data": No connection'),
-            mock.call('Unable to connect to redis: Bad connection'),
-            mock.call('Unable to connect to elasticsearch: No response from elasticsearch ping'),
-            mock.call('Unable to connect to kibana: 500 Server Error: Internal Server Error for url: http://localhost:5601/status'),
+            mock.call('Database "default" connection error: No connection'),
+            mock.call('Database "reference_data" connection error: No connection'),
+            mock.call('Redis connection error: Bad connection'),
+            mock.call('Elasticsearch connection error: No response from elasticsearch ping'),
+            mock.call('Kibana connection error: 500 Server Error: Internal Server Error for url: http://localhost:5601/status'),
         ])
 
         mock_logger.reset_mock()
