@@ -162,7 +162,7 @@ class SavedVariantAPITest(object):
 
         core_variant_json = {
             'alt': 'A',
-            'chrom': '2',
+            'chrom': '27',
             'genotypes': {},
             'genomeVersion': '37',
             'mainTranscriptId': None,
@@ -186,6 +186,11 @@ class SavedVariantAPITest(object):
             'variant': core_variant_json,
         }
 
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Invalid chromosome: 27'})
+
+        core_variant_json['chrom'] = '2'
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
@@ -768,7 +773,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 3)
+        assert_no_list_ws_has_al(self, 4)
 
     def test_create_saved_sv_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
