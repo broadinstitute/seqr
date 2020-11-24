@@ -53,7 +53,6 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 
 
 class VariantSearchAPITest(object):
-    multi_db = True
 
     @mock.patch('seqr.views.apis.variant_search_api.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
@@ -516,7 +515,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 9)
+        assert_no_list_ws_has_al(self, 10)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)

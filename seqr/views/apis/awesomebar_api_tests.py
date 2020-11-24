@@ -6,7 +6,6 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 
 
 class AwesomebarAPITest(object):
-    multi_db = True
 
     def test_awesomebar_autocomplete_handler(self):
         url = reverse(awesomebar_autocomplete_handler)

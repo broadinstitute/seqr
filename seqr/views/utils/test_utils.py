@@ -11,6 +11,7 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
+    multi_db = True
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'

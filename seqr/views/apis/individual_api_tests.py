@@ -61,7 +61,6 @@ CHILD_UPDATE_GUID = "I000001_na19675"
 
 class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_individual_handler(self):

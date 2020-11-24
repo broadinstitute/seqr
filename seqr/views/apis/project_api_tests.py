@@ -15,7 +15,6 @@ EMPTY_PROJECT_GUID = 'R0002_empty'
 
 
 class ProjectAPITest(object):
-    multi_db = True
 
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
