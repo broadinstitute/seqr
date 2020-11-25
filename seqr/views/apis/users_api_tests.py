@@ -266,7 +266,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_user_pure_anvil@test.com'}
     NUM_USERS = 4
-    NEW_USER_IDX = NUM_USERS - 2
+    NEW_USER_IDX = NUM_USERS - 1
 
     def test_get_all_collaborators(self):
         super(AnvilUsersAPITest, self).test_get_all_collaborators()
@@ -303,7 +303,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user', 'test_user_pure_anvil@test.com'}
     NUM_USERS = 5
-    NEW_USER_IDX = NUM_USERS - 2
+    NEW_USER_IDX = NUM_USERS - 1
 
     def test_get_all_collaborators(self):
         super(MixUsersAPITest, self).test_get_all_collaborators()

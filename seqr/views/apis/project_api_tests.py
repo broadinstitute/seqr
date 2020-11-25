@@ -97,6 +97,7 @@ class ProjectAPITest(object):
             datetime.today().strftime('%Y-%m-%d')
         )
         self.assertListEqual(response_json['projectsByGuid'][PROJECT_GUID]['collaborators'], self.PROJECT_COLLABORATORS)
+
         discovery_tags = response_json['projectsByGuid'][PROJECT_GUID]['discoveryTags']
         self.assertEqual(len(discovery_tags), 2)
         self.assertSetEqual(
@@ -179,15 +180,15 @@ BASE_COLLABORATORS = [
      'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False, 'lastLogin': mock.ANY,
      'lastName': '', 'username': 'test_user_non_staff'}]
 
-ANVIL_COLLABORATORS = deepcopy(BASE_COLLABORATORS)
+ANVIL_COLLABORATORS = [{
+    'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
+    'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
+    'isActive': True, 'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False,
+    'lastName': '', 'lastLogin': '', 'username': 'test_user_pure_anvil@test.com'
+}] + deepcopy(BASE_COLLABORATORS)
 for collab in ANVIL_COLLABORATORS:
     collab['isAnvil'] = True
 
-PURE_ANVIL_COLLAB = {
-    'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
-    'first_name': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
-    'is_active': True, 'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False,
-    'lastName': 'test_user_pure_anvil@test.com', 'last_login': '', 'username': 'test_user_pure_anvil@test.com'}
 LOCAL_COLLAB = {
     'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
     'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
@@ -203,7 +204,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
 # Test for permissions from AnVIL only
 class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [PURE_ANVIL_COLLAB]
+    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
 
     def test_create_update_and_delete_project(self):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
@@ -234,7 +235,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB, PURE_ANVIL_COLLAB]
+    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
 
     def test_create_update_and_delete_project(self):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
