@@ -160,6 +160,8 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
+const noteRequired = value => (value ? undefined : 'Note is required')
+
 const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ...props }) => {
   const values = { ...variantTagNotes, ...note }
   return (
@@ -172,6 +174,7 @@ const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ..
         modalId={family.familyGuid}
         modalTitle={`${action} Variant Note for Family ${family.displayName}`}
         additionalEditFields={VARIANT_NOTE_FIELDS}
+        fieldValidator={noteRequired}
         initialValues={values}
         idField={note ? 'noteGuid' : 'variantGuids'}
         deleteConfirm="Are you sure you want to delete this note?"

@@ -10,8 +10,8 @@ const MARKDOWN_OPTIONS = { breaks: true, linkTarget: '_blank' }
 const INLINE_STYLE = { display: 'inline-block' }
 
 const TextFieldView = React.memo((props) => {
-  const { textPopup, textAnnotation, additionalEditFields = [], ...baseProps } = props
-  const fields = [{ name: props.field, component: RichTextEditor }, ...additionalEditFields]
+  const { textPopup, textAnnotation, fieldValidator, additionalEditFields = [], ...baseProps } = props
+  const fields = [{ name: props.field, component: RichTextEditor, validate: fieldValidator }, ...additionalEditFields]
   return <BaseFieldView
     fieldDisplay={(initialText) => {
       const style = props.textAnnotation ? INLINE_STYLE : {}
@@ -37,6 +37,7 @@ TextFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   textAnnotation: PropTypes.node,
   textPopup: PropTypes.func,
+  fieldValidator: PropTypes.func,
 }
 
 export default TextFieldView

@@ -20,14 +20,14 @@ def status_view(request):
             connections[db_connection_key].cursor()
         except Exception as e:
             dependent_services_ok = False
-            logger.error('Unable to connect to database "{}": {}'.format(db_connection_key, e))
+            logger.error('Database "{}" connection error: {}'.format(db_connection_key, e))
 
     # Test redis connection
     try:
         redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3).ping()
     except Exception as e:
         dependent_services_ok = False
-        logger.error('Unable to connect to redis: {}'.format(str(e)))
+        logger.error('Redis connection error: {}'.format(str(e)))
 
     # Test elasticsearch connection
     try:
@@ -35,14 +35,14 @@ def status_view(request):
             raise ValueError('No response from elasticsearch ping')
     except Exception as e:
         dependent_services_ok = False
-        logger.error('Unable to connect to elasticsearch: {}'.format(str(e)))
+        logger.error('Elasticsearch connection error: {}'.format(str(e)))
 
     # Test kibana connection
     try:
         requests.head('http://{}/status'.format(KIBANA_SERVER), timeout=3).raise_for_status()
     except Exception as e:
         dependent_services_ok = False
-        logger.error('Unable to connect to kibana: {}'.format(str(e)))
+        logger.error('Kibana connection error: {}'.format(str(e)))
 
 
     return create_json_response(
