@@ -28,6 +28,14 @@ class SocialAuthPipelineTest(TestCase):
 
     @mock.patch('seqr.utils.social_auth_pipeline.logger')
     def test_log_signed_in(self, mock_logger):
-        log_signed_in('backend', {'email': 'test_user@test.com'})
-        mock_logger.info.assert_called_with('Logged in test_user@test.com(AnVIL)')
+        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'})
+        mock_logger.info.assert_called_with('Logged in test_user@test.com (google-oauth2)')
         self.assertEqual(len(mock_logger.method_calls), 1)
+
+        mock_logger.reset_mock()
+        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'}, is_new=True)
+        mock_logger.info.assert_has_calls([
+            mock.call('Logged in test_user@test.com (google-oauth2)'),
+            mock.call('Created user test_user@test.com (google-oauth2)'),
+        ])
+        self.assertEqual(len(mock_logger.method_calls), 2)
