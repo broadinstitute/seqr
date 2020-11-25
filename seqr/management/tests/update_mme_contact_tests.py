@@ -1,5 +1,6 @@
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.test import TestCase
+from io import StringIO
 import mock
 
 from matchmaker.models import MatchmakerSubmission
@@ -10,6 +11,11 @@ class TransferFamiliesTest(TestCase):
 
     @mock.patch('seqr.management.commands.update_mme_contact.logger.info')
     def test_command(self, mock_logger):
+        out = StringIO()
+        with self.assertRaises(CommandError) as err:
+            call_command('update_mme_contact', stdout=out)
+        self.assertEqual(str(err.exception), 'Error: the following arguments are required: email')
+
         call_command(
             'update_mme_contact', 'UDNCC@hms.harvard.edu', '--replace-email', 'test_user@broadinstitute.org',
         )
