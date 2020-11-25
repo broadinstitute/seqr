@@ -72,15 +72,12 @@ spec:
               name: all-settings
         env:
         - name: POSTGRES_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.username
+          value: "{{ POSTGRES_USERNAME }}"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres.password
+              key: password
         - name: OMIM_KEY
           valueFrom:
             secretKeyRef:
