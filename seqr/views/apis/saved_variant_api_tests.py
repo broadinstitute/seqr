@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import mock
 
@@ -72,6 +73,35 @@ COMPOUND_HET_5_JSON = {
     'familyGuids': ['F000001_1'],
     'variantId': '16-31096164-G-C',
 }
+
+CREATE_VARIANT_JSON = {
+    'alt': 'A',
+    'chrom': '2',
+    'genotypes': {},
+    'genomeVersion': '37',
+    'mainTranscriptId': None,
+    'originalAltAlleles': ['A'],
+    'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+    'pos': 61413835,
+    'predictions': {'cadd': 21.9},
+    'ref': 'AAAG',
+    'transcripts': {},
+    'projectGuid': 'R0001_1kg',
+    'familyGuids': ['F000001_1', 'F000002_2'],
+    'variantId': '2-61413835-AAAG-A',
+}
+
+CREATE_VARIANT_REQUEST_BODY = {
+    'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
+    'familyGuid': 'F000001_1',
+    'tags': [{'name': 'Review'}],
+    'note': '',
+    'functionalData': [],
+    'variant': CREATE_VARIANT_JSON,
+}
+
+INVALID_CREATE_VARIANT_REQUEST_BODY = deepcopy(CREATE_VARIANT_REQUEST_BODY)
+INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 
 class SavedVariantAPITest(object):
@@ -160,38 +190,13 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        core_variant_json = {
-            'alt': 'A',
-            'chrom': '27',
-            'genotypes': {},
-            'genomeVersion': '37',
-            'mainTranscriptId': None,
-            'originalAltAlleles': ['A'],
-            'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
-            'pos': 61413835,
-            'predictions': {'cadd': 21.9},
-            'ref': 'AAAG',
-            'transcripts': {},
-            'projectGuid': 'R0001_1kg',
-            'familyGuids': ['F000001_1', 'F000002_2'],
-            'variantId': '2-61413835-AAAG-A',
-        }
-
-        request_body = {
-            'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
-            'familyGuid': 'F000001_1',
-            'tags': [{'name': 'Review'}],
-            'note': '',
-            'functionalData': [],
-            'variant': core_variant_json,
-        }
-
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            INVALID_CREATE_VARIANT_REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Invalid chromosome: 27'})
 
-        core_variant_json['chrom'] = '2'
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            CREATE_VARIANT_REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
@@ -199,7 +204,7 @@ class SavedVariantAPITest(object):
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json = {'xpos': 2061413835}
-        variant_json.update(core_variant_json)
+        variant_json.update(CREATE_VARIANT_JSON)
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
@@ -218,7 +223,8 @@ class SavedVariantAPITest(object):
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
 
         # creating again without specifying the guid should not error and should not create a duplicate
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            CREATE_VARIANT_REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
