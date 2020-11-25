@@ -14,7 +14,6 @@ TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 class ExternalAPITest(TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
 
     def _check_mme_authenticated(self, url):
         response = self.client.get(url)

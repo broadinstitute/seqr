@@ -67,7 +67,6 @@ OMIM_ENTRIES = {
 class UpdateOmimTest(TestCase):
     databases = '__all__'
     fixtures = ['users', 'reference_data']
-    multi_db = True
 
     @responses.activate
     @mock.patch('reference_data.management.commands.update_omim.os')
