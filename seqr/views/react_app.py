@@ -23,7 +23,7 @@ def no_login_main_app(request, *args, **kwargs):
     user_token = kwargs.get('user_token')
     if user_token:
         initial_json['newUser'] = _get_json_for_initial_user(User.objects.get(password=user_token))
-    elif not request.user.is_anonymous():
+    elif not request.user.is_anonymous:
         initial_json['user'] = _get_json_for_initial_user(request.user)
     if not request.META.get(CSRF_COOKIE_NAME):
         rotate_token(request)

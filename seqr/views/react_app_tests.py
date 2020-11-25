@@ -12,6 +12,7 @@ MAIN_APP_USER_FIELDS = {'currentPolicies'}
 MAIN_APP_USER_FIELDS.update(USER_FIELDS)
 
 class DashboardPageTest(AuthenticationTestCase):
+    databases = '__all__'
     fixtures = ['users']
 
     def get_initial_page_json(self, response):

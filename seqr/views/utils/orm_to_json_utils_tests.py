@@ -13,8 +13,8 @@ from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIEL
     TAG_FIELDS, VARIANT_NOTE_FIELDS
 
 class JSONUtilsTest(TestCase):
+    databases = '__all__'
     fixtures = ['users.json', '1kg_project', 'reference_data', 'variant_searches']
-    multi_db = True
 
     def test_json_for_user(self):
         for user in User.objects.all():

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -113,6 +114,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
+                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
                 'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],
@@ -183,7 +185,7 @@ except IOError:
         with open(SECRET_FILE, 'w') as f:
             f.write(SECRET_KEY)
     except IOError as e:
-        logger.warn('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
         SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 ROOT_URLCONF = 'seqr.urls'

@@ -53,7 +53,6 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 
 
 class VariantSearchAPITest(object):
-    multi_db = True
 
     @mock.patch('seqr.views.apis.variant_search_api.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
