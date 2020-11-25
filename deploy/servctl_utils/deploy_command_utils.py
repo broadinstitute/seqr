@@ -3,8 +3,8 @@ import glob
 import logging
 import os
 from pprint import pformat
-
 import time
+import uuid
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
@@ -71,7 +71,6 @@ SECRETS = {
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
-    'postgres': ['postgres.username', 'postgres.password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
     ],
@@ -171,11 +170,16 @@ def deploy_secrets(settings):
 
     for secret_label in secret_labels:
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
-        secret_command += [
-            '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
-                secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
-            for file in SECRETS[secret_label]
-        ]
+        if secret_label in SECRETS:
+            secret_command += [
+                '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
+                    secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
+                for file in SECRETS[secret_label]
+            ]
+        elif secret_label == 'postgres':
+            secret_command.append('--from-literal=password={}'.format(uuid.uuid4()))
+        else:
+            raise ValueError('Invalid secret component {}'.format(secret_label))
         if secret_label == GCLOUD_CLIENT:
             secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
         run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
