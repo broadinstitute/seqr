@@ -114,6 +114,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
+                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
                 'social_django.context_processors.backends',  # required for social_auth, same for below
                 'social_django.context_processors.login_redirect',
             ],

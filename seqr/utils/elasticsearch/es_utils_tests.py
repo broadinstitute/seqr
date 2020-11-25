@@ -935,7 +935,6 @@ def setup_responses():
 class EsUtilsTest(TestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
 
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
