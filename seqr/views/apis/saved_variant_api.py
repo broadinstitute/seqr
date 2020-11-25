@@ -64,19 +64,20 @@ def create_saved_variant_handler(request):
     family = Family.objects.get(guid=family_guid)
     check_project_permissions(family.project, request.user)
 
-    if isinstance(variant_json['variant'], list):
-        # are compound hets
-        saved_variants = []
-        for single_variant_json in variant_json['variant']:
-            saved_variant, _ = get_or_create_model_from_json(
-                SavedVariant, create_json=_get_parsed_variant_args(single_variant_json, family),
-                update_json={'saved_variant_json': single_variant_json}, user=request.user)
-            saved_variants.append(saved_variant)
-    else:
-        parsed_variant_json = _get_parsed_variant_args(variant_json['variant'], family)
-        parsed_variant_json['saved_variant_json'] = variant_json['variant']
-        saved_variant = create_model_from_json(SavedVariant, parsed_variant_json, request.user)
-        saved_variants = [saved_variant]
+    variants_json = variant_json['variant']
+    if not isinstance(variant_json['variant'], list):
+        variants_json = [variants_json]
+
+    saved_variants = []
+    for single_variant_json in variants_json:
+        try:
+            parsed_variant_json = _get_parsed_variant_args(single_variant_json, family)
+        except ValueError as e:
+            return create_json_response({'error': str(e)}, status=400)
+        saved_variant, _ = get_or_create_model_from_json(
+            SavedVariant, create_json=parsed_variant_json,
+            update_json={'saved_variant_json': single_variant_json}, user=request.user)
+        saved_variants.append(saved_variant)
 
     if variant_json.get('note'):
         _create_variant_note(saved_variants, variant_json, request.user)

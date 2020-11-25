@@ -51,15 +51,12 @@ spec:
             cpu: "2"
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.username
+          value: "{{ POSTGRES_USERNAME }}"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres.password
+              key: password
         readinessProbe:
           exec:
             command:

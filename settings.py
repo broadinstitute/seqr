@@ -316,6 +316,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 
 if TERRA_API_ROOT_URL or (len(sys.argv) >= 2 and sys.argv[1] == 'test'):
     AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
+    SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+        'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
+    }
 
     # Use Google sub ID as the user ID, safer than using email
     USE_UNIQUE_USER_ID = True

@@ -175,7 +175,7 @@ def _search_external_matches(nodes_to_query, patient_data):
         except Exception as e:
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], str(e), json.dumps(patient_data))
-            logger.error(error_message)
+            logger.warning(error_message)
             post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
     return external_results
