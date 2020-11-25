@@ -61,7 +61,6 @@ CHILD_UPDATE_GUID = "I000001_na19675"
 
 class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_individual_handler(self):
@@ -126,7 +125,8 @@ class IndividualAPITest(AuthenticationTestCase):
             {'id': 'HP:0011675', 'notes': 'A new term'},
         ])
 
-    def test_edit_individuals(self):
+    @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
+    def test_edit_individuals(self, mock_update_pedigree):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
         self.check_staff_login(edit_individuals_url)
 
@@ -159,8 +159,13 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['maternalId'], UPDATED_MATERNAL_ID)
         self.assertEqual(response_json['individualsByGuid'][CHILD_UPDATE_GUID]['paternalId'], UPDATED_ID)
+        self.assertSetEqual(
+            {'F000001_1', 'F000003_3'},
+            {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list}
+        )
 
-    def test_delete_individuals(self):
+    @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
+    def test_delete_individuals(self, mock_update_pedigree):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
         self.check_staff_login(individuals_url)
 
@@ -177,8 +182,17 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
+        self.assertDictEqual(response_json, {
+            'individualsByGuid': {'I000002_na19678': None},
+            'familiesByGuid': {'F000001_1': mock.ANY}
+        })
+        self.assertFalse('I000002_na19678' in response_json['familiesByGuid']['F000001_1']['individualGuids'])
 
-    def test_individuals_table_handler(self):
+        mock_update_pedigree.assert_called_once()
+        self.assertEqual(mock_update_pedigree.call_args.args[0].guid, 'F000001_1')
+
+    @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
+    def test_individuals_table_handler(self, mock_update_pedigree):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
         self.check_staff_login(individuals_url)
 
@@ -227,6 +241,7 @@ class IndividualAPITest(AuthenticationTestCase):
             '1 new families, 1 new individuals will be added to the project',
             '2 existing individuals will be updated',
         ])
+        mock_update_pedigree.assert_not_called()
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
@@ -252,6 +267,11 @@ class IndividualAPITest(AuthenticationTestCase):
             response_json['individualsByGuid']['I000001_na19675']['notes'], 'A affected individual, test1-zsf')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['individualId'], 'HG00735')
         self.assertEqual(response_json['individualsByGuid'][new_indiv_guid]['sex'], 'F')
+
+        self.assertSetEqual(
+            {'F000001_1', new_family_guid},
+            {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list}
+        )
 
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)

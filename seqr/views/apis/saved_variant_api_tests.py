@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import mock
 
@@ -7,7 +8,8 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS,\
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
@@ -72,9 +74,37 @@ COMPOUND_HET_5_JSON = {
     'variantId': '16-31096164-G-C',
 }
 
+CREATE_VARIANT_JSON = {
+    'alt': 'A',
+    'chrom': '2',
+    'genotypes': {},
+    'genomeVersion': '37',
+    'mainTranscriptId': None,
+    'originalAltAlleles': ['A'],
+    'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+    'pos': 61413835,
+    'predictions': {'cadd': 21.9},
+    'ref': 'AAAG',
+    'transcripts': {},
+    'projectGuid': 'R0001_1kg',
+    'familyGuids': ['F000001_1', 'F000002_2'],
+    'variantId': '2-61413835-AAAG-A',
+}
 
-class SavedVariantAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+CREATE_VARIANT_REQUEST_BODY = {
+    'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
+    'familyGuid': 'F000001_1',
+    'tags': [{'name': 'Review'}],
+    'note': '',
+    'functionalData': [],
+    'variant': CREATE_VARIANT_JSON,
+}
+
+INVALID_CREATE_VARIANT_REQUEST_BODY = deepcopy(CREATE_VARIANT_REQUEST_BODY)
+INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
+
+
+class SavedVariantAPITest(object):
 
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=['R0001_1kg'])
@@ -160,40 +190,21 @@ class SavedVariantAPITest(AuthenticationTestCase):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        variant_json = {
-            'alt': 'A',
-            'chrom': '2',
-            'genotypes': {},
-            'genomeVersion': '37',
-            'mainTranscriptId': None,
-            'originalAltAlleles': ['A'],
-            'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
-            'pos': 61413835,
-            'predictions': {'cadd': 21.9},
-            'ref': 'AAAG',
-            'transcripts': {},
-            'projectGuid': 'R0001_1kg',
-            'familyGuids': ['F000001_1', 'F000002_2'],
-            'variantId': '2-61413835-AAAG-A',
-        }
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            INVALID_CREATE_VARIANT_REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Invalid chromosome: 27'})
 
-        request_body = {
-            'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
-            'familyGuid': 'F000001_1',
-            'tags': [{'name': 'Review'}],
-            'note': '',
-            'functionalData': [],
-            'variant': variant_json,
-        }
-
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            CREATE_VARIANT_REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        variant_json.update({'xpos': 2061413835})
+        variant_json = {'xpos': 2061413835}
+        variant_json.update(CREATE_VARIANT_JSON)
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
@@ -210,6 +221,12 @@ class SavedVariantAPITest(AuthenticationTestCase):
 
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
+
+        # creating again without specifying the guid should not error and should not create a duplicate
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
+            CREATE_VARIANT_REQUEST_BODY))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
     def test_create_saved_sv_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -739,3 +756,128 @@ class SavedVariantAPITest(AuthenticationTestCase):
         self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
 
 
+# Tests for AnVIL access disabled
+class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
+    fixtures = ['users', '1kg_project']
+
+
+def assert_no_list_ws_has_al(self, acl_call_count):
+    self.mock_list_workspaces.assert_not_called()
+    self.mock_get_ws_access_level.assert_called_with(mock.ANY,
+        'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+    self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    self.mock_get_ws_acl.assert_not_called()
+
+
+# Test for permissions from AnVIL only
+class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def test_saved_variant_data(self):
+        super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
+        assert_no_list_ws_has_al(self, 5)
+
+    def test_create_saved_variant(self):
+        super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
+        assert_no_list_ws_has_al(self, 4)
+
+    def test_create_saved_sv_variant(self):
+        super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_create_saved_compound_hets(self):
+        super(AnvilSavedVariantAPITest, self).test_create_saved_compound_hets()
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_create_update_and_delete_variant_note(self):
+        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
+        assert_no_list_ws_has_al(self, 6)
+
+    def test_create_partially_saved_compound_het_variant_note(self):
+        super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_create_update_and_delete_compound_hets_variant_note(self):
+        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
+        assert_no_list_ws_has_al(self, 7)
+
+    def test_update_variant_tags(self):
+        super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
+        assert_no_list_ws_has_al(self, 3)
+
+    def test_update_variant_functional_data(self):
+        super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_update_compound_hets_variant_tags(self):
+        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
+        assert_no_list_ws_has_al(self, 3)
+
+    def test_update_compound_hets_variant_functional_data(self):
+        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
+        assert_no_list_ws_has_al(self, 3)
+
+    def test_update_saved_variant_json(self, *args):
+        super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json(*args)
+        assert_no_list_ws_has_al(self, 3)
+
+    def test_update_variant_main_transcript(self):
+        super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
+        assert_no_list_ws_has_al(self, 2)
+
+
+# Test for permissions from AnVIL and local
+class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def test_saved_variant_data(self):
+        super(MixSavedVariantAPITest, self).test_saved_variant_data()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_saved_variant(self):
+        super(MixSavedVariantAPITest, self).test_create_saved_variant()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_saved_sv_variant(self):
+        super(MixSavedVariantAPITest, self).test_create_saved_sv_variant()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_saved_compound_hets(self):
+        super(MixSavedVariantAPITest, self).test_create_saved_compound_hets()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_update_and_delete_variant_note(self):
+        super(MixSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_partially_saved_compound_het_variant_note(self):
+        super(MixSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_create_update_and_delete_compound_hets_variant_note(self):
+        super(MixSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_variant_tags(self):
+        super(MixSavedVariantAPITest, self).test_update_variant_tags()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_variant_functional_data(self):
+        super(MixSavedVariantAPITest, self).test_update_variant_functional_data()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_compound_hets_variant_tags(self):
+        super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_compound_hets_variant_functional_data(self):
+        super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_saved_variant_json(self, *args):
+        super(MixSavedVariantAPITest, self).test_update_saved_variant_json(*args)
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_variant_main_transcript(self):
+        super(MixSavedVariantAPITest, self).test_update_variant_main_transcript()
+        assert_no_list_ws_has_al(self, 1)

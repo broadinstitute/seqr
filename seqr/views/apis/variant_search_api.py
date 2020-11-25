@@ -12,7 +12,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
     IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException
+    InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
@@ -70,6 +70,8 @@ def query_variants_handler(request, search_hash):
 
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
+    except InvalidSearchException as e:
+        return create_json_response({'error': str(e)}, status=400, reason=str(e))
     except InvalidIndexException as e:
         logger.error('InvalidIndexException: {}'.format(e))
         return create_json_response({'error': str(e)}, status=400, reason=str(e))

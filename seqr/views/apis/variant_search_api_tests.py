@@ -6,11 +6,12 @@ from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
-from seqr.utils.elasticsearch.utils import InvalidIndexException
+from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
-from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS
+from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
+    MixAuthenticationTestCase, WORKSPACE_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -51,13 +52,12 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
-class VariantSearchAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
-    multi_db = True
+class VariantSearchAPITest(object):
 
+    @mock.patch('seqr.views.apis.variant_search_api.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -69,10 +69,12 @@ class VariantSearchAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid search hash: {}'.format(SEARCH_HASH))
+        mock_error_logger.assert_not_called()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'search': SEARCH}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid search: no projects/ families specified')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = InvalidIndexException('Invalid index')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -80,6 +82,16 @@ class VariantSearchAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid index')
+        mock_error_logger.assert_called_with('InvalidIndexException: Invalid index')
+
+        mock_get_variants.side_effect = InvalidSearchException('Invalid search')
+        mock_error_logger.reset_mock()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid search')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = ConnectionTimeout()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -87,6 +99,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 504)
         self.assertEqual(response.reason_phrase, 'Query Time Out')
+        mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants
 
@@ -127,16 +140,19 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test sort
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
@@ -158,6 +174,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
+        mock_error_logger.assert_not_called()
 
         # Test gene breakdown
         gene_counts = {
@@ -193,6 +210,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000233653'}
         )
+        mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for staff users
         self.login_staff_user()
@@ -207,6 +225,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100)
+        mock_error_logger.assert_not_called()
 
         # Test no results
         mock_get_variants.side_effect = _get_empty_es_variants
@@ -223,6 +242,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
                 'totalResults': 0,
             }
         })
+        mock_error_logger.assert_not_called()
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_projects_variants(self, mock_get_variants):
@@ -473,3 +493,90 @@ class VariantSearchAPITest(AuthenticationTestCase):
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[global_saved_search_guid])
         response = self.client.get(delete_saved_search_url)
         self.assertEqual(response.status_code, 403)
+
+
+# Tests for AnVIL access disabled
+class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
+
+
+def assert_no_list_ws_has_al(self, acl_call_count, workspace_name=None):
+    self.mock_list_workspaces.assert_not_called()
+    if not workspace_name:
+        workspace_name = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
+    self.mock_get_ws_access_level.assert_called_with(mock.ANY, 'my-seqr-billing', workspace_name)
+    self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    self.mock_get_ws_acl.assert_not_called()
+
+
+# Test for permissions from AnVIL only
+class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+
+    def test_query_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
+        assert_no_list_ws_has_al(self, 10)
+
+    def test_query_all_projects_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
+        calls = [
+            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        ]
+        self.mock_list_workspaces.assert_has_calls(calls)
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
+        self.mock_get_ws_acl.assert_not_called()
+
+    def test_query_all_project_families_variants(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
+        assert_no_list_ws_has_al(self, 2, workspace_name='anvil-project 1000 Genomes Demo')
+
+    def test_search_context(self):
+        super(AnvilVariantSearchAPITest, self).test_search_context()
+        assert_no_list_ws_has_al(self, 15)
+
+    def test_query_single_variant(self, *args):
+        super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
+        assert_no_list_ws_has_al(self, 3)
+
+    def test_saved_search(self):
+        super(AnvilVariantSearchAPITest, self).test_saved_search()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+
+
+# Test for permissions from AnVIL and local
+class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+
+    def test_query_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_variants(*args)
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_query_all_projects_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
+        calls = [
+            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        ]
+        self.mock_list_workspaces.assert_has_calls(calls)
+        self.mock_get_ws_acl.assert_not_called()
+
+    def test_query_all_project_families_variants(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
+        assert_no_list_ws_has_al(self, 1, workspace_name='anvil-project 1000 Genomes Demo')
+
+    def test_search_context(self):
+        super(MixSavedVariantSearchAPITest, self).test_search_context()
+        assert_no_list_ws_has_al(self, 8)
+
+    def test_query_single_variant(self, *args):
+        super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_saved_search(self):
+        super(MixSavedVariantSearchAPITest, self).test_saved_search()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()

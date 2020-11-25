@@ -10,11 +10,14 @@ from collections import defaultdict
 from copy import copy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions
+from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_workspace_collaborator_perms
+from seqr.views.utils.terra_api_utils import is_google_authenticated
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,8 +89,11 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
+DEFUALT_USER = {
 
-def _get_json_for_user(user):
+}
+
+def _get_json_for_user(user, is_anvil=None):
     """Returns JSON representation of the given User object
 
     Args:
@@ -104,6 +110,7 @@ def _get_json_for_user(user):
         _to_camel_case(field): getattr(user, field) for field in [
         'username', 'email', 'first_name', 'last_name', 'last_login', 'is_superuser', 'is_active', 'date_joined', 'id',
     ]}
+    user_json['isAnvil'] = is_google_authenticated(user) if is_anvil is None else is_anvil
     user_json['displayName'] = user.get_full_name()
     user_json.update({
         'isAnalyst': user.is_staff,
@@ -677,14 +684,14 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_project_collaborator_list(project):
+def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(project).values())
+    collaborator_list = list(get_project_collaborators_by_username(user, project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def get_project_collaborators_by_username(project, include_permissions=True):
+def get_project_collaborators_by_username(user, project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
@@ -698,11 +705,33 @@ def get_project_collaborators_by_username(project, include_permissions=True):
             collaborator, include_permissions, can_edit=True
         )
 
+    if project_has_anvil(project):
+        permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
+        users_by_email = {u.email: u for u in User.objects.filter(email__in = permission_levels.keys())}
+        for email, permission in permission_levels.items():
+            collaborator = users_by_email.get(email)
+            if collaborator:
+                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
+                    can_edit=permission==CAN_EDIT, is_anvil=True)})
+            else:
+                collaborators[email] = {
+                    'username': email,  # to ensure everything has a unique ID
+                    'email': email,
+                    'isAnvil': True,
+                    'hasViewPermissions': True,
+                    'hasEditPermissions': permission == CAN_EDIT,
+                    'displayName': email,
+                    'lastName': email,
+                    'is_staff': False,
+                    'is_active': True,
+                    'first_name': '', 'last_login': '', 'date_joined': '', 'id': '',
+                }
+
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit):
-    collaborator_json = _get_json_for_user(collaborator)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False):
+    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,

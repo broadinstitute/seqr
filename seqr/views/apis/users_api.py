@@ -34,7 +34,7 @@ def get_all_collaborators(request):
     else:
         collaborators = {}
         for project in get_projects_user_can_view(request.user):
-            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False))
+            collaborators.update(get_project_collaborators_by_username(request.user, project, include_permissions=False))
 
     return create_json_response(collaborators)
 
@@ -124,7 +124,7 @@ def create_project_collaborator(request, project_guid):
     project.can_view_group.user_set.add(user)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(request.user, project)}}
     })
 
 
@@ -168,7 +168,7 @@ def _update_existing_user(user, project, request_json):
         project.can_edit_group.user_set.remove(user)
 
     return create_json_response({
-        'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(user, project)}}
     })
 
 
@@ -190,5 +190,5 @@ def delete_project_collaborator(request, project_guid, username):
     project.can_edit_group.user_set.remove(user)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(request.user, project)}}
     })

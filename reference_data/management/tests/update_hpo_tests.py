@@ -127,8 +127,8 @@ EXPECTED_DB_DATA = {
 }
 
 class UpdateHpoTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
-    multi_db = True
 
     @responses.activate
     @mock.patch('reference_data.management.commands.update_human_phenotype_ontology.logger')

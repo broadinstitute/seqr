@@ -17,8 +17,8 @@ MGI_DATA = [
 
 
 class UpdateMgiTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
-    multi_db = True
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')

@@ -300,6 +300,10 @@ urlpatterns += [
     }),
 ]
 
+urlpatterns += [
+    url('', include('social_django.urls')),
+]
+
 if DEBUG:
     urlpatterns += [
         url(r'^hijack/', include('hijack.urls')),

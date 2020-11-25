@@ -135,7 +135,7 @@ def project_page_data(request, project_guid):
     response = _get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
-    project_json['collaborators'] = get_json_for_project_collaborator_list(project)
+    project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
     project_json['locusListGuids'] = list(response['locusListsByGuid'].keys())
     project_json['detailsLoaded'] = True
     project_json.update(_get_json_for_variant_tag_types(project))

@@ -5,10 +5,10 @@ import logging
 import random
 
 from django.contrib.auth.models import User, Group
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import options, ForeignKey
+from django.db.models import options, ForeignKey, JSONField
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -163,6 +163,9 @@ class Project(ModelWithGUID):
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
+    workspace_namespace = models.TextField(null = True, blank = True)
+    workspace_name = models.TextField(null = True, blank = True)
+
     def __unicode__(self):
         return self.name.strip()
 
@@ -213,7 +216,8 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
-            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid'
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
+            'workspace_namespace', 'workspace_name'
         ]
 
 
@@ -274,7 +278,7 @@ class Family(ModelWithGUID):
         choices=SUCCESS_STORY_TYPE_CHOICES,
         null=True,
         blank=True
-    ), default=list())
+    ), default=list)
     success_story = models.TextField(null=True, blank=True)
 
     mme_notes = models.TextField(null=True, blank=True)
@@ -283,7 +287,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
-    pubmed_ids = ArrayField(models.TextField(), default=list())
+    pubmed_ids = ArrayField(models.TextField(), default=list)
 
     analysis_status = models.CharField(
         max_length=10,
@@ -323,7 +327,7 @@ class Family(ModelWithGUID):
 
 # TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/broadinstitute/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
     def __unicode__(self):
         return '{}_{}'.format(self.family.guid, self.created_by)
@@ -474,8 +478,8 @@ class Individual(ModelWithGUID):
 
     maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
     paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
-    consanguinity = models.NullBooleanField()
-    affected_relatives = models.NullBooleanField()
+    consanguinity = models.BooleanField(null=True)
+    affected_relatives = models.BooleanField(null=True)
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
 
     # features are objects with an id field for HPO id and optional notes and qualifiers fields
@@ -493,13 +497,13 @@ class Individual(ModelWithGUID):
     candidate_genes = JSONField(null=True)
     rejected_genes = JSONField(null=True)
 
-    ar_fertility_meds = models.NullBooleanField()
-    ar_iui = models.NullBooleanField()
-    ar_ivf = models.NullBooleanField()
-    ar_icsi = models.NullBooleanField()
-    ar_surrogacy = models.NullBooleanField()
-    ar_donoregg = models.NullBooleanField()
-    ar_donorsperm = models.NullBooleanField()
+    ar_fertility_meds = models.BooleanField(null=True)
+    ar_iui = models.BooleanField(null=True)
+    ar_ivf = models.BooleanField(null=True)
+    ar_icsi = models.BooleanField(null=True)
+    ar_surrogacy = models.BooleanField(null=True)
+    ar_donoregg = models.BooleanField(null=True)
+    ar_donorsperm = models.BooleanField(null=True)
 
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
