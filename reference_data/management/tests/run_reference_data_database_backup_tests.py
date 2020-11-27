@@ -9,6 +9,7 @@ from django.test import TestCase
 @mock.patch('reference_data.management.commands.run_reference_data_database_backup.os')
 @mock.patch('reference_data.management.commands.run_reference_data_database_backup.datetime')
 class RunReferenceDataDbBackupTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
 
     def test_reference_data_db_backup_command(self, mock_datetime, mock_os, mock_logger):

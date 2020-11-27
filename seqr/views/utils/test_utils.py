@@ -3,13 +3,14 @@ from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
+import mock
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
 class AuthenticationTestCase(TestCase):
-
+    databases = '__all__'
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
@@ -94,6 +95,168 @@ class AuthenticationTestCase(TestCase):
 
         self.login_staff_user()
 
+
+ANVIL_WORKSPACES = [{
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_not_registered@test.com': {
+            "accessLevel": "READER",
+            "pending": True,
+            "canShare": False,
+            "canCompute": True
+        },
+        'test_user_pure_anvil@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-project 1000 Genomes Demo',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": False
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace1',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_no_staff@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace2',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}
+]
+
+
+TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
+
+# the time must the same as that in 'auth_time' in the social_auth fixture data
+TOKEN_AUTH_TIME = 1603287741
+WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
+REGISTER_RESPONSE = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"test@test.com","userSubjectId":"123456"}}'
+
+
+def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    return wss[0]['acl'] if wss else {}
+
+
+def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    acl = wss[0]['acl'] if wss else {}
+    if user.email in acl.keys():
+        return {'accessLevel': acl[user.email]['accessLevel']}
+    return {}
+
+
+def get_workspaces_side_effect(user, fields):
+    return [
+        {
+            'public': ws['public'],
+            'accessLevel': ws['acl'][user.email]['accessLevel'],
+            'workspace':{
+                'namespace': ws['workspace_namespace'],
+                'name': ws['workspace_name']
+            }
+        } for ws in ANVIL_WORKSPACES if user.email in ws['acl'].keys()
+    ]
+
+
+class AnvilAuthenticationTestCase(AuthenticationTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.get(username='test_user')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+
+    # mock the terra apis
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = TOKEN_AUTH_TIME + 10
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        self.mock_list_workspaces = patcher.start()
+        self.mock_list_workspaces.side_effect = get_workspaces_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_acl')
+        self.mock_get_ws_acl = patcher.start()
+        self.mock_get_ws_acl.side_effect = get_ws_acl_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
+        self.mock_get_ws_access_level = patcher.start()
+        self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
+        self.addCleanup(patcher.stop)
+
+
+# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
+class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
+    LOCAL_USER = 'local_user'
+
+    # use the local permissions set-up by AuthenticationTestCase
+    @classmethod
+    def setUpTestData(cls):
+        AuthenticationTestCase.setUpTestData()
+        cls.local_user = User.objects.get(username = 'test_local_user')
+        view_group = Group.objects.get(pk=3)
+        view_group.user_set.add(cls.local_user)
+
+
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
 # The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
 # methods for easier usage
@@ -117,13 +280,13 @@ urllib3_responses = Urllib3Responses()
 
 
 USER_FIELDS = {
-    'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isActive',
+    'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isActive', 'isAnvil'
 }
 
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
-    'isMmeEnabled',
+    'isMmeEnabled', 'workspaceName', 'workspaceNamespace'
 }
 
 FAMILY_FIELDS = {
@@ -577,3 +740,8 @@ PARSED_SV_VARIANT = {
     'numExon': 2,
     '_sort': [1049045387],
 }
+
+GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
+
+GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'

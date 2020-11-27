@@ -23,6 +23,7 @@ def mgi_exception():
 @mock.patch('reference_data.management.commands.update_all_reference_data.update_gencode')
 @mock.patch('reference_data.management.commands.update_all_reference_data.OmimReferenceDataHandler')
 class UpdateAllReferenceDataTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
 
     @mock.patch('reference_data.management.commands.update_dbnsfp_gene.DbNSFPReferenceDataHandler')

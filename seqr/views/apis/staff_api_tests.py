@@ -453,7 +453,6 @@ SAMPLE_SV_QC_DATA = [
 
 class StaffAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
-    multi_db = True
 
     @urllib3_responses.activate
     def test_elasticsearch_status(self):

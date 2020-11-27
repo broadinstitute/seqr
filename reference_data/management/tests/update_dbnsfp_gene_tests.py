@@ -17,8 +17,8 @@ dbNSFP_GENE_DATA = [ dbNSFP_HEADER,
 
 
 class UpdateDbNsfpGeneTest(TestCase):
+    databases = '__all__'
     fixtures = ['users', 'reference_data']
-    multi_db = True
 
     @responses.activate
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
