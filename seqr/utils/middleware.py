@@ -35,11 +35,11 @@ class JsonErrorMiddleware(MiddlewareMixin):
     def process_exception(request, exception):
         if request.path.startswith('/api'):
             exception_json = {'error': str(exception)}
-            if DEBUG:
+            status = _get_exception_status_code(exception)
+            if DEBUG or status == 500:
                 traceback_message = traceback.format_exc()
-                logger.error(traceback_message)
                 exception_json['traceback'] = traceback_message
-            return create_json_response(exception_json, status=_get_exception_status_code(exception))
+            return create_json_response(exception_json, status=status)
         return None
 
 class LogRequestMiddleware(MiddlewareMixin):
@@ -68,11 +68,13 @@ class LogRequestMiddleware(MiddlewareMixin):
             pass
 
         error = ''
+        traceback = None
         try:
             response_json = json.loads(response.content)
             error = response_json.get('error')
             if response_json.get('errors'):
                 error = '; '.join(response_json['errors'])
+            traceback = response_json.get('traceback')
         except (ValueError, AttributeError):
             pass
 
@@ -85,6 +87,8 @@ class LogRequestMiddleware(MiddlewareMixin):
             message = error
         else:
             level = logger.info
-        level(message, extra={'http_request_json': http_json, 'request_body': request_body, 'user': request.user})
+        level(message, extra={
+            'http_request_json': http_json, 'request_body': request_body, 'traceback': traceback, 'user': request.user,
+        })
 
         return response
