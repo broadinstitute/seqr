@@ -187,8 +187,7 @@ def _retrieve_families(project_guid, user):
     Returns:
         dictionary: families_by_guid
     """
-    fields = Family._meta.json_fields + Family._meta.internal_json_fields
-    family_models = Family.objects.filter(project__guid=project_guid).only(*fields)
+    family_models = Family.objects.filter(project__guid=project_guid)
 
     families = _get_json_for_families(family_models, user, project_guid=project_guid)
 

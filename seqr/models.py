@@ -160,6 +160,7 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     disable_staff_access = models.BooleanField(default=False)
+    has_case_review = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -217,7 +218,7 @@ class Project(ModelWithGUID):
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
-            'workspace_namespace', 'workspace_name'
+            'workspace_namespace', 'workspace_name', 'has_case_review'
         ]
 
 
@@ -295,15 +296,8 @@ class Family(ModelWithGUID):
         default="Q"
     )
 
-    internal_analysis_status = models.CharField(
-        max_length=10,
-        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
-        null=True,
-        blank=True
-    )
-
-    internal_case_review_notes = models.TextField(null=True, blank=True)
-    internal_case_review_summary = models.TextField(null=True, blank=True)
+    case_review_notes = models.TextField(null=True, blank=True)
+    case_review_summary = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.family_id.strip()
@@ -320,7 +314,6 @@ class Family(ModelWithGUID):
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
-            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
             'success_story_types', 'success_story'
         ]
 

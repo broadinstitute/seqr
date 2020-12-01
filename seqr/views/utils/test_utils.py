@@ -287,7 +287,7 @@ USER_FIELDS = {
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
-    'isMmeEnabled', 'workspaceName', 'workspaceNamespace'
+    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview'
 }
 
 FAMILY_FIELDS = {
@@ -295,10 +295,11 @@ FAMILY_FIELDS = {
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
     'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'mmeNotes',
 }
-
+CASE_REVIEW_FAMILY_FIELDS = {
+    'caseReviewNotes', 'caseReviewSummary'
+}
 INTERNAL_FAMILY_FIELDS = {
-    'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary', 'individualGuids', 'successStory',
-    'successStoryTypes',
+    'individualGuids', 'successStory', 'successStoryTypes',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 

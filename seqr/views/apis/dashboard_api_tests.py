@@ -5,7 +5,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
-    WORKSPACE_FIELDS
+    WORKSPACE_FIELDS, PROJECT_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -30,6 +30,10 @@ PROJECT_EXPORT_HEADER = [
     'Waiting for data',
 ]
 
+DASHBOARD_PROJECT_FIELDS = {
+    'numIndividuals', 'numFamilies', 'sampleTypeCounts', 'numVariantTags', 'analysisStatusCounts',
+}
+DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 
 class DashboardPageTest(object):
 
@@ -53,11 +57,7 @@ class DashboardPageTest(object):
         )
         self.assertEqual(len(response_json['projectsByGuid']), self.NUM_COLLABORATOR_PROJECTS)
         self.assertSetEqual(
-            set(next(iter(response_json['projectsByGuid'].values())).keys()),
-            {'analysisStatusCounts', 'canEdit', 'createdDate', 'description', 'genomeVersion', 'sampleTypeCounts',
-             'isMmeEnabled', 'lastAccessedDate', 'lastModifiedDate', 'projectCategoryGuids', 'projectGuid',
-             'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
-             'numVariantTags', 'workspaceName', 'workspaceNamespace'}
+            set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
 
         # Staff users can see all projects

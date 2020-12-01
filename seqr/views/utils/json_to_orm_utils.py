@@ -20,7 +20,7 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False):
 
     update_model_from_json(
         family, json, user=user, allow_unknown_keys=allow_unknown_keys,
-        immutable_keys=['pedigree_image', 'assigned_analyst'],
+        immutable_keys=['pedigree_image', 'assigned_analyst', 'case_review_summary', 'case_review_notes'],
     )
 
 
