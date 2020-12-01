@@ -7,6 +7,7 @@ from seqr.views.apis.case_review_api import save_internal_case_review_notes, sav
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 FAMILY_GUID = 'F000001_1'
+NO_CASE_REVIEW_FAMILY_GUID = 'F000011_11'
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -16,7 +17,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
     def test_save_internal_case_review_notes(self):
         url = reverse(save_internal_case_review_notes, args=[FAMILY_GUID])
-        self.check_staff_login(url)
+        self.check_manager_login(url)
 
         # send request with a "value" attribute
         req_values = {
@@ -29,19 +30,25 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
-        self.assertEqual(response_json[FAMILY_GUID]['internalCaseReviewNotes'], req_values['value'])
+        self.assertEqual(response_json[FAMILY_GUID]['caseReviewNotes'], req_values['value'])
 
         # send request with a invalid "value" attribute
-        req_values = {
+        invalid_req_values = {
             'valueX': 'some case review notes'
         }
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
+                                    data=json.dumps(invalid_req_values))
         self.assertEqual(response.status_code, 500)
+
+        # send request for invalid project
+        url = reverse(save_internal_case_review_notes, args=[NO_CASE_REVIEW_FAMILY_GUID])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'User cannot edit case_review_notes for this project')
 
     def test_save_internal_case_review_summary(self):
         url = reverse(save_internal_case_review_summary, args=[FAMILY_GUID])
-        self.check_staff_login(url)
+        self.check_manager_login(url)
 
         # send request with a "value" attribute
         req_values = {
@@ -54,11 +61,17 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
-        self.assertEqual(response_json[FAMILY_GUID]['internalCaseReviewSummary'], req_values['value'])
+        self.assertEqual(response_json[FAMILY_GUID]['caseReviewSummary'], req_values['value'])
         # send request with a "value" attribute
-        req_values = {
+        invalid_req_values = {
             'valueX': 'some case review notes'
         }
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
+                                    data=json.dumps(invalid_req_values))
         self.assertEqual(response.status_code, 500)
+
+        # send request for invalid project
+        url = reverse(save_internal_case_review_summary, args=[NO_CASE_REVIEW_FAMILY_GUID])
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'User cannot edit case_review_summary for this project')

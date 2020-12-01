@@ -15,7 +15,8 @@ from django.contrib.auth.models import User
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_workspace_collaborator_perms
+from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
+    project_has_anvil, get_workspace_collaborator_perms
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 logger = logging.getLogger(__name__)
@@ -156,6 +157,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     Returns:
         array: json objects
     """
+    if not families:
+        return []
 
     def _get_pedigree_image_url(pedigree_image):
         if isinstance(pedigree_image, ImageFieldFile):
@@ -189,13 +192,18 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
+    kwargs = {'additional_model_fields': _get_case_review_fields(families[0], families[0].project, user)}
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
     else:
-        kwargs = {'additional_model_fields': ['project_id']}
+        kwargs['additional_model_fields'] = (kwargs['additional_model_fields'] or []) + ['project_id']
 
-    return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
+    return _get_json_for_models(families, user=user, process_result=_process_result,  **kwargs)
 
+def _get_case_review_fields(model, project, user):
+    if not (user and has_case_review_permissions(project, user)):
+        return None
+    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 def _get_json_for_family(family, user=None, **kwargs):
     """Returns a JSON representation of the given Family.
