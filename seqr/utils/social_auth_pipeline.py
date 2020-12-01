@@ -16,5 +16,7 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
             return redirect('/login?googleLoginFailed=true')
 
 
-def log_signed_in(backend, response, *args, **kwargs):
-    logger.info('Logged in {}(AnVIL)'.format(response['email']))
+def log_signed_in(backend, response, is_new=False, *args, **kwargs):
+    logger.info('Logged in {} ({})'.format(response['email'], backend.name))
+    if is_new:
+        logger.info('Created user {} ({})'.format(response['email'], backend.name))

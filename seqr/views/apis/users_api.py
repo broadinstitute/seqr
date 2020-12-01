@@ -145,6 +145,7 @@ def _create_user(request, is_staff=False):  # TODO clean up?
         last_name=request_json.get('lastName') or '',
         is_staff=is_staff,
     )
+    logger.info('Created user {} (local)'.format(request_json['email']), extra={'user': request.user})
 
     try:
         send_welcome_email(user, request.user)

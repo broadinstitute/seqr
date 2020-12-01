@@ -50,8 +50,10 @@ class UsersAPITest(object):
         self.assertSetEqual(set(response.json().keys()), {
             'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user'})
 
+
+    @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
-    def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
+    def test_create_update_and_delete_project_collaborator(self, mock_send_mail, mock_logger):
         create_url = reverse(create_project_collaborator, args=[PROJECT_GUID])
         self.check_manager_login(create_url)
 
@@ -100,6 +102,9 @@ class UsersAPITest(object):
         )
         mock_send_mail.reset_mock()
 
+        mock_logger.info.assert_called_with('Created user test@test.com (local)', extra={'user': self.manager_user})
+        mock_logger.reset_mock()
+
         # get all project collaborators includes new collaborator
         get_all_collaborators_url = reverse(get_all_collaborators)
         response = self.client.get(get_all_collaborators_url)
@@ -117,6 +122,7 @@ class UsersAPITest(object):
         self.assertEqual(collaborators[self.NEW_USER_IDX]['username'], username)
         self.assertEqual(collaborators[self.NEW_USER_IDX]['displayName'], 'Test User')
         mock_send_mail.assert_not_called()
+        mock_logger.info.assert_not_called()
 
         # update the user
         update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, username])
