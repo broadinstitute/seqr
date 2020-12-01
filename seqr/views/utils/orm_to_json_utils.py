@@ -165,6 +165,12 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
+def _get_case_review_fields(model, project, user):
+    if not (user and has_case_review_permissions(project, user)):
+        return None
+    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
+
+
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False):
     """Returns a JSON representation of the given Family.
 
@@ -219,10 +225,6 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     return _get_json_for_models(families, user=user, process_result=_process_result,  **kwargs)
 
-def _get_case_review_fields(model, project, user):
-    if not (user and has_case_review_permissions(project, user)):
-        return None
-    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 def _get_json_for_family(family, user=None, **kwargs):
     """Returns a JSON representation of the given Family.
@@ -272,6 +274,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
             result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
+    kwargs = {
+        'additional_model_fields': _get_case_review_fields(individuals[0], individuals[0].family.project, user) or []
+    }
     if project_guid or not skip_nested:
         nested_fields = [
             {'fields': ('family', 'guid'), 'value': family_guid},
@@ -280,9 +285,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         if family_fields:
             for field in family_fields:
                 nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs = {'nested_fields': nested_fields, 'additional_model_fields': []}
+        kwargs.update({'nested_fields': nested_fields})
     else:
-        kwargs = {'additional_model_fields': ['family_id']}
+        kwargs['additional_model_fields'].append('family_id')
 
     if add_hpo_details:
         kwargs['additional_model_fields'] += [
@@ -290,7 +295,8 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
-    prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
+    if 'case_review_status_last_modified_by' in kwargs['additional_model_fields']:
+        prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')

@@ -773,6 +773,7 @@ const CASE_REVIEW_FIELDS = [
     isEditable: true,
     individualFields: ({ caseReviewStatus, caseReviewDiscussion }) => ({
       isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED || caseReviewDiscussion,
+      individualField: 'case_review_discussion',
     }),
   },
   ...INDIVIDUAL_FIELDS,

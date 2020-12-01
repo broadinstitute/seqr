@@ -26,10 +26,10 @@ import {
   FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
-  INTERNAL_FAMILY_EXPORT_DATA,
+  CASE_REVIEW_FAMILY_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   INDIVIDUAL_EXPORT_DATA,
-  INTERNAL_INDIVIDUAL_EXPORT_DATA,
+  CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
 } from './constants'
 
@@ -239,7 +239,7 @@ export const getFamiliesExportConfig = createSelector(
   getFamiliesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'families',
-  (state, ownProps) => ((ownProps || {}).internal ? FAMILY_EXPORT_DATA.concat(INTERNAL_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
+  (state, ownProps) => ((ownProps || {}).caseReview ? FAMILY_EXPORT_DATA.concat(CASE_REVIEW_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
   getEntityExportConfig,
 )
 
@@ -263,7 +263,7 @@ export const getIndividualsExportConfig = createSelector(
   getIndividualsExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'individuals',
-  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
+  (state, ownProps) => ((ownProps || {}).caseReview ? INDIVIDUAL_EXPORT_DATA.concat(CASE_REVIEW_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
   getEntityExportConfig,
 )
 
