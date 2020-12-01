@@ -520,8 +520,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'case_review_status', 'case_review_discussion',
-            'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
+            'proband_relationship'
         ]
 
 

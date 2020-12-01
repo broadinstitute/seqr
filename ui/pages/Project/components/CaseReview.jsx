@@ -36,7 +36,7 @@ const CaseReviewTable = React.memo((props) => {
   return (
     <div>
       <FamilyTable
-        showInternalFilters
+        showCaseReviewFilters
         editCaseReview
         showDetails
         tableName={CASE_REVIEW_TABLE_NAME}
@@ -59,8 +59,8 @@ CaseReviewTable.propTypes = {
 
 const mapStateToProps = state => ({
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
-  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
+  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, caseReview: true }),
+  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, caseReview: true }),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

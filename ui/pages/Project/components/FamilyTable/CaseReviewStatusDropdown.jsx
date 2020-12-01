@@ -35,7 +35,7 @@ const STATUS_FORM_FIELDS = [{
 const CaseReviewStatusDropdown = React.memo(props =>
   <StatusContainer>
     <ReduxFormWrapper
-      onSubmit={props.updateIndividual}
+      onSubmit={props.updateIndividualStatus}
       form={`editCaseReviewStatus-${props.individual.individualGuid}`}
       initialValues={props.individual}
       closeOnSuccess={false}
@@ -54,7 +54,7 @@ const CaseReviewStatusDropdown = React.memo(props =>
           field="caseReviewDiscussion"
           idField="individualGuid"
           modalTitle={`${props.individual.displayName}: Case Review Discussion`}
-          onSubmit={props.updateIndividual}
+          onSubmit={props.updateIndividualDiscussion}
         />
       }
     </div>
@@ -66,13 +66,19 @@ export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
 CaseReviewStatusDropdown.propTypes = {
   individual: PropTypes.object.isRequired,
-  updateIndividual: PropTypes.func.isRequired,
+  updateIndividualStatus: PropTypes.func.isRequired,
+  updateIndividualDiscussion: PropTypes.func.isRequired,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    updateIndividual: (updates) => {
-      dispatch(updateIndividual({ individualGuid: ownProps.individual.individualGuid, ...updates }))
+    updateIndividualStatus: (updates) => {
+      dispatch(updateIndividual({
+        individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_status', ...updates }))
+    },
+    updateIndividualDiscussion: (updates) => {
+      dispatch(updateIndividual({
+        individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_discussion', ...updates }))
     },
   }
 }

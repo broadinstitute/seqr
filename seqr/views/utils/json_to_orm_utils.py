@@ -1,6 +1,5 @@
 import logging
 from django.core.exceptions import PermissionDenied
-from django.utils import timezone
 
 from seqr.models import Individual
 from seqr.utils.logging_utils import log_model_update
@@ -25,13 +24,6 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False):
 
 
 def update_individual_from_json(individual, json, user, allow_unknown_keys=False):
-    if json.get('caseReviewStatus') and json['caseReviewStatus'] != individual.case_review_status:
-        json['caseReviewStatusLastModifiedBy'] = user
-        json['caseReviewStatusLastModifiedDate'] = timezone.now()
-    else:
-        json.pop('caseReviewStatusLastModifiedBy', None)
-        json.pop('caseReviewStatusLastModifiedDate', None)
-
     _parse_parent_field(json, individual, 'mother', 'maternalId')
     _parse_parent_field(json, individual, 'father', 'paternalId')
 
@@ -43,6 +35,8 @@ def update_individual_from_json(individual, json, user, allow_unknown_keys=False
         immutable_keys=[
             'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features',
+            'case_review_status', 'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
+            'case_review_discussion'
         ],
     )
 
