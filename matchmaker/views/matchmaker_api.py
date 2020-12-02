@@ -47,7 +47,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     gene_ids = set()
     for variant in response_json['savedVariantsByGuid'].values():
-        gene_ids.update(list(variant['transcripts'].keys()))
+        gene_ids.update(list(variant.get('transcripts', {}).keys()))
 
     return _parse_mme_results(
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
