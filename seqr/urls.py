@@ -114,6 +114,8 @@ from seqr.views.apis.staff_api import \
     sample_metadata_export, \
     proxy_to_kibana
 
+from seqr.views.apis.superuser_api import get_all_users
+
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
@@ -259,6 +261,7 @@ api_endpoints = {
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'staff/get_all_users': get_all_users,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

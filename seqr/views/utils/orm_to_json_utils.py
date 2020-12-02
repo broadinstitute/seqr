@@ -106,6 +106,7 @@ def _get_json_for_user(user, is_anvil=None):
     user_json = {
         _to_camel_case(field): getattr(user, field) for field in [
         'username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'is_active', 'date_joined', 'id',
+        'is_superuser',
     ]}
     user_json['isAnvil'] = is_google_authenticated(user) if is_anvil is None else is_anvil
     user_json['displayName'] = user.get_full_name()

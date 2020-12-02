@@ -870,10 +870,3 @@ class StaffAPITest(AuthenticationTestCase):
         # Test with connection error
         response = self.client.get('{}/bad_path'.format(url))
         self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
-
-    def test_admin(self):
-        url = 'http://localhost/admin/'
-        self.check_superuser_login(url)
-
-        response = self.client.get(url)
-        self.assertContains(response, 'Django administration', status_code=200)
