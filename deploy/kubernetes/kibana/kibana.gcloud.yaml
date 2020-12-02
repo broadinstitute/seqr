@@ -12,8 +12,11 @@ spec:
   count: 1
   config:
     elasticsearch.hosts:
-      - http://{{ ELASTICSEARCH_SERVICE_EXTERNAL_IP }}:{{ ELASTICSEARCH_SERVICE_PORT }}
+      - http://{{ ELASTICSEARCH_SERVICE_HOSTNAME }}:{{ ELASTICSEARCH_SERVICE_PORT }}
     elasticsearch.username: kibana
+    xpack.security.sameSiteCookies: None
+    xpack.security.secureCookies: true
+    server.customResponseHeaders: {"x-frame-options":"sameorigin"}
   secureSettings:
     - secretName: kibana-secrets
   podTemplate:
