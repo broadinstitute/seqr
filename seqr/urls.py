@@ -297,7 +297,6 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
