@@ -235,6 +235,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         array: array of json objects
     """
 
+    if not individuals:
+        return []
+
     def _get_case_review_status_modified_by(modified_by):
         return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
 
