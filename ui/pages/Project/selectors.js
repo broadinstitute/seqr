@@ -27,6 +27,7 @@ import {
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   CASE_REVIEW_FAMILY_EXPORT_DATA,
+  CASE_REVIEW_TABLE_NAME,
   INDIVIDUAL_HAS_DATA_FIELD,
   INDIVIDUAL_EXPORT_DATA,
   CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
@@ -237,10 +238,13 @@ export const getFamiliesExportData = createSelector(
 export const getFamiliesExportConfig = createSelector(
   getCurrentProject,
   getFamiliesExportData,
-  (state, ownProps) => (ownProps || {}).tableName,
-  () => 'families',
-  (state, ownProps) => ((ownProps || {}).caseReview ? FAMILY_EXPORT_DATA.concat(CASE_REVIEW_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
-  getEntityExportConfig,
+  (project, rawData) => getEntityExportConfig(project, rawData, null, 'families', FAMILY_EXPORT_DATA),
+)
+
+export const getCaseReviewFamiliesExportConfig = createSelector(
+  getCurrentProject,
+  getFamiliesExportData,
+  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'families', CASE_REVIEW_FAMILY_EXPORT_DATA),
 )
 
 export const getIndividualsExportData = createSelector(
@@ -261,10 +265,13 @@ export const getIndividualsExportData = createSelector(
 export const getIndividualsExportConfig = createSelector(
   getCurrentProject,
   getIndividualsExportData,
-  (state, ownProps) => (ownProps || {}).tableName,
-  () => 'individuals',
-  (state, ownProps) => ((ownProps || {}).caseReview ? INDIVIDUAL_EXPORT_DATA.concat(CASE_REVIEW_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
-  getEntityExportConfig,
+  (project, rawData) => getEntityExportConfig(project, rawData, null, 'individuals', INDIVIDUAL_EXPORT_DATA),
+)
+
+export const getCaseReviewIndividualsExportConfig = createSelector(
+  getCurrentProject,
+  getIndividualsExportData,
+  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'individuals', CASE_REVIEW_INDIVIDUAL_EXPORT_DATA),
 )
 
 const getSamplesExportData = createSelector(
