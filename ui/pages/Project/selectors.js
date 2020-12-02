@@ -514,14 +514,13 @@ const getSearchType = ({ breadcrumb, variantPage }) => {
 }
 
 export const getPageHeaderEntityLinks = createSelector(
-  getUser,
   getCurrentProject,
   getPageHeaderFamily,
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
   getHasActiveVariantSampleByFamily,
-  (user, project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -542,7 +541,7 @@ export const getPageHeaderEntityLinks = createSelector(
       popup: disabled ? 'Search is disabled until data is loaded' : null,
 
     }]
-    if (user.isStaff) {
+    if (project.hasCaseReview) {
       entityLinks.push({
         to: `/project/${project.projectGuid}/case_review`,
         content: 'Case Review',
