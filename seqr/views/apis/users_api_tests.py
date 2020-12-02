@@ -49,7 +49,9 @@ class UsersAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json().keys()), {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user'})
+            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user',
+            'test_superuser',
+        })
 
 
     @mock.patch('seqr.views.apis.users_api.logger')

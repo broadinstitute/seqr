@@ -9,10 +9,10 @@ from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \
     add_variants_dataset_handler, \
     receive_igv_table_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, DEBUG
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG
 from django.conf.urls import url, include
 from django.contrib import admin
-import django.contrib.admindocs.urls
+from django.views.generic.base import RedirectView
 import django.views.static
 
 from seqr.views.apis.family_api import \
@@ -295,6 +295,7 @@ urlpatterns += [
 ]
 
 urlpatterns += [
+    url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
