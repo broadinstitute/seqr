@@ -11,7 +11,7 @@ from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
 from deploy.servctl_utils.yaml_settings_utils import process_jinja_template, load_settings
-from deploy.servctl_utils.shell_utils import run
+from deploy.servctl_utils.shell_utils import run, wait_for
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
@@ -244,6 +244,17 @@ def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+
+
+def deploy_linkerd(settings):
+    print_separator('linkerd')
+
+    has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
+    if not has_namespace:
+        run('linkerd install | kubectl apply -f -')
+
+        wait_for('linkerd check')
+
 
 def deploy_postgres(settings):
     print_separator("postgres")
