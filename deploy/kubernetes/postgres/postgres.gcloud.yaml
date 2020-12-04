@@ -24,6 +24,8 @@ spec:
       name: postgres
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         name: postgres
         deployment: {{ DEPLOY_TO }}

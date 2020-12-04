@@ -21,6 +21,8 @@ spec:
     - secretName: kibana-secrets
   podTemplate:
     metadata:
+      annotations:
+            linkerd.io/inject: enabled
       labels:
         name: kibana
         deployment: {{ DEPLOY_TO }}
