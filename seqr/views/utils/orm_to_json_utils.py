@@ -148,7 +148,7 @@ def _get_json_for_project(project, user, **kwargs):
 
 def _get_case_review_fields(model, project, user):
     if not (user and has_case_review_permissions(project, user)):
-        return None
+        return []
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 
@@ -202,9 +202,9 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if project_guid or not skip_nested:
         kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
     else:
-        kwargs['additional_model_fields'] = (kwargs['additional_model_fields'] or []) + ['project_id']
+        kwargs['additional_model_fields'].append('project_id')
 
-    return _get_json_for_models(families, user=user, process_result=_process_result,  **kwargs)
+    return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_family(family, user=None, **kwargs):
@@ -259,7 +259,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
     kwargs = {
-        'additional_model_fields': _get_case_review_fields(individuals[0], individuals[0].family.project, user) or []
+        'additional_model_fields': _get_case_review_fields(individuals[0], individuals[0].family.project, user)
     }
     if project_guid or not skip_nested:
         nested_fields = [
