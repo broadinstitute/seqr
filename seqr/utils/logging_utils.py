@@ -22,6 +22,9 @@ class JsonLogFormatter(logging.Formatter):
         if hasattr(record, 'db_update'):
             log_json['dbUpdate'] = record.db_update
 
+        if hasattr(record, 'traceback'):
+            log_json['traceback'] = record.traceback
+
         if record.levelname == 'ERROR':
             # Allows GCP Error to detect that this is an error log
             log_json['@type'] = 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'
