@@ -249,6 +249,10 @@ def _set_elasticsearch_kubernetes_resources():
 def deploy_linkerd(settings):
     print_separator('linkerd')
 
+    version_match = run("linkerd version 2&>1 | awk '/Client/ {print $3}'")
+    if version_match != settings["LINKERD_VERSION"]:
+        raise Exception("Your locally installed linkerd version does not match the desired server version.")
+
     has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
     if not has_namespace:
         run('linkerd install | kubectl apply -f -')
