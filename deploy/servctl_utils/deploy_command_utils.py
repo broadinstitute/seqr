@@ -34,6 +34,7 @@ DEPLOYABLE_COMPONENTS = [
     "pipeline-runner",
 
     "kube-scan",
+    "linkerd",
 ]
 
 DEPLOYMENT_TARGETS = {}
