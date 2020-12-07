@@ -26,10 +26,11 @@ import {
   FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
-  INTERNAL_FAMILY_EXPORT_DATA,
+  CASE_REVIEW_FAMILY_EXPORT_DATA,
+  CASE_REVIEW_TABLE_NAME,
   INDIVIDUAL_HAS_DATA_FIELD,
   INDIVIDUAL_EXPORT_DATA,
-  INTERNAL_INDIVIDUAL_EXPORT_DATA,
+  CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
 } from './constants'
 
@@ -237,10 +238,13 @@ export const getFamiliesExportData = createSelector(
 export const getFamiliesExportConfig = createSelector(
   getCurrentProject,
   getFamiliesExportData,
-  (state, ownProps) => (ownProps || {}).tableName,
-  () => 'families',
-  (state, ownProps) => ((ownProps || {}).internal ? FAMILY_EXPORT_DATA.concat(INTERNAL_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
-  getEntityExportConfig,
+  (project, rawData) => getEntityExportConfig(project, rawData, null, 'families', FAMILY_EXPORT_DATA),
+)
+
+export const getCaseReviewFamiliesExportConfig = createSelector(
+  getCurrentProject,
+  getFamiliesExportData,
+  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'families', CASE_REVIEW_FAMILY_EXPORT_DATA),
 )
 
 export const getIndividualsExportData = createSelector(
@@ -261,10 +265,13 @@ export const getIndividualsExportData = createSelector(
 export const getIndividualsExportConfig = createSelector(
   getCurrentProject,
   getIndividualsExportData,
-  (state, ownProps) => (ownProps || {}).tableName,
-  () => 'individuals',
-  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
-  getEntityExportConfig,
+  (project, rawData) => getEntityExportConfig(project, rawData, null, 'individuals', INDIVIDUAL_EXPORT_DATA),
+)
+
+export const getCaseReviewIndividualsExportConfig = createSelector(
+  getCurrentProject,
+  getIndividualsExportData,
+  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'individuals', CASE_REVIEW_INDIVIDUAL_EXPORT_DATA),
 )
 
 const getSamplesExportData = createSelector(
@@ -514,14 +521,13 @@ const getSearchType = ({ breadcrumb, variantPage }) => {
 }
 
 export const getPageHeaderEntityLinks = createSelector(
-  getUser,
   getCurrentProject,
   getPageHeaderFamily,
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
   getHasActiveVariantSampleByFamily,
-  (user, project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -542,7 +548,7 @@ export const getPageHeaderEntityLinks = createSelector(
       popup: disabled ? 'Search is disabled until data is loaded' : null,
 
     }]
-    if (user.isStaff) {
+    if (project.hasCaseReview) {
       entityLinks.push({
         to: `/project/${project.projectGuid}/case_review`,
         content: 'Case Review',

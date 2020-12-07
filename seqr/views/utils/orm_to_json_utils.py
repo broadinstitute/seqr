@@ -15,7 +15,8 @@ from django.contrib.auth.models import User
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, project_has_anvil, get_workspace_collaborator_perms
+from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
+    project_has_anvil, get_workspace_collaborator_perms
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,12 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
+def _get_case_review_fields(model, project, user):
+    if not (user and has_case_review_permissions(project, user)):
+        return []
+    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
+
+
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False):
     """Returns a JSON representation of the given Family.
 
@@ -157,6 +164,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     Returns:
         array: json objects
     """
+    if not families:
+        return []
 
     def _get_pedigree_image_url(pedigree_image):
         if isinstance(pedigree_image, ImageFieldFile):
@@ -190,10 +199,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
+    kwargs = {'additional_model_fields': _get_case_review_fields(families[0], families[0].project, user)}
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
     else:
-        kwargs = {'additional_model_fields': ['project_id']}
+        kwargs['additional_model_fields'].append('project_id')
 
     return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
 
@@ -226,6 +236,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         array: array of json objects
     """
 
+    if not individuals:
+        return []
+
     def _get_case_review_status_modified_by(modified_by):
         return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
 
@@ -246,6 +259,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
             result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
+    kwargs = {
+        'additional_model_fields': _get_case_review_fields(individuals[0], individuals[0].family.project, user)
+    }
     if project_guid or not skip_nested:
         nested_fields = [
             {'fields': ('family', 'guid'), 'value': family_guid},
@@ -254,9 +270,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         if family_fields:
             for field in family_fields:
                 nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs = {'nested_fields': nested_fields, 'additional_model_fields': []}
+        kwargs.update({'nested_fields': nested_fields})
     else:
-        kwargs = {'additional_model_fields': ['family_id']}
+        kwargs['additional_model_fields'].append('family_id')
 
     if add_hpo_details:
         kwargs['additional_model_fields'] += [
@@ -264,7 +280,8 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
-    prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
+    if 'case_review_status_last_modified_by' in kwargs['additional_model_fields']:
+        prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')

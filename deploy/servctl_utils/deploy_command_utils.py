@@ -412,7 +412,7 @@ def deploy_kube_scan(settings):
     print_separator("kube-scan")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
+        run("kubectl delete -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
         if settings["ONLY_PUSH_TO_REGISTRY"]:
             return

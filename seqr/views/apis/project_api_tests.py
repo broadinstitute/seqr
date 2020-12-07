@@ -8,8 +8,8 @@ from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS, \
+    CASE_REVIEW_FAMILY_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -136,6 +136,7 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         family_fields.update(INTERNAL_FAMILY_FIELDS)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
@@ -220,7 +221,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 3)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -251,7 +252,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
 
     def test_empty_project_page_data(self):
         super(MixProjectAPITest, self).test_empty_project_page_data()

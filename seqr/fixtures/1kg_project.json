@@ -16,6 +16,7 @@
     "workspace_namespace": "my-seqr-billing",
     "genome_version": "37",
 	"is_mme_enabled": true,
+    "has_case_review": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
@@ -119,9 +120,8 @@
         "analysis_notes": "<b>\r\n                        F\u00e5mily analysis n\u00f8tes\r\n                    </b>",
         "analysis_summary": "<b>\r\n                        F\u00e5mily analysis summ\u00e5ry.\r\n                    </b>",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
-        "internal_case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
+        "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
+        "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
     }
 },
 {
@@ -140,9 +140,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
-        "internal_case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
+        "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
+        "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }
 },
 {
@@ -161,9 +160,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -182,9 +180,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -203,9 +200,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -224,9 +220,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -245,9 +240,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -266,9 +260,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -287,9 +280,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -308,9 +300,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -329,9 +320,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": ""
+        "case_review_notes": "",
+        "case_review_summary": ""
     }
 },
 {
@@ -352,9 +342,8 @@
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
-        "internal_case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
+        "case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
+        "case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
     }
 },
 {
@@ -375,9 +364,8 @@
         "analysis_status": "Q",
         "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
         "success_story_types": ["A"],
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "family without individuals and samples",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "family without individuals and samples",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -1334,7 +1322,6 @@
                         "codons": "ctTCTc/ctc",
                         "hgvsc": "ENST00000258436.5:c.375_377delTCT",
                         "transcriptRank": 0,
-                        "geneId": "ENSG00000135953",
                         "aminoAcids": "LL/L",
                         "cdnaPosition": "419-421"
                     }

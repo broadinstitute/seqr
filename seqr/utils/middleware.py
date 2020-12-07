@@ -1,11 +1,13 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
+from elasticsearch.exceptions import ConnectionTimeout
 from requests import HTTPError
 import json
 import logging
 import traceback
 
+from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.utils.json_utils import create_json_response
 from settings import DEBUG
 
@@ -15,9 +17,13 @@ logger = logging.getLogger()
 EXCEPTION_ERROR_MAP = {
     PermissionDenied: 403,
     ObjectDoesNotExist: 404,
+    InvalidIndexException: 400,
+    InvalidSearchException: 400,
+    ConnectionTimeout: 504,
     HTTPError: lambda e: int(e.response.status_code),
 }
 
+ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
 
 def _get_exception_status_code(exception):
     status = next((code for exc, code in EXCEPTION_ERROR_MAP.items() if isinstance(exception, exc)), 500)
@@ -35,11 +41,13 @@ class JsonErrorMiddleware(MiddlewareMixin):
     def process_exception(request, exception):
         if request.path.startswith('/api'):
             exception_json = {'error': str(exception)}
-            if DEBUG:
+            status = _get_exception_status_code(exception)
+            if exception.__class__ in ERROR_LOG_EXCEPTIONS:
+                exception_json['log_error'] = True
+            if DEBUG or status == 500:
                 traceback_message = traceback.format_exc()
-                logger.error(traceback_message)
                 exception_json['traceback'] = traceback_message
-            return create_json_response(exception_json, status=_get_exception_status_code(exception))
+            return create_json_response(exception_json, status=status)
         return None
 
 class LogRequestMiddleware(MiddlewareMixin):
@@ -68,23 +76,29 @@ class LogRequestMiddleware(MiddlewareMixin):
             pass
 
         error = ''
+        log_error = False
+        traceback = None
         try:
             response_json = json.loads(response.content)
             error = response_json.get('error')
             if response_json.get('errors'):
                 error = '; '.join(response_json['errors'])
+            traceback = response_json.get('traceback')
+            log_error = response_json.get('log_error')
         except (ValueError, AttributeError):
             pass
 
         message = ''
-        if response.status_code >= 500:
+        if log_error or (response.status_code >= 500 and response.status_code != 504):
             level = logger.error
             message = error
-        elif response.status_code >= 400 or response.status_code == 504:
+        elif response.status_code >= 400:
             level = logger.warning
             message = error
         else:
             level = logger.info
-        level(message, extra={'http_request_json': http_json, 'request_body': request_body, 'user': request.user})
+        level(message, extra={
+            'http_request_json': http_json, 'request_body': request_body, 'traceback': traceback, 'user': request.user,
+        })
 
         return response

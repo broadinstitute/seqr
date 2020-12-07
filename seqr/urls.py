@@ -36,6 +36,8 @@ from seqr.views.apis.individual_api import \
     save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
+    update_case_review_discussion, \
+    update_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
@@ -152,6 +154,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,

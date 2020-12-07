@@ -54,7 +54,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 
 class VariantSearchAPITest(object):
 
-    @mock.patch('seqr.views.apis.variant_search_api.logger.error')
+    @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
@@ -81,8 +81,8 @@ class VariantSearchAPITest(object):
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid index')
-        mock_error_logger.assert_called_with('InvalidIndexException: Invalid index')
+        self.assertEqual(response.json()['error'], 'Invalid index')
+        mock_error_logger.assert_called_with('Invalid index', extra=mock.ANY)
 
         mock_get_variants.side_effect = InvalidSearchException('Invalid search')
         mock_error_logger.reset_mock()
@@ -90,15 +90,15 @@ class VariantSearchAPITest(object):
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid search')
+        self.assertEqual(response.json()['error'], 'Invalid search')
         mock_error_logger.assert_not_called()
 
-        mock_get_variants.side_effect = ConnectionTimeout()
+        mock_get_variants.side_effect = ConnectionTimeout('', '', ValueError('Timeout'))
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 504)
-        self.assertEqual(response.reason_phrase, 'Query Time Out')
+        self.assertEqual(response.json()['error'], 'ConnectionTimeout caused by - ValueError(Timeout)')
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants
@@ -419,6 +419,11 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
 
+        mock_get_variant.side_effect = InvalidSearchException('Variant not found')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Variant not found')
+
     def test_saved_search(self):
         get_saved_search_url = reverse(get_saved_search_handler)
         self.check_require_login(get_saved_search_url)
@@ -535,11 +540,11 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 15)
+        assert_no_list_ws_has_al(self, 27)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 3)
+        assert_no_list_ws_has_al(self, 5)
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
@@ -570,11 +575,11 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_search_context(self):
         super(MixSavedVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 8)
+        assert_no_list_ws_has_al(self, 20)
 
     def test_query_single_variant(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 2)
+        assert_no_list_ws_has_al(self, 4)
 
     def test_saved_search(self):
         super(MixSavedVariantSearchAPITest, self).test_saved_search()
