@@ -288,7 +288,8 @@ def update_mme_result_status(request, matchmaker_result_guid):
     check_mme_permissions(result.submission, request.user)
 
     request_json = json.loads(request.body)
-    update_model_from_json(result, request_json, user=request.user, allow_unknown_keys=True)
+    update_model_from_json(
+        result, request_json, user=request.user, allow_unknown_keys=True, immutable_keys=['originating_submission'])
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
