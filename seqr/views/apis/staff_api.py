@@ -400,9 +400,11 @@ def _get_variant_main_transcript(variant):
     main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
     if not main_transcript_id:
         return {}
-    for transcripts in variant.get('transcripts', {}).values():
+    for gene_id, transcripts in variant.get('transcripts', {}).items():
         main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
         if main_transcript:
+            if 'geneId' not in main_transcript:
+                main_transcript['geneId'] = gene_id
             return main_transcript
 
 
