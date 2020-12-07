@@ -21,7 +21,7 @@ const FIELDS = [
   { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
