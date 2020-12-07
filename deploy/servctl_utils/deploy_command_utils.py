@@ -11,7 +11,7 @@ from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
 from deploy.servctl_utils.yaml_settings_utils import process_jinja_template, load_settings
-from deploy.servctl_utils.shell_utils import run, wait_for
+from deploy.servctl_utils.shell_utils import run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
@@ -251,15 +251,15 @@ def _set_elasticsearch_kubernetes_resources():
 def deploy_linkerd(settings):
     print_separator('linkerd')
 
-    version_match = run("linkerd version 2&>1 | awk '/Client/ {print $3}'")
-    if version_match != settings["LINKERD_VERSION"]:
-        raise Exception("Your locally installed linkerd version does not match the desired server version.")
+    version_match = run("linkerd version | awk '/Client/ {print $3}'")
+    if version_match.strip() != settings["LINKERD_VERSION"]:
+        raise Exception("Your locally installed linkerd version  does not match the desired server version.")
 
     has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
     if not has_namespace:
         run('linkerd install | kubectl apply -f -')
 
-        wait_for('linkerd check')
+        run('linkerd check')
 
 
 def deploy_postgres(settings):
