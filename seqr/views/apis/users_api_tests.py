@@ -7,9 +7,9 @@ from django.contrib.auth.models import User
 from django.urls.base import reverse
 
 from seqr.models import UserPolicy
-from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
+from seqr.views.apis.users_api import get_all_collaborator_options, set_password, create_staff_user, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff, update_policies
+    get_all_staff_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
@@ -21,7 +21,7 @@ PROJECT_GUID = 'R0001_1kg'
 class UsersAPITest(object):
 
     def test_get_all_staff(self):
-        get_all_staff_url = reverse(get_all_staff)
+        get_all_staff_url = reverse(get_all_staff_options)
         self.check_require_login(get_all_staff_url)
         response = self.client.get(get_all_staff_url)
         self.assertEqual(response.status_code, 200)
@@ -33,7 +33,7 @@ class UsersAPITest(object):
         self.assertTrue(first_staff_user['isStaff'])
 
     def test_get_all_collaborators(self):
-        url = reverse(get_all_collaborators)
+        url = reverse(get_all_collaborator_options)
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -106,7 +106,7 @@ class UsersAPITest(object):
         mock_logger.reset_mock()
 
         # get all project collaborators includes new collaborator
-        get_all_collaborators_url = reverse(get_all_collaborators)
+        get_all_collaborators_url = reverse(get_all_collaborator_options)
         response = self.client.get(get_all_collaborators_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

@@ -39,7 +39,7 @@ export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
-export const getUsersByUsername = state => state.usersByUsername
+export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getVersion = state => state.meta.version
 export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
@@ -66,10 +66,6 @@ export const getAnnotationSecondary = (state) => {
   }
 }
 
-export const getAllUsers = createSelector(
-  getUsersByUsername,
-  usersByUsername => Object.values(usersByUsername),
-)
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )

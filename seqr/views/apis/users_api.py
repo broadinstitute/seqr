@@ -28,7 +28,7 @@ class CreateUserException(Exception):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def get_all_collaborators(request):
+def get_all_collaborator_options(request):
     if request.user.is_staff:
         # TODO only return correct fields
         collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
@@ -41,7 +41,7 @@ def get_all_collaborators(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def get_all_staff(request):
+def get_all_staff_options(request):
     staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
 
     return create_json_response(staff_analysts)

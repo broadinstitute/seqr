@@ -93,8 +93,8 @@ from seqr.views.apis.variant_search_api import \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
-    get_all_collaborators, \
-    get_all_staff, \
+    get_all_collaborator_options, \
+    get_all_staff_options, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
@@ -244,8 +244,8 @@ api_endpoints = {
     'users/(?P<username>[^/]+)/set_password': set_password,
     'users/update_policies': update_policies,
 
-    'users/get_all': get_all_collaborators,
-    'users/get_all_staff': get_all_staff,
+    'users/get_options': get_all_collaborator_options,
+    'users/get_staff_options': get_all_staff_options,
     'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
