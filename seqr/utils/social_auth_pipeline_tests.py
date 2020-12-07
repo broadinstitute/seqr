@@ -17,7 +17,7 @@ class SocialAuthPipelineTest(TestCase):
         responses.add(responses.GET, url, status=404)
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
         mock_logger.warning.assert_called_with('User test@seqr.org is trying to login without registration on AnVIL. None called Terra API: GET /register got status 404 with reason: Not Found')
-        self.assertEqual(r.url, '/login?googleLoginFailed=true')
+        self.assertEqual(r.url, '/login?anvilLoginFailed=true')
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -28,14 +28,20 @@ class SocialAuthPipelineTest(TestCase):
 
     @mock.patch('seqr.utils.social_auth_pipeline.logger')
     def test_log_signed_in(self, mock_logger):
-        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'})
+        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'}, user='test')
         mock_logger.info.assert_called_with('Logged in test_user@test.com (google-oauth2)')
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
-        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'}, is_new=True)
+        log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'}, is_new=True, user='test')
         mock_logger.info.assert_has_calls([
             mock.call('Logged in test_user@test.com (google-oauth2)'),
             mock.call('Created user test_user@test.com (google-oauth2)'),
         ])
         self.assertEqual(len(mock_logger.method_calls), 2)
+
+        mock_logger.reset_mock()
+        r = log_signed_in(GoogleOAuth2(), {'email': 'test_user@test.com'})
+        mock_logger.warning.assert_called_with('Google user test_user@test.com is trying to login without an existing seqr account')
+        self.assertEqual(r.url, '/login?googleLoginFailed=true')
+        self.assertEqual(len(mock_logger.method_calls), 1)
