@@ -41,6 +41,7 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "init-cluster",
     "settings",
     "secrets",
+    "linkerd",
     "nginx",
     "postgres",
     "external-elasticsearch-connector",
