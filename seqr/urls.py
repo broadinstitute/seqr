@@ -12,7 +12,6 @@ from seqr.views.apis.dataset_api import \
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, DEBUG
 from django.conf.urls import url, include
 from django.contrib import admin
-import django.contrib.admindocs.urls
 import django.views.static
 
 from seqr.views.apis.family_api import \
@@ -36,6 +35,8 @@ from seqr.views.apis.individual_api import \
     save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
+    update_case_review_discussion, \
+    update_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
@@ -150,6 +151,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
@@ -295,7 +298,6 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
