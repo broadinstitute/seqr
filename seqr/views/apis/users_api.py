@@ -133,7 +133,7 @@ def create_project_collaborator(request, project_guid):
     })
 
 
-def _create_user(request, is_staff=False):  # TODO clean up?
+def _create_user(request, is_staff=False):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
         raise CreateUserException('Email is required')

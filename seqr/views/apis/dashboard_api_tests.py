@@ -134,7 +134,6 @@ def assert_has_anvil_calls(self):
     calls = [
         mock.call(self.no_access_user, fields = WORKSPACE_FIELDS),
         mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
-        mock.call(self.staff_user, fields = WORKSPACE_FIELDS)
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     calls = [
@@ -156,7 +155,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(AnvilDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_list_workspaces.assert_called_with(self.no_access_user, fields=WORKSPACE_FIELDS)
         self.mock_get_ws_acl.assert_not_called()
 
 
@@ -171,5 +170,5 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(MixDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_list_workspaces.assert_called_with(self.no_access_user, fields=WORKSPACE_FIELDS)
         self.mock_get_ws_acl.assert_not_called()

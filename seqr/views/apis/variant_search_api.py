@@ -5,14 +5,12 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Q, prefetch_related_objects
-from elasticsearch.exceptions import ConnectionTimeout
 import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
     IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
-from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException, InvalidSearchException
+from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
@@ -33,7 +31,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
+from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -58,7 +56,7 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:  # TODO
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:

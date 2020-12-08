@@ -7,6 +7,17 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
 from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
 
+def user_is_analyst(user):
+    return user.is_staff # TODO
+
+def user_is_data_manager(user):
+    return user.is_staff # TODO
+
+def user_is_pm(user):
+    return user.is_staff # TODO
+
+def _has_analyst_access(project):
+    return not project.disable_staff_access # TODO
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to
@@ -63,9 +74,10 @@ def has_project_permissions(project, user, can_edit=False, is_owner=False):
     if is_owner:
         permission_level = IS_OWNER
 
-    # TODO
-    return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)\
-        or anvil_has_perm(user, permission_level, project)
+    return user_is_data_manager(user) or \
+           (user_is_analyst(user) and _has_analyst_access(project)) or \
+           user.has_perm(permission_level, project) or \
+           anvil_has_perm(user, permission_level, project)
 
 
 def check_project_permissions(project, user, **kwargs):
@@ -97,18 +109,24 @@ def _get_workspaces_user_can_view(user):
     return ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in workspace_list if not ws.get('public', True)]
 
 
+def _get_analyst_projects():
+    return Project.objects.filter(disable_staff_access=False) # TODO
+
 def get_projects_user_can_view(user):
-    can_view_filter = Q(can_view_group__user=user)
-    if user.is_staff: # TODO
-        can_view_filter = can_view_filter | Q(disable_staff_access=False)
+    if user_is_data_manager(user):
+        return Project.objects.all()
+
+    projects = Project.objects.filter(can_view_group__user=user)
+    if user_is_analyst(user):
+        projects = (projects | _get_analyst_projects())
 
     if is_google_authenticated(user):
         workspaces = _get_workspaces_user_can_view(user)
         anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
-        return (anvil_permitted_projects | Project.objects.filter(can_view_filter)).distinct()
+        return (anvil_permitted_projects | projects).distinct()
     else:
-        return Project.objects.filter(can_view_filter)
+        return projects.distinct()
 
 
 def check_mme_permissions(submission, user):
