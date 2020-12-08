@@ -253,7 +253,9 @@ def deploy_linkerd(settings):
 
     version_match = run("linkerd version | awk '/Client/ {print $3}'")
     if version_match.strip() != settings["LINKERD_VERSION"]:
-        raise Exception("Your locally installed linkerd version  does not match the desired server version.")
+        raise Exception("Your locally installed linkerd version does not match %s. "
+                        "Download the correct version from https://github.com/linkerd/linkerd2/releases/tag/%s" % \
+                        (settings['LINKERD_VERSION'], settings['LINKERD_VERSION']))
 
     has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
     if not has_namespace:

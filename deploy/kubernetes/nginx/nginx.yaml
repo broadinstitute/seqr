@@ -56,6 +56,7 @@ spec:
   minReadySeconds: 0
   template:
     metadata:
+      # this annotation is the only difference from the upstream Deployment
       annotations:
         linkerd.io/inject: ingress
       labels:
