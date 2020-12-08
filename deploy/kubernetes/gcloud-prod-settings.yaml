@@ -3,7 +3,13 @@
 
 CLUSTER_NAME: 'seqr-cluster-prod'
 CLUSTER_MACHINE_TYPE: 'n1-highmem-8'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
+
+# TODO this will need to change, but that will depend on how init-clusters is modified
 CLUSTER_NUM_NODES: 1
+# current ES values:
+#CLUSTER_NUM_NODES: 4
+#CLUSTER_NODE_LABELS: nodeType=data
+#NUM_NODES_PER_NODE_POOL: 4
 
 KUBERNETES_VERSION: '1.16.13-gke.401'
 
@@ -11,8 +17,30 @@ CLUSTER_EXTERNAL_IP: '35.194.17.244'
 CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
 BASE_URL: 'https://seqr.broadinstitute.org/'
 
+DISKS: postgres, seqr-static-files, es-data
+
+POSTGRES_DISK_SIZE: '200Gb'
+SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
+
+ES_DATA_NUM_DISKS: 3
+ES_DATA_DISK_TYPE: pd-ssd
+ES_DATA_DISK_SIZE: 3200
+# we can change these to the latest snapshot names and uncomment this if we want to create new disks from snapshots
+#ES_DATA_SNAPSHOTS:  es-7-data-snapshot-1,  es-7-data-snapshot-2,  es-7-data-snapshot-3
+
+ELASTICSEARCH_JVM_MEMORY: 22g
+ELASTICSEARCH_CONTAINER_MEMORY: 44Gi
+
+ES_DATA_NUM_PODS: 3
+ES_CLIENT_NUM_PODS: 3
+ES_MASTER_NUM_PODS: 3
+ES_LOADING_NUM_PODS: 4
+
+# when we want to swap to the in-cluster ES, we can uncomment this and remove the below ELASTICSEARCH_SERVICE_ variables
+#ELASTICSEARCH_SERVICE_HOSTNAME: elasticsearch-es-http
 ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.0.0.2
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
+
 ELASTICSEARCH_VERSION: 7.8.1
 
 KIBANA_SERVICE_HOSTNAME: kibana-kb-http
