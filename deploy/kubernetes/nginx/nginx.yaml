@@ -55,7 +55,7 @@ data:
     # local requests
     SecRuleRemoveById 920350
     # regex match for windows command injection, contained many false positives
-    SecRuleRemoveByID 932115
+    SecRuleRemoveById 932115
     Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
     # adds 'application/vnd.ga4gh.matchmaker.v1.0+json' to the list of allowed content-types
     SecAction \
