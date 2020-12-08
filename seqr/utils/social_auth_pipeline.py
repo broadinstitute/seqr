@@ -13,7 +13,14 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
             anvil_call('get', 'register', response['access_token'])
         except TerraNotFoundException as et:
             logger.warning('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et)))
-            return redirect('/login?googleLoginFailed=true')
+            return redirect('/login?anvilLoginFailed=true')
+
+
+def validate_user_exist(backend, response, user=None, *args, **kwargs):
+    if not user:
+        logger.warning('Google user {} is trying to login without an existing seqr account ({}).'
+                       .format(response['email'], backend.name))
+        return redirect('/login?googleLoginFailed=true')
 
 
 def log_signed_in(backend, response, is_new=False, *args, **kwargs):

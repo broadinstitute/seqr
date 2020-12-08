@@ -13,7 +13,7 @@ import {
   FAMILY_FIELD_ASSIGNED_ANALYST,
 } from 'shared/utils/constants'
 import { CASE_REVIEW_TABLE_NAME } from '../constants'
-import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
+import { getCaseReviewStatusCounts, getCaseReviewFamiliesExportConfig, getCaseReviewIndividualsExportConfig } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const FIELDS = [
@@ -21,7 +21,7 @@ const FIELDS = [
   { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
@@ -36,8 +36,6 @@ const CaseReviewTable = React.memo((props) => {
   return (
     <div>
       <FamilyTable
-        showCaseReviewFilters
-        editCaseReview
         showDetails
         tableName={CASE_REVIEW_TABLE_NAME}
         headerStatus={headerStatus}
@@ -59,8 +57,8 @@ CaseReviewTable.propTypes = {
 
 const mapStateToProps = state => ({
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, caseReview: true }),
-  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, caseReview: true }),
+  familyExportConfig: getCaseReviewFamiliesExportConfig(state, {}),
+  individualsExportConfig: getCaseReviewIndividualsExportConfig(state, {}),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

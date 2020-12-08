@@ -12,7 +12,12 @@ import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
 import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
-import { FAMILY_FILTER_OPTIONS, CASE_REVIEW_FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
+import {
+  FAMILY_FILTER_OPTIONS,
+  CASE_REVIEW_FAMILY_FILTER_OPTIONS,
+  FAMILY_SORT_OPTIONS,
+  CASE_REVIEW_TABLE_NAME,
+} from '../../../constants'
 
 import SortDirectionToggle from './SortDirectionToggle'
 
@@ -87,7 +92,7 @@ TableHeaderDetail.propTypes = {
 }
 
 const TableHeaderRow = React.memo((
-  { showCaseReviewFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
+  { visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
     updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
   }) =>
     <Table.Header fullWidth>
@@ -109,7 +114,7 @@ const TableHeaderRow = React.memo((
             closeOnSuccess={false}
             submitOnChange
             inline
-            fields={showCaseReviewFilters ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS}
+            fields={tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS}
           />
         </OverflowHeaderCell>
       </Table.Row>
@@ -124,7 +129,6 @@ const TableHeaderRow = React.memo((
 )
 
 TableHeaderRow.propTypes = {
-  showCaseReviewFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number.isRequired,
   totalFamiliesCount: PropTypes.number.isRequired,
   familiesTableState: PropTypes.object.isRequired,

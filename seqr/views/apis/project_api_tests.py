@@ -221,7 +221,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -252,7 +252,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 3)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
 
     def test_empty_project_page_data(self):
         super(MixProjectAPITest, self).test_empty_project_page_data()

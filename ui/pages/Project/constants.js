@@ -415,6 +415,7 @@ export const INDIVIDUAL_FIELDS = [
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
 export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
+  ...FAMILY_EXPORT_DATA,
   { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
   { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
@@ -444,6 +445,7 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
 
 
 export const CASE_REVIEW_INDIVIDUAL_EXPORT_DATA = [
+  ...INDIVIDUAL_EXPORT_DATA,
   { header: 'Case Review Status', field: 'caseReviewStatus', format: status => CASE_REVIEW_STATUS_OPT_LOOKUP[status].name },
   { header: 'Case Review Status Last Modified', field: 'caseReviewStatusLastModifiedDate' },
   { header: 'Case Review Status Last Modified By', field: 'caseReviewStatusLastModifiedBy' },

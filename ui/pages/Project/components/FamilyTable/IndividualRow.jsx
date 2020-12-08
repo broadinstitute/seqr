@@ -29,7 +29,7 @@ import {
   getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
 } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
+import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME } from '../../constants'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
@@ -799,7 +799,7 @@ const NON_CASE_REVIEW_FIELDS = [
 ]
 
 const IndividualRow = React.memo((
-  { project, family, individual, editCaseReview, mmeSubmission, samplesByGuid, dispatchUpdateIndividual },
+  { project, family, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
 ) => {
   const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids } = individual
 
@@ -831,6 +831,7 @@ const IndividualRow = React.memo((
       </div>
     </div>
 
+  const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
   const rightContent = editCaseReview ?
     <CaseReviewStatus individual={individual} /> :
     <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
@@ -865,7 +866,7 @@ IndividualRow.propTypes = {
   mmeSubmission: PropTypes.object,
   samplesByGuid: PropTypes.object.isRequired,
   dispatchUpdateIndividual: PropTypes.func,
-  editCaseReview: PropTypes.bool,
+  tableName: PropTypes.string,
 }
 
 export { IndividualRow as IndividualRowComponent }

@@ -1322,7 +1322,6 @@
                         "codons": "ctTCTc/ctc",
                         "hgvsc": "ENST00000258436.5:c.375_377delTCT",
                         "transcriptRank": 0,
-                        "geneId": "ENSG00000135953",
                         "aminoAcids": "LL/L",
                         "cdnaPosition": "419-421"
                     }

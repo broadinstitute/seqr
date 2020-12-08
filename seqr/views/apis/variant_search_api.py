@@ -68,15 +68,7 @@ def query_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    try:
-        variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
-    except InvalidSearchException as e:
-        return create_json_response({'error': str(e)}, status=400, reason=str(e))
-    except InvalidIndexException as e:
-        logger.error('InvalidIndexException: {}'.format(e))
-        return create_json_response({'error': str(e)}, status=400, reason=str(e))
-    except ConnectionTimeout:
-        return create_json_response({}, status=504, reason='Query Time Out')
+    variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
 
     response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)

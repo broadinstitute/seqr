@@ -768,6 +768,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'comments': 'test comment',
             'deemedIrrelevant': False,
             'flagForAnalysis': True,
+            'originatingSubmission': {'originatingSubmissionGuid': 'MS000016_P0004515'},
         }))
 
         self.assertEqual(response.status_code, 200)

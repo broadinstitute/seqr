@@ -6,9 +6,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
 from django.template import loader
 from django.http import HttpResponse
-from settings import SEQR_VERSION, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, CSRF_COOKIE_NAME, DEBUG
+from settings import SEQR_VERSION, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, CSRF_COOKIE_NAME, DEBUG, GOOGLE_AUTH_CONFIG_DIR
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
-from seqr.views.utils.terra_api_utils import anvil_enabled
 
 
 @login_required
@@ -47,7 +46,7 @@ def _render_app_html(request, initial_json):
     initial_json['meta'] = {
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
-        'googleLoginEnabled': anvil_enabled(),
+        'googleLoginEnabled': bool(GOOGLE_AUTH_CONFIG_DIR),
     }
 
     html = html.replace(
