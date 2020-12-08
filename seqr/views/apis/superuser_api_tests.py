@@ -7,7 +7,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 PROJECT_GUID = 'R0001_1kg'
 
 
-class UsersAPITest(AuthenticationTestCase):
+class SuperusersAPITest(AuthenticationTestCase):
     fixtures = ['users']
 
     def test_get_all_users(self):
