@@ -4,9 +4,6 @@ from seqr.views.apis.superuser_api import get_all_users
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 
-PROJECT_GUID = 'R0001_1kg'
-
-
 class SuperusersAPITest(AuthenticationTestCase):
     fixtures = ['users']
 
