@@ -29,7 +29,7 @@ class PedigreeImageTest(TestCase):
         mock_randint.return_value = 123456
 
         def _mock_paint(command, **kwargs):
-            with open(command.split('-outfile ')[-1], 'wb') as f:
+            with open(command[-1], 'wb') as f:
                 f.write(b'\xff\xd8\xff')
             return MOCK_PAINT_PROCESS
         mock_run.side_effect = _mock_paint
@@ -42,7 +42,7 @@ class PedigreeImageTest(TestCase):
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
         os.remove(pedigree_image.path)
         mock_run.assert_called_with(
-            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /tmp/pedigree_image_123456.png',
+            ['perl', '/seqr/management/commands/HaploPainter1.043.pl', '-b', '-outformat', 'png', '-pedfile', 'temp.fam', '-family', '1', '-outfile', '/tmp/pedigree_image_123456.png'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         mock_tempfile_file.write.assert_has_calls([
@@ -72,7 +72,7 @@ class PedigreeImageTest(TestCase):
         self.assertEqual(pedigree_image.name, 'pedigree_images/pedigree_image_123456.png')
         os.remove(pedigree_image.path)
         mock_run.assert_called_with(
-            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /tmp/pedigree_image_123456.png',
+            ['perl', '/seqr/management/commands/HaploPainter1.043.pl', '-b', '-outformat', 'png', '-pedfile', 'temp.fam', '-family', '1', '-outfile', '/tmp/pedigree_image_123456.png'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         mock_tempfile_file.write.assert_has_calls([
@@ -116,7 +116,7 @@ class PedigreeImageTest(TestCase):
         pedigree_image = test_families.first().pedigree_image
         self.assertFalse(bool(pedigree_image))
         mock_run.assert_called_with(
-            'perl /seqr/management/commands/HaploPainter1.043.pl -b -outformat png -pedfile temp.fam -family 1 -outfile /tmp/pedigree_image_123456.png',
+            ['perl', '/seqr/management/commands/HaploPainter1.043.pl', '-b', '-outformat', 'png', '-pedfile', 'temp.fam', '-family', '1', '-outfile', '/tmp/pedigree_image_123456.png'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         mock_tempfile_file.write.assert_has_calls([
