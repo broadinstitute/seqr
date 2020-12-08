@@ -12,13 +12,13 @@ from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
-    get_project_collaborators_by_username
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = logging.getLogger(__name__)
 
+USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_staff'}
 
 class CreateUserException(Exception):
     def __init__(self, error, status_code=400, existing_user=None):
@@ -30,19 +30,23 @@ class CreateUserException(Exception):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_collaborator_options(request):
     if request.user.is_staff:
-        # TODO only return correct fields
-        collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
+        collaborators = User.objects.exclude(email='').filter(is_active=True)
     else:
-        collaborators = {}
+        collaborators = set()
         for project in get_projects_user_can_view(request.user):
-            collaborators.update(get_project_collaborators_by_username(request.user, project, include_permissions=False))
+            collaborators.update(project.get_collaborators())
 
-    return create_json_response(collaborators)
+    return create_json_response({
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_staff_options(request):
-    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
+    staff_analysts = {
+        staff.username: _get_json_for_user(staff, fields=USER_OPTION_FIELDS)
+        for staff in User.objects.filter(is_staff=True, is_active=True)
+    }
 
     return create_json_response(staff_analysts)
 
