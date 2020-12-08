@@ -39,7 +39,6 @@ class Project extends React.PureComponent
       return (
         <Switch>
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
-          {/* TODO add case review to project */}
           {this.props.project.hasCaseReview && <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />}
           <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
