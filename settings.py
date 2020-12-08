@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'seqr',
     'reference_data',
     'matchmaker',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -171,6 +172,7 @@ LOGGING = {
 TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
 
 AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
@@ -315,36 +317,39 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
-if TERRA_API_ROOT_URL or (len(sys.argv) >= 2 and sys.argv[1] == 'test'):
-    AUTHENTICATION_BACKENDS = ('social_core.backends.google.GoogleOAuth2',) + AUTHENTICATION_BACKENDS
+# Use Google sub ID as the user ID, safer than using email
+USE_UNIQUE_USER_ID = True
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
+
+SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+
+SOCIAL_AUTH_PIPELINE_BASE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.social_auth.associate_by_email',
+)
+SOCIAL_AUTH_PIPELINE_USER_EXIST = ('seqr.utils.social_auth_pipeline.validate_user_exist',)
+SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associate_user',)
+SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
+
+if TERRA_API_ROOT_URL:
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
     }
 
-    # Use Google sub ID as the user ID, safer than using email
-    USE_UNIQUE_USER_ID = True
-
-    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
-    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
-
-    SOCIAL_AUTH_GOOGLE_PLUS_AUTH_EXTRA_ARGUMENTS = {
-          'access_type': 'offline'
-    }
-
-    SOCIAL_AUTH_POSTGRES_JSONFIELD = True
-    SOCIAL_AUTH_URL_NAMESPACE = 'social'
-    SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
-    SOCIAL_AUTH_PIPELINE = (
-        'seqr.utils.social_auth_pipeline.validate_anvil_registration',
-        'social_core.pipeline.social_auth.social_details',
-        'social_core.pipeline.social_auth.social_uid',
-        'social_core.pipeline.social_auth.social_user',
-        'social_core.pipeline.user.get_username',
-        'social_core.pipeline.social_auth.associate_by_email',
-        'social_core.pipeline.user.create_user',
-        'social_core.pipeline.social_auth.associate_user',
-        'social_core.pipeline.social_auth.load_extra_data',
-        'social_core.pipeline.user.user_details',
-        'seqr.utils.social_auth_pipeline.log_signed_in',
-    )
-    INSTALLED_APPS.append('social_django')
+    SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
+                           SOCIAL_AUTH_PIPELINE_BASE + \
+                           ('social_core.pipeline.user.get_username',
+                            'social_core.pipeline.user.create_user') + \
+                           SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + \
+                           ('social_core.pipeline.social_auth.load_extra_data',
+                            'social_core.pipeline.user.user_details') + \
+                           SOCIAL_AUTH_PIPELINE_LOG
+else:
+    SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + SOCIAL_AUTH_PIPELINE_USER_EXIST + \
+                           SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + SOCIAL_AUTH_PIPELINE_LOG

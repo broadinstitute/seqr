@@ -26,10 +26,14 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
     {googleLoginEnabled &&
     <div>
       <Divider />
-      {location.search === '?googleLoginFailed=true' &&
+      {location.search === '?anvilLoginFailed=true' &&
       <Message visible warning>
         Logging in has failed. Make sure you have registered your account on AnVIL. <br />
         Click this link <a href="https://anvil.terra.bio">https://anvil.terra.bio</a>, sign in to AnVIL with Google, and register your account.
+      </Message> }
+      {location.search === '?googleLoginFailed=true' &&
+      <Message visible warning>
+        No existing seqr account for the Google user.
       </Message> }
       <a href="/login/google-oauth2">Sign in with Google</a>
     </div>}
