@@ -24,6 +24,8 @@ spec:
       name: redis
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         name: redis
         deployment: {{ DEPLOY_TO }}
