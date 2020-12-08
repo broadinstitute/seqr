@@ -189,7 +189,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         loading={loading}
         data={visibleProjects}
         columns={getColumns(googleLoginEnabled, user.isAnvil, user.isSuperuser)}
-        footer={user.isPM ? <CreateProjectButton /> : null}
+        footer={user.isPm ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
   </DataLoader>,

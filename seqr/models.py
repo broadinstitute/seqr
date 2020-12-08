@@ -212,6 +212,20 @@ class Project(ModelWithGUID):
         self.can_edit_group.delete()
         self.can_view_group.delete()
 
+    def get_collaborators(self, permissions=None):
+        if not permissions:
+            permissions = {CAN_VIEW, CAN_EDIT, IS_OWNER}
+
+        collabs = set()
+        if CAN_VIEW in permissions:
+            collabs.update(self.can_view_group.user_set.all())
+        if CAN_EDIT in permissions:
+            collabs.update(self.can_edit_group.user_set.all())
+        if IS_OWNER in permissions:
+            collabs.update(self.owners_group.user_set.all())
+
+        return collabs
+
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
 

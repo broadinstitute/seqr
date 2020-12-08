@@ -3,10 +3,12 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Button } from 'semantic-ui-react'
 
-import { loadUserOptions } from 'redux/rootReducer'
-import { getAllUsers, getUserOptionsIsLoading, getHijakEnabled } from 'redux/selectors'
+import { getHijakEnabled } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
+import { getAllUsers, getAllUsersLoading } from '../selectors'
+import { loadAllUsers } from '../reducers'
+
 
 const CheckIcon = () => <Icon color="green" name="check circle" />
 
@@ -21,7 +23,7 @@ const COLUMNS = [
   { name: 'dateJoined', content: 'Date Joined', format: ({ dateJoined }) => (dateJoined || '').slice(0, 10) },
   { name: 'lastLogin', content: 'Last Login', format: ({ lastLogin }) => (lastLogin || '').slice(0, 10) },
   hasPrivilegeColumn('isAnalyst', 'Analyst?'),
-  hasPrivilegeColumn('isPM', 'PM?'),
+  hasPrivilegeColumn('isPm', 'PM?'),
   hasPrivilegeColumn('isDataManager', 'Data Manager?'),
   hasPrivilegeColumn('isSuperuser', 'Superuser?'),
   {
@@ -71,12 +73,12 @@ Users.propTypes = {
 
 const mapStateToProps = state => ({
   users: getAllUsers(state),
-  loading: getUserOptionsIsLoading(state),
+  loading: getAllUsersLoading(state),
   hijak: getHijakEnabled(state),
 })
 
 const mapDispatchToProps = {
-  load: loadUserOptions,
+  load: loadAllUsers,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Users)

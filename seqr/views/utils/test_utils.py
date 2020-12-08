@@ -9,19 +9,30 @@ from urllib3_mock import Responses
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
+def _initialize_users(cls):
+    cls.super_user = User.objects.get(username='test_superuser')
+    cls.staff_user = User.objects.get(username='test_user')
+    cls.manager_user = User.objects.get(username='test_user_manager')
+    cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+    cls.no_access_user = User.objects.get(username='test_user_no_access')
+
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
+    SUPERUSER = 'superuser'
     STAFF = 'staff'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
 
+    super_user = None
+    staff_user = None
+    manager_user = None
+    collaborator_user = None
+    no_access_user = None
+
     @classmethod
     def setUpTestData(cls):
-        cls.staff_user = User.objects.get(username='test_user')
-        cls.manager_user = User.objects.get(username='test_user_manager')
-        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
-        cls.no_access_user = User.objects.get(username='test_user_no_access')
+        _initialize_users(cls)
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
@@ -41,6 +52,9 @@ class AuthenticationTestCase(TestCase):
 
     def check_staff_login(self, url):
         self._check_login(url, self.STAFF)
+
+    def check_superuser_login(self, url):
+        self._check_login(url, self.SUPERUSER)
 
     def login_base_user(self):
         self.client.force_login(self.no_access_user)
@@ -94,6 +108,13 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.login_staff_user()
+        if permission_level == self.STAFF:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.client.force_login(self.super_user)
 
 
 ANVIL_WORKSPACES = [{
@@ -217,10 +238,7 @@ def get_workspaces_side_effect(user, fields):
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.staff_user = User.objects.get(username='test_user')
-        cls.manager_user = User.objects.get(username='test_user_manager')
-        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
-        cls.no_access_user = User.objects.get(username='test_user_no_access')
+        _initialize_users(cls)
 
     # mock the terra apis
     def setUp(self):
@@ -281,9 +299,8 @@ urllib3_responses = Urllib3Responses()
 
 USER_FIELDS = {
     'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive', 'isAnvil',
-    'isAnalyst', 'isDataManager', 'isPM', 'isSuperuser',
+    'isAnalyst', 'isDataManager', 'isPm', 'isSuperuser',
 }
-
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',

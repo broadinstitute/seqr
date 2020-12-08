@@ -97,7 +97,6 @@ class ProjectAPITest(object):
             datetime.today().strftime('%Y-%m-%d')
         )
         self.assertListEqual(response_json['projectsByGuid'][PROJECT_GUID]['collaborators'], self.PROJECT_COLLABORATORS)
-
         discovery_tags = response_json['projectsByGuid'][PROJECT_GUID]['discoveryTags']
         self.assertEqual(len(discovery_tags), 2)
         self.assertSetEqual(
@@ -173,27 +172,26 @@ class ProjectAPITest(object):
 BASE_COLLABORATORS = [
     {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',
      'firstName': 'Test Manager User', 'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11,
-     'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False,
+     'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False,
      'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
     {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
      'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
      'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
-     'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False, 'lastLogin': mock.ANY,
+     'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'lastLogin': mock.ANY,
      'lastName': '', 'username': 'test_user_non_staff'}]
 
 ANVIL_COLLABORATORS = [{
     'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
     'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
-    'isActive': True, 'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False,
-    'lastName': '', 'lastLogin': '', 'username': 'test_user_pure_anvil@test.com'
-}] + deepcopy(BASE_COLLABORATORS)
+    'isActive': True, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False, 'lastName': '',
+    'lastLogin': '', 'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
 for collab in ANVIL_COLLABORATORS:
     collab['isAnvil'] = True
 
 LOCAL_COLLAB = {
     'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
     'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
-    'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPM': False, 'isSuperuser': False,
+    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False,
     'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
 
 # Tests for AnVIL access disabled

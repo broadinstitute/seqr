@@ -32,8 +32,8 @@ export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
-const REQUEST_USERS = 'REQUEST_USERS'
-const RECEIVE_USERS = 'RECEIVE_USERS'
+const REQUEST_USER_OPTIONS = 'REQUEST_USER_OPTIONS'
+const RECEIVE_USER_OPTIONS = 'RECEIVE_USER_OPTIONS'
 const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
@@ -81,14 +81,14 @@ export const fetchProjects = () => {
 export const loadUserOptions = (staffOnly) => {
 
   return (dispatch) => {
-    const url = staffOnly ? '/api/users/get_all_staff' : '/api/users/get_all'
-    dispatch({ type: REQUEST_USERS })
+    const url = staffOnly ? '/api/users/get_staff_options' : '/api/users/get_options'
+    dispatch({ type: REQUEST_USER_OPTIONS })
     new HttpRequestHelper(url,
       (responseJson) => {
-        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+        dispatch({ type: RECEIVE_USER_OPTIONS, newValue: responseJson })
       },
       (e) => {
-        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+        dispatch({ type: RECEIVE_USER_OPTIONS, error: e.message, newValue: [] })
       },
     ).get()
   }
@@ -413,8 +413,8 @@ const rootReducer = combineReducers(Object.assign({
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
-  usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
-  userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
+  userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
   form: formReducer,
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),

@@ -16,8 +16,8 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getProjectGuid, getAllUsers, getHasActiveVariantSampleByFamily,
-  getVariantTagsByGuid,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getProjectGuid, getHasActiveVariantSampleByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername,
 } from 'redux/selectors'
 
 import {
@@ -418,8 +418,8 @@ export const getMmeDefaultContactEmail = createSelector(
 
 // user options selectors
 export const getUserOptions = createSelector(
-  getAllUsers,
-  users => users.map(
+  getUserOptionsByUsername,
+  usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
     user => ({ key: user.username, value: user.username, text: user.email }),
   ),
 )
@@ -432,9 +432,9 @@ export const getCollaborators = createSelector(
 // analyst option selectors (add project collaborators to staff users)
 export const getAnalystOptions = createSelector(
   getCollaborators,
-  getAllUsers,
-  (collaborators, users) => {
-    const analyst = users.filter(user => user.isAnalyst)
+  getUserOptionsByUsername,
+  (collaborators, usersOptionsByUsername) => {
+    const analyst = Object.values(usersOptionsByUsername).filter(user => user.isAnalyst)
     const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isAnalyst)
     return [...uniqueCollaborators, ...analyst].map(
       user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
