@@ -179,11 +179,11 @@ BASE_COLLABORATORS = [
      'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
      'isSuperuser': False, 'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'}]
 
-ANVIL_COLLABORATORS = deepcopy(BASE_COLLABORATORS) + [{
-    'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
-    'first_name': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
-    'is_active': True, 'is_staff': False, 'lastName': 'test_user_pure_anvil@test.com', 'last_login': '',
-    'username': 'test_user_pure_anvil@test.com'}]
+ANVIL_COLLABORATORS = [{
+    'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
+    'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
+    'isActive': True, 'isStaff': False, 'isSuperuser': False, 'lastName': '', 'lastLogin': '',
+    'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
 for collab in ANVIL_COLLABORATORS:
     collab['isAnvil'] = True
 
@@ -192,9 +192,6 @@ LOCAL_COLLAB = {
     'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
     'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isStaff': False, 'lastLogin': None, 'lastName': '',
     'username': 'test_local_user'}
-
-MIX_COLLABORATORS = deepcopy(ANVIL_COLLABORATORS)
-MIX_COLLABORATORS.insert(2, LOCAL_COLLAB)
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
@@ -236,7 +233,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = MIX_COLLABORATORS
+    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
 
     def test_create_update_and_delete_project(self):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
