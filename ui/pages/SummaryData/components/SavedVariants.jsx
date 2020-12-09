@@ -67,11 +67,11 @@ const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, geneDetail,
   const { params } = props.match
   const { tag, gene } = params
 
-  const getUpdateTagUrl = selectedTag => `/staff/saved_variants/${selectedTag}${gene ? `/${gene}` : ''}`
+  const getUpdateTagUrl = selectedTag => `/summary_data/saved_variants/${selectedTag}${gene ? `/${gene}` : ''}`
 
-  const getGeneHref = selectedGene => `/staff/saved_variants/${tag || SHOW_ALL}/${selectedGene.key}`
+  const getGeneHref = selectedGene => `/summary_data/saved_variants/${tag || SHOW_ALL}/${selectedGene.key}`
 
-  const removeGene = () => props.history.push(`/staff/saved_variants/${tag || SHOW_ALL}`)
+  const removeGene = () => props.history.push(`/summary_data/saved_variants/${tag || SHOW_ALL}`)
 
   const loadVariants = (newParams) => {
     const isInitialLoad = params === newParams

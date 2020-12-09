@@ -139,7 +139,7 @@ def _get_matching_genes(query, projects):
             'key': g['gene_id'],
             'title': title,
             'description': '('+description+')' if description else '',
-            'href': '/gene_info/'+g['gene_id'],
+            'href': '/summary_data/gene_info/'+g['gene_id'],
         })
 
     return result

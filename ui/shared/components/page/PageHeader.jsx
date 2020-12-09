@@ -4,13 +4,14 @@ import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 import { Route, Switch, NavLink } from 'react-router-dom'
 import styled from 'styled-components'
-import { Grid, Breadcrumb, Popup, Icon } from 'semantic-ui-react'
+import { Grid, Breadcrumb, Popup, Icon, Header, Menu } from 'semantic-ui-react'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
-import { LocusListPageHeader } from 'pages/LocusLists'
-import { StaffPageHeader } from 'pages/Staff/Staff'
+import { STAFF_PAGES } from 'pages/Staff/Staff'
+import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
@@ -152,18 +153,40 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
 
+export const SimplePageHeader = ({ page, pages }) => ([
+  <Menu attached key="submenu">
+    <Menu.Item key="title">
+      <Header size="medium"><HorizontalSpacer width={90} /> {snakecaseToTitlecase(page)} Pages:</Header>
+    </Menu.Item>
+    {pages.map(({ path }) =>
+      <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+    )}
+  </Menu>,
+  <VerticalSpacer height={20} key="spacer" />,
+])
+
+SimplePageHeader.propTypes = {
+  page: PropTypes.string,
+  pages: PropTypes.array,
+}
+
 const NO_HEADER_PAGES = ['/dashboard', '/users', '/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
+
+const SIMPLE_HEADER_PAGES = [
+  { page: 'staff', pages: STAFF_PAGES },
+]
 
 export default () =>
   <Switch>
     {NO_HEADER_PAGES.map(page =>
       <Route key={page} path={page} component={() => null} />,
     )}
+    {SIMPLE_HEADER_PAGES.map(({ page, ...props }) =>
+      <Route key={page} path={`/${page}`} component={() => <SimplePageHeader page={page} {...props} />} />,
+    )}
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
-    <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />
-    <Route path="/gene_info/:geneId?" component={GenePageHeader} />
+    <Route path="/summary_data" component={SummaryDataPageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
-    <Route path="/staff" component={StaffPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
   </Switch>

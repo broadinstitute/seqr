@@ -30,7 +30,7 @@ const FIELD_LOOKUP = LOCUS_LIST_FIELDS.reduce(
 )
 FIELD_LOOKUP[NAME_WITH_LINK_FIELD] = {
   ...FIELD_LOOKUP[LOCUS_LIST_NAME_FIELD],
-  format: locusList => <Link to={`/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>,
+  format: locusList => <Link to={`/summary_data/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>,
 }
 FIELD_LOOKUP[EDIT_FIELD] = {
   name: '',
@@ -62,7 +62,7 @@ const PUBLIC_TABLE = {
 }
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
 
-const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, ...tableProps }) => {
+const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, tableButtons, ...tableProps }) => {
   let data = Object.values(locusListsByGuid)
   if (omitLocusLists) {
     data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
@@ -91,6 +91,7 @@ const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, 
           data={tableData[name]}
           {...tableProps}
         />
+        {tableButtons && tableButtons[name]}
       </div>,
   )
 })
@@ -99,6 +100,7 @@ LocusListTables.propTypes = {
   locusListsByGuid: PropTypes.object,
   fields: PropTypes.array,
   omitLocusLists: PropTypes.array,
+  tableButtons: PropTypes.node,
 }
 
 

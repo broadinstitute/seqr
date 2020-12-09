@@ -129,6 +129,7 @@ react_app_pages = [
     'gene_lists/.*',
     'variant_search/.*',
     'staff/.*',
+    'summary_data/.*',
 ]
 
 no_login_react_app_pages = [
