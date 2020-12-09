@@ -333,7 +333,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
-        
+
     def test_update_policies(self):
         super(MixUsersAPITest, self).test_update_policies()
         self.mock_list_workspaces.assert_not_called()
