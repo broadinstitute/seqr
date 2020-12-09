@@ -78,10 +78,10 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadUserOptions = (staffOnly) => {
+export const loadUserOptions = (analystsOnly) => {
 
   return (dispatch) => {
-    const url = staffOnly ? '/api/users/get_staff_options' : '/api/users/get_options'
+    const url = analystsOnly ? '/api/users/get_analyst_options' : '/api/users/get_options'
     dispatch({ type: REQUEST_USER_OPTIONS })
     new HttpRequestHelper(url,
       (responseJson) => {
@@ -94,7 +94,7 @@ export const loadUserOptions = (staffOnly) => {
   }
 }
 
-export const loadStaffOptions = () => loadUserOptions(true)
+export const loadAnalystOptions = () => loadUserOptions(true)
 
 export const updateUserPolicies = (values) => {
   return (dispatch) => {

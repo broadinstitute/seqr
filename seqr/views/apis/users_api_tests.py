@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff_options, update_policies
+    get_all_analyst_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
 
@@ -22,7 +22,7 @@ USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email
 class UsersAPITest(object):
 
     def test_get_all_staff_options(self):
-        get_all_staff_url = reverse(get_all_staff_options)
+        get_all_staff_url = reverse(get_all_analyst_options)
         self.check_require_login(get_all_staff_url)
         response = self.client.get(get_all_staff_url)
         self.assertEqual(response.status_code, 200)

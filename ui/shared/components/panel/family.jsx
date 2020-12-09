@@ -5,7 +5,7 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
+import { updateFamily, loadAnalystOptions } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getFirstSampleByFamily,
@@ -95,7 +95,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = {
-  load: loadStaffOptions,
+  load: loadAnalystOptions,
 }
 
 AnalystEmailDropdown.propTypes = {

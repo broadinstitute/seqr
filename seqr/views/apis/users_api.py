@@ -30,16 +30,16 @@ def get_all_collaborator_options(request):
         user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
     })
 
+def _get_all_analysts():
+    return User.objects.filter(is_staff=True, is_active=True) # TODO
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def get_all_staff_options(request):
-    # TODO rename
-    staff_analysts = {
-        staff.username: _get_json_for_user(staff, fields=USER_OPTION_FIELDS)
-        for staff in User.objects.filter(is_staff=True, is_active=True)
+def get_all_analyst_options(request):
+    analysts = {
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in _get_all_analysts()
     }
 
-    return create_json_response(staff_analysts)
+    return create_json_response(analysts)
 
 
 def forgot_password(request):
