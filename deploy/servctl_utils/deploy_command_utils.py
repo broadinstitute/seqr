@@ -569,8 +569,8 @@ def _init_cluster_gcloud(settings):
         "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
-        "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-        "--num-nodes 1",
+        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
+        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
         "--no-enable-legacy-authorization",
         "--metadata disable-legacy-endpoints=true",
         "--no-enable-basic-auth",
@@ -587,31 +587,26 @@ def _init_cluster_gcloud(settings):
     # This way, the cluster can be scaled up and down when needed using the technique in
     #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
     #
-    i = 0
-    num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
-    num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
-    while num_nodes_remaining_to_create > 0:
-        i += 1
+
+    for pool_name, pool_settings in settings['NODE_POOLS'].items():
         command = [
-            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
+            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
             "--cluster %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--machine-type %s" % pool_settings['machine_type'],
             "--node-version %(KUBERNETES_VERSION)s",
             #"--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
-            "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
+            "--num-nodes %s" % pool_settings['num_nodes'],
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]
-        if settings.get('CLUSTER_NODE_LABELS'):
-            command += ['--node-labels', settings['CLUSTER_NODE_LABELS']]
+        if pool_settings.get('labels'):
+            command += ['--node-labels', pool_settings['labels']]]
         run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
-
-        num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
     run(" ".join([
         "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
