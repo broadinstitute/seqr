@@ -74,7 +74,7 @@ SECRETS = {
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
     'seqr': [
-        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
+        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password', 'google_client_secret'
     ],
 }
 

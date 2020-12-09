@@ -297,16 +297,6 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 #########################################################
-#  AnVIL Terra API specific settings
-#########################################################
-GOOGLE_AUTH_CONFIG_DIR = os.environ.get('GOOGLE_AUTH_CONFIG_DIR', '')
-
-GOOGLE_AUTH_CLIENT_CONFIG = {}
-if GOOGLE_AUTH_CONFIG_DIR:
-    with open(os.path.join(GOOGLE_AUTH_CONFIG_DIR, 'client_secret.json'), 'r') as f:
-        GOOGLE_AUTH_CLIENT_CONFIG = json.load(f)
-
-#########################################################
 #  Social auth specific settings
 #########################################################
 SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
@@ -320,8 +310,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_id')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_AUTH_CLIENT_CONFIG.get('web', {}).get('client_secret')
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
