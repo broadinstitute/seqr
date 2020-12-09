@@ -837,7 +837,7 @@ def get_json_for_gene(gene, **kwargs):
 
 def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
-        # Do not apply HGMD filters in shared searches for non-staff users
+        # Do not apply HGMD filters in shared searches for non-analyst users
         if not search.created_by and not user_is_analyst(user) and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'

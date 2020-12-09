@@ -134,7 +134,7 @@ def _process_variants(variants, families, user):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff) # TODO
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user_is_analyst(user))
 
     response_json.update({
         'searchedVariants': variants,

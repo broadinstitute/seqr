@@ -19,7 +19,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
-from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, user_is_analyst
 
 from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
@@ -365,7 +365,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
-        if user.is_staff and result_model.originating_submission: # TODO should just check permission on originating submission project
+        if user_is_analyst(user) and result_model.originating_submission:
             result['originatingSubmission'] = {
                 'originatingSubmissionGuid': result_model.originating_submission.guid,
                 'familyGuid': result_model.originating_submission.individual.family.guid,

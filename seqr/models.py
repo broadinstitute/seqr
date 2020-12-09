@@ -201,8 +201,7 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            if user and not user.is_staff:  # staff have access to all resources anyway
-                user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
+            user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""

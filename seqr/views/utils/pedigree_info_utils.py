@@ -607,15 +607,8 @@ class JsonConstants:
     SAMPLE_ID_COLUMN = 'sampleId'
     NOTES_COLUMN = 'notes'
     FAMILY_NOTES_COLUMN = 'familyNotes'
-
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
-
-    # staff-only uploads
     PROBAND_RELATIONSHIP = 'probandRelationship'
-    #CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
-
-    #POST_DISCOVERY_OMIM_COLUMN = 'postDiscoveryOmim'
-    #FUNDING_SOURCE_COLUMN = 'fundingSource'
 
 
 class MergedPedigreeSampleManifestConstants:
