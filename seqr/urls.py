@@ -102,19 +102,14 @@ from seqr.views.apis.users_api import \
     update_policies, \
     forgot_password
 
-from seqr.views.apis.staff_api import \
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
+from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
     get_projects_for_category, \
-    success_story, \
-    elasticsearch_status, \
-    saved_variants_page, \
-    upload_qc_pipeline_output, \
-    mme_details, \
-    seqr_stats, \
     sample_metadata_export, \
-    proxy_to_kibana
-
+    seqr_stats
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
