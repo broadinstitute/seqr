@@ -49,17 +49,6 @@ class UsersAPITest(object):
         if self.LOCAL_COLLABORATOR_NAMES:
             self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
-        self.login_staff_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user',
-            'test_superuser',
-        })
-        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
-
-
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail, mock_logger):
