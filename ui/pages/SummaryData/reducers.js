@@ -19,7 +19,7 @@ const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
 export const loadMme = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_MME })
-    new HttpRequestHelper('/api/staff/matchmaker',
+    new HttpRequestHelper('/api/summary_data/matchmaker',
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_MME, newValue: responseJson })
@@ -35,7 +35,7 @@ export const loadSuccessStory = (successStoryTypes) => {
   return (dispatch) => {
     if (successStoryTypes) {
       dispatch({ type: REQUEST_SUCCESS_STORY })
-      new HttpRequestHelper(`/api/staff/success_story/${successStoryTypes}`,
+      new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
         (responseJson) => {
           console.log(responseJson.errors)
           dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
@@ -60,7 +60,7 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
     }
 
     dispatch({ type: REQUEST_SAVED_VARIANTS })
-    new HttpRequestHelper(`/api/staff/saved_variants/${tag}`,
+    new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
       (responseJson) => {
         if (tag && !gene) {
           dispatch({
