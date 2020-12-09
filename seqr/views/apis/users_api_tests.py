@@ -7,11 +7,12 @@ from django.contrib.auth.models import User
 from django.urls.base import reverse
 
 from seqr.models import UserPolicy
-from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
+from seqr.views.apis.users_api import get_all_collaborators, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_staff, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
@@ -144,57 +145,6 @@ class UsersAPITest(object):
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)
-
-    @mock.patch('seqr.views.apis.users_api.logger')
-    @mock.patch('django.contrib.auth.models.send_mail')
-    def test_create_staff_user(self, mock_send_mail, mock_logger):
-        create_url = reverse(create_staff_user)
-        self.check_staff_login(create_url)
-
-        # send invalid request
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
-
-        # create
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com', 'firstName': 'Test', 'lastName': 'Staff'}))
-        self.assertEqual(response.status_code, 200)
-        user = User.objects.get(email='test_staff@test.com')
-        self.assertTrue(user.is_staff)
-
-        expected_email_content = """
-    Hi there Test Staff--
-
-    Test User has added you as a collaborator in seqr.
-
-    Please click this link to set up your account:
-    /users/set_password/{password_token}
-
-    Thanks!
-    """.format(password_token=user.password)
-        mock_send_mail.assert_called_with(
-            'Set up your seqr account',
-            expected_email_content,
-            None,
-            ['test_staff@test.com'],
-            fail_silently=False,
-        )
-
-        mock_logger.info.assert_called_with('Created user test_staff@test.com (local)', extra={'user': self.staff_user})
-
-        # calling create again fails
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'This user already exists')
-
-        # Test email failure
-        mock_send_mail.side_effect = AnymailError('Connection err')
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff_new@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Connection err')
 
     def test_set_password(self):
         username = 'test_new_user'
@@ -338,11 +288,6 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 6)
         self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
 
-    def test_create_staff_user(self, *args):
-        super(AnvilUsersAPITest, self).test_create_staff_user(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
-
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()
         self.mock_list_workspaces.asssert_not_called()
@@ -380,11 +325,6 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 6)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
-    def test_create_staff_user(self, *args):
-        super(MixUsersAPITest, self).test_create_staff_user(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
-
     def test_set_password(self):
         super(MixUsersAPITest, self).test_set_password()
         self.mock_list_workspaces.asssert_not_called()
@@ -394,7 +334,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_forgot_password(*args)
         self.mock_list_workspaces.asssert_not_called()
         self.mock_get_ws_acl.asssert_not_called()
-        
+
     def test_update_policies(self):
         super(MixUsersAPITest, self).test_update_policies()
         self.mock_list_workspaces.asssert_not_called()
