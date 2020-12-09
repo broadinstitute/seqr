@@ -12,6 +12,7 @@ from seqr.views.apis.users_api import get_all_collaborator_options, set_password
     get_all_staff_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
