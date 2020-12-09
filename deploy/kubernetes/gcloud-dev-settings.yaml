@@ -31,7 +31,7 @@ LINKERD_VERSION: 'stable-2.9.0'
 
 TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID: '733952080251-cpc211ip00bvl1fjol9hh6hhdqgkn8j8.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID: '733952080251-dqiqgpi81nhrecvomaaha9so5fmflvhm.apps.googleusercontent.com'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
