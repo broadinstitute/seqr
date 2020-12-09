@@ -58,7 +58,7 @@ class UsersAPITest(object):
         # send invalid request
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
+        self.assertEqual(response.json()['error'], 'Email is required')
 
         # create
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
