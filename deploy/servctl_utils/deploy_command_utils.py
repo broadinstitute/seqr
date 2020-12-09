@@ -45,6 +45,7 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "linkerd",
     "nginx",
     "postgres",
+    "elasticsearch",
     "external-elasticsearch-connector",
     "kibana",
     "redis",
@@ -83,6 +84,7 @@ DEPLOYMENT_TARGET_SECRETS = {
     'gcloud-prod': [
         'seqr',
         'postgres',
+        'elasticsearch',
         'nginx',
         'matchbox',
         'kibana',
