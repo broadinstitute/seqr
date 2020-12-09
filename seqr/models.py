@@ -103,7 +103,7 @@ class ModelWithGUID(models.Model):
 
     def delete_model(self, user, user_can_delete=False):
         """Helper delete method that logs the deletion"""
-        if not (user_can_delete or user.is_staff or self.created_by == user):
+        if not (user_can_delete or self.created_by == user):
             raise PermissionDenied('User does not have permission to delete this {}'.format(type(self).__name__))
         self.delete()
         log_model_update(logger, self, user, 'delete')

@@ -100,8 +100,7 @@ from seqr.views.apis.users_api import \
     delete_project_collaborator, \
     set_password, \
     update_policies, \
-    forgot_password, \
-    create_staff_user
+    forgot_password
 
 from seqr.views.apis.staff_api import \
     anvil_export, \
@@ -246,7 +245,6 @@ api_endpoints = {
 
     'users/get_options': get_all_collaborator_options,
     'users/get_staff_options': get_all_staff_options,
-    'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,

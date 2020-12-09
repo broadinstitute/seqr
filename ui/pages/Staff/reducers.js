@@ -138,22 +138,6 @@ export const loadSuccessStory = (successStoryTypes) => {
   }
 }
 
-
-export const createStaffUser = (values) => {
-  return () => {
-    return new HttpRequestHelper('/api/users/create_staff_user',
-      () => {},
-      (e) => {
-        if (e.body && e.body.error) {
-          throw new SubmissionError({ _error: [e.body.error] })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
-      },
-    ).post(values)
-  }
-}
-
 export const loadAllUsers = () => {
   return (dispatch, getState) => {
     const { allUsers } = getState()

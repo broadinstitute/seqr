@@ -113,16 +113,6 @@ def update_policies(request):
     return create_json_response({'currentPolicies': True})
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def create_staff_user(request):
-    try:
-        _create_user(request, is_staff=True)
-    except CreateUserException as e:
-        return create_json_response({'error': str(e)}, status=e.status_code, reason=str(e))
-
-    return create_json_response({'success': True})
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
