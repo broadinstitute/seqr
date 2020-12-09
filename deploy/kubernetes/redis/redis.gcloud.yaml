@@ -46,6 +46,8 @@ spec:
             cpu: "1"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

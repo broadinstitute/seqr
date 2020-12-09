@@ -34,6 +34,7 @@ spec:
 ---
 # Source: ingress-nginx/templates/controller-deployment.yaml
 # modified to include the linkerd-inject annotation
+# modified to deploy onto our default pool
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -142,6 +143,8 @@ spec:
               memory: 90Mi
       nodeSelector:
         kubernetes.io/os: linux
+        # only deploy into our default pool
+        cloud.google.com/gke-nodepool: 'default-pool'
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       volumes:

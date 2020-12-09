@@ -191,3 +191,5 @@ spec:
                       values:
                       - seqr
                 topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'

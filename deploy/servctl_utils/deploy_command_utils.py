@@ -605,7 +605,7 @@ def _init_cluster_gcloud(settings):
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]
         if pool_settings.get('labels'):
-            command += ['--node-labels', pool_settings['labels']]]
+            command += ['--node-labels', pool_settings['labels']]
         run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
 
     run(" ".join([
