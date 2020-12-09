@@ -39,9 +39,9 @@ spec:
               nodeSelectorTerms:
               - matchExpressions:
                 - key: nodeType
-                  operator: In
+                  operator: NotIn
                   values:
-                  - es-control
+                  - data
         initContainers:
           - name: sysctl
             securityContext:
@@ -70,9 +70,9 @@ spec:
               nodeSelectorTerms:
               - matchExpressions:
                 - key: nodeType
-                  operator: In
+                  operator: NotIn
                   values:
-                  - es-control
+                  - data
         initContainers:
           - name: sysctl
             securityContext:
