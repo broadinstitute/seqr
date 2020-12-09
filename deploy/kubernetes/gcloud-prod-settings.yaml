@@ -9,7 +9,7 @@ NODE_POOLS:
   es-data-nodes:
     num_nodes: 3
     machine_type: n1-highmem-8
-    labels: noteType=data
+    labels: nodeType=data
 
 KUBERNETES_VERSION: '1.16.13-gke.401'
 
