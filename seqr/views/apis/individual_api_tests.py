@@ -2,7 +2,6 @@
 import json
 import mock
 
-from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
