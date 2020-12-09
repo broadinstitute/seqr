@@ -6,22 +6,23 @@ from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls.base import reverse
 
-from seqr.models import UserPolicy
-from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
+from seqr.models import UserPolicy, Project
+from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff, update_policies
+    get_all_staff_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
 PROJECT_GUID = 'R0001_1kg'
-
+USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isStaff'}
 
 class UsersAPITest(object):
 
-    def test_get_all_staff(self):
-        get_all_staff_url = reverse(get_all_staff)
+    def test_get_all_staff_options(self):
+        get_all_staff_url = reverse(get_all_staff_options)
         self.check_require_login(get_all_staff_url)
         response = self.client.get(get_all_staff_url)
         self.assertEqual(response.status_code, 200)
@@ -29,11 +30,11 @@ class UsersAPITest(object):
         all_staff_usernames = list(response_json.keys())
         first_staff_user = response_json[all_staff_usernames[0]]
 
-        self.assertSetEqual(set(first_staff_user), USER_FIELDS)
+        self.assertSetEqual(set(first_staff_user), USER_OPTION_FIELDS)
         self.assertTrue(first_staff_user['isStaff'])
 
-    def test_get_all_collaborators(self):
-        url = reverse(get_all_collaborators)
+    def test_get_all_collaborator_options(self):
+        url = reverse(get_all_collaborator_options)
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -43,13 +44,20 @@ class UsersAPITest(object):
         self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json().keys()), self.COLLABORATOR_NAMES)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), self.LOCAL_COLLABORATOR_NAMES)
+        if self.LOCAL_COLLABORATOR_NAMES:
+            self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
         self.login_staff_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json().keys()), {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user'})
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user',
+            'test_superuser',
+        })
+        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
 
     @mock.patch('seqr.views.apis.users_api.logger')
@@ -103,13 +111,9 @@ class UsersAPITest(object):
         mock_logger.info.assert_called_with('Created user test@test.com (local)', extra={'user': self.manager_user})
         mock_logger.reset_mock()
 
-        # get all project collaborators includes new collaborator
-        get_all_collaborators_url = reverse(get_all_collaborators)
-        response = self.client.get(get_all_collaborators_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {username} | self.COLLABORATOR_NAMES)
-        self.assertSetEqual(set(response_json[username].keys()), USER_FIELDS)
+        # check user object added to project set
+        self.assertEqual(
+            Project.objects.get(guid=PROJECT_GUID).can_view_group.user_set.filter(username=username).count(), 1)
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
@@ -117,8 +121,9 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), self.NUM_USERS)
-        self.assertEqual(collaborators[self.NEW_USER_IDX]['username'], username)
-        self.assertEqual(collaborators[self.NEW_USER_IDX]['displayName'], 'Test User')
+        NEW_USER_IDX = self.NUM_USERS - 1
+        self.assertEqual(collaborators[NEW_USER_IDX]['username'], username)
+        self.assertEqual(collaborators[NEW_USER_IDX]['displayName'], 'Test User')
         mock_send_mail.assert_not_called()
         mock_logger.info.assert_not_called()
 
@@ -128,11 +133,11 @@ class UsersAPITest(object):
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), self.NUM_USERS)
-        self.assertEqual(collaborators[self.NEW_USER_IDX]['email'], 'test@test.com')
-        self.assertEqual(collaborators[self.NEW_USER_IDX]['displayName'], 'Edited Collaborator')
-        self.assertFalse(collaborators[self.NEW_USER_IDX]['isStaff'])
-        self.assertTrue(collaborators[self.NEW_USER_IDX]['hasViewPermissions'])
-        self.assertTrue(collaborators[self.NEW_USER_IDX]['hasEditPermissions'])
+        self.assertEqual(collaborators[NEW_USER_IDX]['email'], 'test@test.com')
+        self.assertEqual(collaborators[NEW_USER_IDX]['displayName'], 'Edited Collaborator')
+        self.assertFalse(collaborators[NEW_USER_IDX]['isStaff'])
+        self.assertTrue(collaborators[NEW_USER_IDX]['hasViewPermissions'])
+        self.assertTrue(collaborators[NEW_USER_IDX]['hasEditPermissions'])
 
         # delete the project collaborator
         delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
@@ -144,57 +149,6 @@ class UsersAPITest(object):
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)
-
-    @mock.patch('seqr.views.apis.users_api.logger')
-    @mock.patch('django.contrib.auth.models.send_mail')
-    def test_create_staff_user(self, mock_send_mail, mock_logger):
-        create_url = reverse(create_staff_user)
-        self.check_staff_login(create_url)
-
-        # send invalid request
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
-
-        # create
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com', 'firstName': 'Test', 'lastName': 'Staff'}))
-        self.assertEqual(response.status_code, 200)
-        user = User.objects.get(email='test_staff@test.com')
-        self.assertTrue(user.is_staff)
-
-        expected_email_content = """
-    Hi there Test Staff--
-
-    Test User has added you as a collaborator in seqr.
-
-    Please click this link to set up your account:
-    /users/set_password/{password_token}
-
-    Thanks!
-    """.format(password_token=user.password)
-        mock_send_mail.assert_called_with(
-            'Set up your seqr account',
-            expected_email_content,
-            None,
-            ['test_staff@test.com'],
-            fail_silently=False,
-        )
-
-        mock_logger.info.assert_called_with('Created user test_staff@test.com (local)', extra={'user': self.staff_user})
-
-        # calling create again fails
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'This user already exists')
-
-        # Test email failure
-        mock_send_mail.side_effect = AnymailError('Connection err')
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test_staff_new@test.com'}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Connection err')
 
     def test_set_password(self):
         username = 'test_new_user'
@@ -299,8 +253,8 @@ class UsersAPITest(object):
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
+    LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
     NUM_USERS = 3
-    NEW_USER_IDX = NUM_USERS - 1
 
 
 def assert_has_anvil_calls(self):
@@ -309,93 +263,78 @@ def assert_has_anvil_calls(self):
         mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
-    calls = [
-        mock.call(self.no_access_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        mock.call(self.no_access_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
-    ]
-    self.mock_get_ws_acl.asssert_has_calls(calls)
+    self.mock_get_ws_acl.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_user_pure_anvil@test.com'}
+    LOCAL_COLLABORATOR_NAMES = set()
     NUM_USERS = 4
-    NEW_USER_IDX = NUM_USERS - 2
 
-    def test_get_all_collaborators(self):
-        super(AnvilUsersAPITest, self).test_get_all_collaborators()
+    def test_get_all_collaborator_options(self):
+        super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff(self):
-        super(AnvilUsersAPITest, self).test_get_all_staff()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+    def test_get_all_staff_options(self):
+        super(AnvilUsersAPITest, self).test_get_all_staff_options()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_create_update_and_delete_project_collaborator(self, *args):
         super(AnvilUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
-        self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_get_ws_acl.call_count, 6)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
-
-    def test_create_staff_user(self, *args):
-        super(AnvilUsersAPITest, self).test_create_staff_user(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_forgot_password(self, *args):
         super(AnvilUsersAPITest, self).test_forgot_password(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_update_policies(self):
         super(AnvilUsersAPITest, self).test_update_policies()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user', 'test_user_pure_anvil@test.com'}
+    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
+    COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
+    COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     NUM_USERS = 5
-    NEW_USER_IDX = NUM_USERS - 2
 
-    def test_get_all_collaborators(self):
-        super(MixUsersAPITest, self).test_get_all_collaborators()
+    def test_get_all_collaborator_options(self):
+        super(MixUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff(self):
-        super(MixUsersAPITest, self).test_get_all_staff()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+    def test_get_all_staff_options(self):
+        super(MixUsersAPITest, self).test_get_all_staff_options()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_create_update_and_delete_project_collaborator(self, *args):
         super(MixUsersAPITest, self).test_create_update_and_delete_project_collaborator(*args)
-        self.mock_list_workspaces.assert_called_with(self.manager_user, fields=WORKSPACE_FIELDS)
-        self.assertEqual(self.mock_get_ws_acl.call_count, 6)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-
-    def test_create_staff_user(self, *args):
-        super(MixUsersAPITest, self).test_create_staff_user(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
 
     def test_set_password(self):
         super(MixUsersAPITest, self).test_set_password()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_forgot_password(self, *args):
         super(MixUsersAPITest, self).test_forgot_password(*args)
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
-        
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+
     def test_update_policies(self):
         super(MixUsersAPITest, self).test_update_policies()
-        self.mock_list_workspaces.asssert_not_called()
-        self.mock_get_ws_acl.asssert_not_called()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()

@@ -3,7 +3,6 @@ import json
 import os
 import random
 import string
-import sys
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'seqr.apps.SuperuserAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.messages',

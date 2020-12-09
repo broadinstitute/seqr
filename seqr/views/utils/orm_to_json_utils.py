@@ -2,18 +2,17 @@
 Utility functions for converting Django ORM object to JSON
 """
 
-import itertools
 import json
 import logging
 import os
 from collections import defaultdict
-from copy import copy
+from copy import copy, deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, IS_OWNER
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms
@@ -90,8 +89,23 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
+MAIN_USER_FIELDS = [
+    'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id'
+]
+BOOL_USER_FIELDS = {
+    'is_superuser': False, 'is_staff': False, 'is_active': True,
+}
+MODEL_USER_FIELDS = MAIN_USER_FIELDS + list(BOOL_USER_FIELDS.keys())
+COMPUTED_USER_FIELDS = {
+    'is_anvil': lambda user, is_anvil=None: is_google_authenticated(user) if is_anvil is None else is_anvil,
+    'display_name': lambda user, **kwargs: user.get_full_name(),
+}
 
-def _get_json_for_user(user, is_anvil=None):
+DEFAULT_USER = {_to_camel_case(field): '' for field in MAIN_USER_FIELDS}
+DEFAULT_USER.update({_to_camel_case(field): val for field, val in BOOL_USER_FIELDS.items()})
+DEFAULT_USER.update({_to_camel_case(field): False for field in COMPUTED_USER_FIELDS.keys()})
+
+def _get_json_for_user(user, is_anvil=None, fields=None):
     """Returns JSON representation of the given User object
 
     Args:
@@ -104,12 +118,15 @@ def _get_json_for_user(user, is_anvil=None):
     if hasattr(user, '_wrapped'):
         user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
 
+    model_fields = [field for field in fields if field in MODEL_USER_FIELDS] if fields else MODEL_USER_FIELDS
+    computed_fields = [field for field in fields if field in COMPUTED_USER_FIELDS] if fields else COMPUTED_USER_FIELDS
+
     user_json = {
-        _to_camel_case(field): getattr(user, field) for field in [
-        'username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'is_active', 'date_joined', 'id',
-    ]}
-    user_json['isAnvil'] = is_google_authenticated(user) if is_anvil is None else is_anvil
-    user_json['displayName'] = user.get_full_name()
+        _to_camel_case(field): getattr(user, field) for field in model_fields
+    }
+    user_json.update({
+        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user, is_anvil=is_anvil) for field in computed_fields
+    })
     return user_json
 
 
@@ -629,7 +646,7 @@ def get_json_for_gene_notes(notes, user):
 
     def _process_result(result, note):
         result.update({
-            'editable': user.is_staff or user == note.created_by,
+            'editable': user == note.created_by,
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
@@ -697,19 +714,20 @@ def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborator_list = list(get_project_collaborators_by_username(user, project).values())
 
-    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
+    return sorted(collaborator_list, key=lambda collaborator: (
+        collaborator['lastName'] or '', collaborator['displayName'] or '', collaborator['email']))
 
 
 def get_project_collaborators_by_username(user, project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
 
-    for collaborator in project.can_view_group.user_set.all():
+    for collaborator in project.get_collaborators(permissions=[CAN_VIEW]):
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=False
         )
 
-    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+    for collaborator in project.get_collaborators(permissions=[CAN_EDIT, IS_OWNER]):
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=True
         )
@@ -723,18 +741,14 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
                 collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
                     can_edit=permission==CAN_EDIT, is_anvil=True)})
             else:
-                collaborators[email] = {
+                collaborators[email] = deepcopy(DEFAULT_USER)
+                collaborators[email].update({
                     'username': email,  # to ensure everything has a unique ID
                     'email': email,
                     'isAnvil': True,
                     'hasViewPermissions': True,
                     'hasEditPermissions': permission == CAN_EDIT,
-                    'displayName': email,
-                    'lastName': email,
-                    'is_staff': False,
-                    'is_active': True,
-                    'first_name': '', 'last_login': '', 'date_joined': '', 'id': '',
-                }
+                })
 
     return collaborators
 

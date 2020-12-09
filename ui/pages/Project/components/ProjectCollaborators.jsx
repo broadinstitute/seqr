@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUsersByUsername, getCurrentProject, getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsByUsername, getCurrentProject, getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -41,7 +41,7 @@ CollaboratorEmailDropdown.propTypes = {
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
-  usersByUsername: getUsersByUsername(state),
+  usersByUsername: getUserOptionsByUsername(state),
 })
 
 const mapDropdownDispatchToProps = {
