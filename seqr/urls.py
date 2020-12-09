@@ -253,13 +253,14 @@ api_endpoints = {
     'staff/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
-    'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'staff/elasticsearch_status': elasticsearch_status,
-    'summary_data/matchmaker': mme_details,
-    'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'staff/get_all_users': get_all_users,
+
+    'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
+    'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
+    'summary_data/matchmaker': mme_details,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
