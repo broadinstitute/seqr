@@ -3,7 +3,6 @@ from requests.utils import quote
 import json
 import logging
 from anymail.exceptions import AnymailError
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
