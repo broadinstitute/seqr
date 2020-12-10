@@ -2,7 +2,6 @@
 import json
 import mock
 
-from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
@@ -62,7 +61,6 @@ CHILD_UPDATE_GUID = "I000001_na19675"
 class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
         self.check_manager_login(edit_individuals_url)
@@ -79,20 +77,6 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['notes'], 'A note')
         self.assertFalse('features' in response_json[INDIVIDUAL_UPDATE_GUID])
         self.assertIsNone(individual.features)
-
-        # test edit case review status
-        response = self.client.post(edit_individuals_url, content_type='application/json',
-                                    data=json.dumps({'caseReviewStatus': 'A'}))
-        self.assertEqual(response.status_code, 403)
-        self.login_staff_user()
-        response = self.client.post(edit_individuals_url, content_type='application/json',
-                                    data=json.dumps({'caseReviewStatus': 'A'}))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatus'], 'A')
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedDate'], '2020-01-01T00:00:00')
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['caseReviewStatusLastModifiedBy'], 'test_user@test.com')
 
     def test_update_individual_hpo_terms(self):
         edit_individuals_url = reverse(update_individual_hpo_terms, args=[INDIVIDUAL_UPDATE_GUID])

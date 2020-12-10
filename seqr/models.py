@@ -103,7 +103,7 @@ class ModelWithGUID(models.Model):
 
     def delete_model(self, user, user_can_delete=False):
         """Helper delete method that logs the deletion"""
-        if not (user_can_delete or user.is_staff or self.created_by == user):
+        if not (user_can_delete or self.created_by == user):
             raise PermissionDenied('User does not have permission to delete this {}'.format(type(self).__name__))
         self.delete()
         log_model_update(logger, self, user, 'delete')
@@ -160,6 +160,7 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     disable_staff_access = models.BooleanField(default=False)
+    has_case_review = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -211,13 +212,27 @@ class Project(ModelWithGUID):
         self.can_edit_group.delete()
         self.can_view_group.delete()
 
+    def get_collaborators(self, permissions=None):
+        if not permissions:
+            permissions = {CAN_VIEW, CAN_EDIT, IS_OWNER}
+
+        collabs = set()
+        if CAN_VIEW in permissions:
+            collabs.update(self.can_view_group.user_set.all())
+        if CAN_EDIT in permissions:
+            collabs.update(self.can_edit_group.user_set.all())
+        if IS_OWNER in permissions:
+            collabs.update(self.owners_group.user_set.all())
+
+        return collabs
+
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
-            'workspace_namespace', 'workspace_name'
+            'workspace_namespace', 'workspace_name', 'has_case_review'
         ]
 
 
@@ -295,15 +310,8 @@ class Family(ModelWithGUID):
         default="Q"
     )
 
-    internal_analysis_status = models.CharField(
-        max_length=10,
-        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
-        null=True,
-        blank=True
-    )
-
-    internal_case_review_notes = models.TextField(null=True, blank=True)
-    internal_case_review_summary = models.TextField(null=True, blank=True)
+    case_review_notes = models.TextField(null=True, blank=True)
+    case_review_summary = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.family_id.strip()
@@ -320,7 +328,6 @@ class Family(ModelWithGUID):
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
-            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
             'success_story_types', 'success_story'
         ]
 
@@ -527,8 +534,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'case_review_status', 'case_review_discussion',
-            'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
+            'proband_relationship'
         ]
 
 

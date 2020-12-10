@@ -9,7 +9,7 @@ import Family from 'shared/components/panel/family'
 import FamilyVariantReads from 'shared/components/panel/variants/FamilyVariantReads'
 import IndividualRow from './FamilyTable/IndividualRow'
 
-const BaseFamilyDetail = React.memo(({ family, individuals, editCaseReview, compact, ...props }) =>
+const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, ...props }) =>
   <div>
     <Family
       family={family}
@@ -23,7 +23,7 @@ const BaseFamilyDetail = React.memo(({ family, individuals, editCaseReview, comp
         key={individual.individualGuid}
         family={family}
         individual={individual}
-        editCaseReview={editCaseReview}
+        tableName={tableName}
       />),
     )}
   </div>,
@@ -31,9 +31,9 @@ const BaseFamilyDetail = React.memo(({ family, individuals, editCaseReview, comp
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,
-  editCaseReview: PropTypes.bool,
   individuals: PropTypes.array,
   compact: PropTypes.bool,
+  tableName: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({

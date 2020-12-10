@@ -14,7 +14,6 @@ import CustomSearch from './components/CustomSearch'
 import DiscoverySheet from './components/DiscoverySheet'
 import SuccessStory from './components/SuccessStory'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
-import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
 import SampleMetadata from './components/SampleMetadata'
 import SampleQc from './components/SampleQc'
@@ -26,7 +25,6 @@ const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 const STAFF_PAGES = [
   { path: 'anvil', component: Anvil },
-  { path: 'create_user', component: CreateUser },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },

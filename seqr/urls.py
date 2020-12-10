@@ -9,10 +9,10 @@ from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \
     add_variants_dataset_handler, \
     receive_igv_table_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, DEBUG
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG
 from django.conf.urls import url, include
 from django.contrib import admin
-import django.contrib.admindocs.urls
+from django.views.generic.base import RedirectView
 import django.views.static
 
 from seqr.views.apis.family_api import \
@@ -36,6 +36,8 @@ from seqr.views.apis.individual_api import \
     save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
+    update_case_review_discussion, \
+    update_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
@@ -91,15 +93,14 @@ from seqr.views.apis.variant_search_api import \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
-    get_all_collaborators, \
-    get_all_staff, \
+    get_all_collaborator_options, \
+    get_all_staff_options, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
     set_password, \
     update_policies, \
-    forgot_password, \
-    create_staff_user
+    forgot_password
 
 from seqr.views.apis.staff_api import \
     anvil_export, \
@@ -113,6 +114,8 @@ from seqr.views.apis.staff_api import \
     seqr_stats, \
     sample_metadata_export, \
     proxy_to_kibana
+
+from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
@@ -150,6 +153,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
@@ -238,9 +243,8 @@ api_endpoints = {
     'users/(?P<username>[^/]+)/set_password': set_password,
     'users/update_policies': update_policies,
 
-    'users/get_all': get_all_collaborators,
-    'users/get_all_staff': get_all_staff,
-    'users/create_staff_user': create_staff_user,
+    'users/get_options': get_all_collaborator_options,
+    'users/get_staff_options': get_all_staff_options,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
@@ -259,6 +263,7 @@ api_endpoints = {
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'staff/get_all_users': get_all_users,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
@@ -295,7 +300,7 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
+    url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,

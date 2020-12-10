@@ -1,5 +1,6 @@
 import json
 import mock
+from copy import deepcopy
 from datetime import datetime
 from django.urls.base import reverse
 
@@ -7,8 +8,8 @@ from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS,\
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS, \
+    CASE_REVIEW_FAMILY_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -135,6 +136,7 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         family_fields.update(INTERNAL_FAMILY_FIELDS)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
@@ -167,40 +169,40 @@ class ProjectAPITest(object):
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {})
         self.assertDictEqual(response_json['locusListsByGuid'], {})
 
+BASE_COLLABORATORS = [
+    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',
+     'firstName': 'Test Manager User', 'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11,
+     'isActive': True, 'isAnvil': False, 'isStaff': False, 'isSuperuser': False, 'lastLogin': None, 'lastName': '',
+     'username': 'test_user_manager'},
+    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
+     'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
+     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
+     'isSuperuser': False, 'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'}]
+
+ANVIL_COLLABORATORS = [{
+    'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
+    'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
+    'isActive': True, 'isStaff': False, 'isSuperuser': False, 'lastName': '', 'lastLogin': '',
+    'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
+for collab in ANVIL_COLLABORATORS:
+    collab['isAnvil'] = True
+
+LOCAL_COLLAB = {
+    'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
+    'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
+    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isStaff': False, 'lastLogin': None, 'lastName': '',
+    'username': 'test_local_user'}
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
-                              'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': False,
-                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
-                             {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
-                              'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
-                              'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '',
-                              'username': 'test_user_non_staff'}]
+    PROJECT_COLLABORATORS = BASE_COLLABORATORS
 
 
 # Test for permissions from AnVIL only
 class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
-                              'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True,
-                              'isAnvil': True,
-                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
-                             {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
-                              'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True,
-                              'isAnvil': True,
-                              'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '',
-                              'username': 'test_user_non_staff'},
-                             {'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com',
-                              'email': 'test_user_pure_anvil@test.com', 'first_name': '', 'hasEditPermissions': False,
-                              'hasViewPermissions': True, 'id': '', 'isAnvil': True, 'is_active': True,
-                              'is_staff': False, 'lastName': 'test_user_pure_anvil@test.com', 'last_login': '',
-                              'username': 'test_user_pure_anvil@test.com'}]
+    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
 
     def test_create_update_and_delete_project(self):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
@@ -216,7 +218,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 3)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
 
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -231,24 +233,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = [{'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User',
-                              'email': 'test_user_manager@test.com', 'firstName': 'Test Manager User',
-                              'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11, 'isActive': True, 'isAnvil': True,
-                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
-                             {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
-                              'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': True,
-                              'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'},
-                             {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User',
-                              'email': 'test_local_user@test.com', 'firstName': 'Test seqr local User',
-                              'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14, 'isActive': True, 'isAnvil': False,
-                              'isStaff': False, 'lastLogin': None, 'lastName': '', 'username': 'test_local_user'},
-                             {'date_joined': '', 'displayName': 'test_user_pure_anvil@test.com',
-                              'email': 'test_user_pure_anvil@test.com', 'first_name': '', 'hasEditPermissions': False,
-                              'hasViewPermissions': True, 'id': '', 'isAnvil': True, 'is_active': True,
-                              'is_staff': False, 'lastName': 'test_user_pure_anvil@test.com', 'last_login': '',
-                              'username': 'test_user_pure_anvil@test.com'}
-                             ]
+    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
 
     def test_create_update_and_delete_project(self):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
@@ -264,7 +249,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
 
     def test_empty_project_page_data(self):
         super(MixProjectAPITest, self).test_empty_project_page_data()

@@ -24,6 +24,8 @@ const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
 const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
+const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
+const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
 
 // Data actions
@@ -136,19 +138,22 @@ export const loadSuccessStory = (successStoryTypes) => {
   }
 }
 
+export const loadAllUsers = () => {
+  return (dispatch, getState) => {
+    const { allUsers } = getState()
+    if (allUsers && allUsers.length) {
+      return
+    }
 
-export const createStaffUser = (values) => {
-  return () => {
-    return new HttpRequestHelper('/api/users/create_staff_user',
-      () => {},
-      (e) => {
-        if (e.body && e.body.error) {
-          throw new SubmissionError({ _error: [e.body.error] })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
+    dispatch({ type: REQUEST_ALL_USERS })
+    new HttpRequestHelper('/api/staff/get_all_users',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_ALL_USERS, newValue: responseJson })
       },
-    ).post(values)
+      (e) => {
+        dispatch({ type: RECEIVE_ALL_USERS, error: e.message, newValue: [] })
+      },
+    ).get()
   }
 }
 
@@ -299,6 +304,8 @@ export const reducers = {
     page: 1,
     recordsPerPage: 25,
   }, false),
+  allUsers: createSingleValueReducer(RECEIVE_ALL_USERS, [], 'users'),
+  allUsersLoading: loadingReducer(REQUEST_ALL_USERS, RECEIVE_ALL_USERS),
 }
 
 const rootReducer = combineReducers(reducers)

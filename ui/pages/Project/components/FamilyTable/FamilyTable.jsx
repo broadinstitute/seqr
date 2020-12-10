@@ -46,7 +46,7 @@ class FamilyTableRow extends React.PureComponent {
   }
 
   render() {
-    const { familyGuid, editCaseReview, showVariantDetails, detailFields, noDetailFields } = this.props
+    const { familyGuid, showVariantDetails, detailFields, noDetailFields, tableName } = this.props
     return (
       <Table.Row>
         <OverflowCell>
@@ -55,11 +55,11 @@ class FamilyTableRow extends React.PureComponent {
             familyGuid={familyGuid}
             showFamilyPageLink
             showVariantDetails={showVariantDetails}
+            tableName={tableName}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
             showIndividuals={this.state.showDetails}
-            editCaseReview={editCaseReview}
           />
         </OverflowCell>
       </Table.Row>
@@ -69,7 +69,7 @@ class FamilyTableRow extends React.PureComponent {
 
 FamilyTableRow.propTypes = {
   familyGuid: PropTypes.string.isRequired,
-  editCaseReview: PropTypes.bool,
+  tableName: PropTypes.string,
   detailFields: PropTypes.array,
   noDetailFields: PropTypes.array,
   showVariantDetails: PropTypes.bool,
@@ -77,7 +77,7 @@ FamilyTableRow.propTypes = {
 }
 
 const FamilyTable = React.memo((
-  { visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
+  { visibleFamilies, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
 ) =>
   <div>
     <ExportContainer>
@@ -99,7 +99,6 @@ const FamilyTable = React.memo((
     </ExportContainer>
     <Table padded fixed attached="top">
       <TableHeaderRow
-        showInternalFilters={showInternalFilters}
         fields={noDetailFields}
         tableName={tableName}
         showVariantDetails={showVariantDetails}
@@ -116,6 +115,7 @@ const FamilyTable = React.memo((
               familyGuid={family.familyGuid}
               noDetailFields={noDetailFields}
               showVariantDetails={showVariantDetails}
+              tableName={tableName}
               {...props}
             />,
           ) : <EmptyTableRow tableName={tableName} />)
@@ -133,8 +133,6 @@ FamilyTable.propTypes = {
   visibleFamilies: PropTypes.array.isRequired,
   loading: PropTypes.bool,
   headerStatus: PropTypes.object,
-  showInternalFilters: PropTypes.bool,
-  editCaseReview: PropTypes.bool,
   exportUrls: PropTypes.array,
   showVariantDetails: PropTypes.bool,
   noDetailFields: PropTypes.array,

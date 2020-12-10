@@ -12,7 +12,12 @@ import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
 import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
-import { FAMILY_FILTER_OPTIONS, INTERNAL_FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
+import {
+  FAMILY_FILTER_OPTIONS,
+  CASE_REVIEW_FAMILY_FILTER_OPTIONS,
+  FAMILY_SORT_OPTIONS,
+  CASE_REVIEW_TABLE_NAME,
+} from '../../../constants'
 
 import SortDirectionToggle from './SortDirectionToggle'
 
@@ -67,7 +72,7 @@ const SORT_FILTER_FIELDS = [
   },
 ]
 const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
-const INTERNAL_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: INTERNAL_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
+const CASE_REVEIW_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 
 export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) =>
   <FamilyLayout
@@ -87,7 +92,7 @@ TableHeaderDetail.propTypes = {
 }
 
 const TableHeaderRow = React.memo((
-  { showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
+  { visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
     updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
   }) =>
     <Table.Header fullWidth>
@@ -109,7 +114,7 @@ const TableHeaderRow = React.memo((
             closeOnSuccess={false}
             submitOnChange
             inline
-            fields={showInternalFilters ? INTERNAL_FILTER_FIELDS : FILTER_FIELDS}
+            fields={tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS}
           />
         </OverflowHeaderCell>
       </Table.Row>
@@ -124,7 +129,6 @@ const TableHeaderRow = React.memo((
 )
 
 TableHeaderRow.propTypes = {
-  showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number.isRequired,
   totalFamiliesCount: PropTypes.number.isRequired,
   familiesTableState: PropTypes.object.isRequired,

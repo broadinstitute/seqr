@@ -10,7 +10,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
 from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS, IGV_SAMPLE_FIELDS, \
-    TAG_FIELDS, VARIANT_NOTE_FIELDS
+    TAG_FIELDS, VARIANT_NOTE_FIELDS, CASE_REVIEW_FAMILY_FIELDS
 
 class JSONUtilsTest(TestCase):
     databases = '__all__'
@@ -31,13 +31,23 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(set(json.keys()), PROJECT_FIELDS)
 
     def test_json_for_family(self):
-        family = Family.objects.first()
+        family = Family.objects.filter(project__has_case_review=False).first()
         json = _get_json_for_family(family)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
         user = User.objects.filter(is_staff=True).first()
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_FAMILY_FIELDS)
+
+        case_review_family = Family.objects.filter(project__has_case_review=True).first()
+        json = _get_json_for_family(case_review_family)
+        self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
+
+        fields = set()
+        fields.update(INTERNAL_FAMILY_FIELDS)
+        fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        json = _get_json_for_family(case_review_family, user, add_individual_guids_field=True)
+        self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_individual(self):
         individual = Individual.objects.first()

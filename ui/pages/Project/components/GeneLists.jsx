@@ -142,7 +142,6 @@ class AddGeneLists extends React.PureComponent {
             omitLocusLists={this.props.project.locusListGuids}
             selectRows={this.selectList}
             selectedRows={this.state.selected}
-            hidePrivateLists
           />
           <Divider />
           <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>

@@ -205,7 +205,7 @@ class EsSearch(object):
                         variant_ids.append(lifted_variant_id)
 
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
-        if not (genes or intervals or rs_ids) and len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
+        if not (genes or intervals or rs_ids) and len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
             self._filtered_variant_ids = variant_id_genome_versions
         return self
 

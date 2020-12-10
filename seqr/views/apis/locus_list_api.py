@@ -25,11 +25,9 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def locus_lists(request):
-    if request.user.is_staff:
-        locus_list_models = LocusList.objects.all()
-    else:
-        locus_list_models = LocusList.objects.filter(Q(is_public=True) | Q(created_by=request.user))
-    locus_list_models = locus_list_models.annotate(num_projects=Count('projects'))
+    locus_list_models = LocusList.objects.filter(
+        Q(is_public=True) | Q(created_by=request.user)
+    ).annotate(num_projects=Count('projects'))
 
     locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True)
 

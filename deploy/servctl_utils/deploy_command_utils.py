@@ -34,6 +34,7 @@ DEPLOYABLE_COMPONENTS = [
     "pipeline-runner",
 
     "kube-scan",
+    "linkerd",
 ]
 
 DEPLOYMENT_TARGETS = {}
@@ -41,6 +42,7 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "init-cluster",
     "settings",
     "secrets",
+    "linkerd",
     "nginx",
     "postgres",
     "external-elasticsearch-connector",
@@ -245,6 +247,23 @@ def _set_elasticsearch_kubernetes_resources():
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
+
+def deploy_linkerd(settings):
+    print_separator('linkerd')
+
+    version_match = run("linkerd version | awk '/Client/ {print $3}'")
+    if version_match.strip() != settings["LINKERD_VERSION"]:
+        raise Exception("Your locally installed linkerd version does not match %s. "
+                        "Download the correct version from https://github.com/linkerd/linkerd2/releases/tag/%s" % \
+                        (settings['LINKERD_VERSION'], settings['LINKERD_VERSION']))
+
+    has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
+    if not has_namespace:
+        run('linkerd install | kubectl apply -f -')
+
+        run('linkerd check')
+
+
 def deploy_postgres(settings):
     print_separator("postgres")
 
@@ -412,7 +431,7 @@ def deploy_kube_scan(settings):
     print_separator("kube-scan")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
+        run("kubectl delete -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
         if settings["ONLY_PUSH_TO_REGISTRY"]:
             return
