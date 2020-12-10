@@ -28,6 +28,8 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       automountServiceAccountToken: true
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
   http:
     tls:
       selfSignedCertificate:
