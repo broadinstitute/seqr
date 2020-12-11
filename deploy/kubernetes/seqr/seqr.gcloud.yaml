@@ -110,6 +110,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: seqr_es_password
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_id
         - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
           valueFrom:
             secretKeyRef:
@@ -166,8 +171,6 @@ spec:
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
           value: "{{ TERRA_API_ROOT_URL }}"
-        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
-          value: "{{ SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID }}"
         readinessProbe:
           exec:
             command:
