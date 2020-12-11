@@ -26,6 +26,8 @@ spec:
       labels:
         name: kibana
         deployment: {{ DEPLOY_TO }}
+    spec:
+      automountServiceAccountToken: true
   http:
     tls:
       selfSignedCertificate:
