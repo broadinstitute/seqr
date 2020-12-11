@@ -110,6 +110,16 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: seqr_es_password
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_id
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_secret
         - name: KIBANA_ES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -159,6 +169,8 @@ spec:
           value: "{{ STATIC_MEDIA_DIR }}"
         - name: MME_CONFIG_DIR
           value: "{{ MME_CONFIG_DIR }}"
+        - name: TERRA_API_ROOT_URL
+          value: "{{ TERRA_API_ROOT_URL }}"
         readinessProbe:
           exec:
             command:

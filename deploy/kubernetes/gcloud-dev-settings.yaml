@@ -29,6 +29,7 @@ KUBERNETES_VERSION: '1.16.13-gke.401'
 
 LINKERD_VERSION: 'stable-2.9.0'
 
+TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
