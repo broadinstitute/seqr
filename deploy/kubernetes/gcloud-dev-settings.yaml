@@ -59,7 +59,7 @@ ELASTICSEARCH_CONTAINER_MEMORY: 2Gi
 
 ES_DATA_NUM_DISKS: 1
 ES_DATA_DISK_TYPE: pd-standard
-ES_DATA_DISK_SIZE: 2
+ES_DATA_DISK_SIZE: 10
 
 # Settings for a copy of production
 
