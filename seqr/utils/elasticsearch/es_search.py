@@ -506,7 +506,7 @@ class EsSearch(object):
             for search in searches:
                 ms = ms.add(search)
 
-        responses = self._execute_search(ms)
+        responses = self._execute_search(ms) if ms._searches else []
         parsed_responses = [self._parse_response(response) for response in responses]
         return self._process_multi_search_responses(parsed_responses, **kwargs)
 
