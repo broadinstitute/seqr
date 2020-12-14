@@ -16,7 +16,7 @@ const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 export const loadElasticsearchStatus = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })
-    new HttpRequestHelper('/api/staff/elasticsearch_status',
+    new HttpRequestHelper('/api/report/elasticsearch_status',
       (responseJson) => {
         dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, newValue: responseJson })
       },
@@ -35,7 +35,7 @@ export const loadAllUsers = () => {
     }
 
     dispatch({ type: REQUEST_ALL_USERS })
-    new HttpRequestHelper('/api/staff/get_all_users',
+    new HttpRequestHelper('/api/report/get_all_users',
       (responseJson) => {
         dispatch({ type: RECEIVE_ALL_USERS, newValue: responseJson })
       },
@@ -48,7 +48,7 @@ export const loadAllUsers = () => {
 
 export const uploadQcPipelineOutput = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper('/api/staff/upload_qc_pipeline_output',
+    return new HttpRequestHelper('/api/report/upload_qc_pipeline_output',
       (responseJson) => {
         dispatch({ type: RECEIVE_PIPELINE_UPLOAD_STATS, newValue: responseJson })
       },
