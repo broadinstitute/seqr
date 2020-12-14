@@ -3,7 +3,7 @@
 
 CLUSTER_NAME: 'seqr-cluster-dev'
 DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-DEFAULT_POOL_NUM_NODES: 2
+DEFAULT_POOL_NUM_NODES: 1
 
 # TODO decide if we need multiple pools, or any pools at all in dev
 NODE_POOLS:
