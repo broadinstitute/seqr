@@ -1129,7 +1129,7 @@ class EsUtilsTest(TestCase):
             urllib3_responses.GET, '/test_index,test_index_sv/_mapping', body=Exception('Connection error'))
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Error accessing index "test_index,test_index_sv": Connection error')
+        self.assertEqual(str(cm.exception), 'test_index,test_index_sv - Error accessing index: Connection error')
 
         urllib3_responses.replace_json('/test_index,test_index_sv/_mapping', {})
         with self.assertRaises(InvalidIndexException) as cm:
