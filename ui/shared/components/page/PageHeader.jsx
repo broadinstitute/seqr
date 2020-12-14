@@ -8,7 +8,8 @@ import { Grid, Breadcrumb, Popup, Icon, Header, Menu } from 'semantic-ui-react'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
-import { STAFF_PAGES } from 'pages/Staff/Staff'
+import { DATA_MANAGEMENT_PAGES } from 'pages/DataManagement/DataManagement'
+import { REPORT_PAGES } from 'pages/Report/Report'
 import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
@@ -173,7 +174,8 @@ SimplePageHeader.propTypes = {
 const NO_HEADER_PAGES = ['/dashboard', '/users', '/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
 
 const SIMPLE_HEADER_PAGES = [
-  { page: 'staff', pages: STAFF_PAGES },
+  { page: 'data_management', pages: DATA_MANAGEMENT_PAGES },
+  { page: 'report', pages: REPORT_PAGES },
 ]
 
 export default () =>

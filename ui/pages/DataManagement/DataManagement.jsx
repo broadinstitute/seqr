@@ -6,33 +6,23 @@ import { Route, Switch } from 'react-router-dom'
 import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
 
-import Anvil from './components/Anvil'
-import CustomSearch from './components/CustomSearch'
-import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
-import SampleMetadata from './components/SampleMetadata'
 import SampleQc from './components/SampleQc'
-import SeqrStats from './components/SeqrStats'
 import Users from './components/Users'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
-export const STAFF_PAGES = [
-  { path: 'anvil', component: Anvil },
-  { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
-  { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
+export const DATA_MANAGEMENT_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
-  { path: 'sample_metadata', params: '/:projectGuid?', component: SampleMetadata },
   { path: 'sample_qc', component: SampleQc },
-  { path: 'seqr_stats', component: SeqrStats },
   { path: 'users', component: Users },
 ]
 
-const Staff = ({ match, user }) => (
+const DataManagement = ({ match, user }) => (
   user.isStaff ? (
     <Switch>
-      {STAFF_PAGES.map(({ path, params, component }) =>
+      {DATA_MANAGEMENT_PAGES.map(({ path, params, component }) =>
         <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
       )}
       <Route path={match.url} component={null} />
@@ -41,7 +31,7 @@ const Staff = ({ match, user }) => (
   ) : <Error401 />
 )
 
-Staff.propTypes = {
+DataManagement.propTypes = {
   user: PropTypes.object,
   match: PropTypes.object,
 }
@@ -50,4 +40,4 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-export default connect(mapStateToProps)(Staff)
+export default connect(mapStateToProps)(DataManagement)

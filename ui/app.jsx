@@ -10,7 +10,8 @@ import BaseLayout from 'shared/components/page/BaseLayout'
 import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
 import VariantSearch from 'pages/Search/VariantSearch'
-import Staff from 'pages/Staff/Staff'
+import DataManagement from 'pages/DataManagement/DataManagement'
+import Report from 'pages/Report/Report'
 import SummaryData from 'pages/SummaryData/SummaryData'
 import Login from 'pages/Login/components/Login'
 import ForgotPassword from 'pages/Login/components/ForgotPassword'
@@ -52,7 +53,8 @@ ReactDOM.render(
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
             <Route path="/variant_search" component={VariantSearch} />
-            <Route path="/staff" component={Staff} />
+            <Route path="/data_management" component={DataManagement} />
+            <Route path="/report" component={Report} />
             <Route path="/summary_data" component={SummaryData} />
             <Route path="/login" component={Login} />
             <Route path="/users/forgot_password" component={ForgotPassword} />
