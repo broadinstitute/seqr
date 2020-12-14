@@ -17,7 +17,7 @@ const ACTIVE_LINK_STYLE = {
 
 const LOADING_PROPS = { inline: true }
 
-const getResultHref = page => result => `/staff/${page}/${result.key}`
+const getResultHref = page => result => `/report/${page}/${result.key}`
 
 const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters, rowsPerPage }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
@@ -28,7 +28,7 @@ const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColu
       inputwidth="350px"
       getResultHref={getResultHref(page)}
     />
-    or <NavLink to={`/staff/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
+    or <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
     <DataTable

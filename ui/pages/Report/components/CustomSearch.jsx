@@ -77,7 +77,7 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
         <DataLoader contentId={match.params.searchHash} content loading={loading} load={loadContext} hideError>
           <VariantSearchFormContainer
             history={history}
-            resultsPath="/staff/custom_search"
+            resultsPath="/report/custom_search"
             form={STAFF_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >

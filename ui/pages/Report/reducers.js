@@ -23,7 +23,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
 
       const errors = new Set()
       const rows = []
-      new HttpRequestHelper('/api/staff/projects_for_category/CMG',
+      new HttpRequestHelper('/api/report/projects_for_category/CMG',
         (projectsResponseJson) => {
           const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
             if (acc[0].length === 5) {
@@ -35,7 +35,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
           chunkedProjects.reduce((previousPromise, projectsChunk) => {
             return previousPromise.then(() => {
               return Promise.all(projectsChunk.map(cmgProjectGuid =>
-                new HttpRequestHelper(`/api/staff/${urlPath}/${cmgProjectGuid}`,
+                new HttpRequestHelper(`/api/report/${urlPath}/${cmgProjectGuid}`,
                   (responseJson) => {
                     if (responseJson.errors && responseJson.errors.length) {
                       console.log(responseJson.errors)
@@ -62,7 +62,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
 
     else if (projectGuid) {
       dispatch({ type: requestAction })
-      new HttpRequestHelper(`/api/staff/${urlPath}/${projectGuid}`,
+      new HttpRequestHelper(`/api/report/${urlPath}/${projectGuid}`,
         (responseJson) => {
           console.log(responseJson.errors)
           dispatch({ type: receiveAction, newValue: responseJson.rows })
@@ -82,7 +82,7 @@ export const loadSampleMetadata = loadMultiProjectData(REQUEST_SAMPLE_METADATA, 
 export const loadSeqrStats = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_SEQR_STATS })
-    new HttpRequestHelper('/api/staff/seqr_stats',
+    new HttpRequestHelper('/api/report/seqr_stats',
       (responseJson) => {
         dispatch({ type: RECEIVE_SEQR_STATS, newValue: responseJson })
       },
