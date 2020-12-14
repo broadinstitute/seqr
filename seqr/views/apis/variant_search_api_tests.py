@@ -106,7 +106,7 @@ class VariantSearchAPITest(object):
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], "TransportError(N/A, 'search_phase_execution_exception', 'Invalid')")
+        self.assertEqual(response.json()['error'], "TransportError: N/A - 'search_phase_execution_exception' - {'error': 'Invalid'}")
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = TransportError('401', 'search_phase_execution_exception', {'error': 'Invalid'})
@@ -114,7 +114,7 @@ class VariantSearchAPITest(object):
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()['error'], "TransportError(401, 'search_phase_execution_exception', 'Invalid')")
+        self.assertEqual(response.json()['error'], "TransportError: 401 - 'search_phase_execution_exception' - {'error': 'Invalid'}")
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants

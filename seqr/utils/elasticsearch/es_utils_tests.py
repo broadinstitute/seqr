@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 from datetime import timedelta
 from django.test import TestCase
-from elasticsearch.exceptions import ConnectionTimeout
+from elasticsearch.exceptions import ConnectionTimeout, TransportError
 from sys import maxsize
 from urllib3.exceptions import ReadTimeoutError
 
@@ -1123,6 +1123,22 @@ class EsUtilsTest(TestCase):
             ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents',
              '/_tasks/_cancel?parent_task_id=456']
         )
+
+        urllib3_responses.reset()
+        urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [
+            {'error': {'type': 'search_phase_execution_exception'}}]}, method=urllib3_responses.POST)
+        with self.assertRaises(TransportError):
+            get_es_variants(results_model)
+
+        urllib3_responses.replace_json('/test_index_sv,test_index/_msearch', {'responses': [
+            {'error': {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]}}
+        ]}, method=urllib3_responses.POST)
+
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
 
         _set_cache('index_metadata__test_index,test_index_sv', None)
         urllib3_responses.add(
