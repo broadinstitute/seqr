@@ -1,7 +1,7 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
-from elasticsearch.exceptions import ConnectionError
+from elasticsearch.exceptions import ConnectionError, TransportError
 from requests import HTTPError
 import json
 import logging
@@ -20,6 +20,7 @@ EXCEPTION_ERROR_MAP = {
     InvalidIndexException: 400,
     InvalidSearchException: 400,
     ConnectionError: 504,
+    TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
 }
 

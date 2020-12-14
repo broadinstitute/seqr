@@ -3,7 +3,7 @@ import mock
 from copy import deepcopy
 
 from django.urls.base import reverse
-from elasticsearch.exceptions import ConnectionTimeout
+from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
 from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
@@ -99,6 +99,22 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 504)
         self.assertEqual(response.json()['error'], 'ConnectionTimeout caused by - ValueError(Timeout)')
+        mock_error_logger.assert_not_called()
+
+        mock_get_variants.side_effect = TransportError('N/A', 'search_phase_execution_exception', {'error': 'Invalid'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], "TransportError(N/A, 'search_phase_execution_exception', 'Invalid')")
+        mock_error_logger.assert_not_called()
+
+        mock_get_variants.side_effect = TransportError('401', 'search_phase_execution_exception', {'error': 'Invalid'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['error'], "TransportError(401, 'search_phase_execution_exception', 'Invalid')")
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants
@@ -520,7 +536,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 10)
+        assert_no_list_ws_has_al(self, 12)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
