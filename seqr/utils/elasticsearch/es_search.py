@@ -995,16 +995,10 @@ class EsSearch(object):
             logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled))
             raise e
         except elasticsearch.exceptions.TransportError as e:
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
-            try:
-                if e.info['root_cause'][0]['type'] == 'too_many_clauses':
-                    from seqr.utils.elasticsearch.utils import InvalidSearchException
-                    raise InvalidSearchException(
-                        'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
-            except InvalidSearchException as e:
-                raise e
-            except Exception:
-                pass
+            if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException(
+                    'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
             raise e
 
     def _delete_long_running_tasks(self):
