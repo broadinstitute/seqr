@@ -1,7 +1,7 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
-from elasticsearch.exceptions import ConnectionTimeout
+from elasticsearch.exceptions import ConnectionError
 from requests import HTTPError
 import json
 import logging
@@ -19,7 +19,7 @@ EXCEPTION_ERROR_MAP = {
     ObjectDoesNotExist: 404,
     InvalidIndexException: 400,
     InvalidSearchException: 400,
-    ConnectionTimeout: 504,
+    ConnectionError: 504,
     HTTPError: lambda e: int(e.response.status_code),
 }
 
