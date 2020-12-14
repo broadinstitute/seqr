@@ -256,9 +256,9 @@ api_endpoints = {
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/seqr_stats': seqr_stats,
 
-    'report/elasticsearch_status': elasticsearch_status,
-    'report/upload_qc_pipeline_output': upload_qc_pipeline_output,
-    'report/get_all_users': get_all_users,
+    'data_management/elasticsearch_status': elasticsearch_status,
+    'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'data_management/get_all_users': get_all_users,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
