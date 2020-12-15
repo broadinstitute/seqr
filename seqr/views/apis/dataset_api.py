@@ -2,7 +2,6 @@ import json
 import logging
 from collections import defaultdict
 
-from django.contrib.auth.decorators import login_required
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
@@ -14,14 +13,13 @@ from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    data_manager_required # TODO
-from settings import API_LOGIN_REQUIRED_URL
+    data_manager_required
 
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 def add_variants_dataset_handler(request, project_guid):
     """Create or update samples for the given variant dataset
 
@@ -126,7 +124,7 @@ def add_variants_dataset_handler(request, project_guid):
     return create_json_response(response_json)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 def receive_igv_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     info = []
@@ -168,7 +166,7 @@ def receive_igv_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project

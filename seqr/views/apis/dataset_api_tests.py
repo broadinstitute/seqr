@@ -28,7 +28,7 @@ class DatasetAPITest(object):
         mock_file_iter = mock_open.return_value.__enter__.return_value.__iter__
 
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
-        self.check_manager_login(url)
+        self.check_staff_login(url)
 
         # Confirm test DB is as expected
         existing_index_sample = Sample.objects.get(sample_id='NA19675')
@@ -257,7 +257,7 @@ class DatasetAPITest(object):
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        self.check_manager_login(url)
+        self.check_staff_login(url)
 
         # Send invalid requests
         f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
@@ -288,7 +288,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        self.check_manager_login(url)
+        self.check_staff_login(url)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -353,11 +353,9 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', '1kg_project']
 
 
-def assert_no_list_ws_has_al(self, acl_call_count):
+def assert_no_list_ws_has_al(self):
     self.mock_list_workspaces.assert_not_called()
-    self.mock_get_ws_access_level .assert_called_with(mock.ANY,
-        'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-    self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    self.mock_get_ws_access_level.assert_not_called()
     self.mock_get_ws_acl.assert_not_called()
 
 
@@ -367,15 +365,15 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_list_ws_has_al(self, 15)
+        assert_no_list_ws_has_al(self)
 
     def test_receive_alignment_table_handler(self):
         super(AnvilDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_list_ws_has_al(self, 4)
+        assert_no_list_ws_has_al(self)
 
     def test_add_alignment_sample(self, *args):
         super(AnvilDatasetAPITest, self).test_add_alignment_sample(*args)
-        assert_no_list_ws_has_al(self, 7)
+        assert_no_list_ws_has_al(self)
 
 
 # Test for permissions from AnVIL and local
@@ -384,12 +382,12 @@ class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self)
 
     def test_receive_alignment_table_handler(self):
         super(MixDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self)
 
     def test_add_alignment_sample(self, *args):
         super(MixDatasetAPITest, self).test_add_alignment_sample(*args)
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self)
