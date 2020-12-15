@@ -17,6 +17,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_google_authenticated
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,9 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     """
     def _process_result(result, project):
         result.update({
-            'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
+            'projectCategoryGuids': [
+                c.guid for c in project.projectcategory_set.all() if c.name != ANALYST_PROJECT_CATEGORY
+            ] if add_project_category_guids_field else [],
             'canEdit': has_project_permissions(project, user, can_edit=True),
         })
 

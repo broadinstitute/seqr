@@ -257,7 +257,7 @@ UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIP
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
-ANALYST_PROJECT_CATEGORY = 'analyst-projects' # TODO make sure not to return this with normal API calls
+ANALYST_PROJECT_CATEGORY = 'analyst-projects'
 ANALYST_USER_GROUP = 'analysts'
 PM_USER_GROUP = 'project-managers'
 
