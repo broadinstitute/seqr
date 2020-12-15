@@ -232,9 +232,9 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
     summaryDetail = (
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        {/* TODO should be available to all users */}
+        {/* TODO should be available to all users (https://github.com/broadinstitute/seqr-private/issues/891) */}
         {user.isAnalyst && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
-        {user.isAnalyst && <NavLink to={`/staff/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
+        {user.isAnalyst && <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
         {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
         {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
       </GeneLinks>

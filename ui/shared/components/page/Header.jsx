@@ -19,9 +19,9 @@ const PageHeader = React.memo(({ user }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length ? [
-      <Menu.Item key="gene" as={Link} to="/gene_info" content="Gene Info" />,
-      <Menu.Item key="gene_lists" as={Link} to="/gene_lists" content="Gene Lists" />,
-      user.isAnalyst ? <Menu.Item key="staff" as={Link} to="/staff" content="Staff Pages" /> : null,
+      <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
+      user.isAnalyst ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
+      user.isDataManager ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
       <Menu.Item key="user" position="right">
         <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email) + (user.isAnvil ? '(AnVIL)' : '')}</b></p>
