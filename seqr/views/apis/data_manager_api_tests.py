@@ -248,7 +248,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @urllib3_responses.activate
     def test_elasticsearch_status(self):
         url = reverse(elasticsearch_status)
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         urllib3_responses.add_json(
             '/_cat/allocation?format=json&h=node,shards,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
@@ -275,7 +275,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output,)
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         request_data =json.dumps({
             'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'
@@ -352,7 +352,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_sv_qc(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output, )
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         request_data = json.dumps({
             'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
@@ -380,7 +380,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @responses.activate
     def test_kibana_proxy(self):
         url = '/api/kibana/random/path'
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response_args = {
             'stream': True,

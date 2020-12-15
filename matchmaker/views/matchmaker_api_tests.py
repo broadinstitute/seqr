@@ -223,8 +223,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
-        # staff users should see originating query for results
-        self.login_staff_user()
+        # analyst users should see originating query for results
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -319,7 +319,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
         )
-        # non-staff users can't see contact notes
+        # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
 
         #  Test removed match is deleted
@@ -394,8 +394,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
         self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
 
-        # staff users should see contact notes
-        self.login_staff_user()
+        # analyst users should see contact notes
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -690,8 +690,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
 
-        # staff users should see originating query for results
-        self.login_staff_user()
+        # analyst users should see originating query for results
+        self.login_analyst_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(update_body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -846,7 +846,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         # Test create
         response = self.client.post(url, content_type='application/json', data=json.dumps({

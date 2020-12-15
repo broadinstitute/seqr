@@ -60,8 +60,12 @@ class DashboardPageTest(object):
             set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
 
-        # Staff users can see all projects
-        self.login_staff_user()
+        self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['projectsByGuid']), 3)
+
+        self.login_data_manager_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 3)
@@ -79,7 +83,7 @@ class DashboardPageTest(object):
         self.assertListEqual(export_content, [PROJECT_EXPORT_HEADER])
 
         # test with access to data
-        self.login_staff_user()
+        self.login_analyst_user()
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]

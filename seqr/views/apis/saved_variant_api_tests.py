@@ -157,8 +157,8 @@ class SavedVariantAPITest(object):
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
 
-        # Test cross-project discovery for staff users
-        self.login_staff_user()
+        # Test cross-project discovery for analyst users
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

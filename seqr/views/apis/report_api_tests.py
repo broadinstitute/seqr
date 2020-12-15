@@ -209,7 +209,7 @@ class ReportAPITest(AuthenticationTestCase):
 
     def test_seqr_stats(self):
         url = reverse(seqr_stats)
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -221,7 +221,7 @@ class ReportAPITest(AuthenticationTestCase):
 
     def test_get_projects_for_category(self):
         url = reverse(get_projects_for_category, args=[PROJECT_CATEGRORY_NAME])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -232,7 +232,7 @@ class ReportAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.report_api.timezone')
     def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
-        self.check_staff_login(non_project_url)
+        self.check_analyst_login(non_project_url)
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -273,7 +273,7 @@ class ReportAPITest(AuthenticationTestCase):
     @responses.activate
     def test_anvil_export(self, mock_zip):
         url = reverse(anvil_export, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         response = self.client.get(url)
@@ -342,7 +342,7 @@ class ReportAPITest(AuthenticationTestCase):
     @responses.activate
     def test_sample_metadata_export(self):
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         # Test invalid airtable responses
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)

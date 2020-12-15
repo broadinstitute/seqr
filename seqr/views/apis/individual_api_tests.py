@@ -112,7 +112,7 @@ class IndividualAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_edit_individuals(self, mock_update_pedigree):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
-        self.check_staff_login(edit_individuals_url)
+        self.check_analyst_login(edit_individuals_url)
 
         # send invalid requests
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({}))
@@ -151,7 +151,7 @@ class IndividualAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_delete_individuals(self, mock_update_pedigree):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
-        self.check_staff_login(individuals_url)
+        self.check_analyst_login(individuals_url)
 
         # send invalid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
@@ -178,7 +178,7 @@ class IndividualAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_individuals_table_handler(self, mock_update_pedigree):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
-        self.check_staff_login(individuals_url)
+        self.check_analyst_login(individuals_url)
 
         # send invalid requests
         response = self.client.get(individuals_url)

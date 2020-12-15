@@ -129,8 +129,8 @@ class ProjectAPITest(object):
             {'id', 'category', 'label'}
         )
 
-        # Test staff users have internal fields returned
-        self.login_staff_user()
+        # Test analyst users have internal fields returned
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -214,7 +214,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+        self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
@@ -245,7 +245,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     def test_project_page_data(self):
         super(MixProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+        self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,

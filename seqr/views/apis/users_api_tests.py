@@ -21,17 +21,17 @@ USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email
 
 class UsersAPITest(object):
 
-    def test_get_all_staff_options(self):
-        get_all_staff_url = reverse(get_all_analyst_options)
-        self.check_require_login(get_all_staff_url)
-        response = self.client.get(get_all_staff_url)
+    def test_get_all_analyst_options(self):
+        get_all_analyst_url = reverse(get_all_analyst_options)
+        self.check_require_login(get_all_analyst_url)
+        response = self.client.get(get_all_analyst_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        all_staff_usernames = list(response_json.keys())
-        first_staff_user = response_json[all_staff_usernames[0]]
+        all_analyst_usernames = list(response_json.keys())
+        first_analyst_user = response_json[all_analyst_usernames[0]]
 
-        self.assertSetEqual(set(first_staff_user), USER_OPTION_FIELDS)
-        self.assertTrue(first_staff_user['isAnalyst'])
+        self.assertSetEqual(set(first_analyst_user), USER_OPTION_FIELDS)
+        self.assertTrue(first_analyst_user['isAnalyst'])
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -269,8 +269,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff_options(self):
-        super(AnvilUsersAPITest, self).test_get_all_staff_options()
+    def test_get_all_analyst_options(self):
+        super(AnvilUsersAPITest, self).test_get_all_analyst_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
@@ -306,8 +306,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff_options(self):
-        super(MixUsersAPITest, self).test_get_all_staff_options()
+    def test_get_all_analyst_options(self):
+        super(MixUsersAPITest, self).test_get_all_analyst_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 

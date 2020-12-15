@@ -11,7 +11,8 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
-    cls.staff_user = User.objects.get(username='test_user')
+    cls.analyst_user = User.objects.get(username='test_user')
+    cls.data_manager_user = User.objects.get(username='test_data_manager')
     cls.manager_user = User.objects.get(username='test_user_manager')
     cls.collaborator_user = User.objects.get(username='test_user_collaborator')
     cls.no_access_user = User.objects.get(username='test_user_no_access')
@@ -19,13 +20,15 @@ def _initialize_users(cls):
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
     SUPERUSER = 'superuser'
-    STAFF = 'staff'
+    ANALYST = 'analyst'
+    DATA_MANAGER = 'data_manager'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
 
     super_user = None
-    staff_user = None
+    analyst_user = None
+    data_manager_user = None
     manager_user = None
     collaborator_user = None
     no_access_user = None
@@ -50,8 +53,11 @@ class AuthenticationTestCase(TestCase):
     def check_manager_login(self, url):
         self._check_login(url, self.MANAGER)
 
-    def check_staff_login(self, url):
-        self._check_login(url, self.STAFF)
+    def check_analyst_login(self, url):
+        self._check_login(url, self.ANALYST)
+
+    def check_data_manager_login(self, url):
+        self._check_login(url, self.DATA_MANAGER)
 
     def check_superuser_login(self, url):
         self._check_login(url, self.SUPERUSER)
@@ -65,8 +71,11 @@ class AuthenticationTestCase(TestCase):
     def login_manager(self):
         self.client.force_login(self.manager_user)
 
-    def login_staff_user(self):
-        self.client.force_login(self.staff_user)
+    def login_analyst_user(self):
+        self.client.force_login(self.analyst_user)
+
+    def login_data_manager_user(self):
+        self.client.force_login(self.data_manager_user)
 
     def _check_login(self, url, permission_level, request_data=None):
         """For integration tests of django views that can only be accessed by a logged-in user,
@@ -107,8 +116,13 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
 
-        self.login_staff_user()
-        if permission_level == self.STAFF:
+        self.login_analyst_user()
+        if permission_level in self.ANALYST:
+            return
+
+        # TODO this will change, analysts should fail
+        self.login_data_manager_user()
+        if permission_level in self.DATA_MANAGER:
             return
 
         response = self.client.get(url)

@@ -28,7 +28,7 @@ class DatasetAPITest(object):
         mock_file_iter = mock_open.return_value.__enter__.return_value.__iter__
 
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_data_manager_login(url)
 
         # Confirm test DB is as expected
         existing_index_sample = Sample.objects.get(sample_id='NA19675')
@@ -257,7 +257,7 @@ class DatasetAPITest(object):
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_data_manager_login(url)
 
         # Send invalid requests
         f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
@@ -288,7 +288,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        self.check_staff_login(url)
+        self.check_data_manager_login(url)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
