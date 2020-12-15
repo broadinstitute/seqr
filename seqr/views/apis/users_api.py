@@ -5,7 +5,7 @@ import logging
 from anymail.exceptions import AnymailError
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 
 from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
@@ -13,7 +13,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
-from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
+from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def get_all_collaborator_options(request):
     })
 
 def _get_all_analysts():
-    return User.objects.filter(is_staff=True, is_active=True) # TODO
+    return Group.objects.get(name=ANALYST_USER_GROUP).user_set.all()
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_analyst_options(request):

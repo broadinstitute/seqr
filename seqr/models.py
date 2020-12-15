@@ -159,8 +159,6 @@ class Project(ModelWithGUID):
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
-    # TODO remove this
-    disable_staff_access = models.BooleanField(default=False)
     has_case_review = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)

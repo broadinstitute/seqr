@@ -3,19 +3,19 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
+from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT, IS_OWNER
 from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
 
 def user_is_analyst(user):
-    return user.is_staff # TODO
+    return user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
 def user_is_data_manager(user):
-    return user.is_staff # TODO
+    return user.is_staff
 
 def user_is_pm(user):
-    return user.is_staff # TODO
+    return user.groups.filter(name=PM_USER_GROUP).exists()
 
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
@@ -23,7 +23,7 @@ data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOG
 pm_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
-    return not project.disable_staff_access # TODO
+    return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to
@@ -116,7 +116,7 @@ def _get_workspaces_user_can_view(user):
 
 
 def _get_analyst_projects():
-    return Project.objects.filter(disable_staff_access=False) # TODO
+    return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
 def get_projects_user_can_view(user):
     if user_is_data_manager(user):
