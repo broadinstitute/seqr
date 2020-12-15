@@ -15,8 +15,8 @@ import {
   FREQUENCIES,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
-  STAFF_PATHOGENICITY_FIELDS,
-  STAFF_PATHOGENICITY_FILTER_OPTIONS,
+  ANALYST_PATHOGENICITY_FIELDS,
+  ANALYST_PATHOGENICITY_FILTER_OPTIONS,
   ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
@@ -93,8 +93,8 @@ const JsonSelectPropsWithAll = (options, all) => ({
 
 const pathogenicityPanel = isAnalyst => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isAnalyst ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
-  fields: isAnalyst ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isAnalyst ? ANALYST_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
+  fields: isAnalyst ? ANALYST_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
