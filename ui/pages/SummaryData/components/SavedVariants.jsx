@@ -18,7 +18,7 @@ import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { loadSavedVariants, updateStaffSavedVariantTable } from '../reducers'
+import { loadSavedVariants, updateAllProjectSavedVariantTable } from '../reducers'
 
 const GENE_SEARCH_CATEGORIES = ['genes']
 
@@ -63,7 +63,7 @@ TAG_OPTIONS.push({
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 })
 
-const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, geneDetail, ...props }) => {
+const BaseSavedVariants = React.memo(({ loadAllProjectSavedVariants, geneDetail, ...props }) => {
   const { params } = props.match
   const { tag, gene } = params
 
@@ -81,7 +81,7 @@ const BaseStaffSavedVariants = React.memo(({ loadStaffSavedVariants, geneDetail,
       props.updateTable({ page: 1 })
     }
     if (isInitialLoad || hasUpdatedTagOrGene) {
-      loadStaffSavedVariants(newParams)
+      loadAllProjectSavedVariants(newParams)
     }
   }
 
@@ -123,23 +123,23 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = {
-  updateTable: updateStaffSavedVariantTable,
-  loadStaffSavedVariants: loadSavedVariants,
+  updateTable: updateAllProjectSavedVariantTable,
+  loadAllProjectSavedVariants: loadSavedVariants,
 }
 
-BaseStaffSavedVariants.propTypes = {
+BaseSavedVariants.propTypes = {
   match: PropTypes.object,
   history: PropTypes.object,
   geneDetail: PropTypes.object,
   updateTable: PropTypes.func,
-  loadStaffSavedVariants: PropTypes.func,
+  loadAllProjectSavedVariants: PropTypes.func,
 }
 
-const StaffSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseStaffSavedVariants)
+const ConnectedSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)
 
 const RoutedSavedVariants = ({ match }) =>
   <Switch>
-    <Route path={`${match.url}/:tag?/:gene?`} component={StaffSavedVariants} />
+    <Route path={`${match.url}/:tag?/:gene?`} component={ConnectedSavedVariants} />
   </Switch>
 
 RoutedSavedVariants.propTypes = {

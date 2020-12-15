@@ -99,7 +99,7 @@ const pathogenicityPanel = isAnalyst => ({
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
 
-export const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true) // TODO rename
+export const ANALYST_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})

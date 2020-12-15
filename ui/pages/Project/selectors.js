@@ -429,7 +429,7 @@ export const getCollaborators = createSelector(
   project => project.collaborators,
 )
 
-// analyst option selectors (add project collaborators to staff users)
+// analyst option selectors (add project collaborators to analysts)
 export const getAnalystOptions = createSelector(
   getCollaborators,
   getUserOptionsByUsername,

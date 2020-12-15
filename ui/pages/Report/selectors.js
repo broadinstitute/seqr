@@ -2,7 +2,7 @@ import { formValueSelector } from 'redux-form'
 import { createSelector } from 'reselect'
 
 import {
-  CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS,
+  CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, CUSTOM_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS,
 } from './constants'
 
 export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
@@ -27,4 +27,4 @@ export const getSampleMetadataColumns = createSelector(
 )
 
 export const getSearchIncludeAllProjectsInput = state =>
-  formValueSelector(STAFF_SEARCH_FORM_NAME)(state, INCLUDE_ALL_PROJECTS)
+  formValueSelector(CUSTOM_SEARCH_FORM_NAME)(state, INCLUDE_ALL_PROJECTS)
