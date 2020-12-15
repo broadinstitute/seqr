@@ -13,7 +13,8 @@ from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+    data_manager_required # TODO
 from settings import API_LOGIN_REQUIRED_URL
 
 

@@ -2,7 +2,6 @@ import json
 import logging
 import requests
 from datetime import datetime
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
@@ -19,7 +18,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
-from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, user_is_analyst
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, user_is_analyst, \
+    analyst_required
 
 from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
@@ -335,7 +335,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def update_mme_contact_note(request, institution):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST

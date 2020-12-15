@@ -1,11 +1,12 @@
+from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
-from django.db.models.query_utils import Q
 from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
 from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
+from settings import API_LOGIN_REQUIRED_URL
 
 def user_is_analyst(user):
     return user.is_staff # TODO
@@ -15,6 +16,11 @@ def user_is_data_manager(user):
 
 def user_is_pm(user):
     return user.is_staff # TODO
+
+# User access decorators
+analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
+data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
+pm_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return not project.disable_staff_access # TODO
