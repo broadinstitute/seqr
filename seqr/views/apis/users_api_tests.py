@@ -244,7 +244,7 @@ class UsersAPITest(object):
 # Tests for AnVIL access disabled
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
     NUM_USERS = 3
 
@@ -261,7 +261,7 @@ def assert_has_anvil_calls(self):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_user_pure_anvil@test.com'}
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
     LOCAL_COLLABORATOR_NAMES = set()
     NUM_USERS = 4
 
@@ -297,7 +297,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
+    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_local_user'}
     COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     NUM_USERS = 5

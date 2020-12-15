@@ -170,15 +170,15 @@ class ProjectAPITest(object):
         self.assertDictEqual(response_json['locusListsByGuid'], {})
 
 BASE_COLLABORATORS = [
+    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Collaborator User',
+     'email': 'test_user_collaborator@test.com', 'firstName': 'Test Collaborator User',
+     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
+     'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'lastLogin': mock.ANY,
+     'lastName': '', 'username': 'test_user_collaborator'},
     {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',
      'firstName': 'Test Manager User', 'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11,
      'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False,
-     'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'},
-    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
-     'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
-     'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'lastLogin': mock.ANY,
-     'lastName': '', 'username': 'test_user_non_staff'}]
+     'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'}]
 
 ANVIL_COLLABORATORS = [{
     'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',

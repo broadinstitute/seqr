@@ -13,7 +13,7 @@ def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
     cls.staff_user = User.objects.get(username='test_user')
     cls.manager_user = User.objects.get(username='test_user_manager')
-    cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+    cls.collaborator_user = User.objects.get(username='test_user_collaborator')
     cls.no_access_user = User.objects.get(username='test_user_no_access')
 
 class AuthenticationTestCase(TestCase):
@@ -128,7 +128,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
@@ -158,7 +158,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
@@ -176,7 +176,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": False,

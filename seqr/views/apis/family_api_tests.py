@@ -84,7 +84,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Non Staff User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Collaborator User')
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])

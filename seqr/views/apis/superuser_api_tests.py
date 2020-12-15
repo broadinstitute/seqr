@@ -17,8 +17,8 @@ class SuperusersAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'users'})
         self.assertSetEqual(set(response_json['users'][0].keys()), USER_FIELDS)
         self.assertSetEqual({user['username'] for user in response_json['users']}, {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user',
-            'test_superuser',
+            'test_user_manager', 'test_user_collaborator', 'test_user_no_access', 'test_user', 'test_local_user',
+            'test_superuser', 'test_data_manager',
         })
 
 
