@@ -190,7 +190,7 @@ metadata:
       grpc_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local:$service_port;
     nginx.ingress.kubernetes.io/enable-modsecurity: "true"
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
-      SecRuleEngine DetectionOnly
+      SecRuleEngine On
 spec:
   tls:
     - hosts:
