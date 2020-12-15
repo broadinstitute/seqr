@@ -12,6 +12,7 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
     cls.analyst_user = User.objects.get(username='test_user')
+    cls.pm_user = User.objects.get(username='test_pm_user')
     cls.data_manager_user = User.objects.get(username='test_data_manager')
     cls.manager_user = User.objects.get(username='test_user_manager')
     cls.collaborator_user = User.objects.get(username='test_user_collaborator')
@@ -21,6 +22,7 @@ class AuthenticationTestCase(TestCase):
     databases = '__all__'
     SUPERUSER = 'superuser'
     ANALYST = 'analyst'
+    PM = 'project_manager'
     DATA_MANAGER = 'data_manager'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
@@ -28,6 +30,7 @@ class AuthenticationTestCase(TestCase):
 
     super_user = None
     analyst_user = None
+    pm_user = None
     data_manager_user = None
     manager_user = None
     collaborator_user = None
@@ -55,6 +58,9 @@ class AuthenticationTestCase(TestCase):
 
     def check_analyst_login(self, url):
         self._check_login(url, self.ANALYST)
+
+    def check_pm_login(self, url):
+        self._check_login(url, self.PM)
 
     def check_data_manager_login(self, url):
         self._check_login(url, self.DATA_MANAGER)
@@ -120,7 +126,16 @@ class AuthenticationTestCase(TestCase):
         if permission_level in self.ANALYST:
             return
 
-        # TODO this will change, analysts should fail
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.client.force_login(self.pm_user)
+        if permission_level in self.PM:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
         self.login_data_manager_user()
         if permission_level in self.DATA_MANAGER:
             return

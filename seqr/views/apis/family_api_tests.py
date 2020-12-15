@@ -23,7 +23,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
     def test_edit_families_handler(self):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
-        self.check_analyst_login(url)
+        self.check_pm_login(url)
 
         # send invalid request
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -53,7 +53,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
     def test_delete_families_handler(self):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
-        self.check_analyst_login(url)
+        self.check_pm_login(url)
 
         # send request with a "families" attribute to provide a list of families
         req_values = {
@@ -158,7 +158,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
     def test_receive_families_table_handler(self):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
-        self.check_analyst_login(url)
+        self.check_pm_login(url)
 
         # send invalid request
         data = b'Description	Coded Phenotype\n\

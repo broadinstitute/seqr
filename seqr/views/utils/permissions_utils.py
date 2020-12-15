@@ -20,7 +20,7 @@ def user_is_pm(user):
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
 data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
-pm_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
+pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
