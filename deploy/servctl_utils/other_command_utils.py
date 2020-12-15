@@ -156,7 +156,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
 
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
-        p = run_in_background("kubectl logs %(stream_arg)s %(previous_flag)s %(pod_name)s" % locals(), print_command=True)
+        p = run_in_background("kubectl logs %(stream_arg)s %(previous_flag)s %(pod_name)s --all-containers" % locals(), print_command=True)
         def print_command_log():
             for line in iter(p.stdout.readline, ''):
                 logger.info(line.strip('\n'))

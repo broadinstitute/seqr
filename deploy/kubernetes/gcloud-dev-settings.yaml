@@ -9,7 +9,7 @@ CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
 BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.20.0.18
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.20.0.11
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
 ELASTICSEARCH_VERSION: 7.8.1
 
@@ -29,6 +29,7 @@ KUBERNETES_VERSION: '1.16.13-gke.401'
 
 LINKERD_VERSION: 'stable-2.9.0'
 
+TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

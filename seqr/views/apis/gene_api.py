@@ -2,7 +2,6 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 
 from seqr.models import GeneNote
 from seqr.utils.gene_utils import get_gene, get_genes
