@@ -33,7 +33,7 @@ from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -515,7 +515,7 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
 
     variant_q = Q()
-    discovery_variant_q = Q() # TODO project permissions
+    discovery_variant_q = Q()
     variants_by_id = {}
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
@@ -529,6 +529,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
+    discovery_variant_q &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
+
     saved_variants = SavedVariant.objects.filter(variant_q)
 
     json = get_json_for_saved_variants_with_tags(

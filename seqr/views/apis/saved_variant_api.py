@@ -17,7 +17,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     user_is_analyst
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,8 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     if user_is_analyst(request.user):
         discovery_tags_query = Q()
         for variant in variant_query:
-            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id)) # TODO project permissions
+            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
+        discovery_tags_query &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
