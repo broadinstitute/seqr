@@ -24,9 +24,8 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(save_internal_case_review_notes, args=[FAMILY_GUID])
         self.check_manager_login(url)
 
-        # send request with a "value" attribute
         req_values = {
-            'value': 'some case review notes'
+            'caseReviewNotes': 'some case review notes'
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
@@ -35,29 +34,20 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
-        self.assertEqual(response_json[FAMILY_GUID]['caseReviewNotes'], req_values['value'])
-
-        # send request with a invalid "value" attribute
-        invalid_req_values = {
-            'valueX': 'some case review notes'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(invalid_req_values))
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response_json[FAMILY_GUID]['caseReviewNotes'], 'some case review notes')
 
         # send request for invalid project
         url = reverse(save_internal_case_review_notes, args=[NO_CASE_REVIEW_FAMILY_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case_review_notes for this project')
+        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
 
     def test_save_internal_case_review_summary(self):
         url = reverse(save_internal_case_review_summary, args=[FAMILY_GUID])
         self.check_manager_login(url)
 
-        # send request with a "value" attribute
         req_values = {
-            'value': 'some case review notes'
+            'caseReviewSummary': 'some case review notes'
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
@@ -66,20 +56,13 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
-        self.assertEqual(response_json[FAMILY_GUID]['caseReviewSummary'], req_values['value'])
-        # send request with a "value" attribute
-        invalid_req_values = {
-            'valueX': 'some case review notes'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(invalid_req_values))
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response_json[FAMILY_GUID]['caseReviewSummary'], 'some case review notes')
 
         # send request for invalid project
         url = reverse(save_internal_case_review_summary, args=[NO_CASE_REVIEW_FAMILY_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case_review_summary for this project')
+        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
 
     @mock.patch('seqr.views.apis.case_review_api.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_case_review_status(self):
@@ -99,7 +82,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(update_case_review_status, args=[NO_CASE_REVIEW_INDIVIDUAL_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'caseReviewStatus': 'A'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case_review_status for this project')
+        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
 
     def test_update_case_review_discussion(self):
         url = reverse(update_case_review_discussion, args=[INDIVIDUAL_GUID])
@@ -116,4 +99,4 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(update_case_review_discussion, args=[NO_CASE_REVIEW_INDIVIDUAL_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'caseReviewDiscussion': 'A Note'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case_review_discussion for this project')
+        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
