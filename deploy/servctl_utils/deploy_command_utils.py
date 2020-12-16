@@ -211,6 +211,9 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     _set_elasticsearch_kubernetes_resources()
 
     # create persistent volumes
@@ -248,7 +251,7 @@ def deploy_elasticsearch(settings):
 def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
     if not has_kube_resource:
-        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+        run('linkerd inject deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml | kubectl apply -f -')
 
 
 def deploy_linkerd(settings):
@@ -657,6 +660,9 @@ def docker_build(component_label, settings, custom_build_args=()):
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
+    
+    if component_label == 'elasticsearch' and settings.get('ELASTICSEARCH_VERSION'):
+        docker_tags.add("%(DOCKER_IMAGE_TAG)s-%(ELASTICSEARCH_VERSION)s" % settings)
 
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
