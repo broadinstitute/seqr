@@ -5,7 +5,9 @@ import hash from 'object-hash'
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
-import { reducers as staffReducers } from 'pages/Staff/reducers'
+import { reducers as dataManagementReducers } from 'pages/DataManagement/reducers'
+import { reducers as reportReducers } from 'pages/Report/reducers'
+import { reducers as summaryDataReducers } from 'pages/SummaryData/reducers'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import {
@@ -423,6 +425,6 @@ const rootReducer = combineReducers(Object.assign({
     page: 1,
     recordsPerPage: 100,
   }, false),
-}, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
+}, modalReducers, dashboardReducers, projectReducers, searchReducers, reportReducers, dataManagementReducers, summaryDataReducers))
 
 export default rootReducer

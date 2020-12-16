@@ -51,7 +51,7 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       idField="row_id"
       initialValues={formatInitialValue(match)}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
-      onSubmit={value => history.push(`/staff/success_story/${value.successStoryTypes}`)}
+      onSubmit={value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)}
       showIconOnly
       simplifiedValue
       fieldDisplay={value => value.map(tag =>
@@ -60,7 +60,7 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
           <HorizontalSpacer width={4} />
         </span>)}
     />
-    or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
+    or <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <VerticalSpacer height={15} />
     <DataTable
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}

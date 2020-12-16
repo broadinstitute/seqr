@@ -8,15 +8,6 @@ import {
 export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
 export const getDiscoverySheetLoadingError = state => state.discoverySheetLoading.errorMessage
 export const getDiscoverySheetRows = state => state.discoverySheetRows
-export const getSuccessStoryLoading = state => state.successStoryLoading.isLoading
-export const getSuccessStoryLoadingError = state => state.successStoryLoading.errorMessage
-export const getSuccessStoryRows = state => state.successStoryRows
-export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
-export const getElasticsearchStatusData = state => state.elasticsearchStatus
-export const getMmeLoading = state => state.mmeLoading.isLoading
-export const getMmeLoadingError = state => state.mmeLoading.errorMessage
-export const getMmeMetrics = state => state.mmeMetrics
-export const getMmeSubmissions = state => state.mmeSubmissions
 export const getSampleMetadataLoading = state => state.sampleMetadataLoading.isLoading
 export const getSampleMetadataLoadingError = state => state.sampleMetadataLoading.errorMessage
 export const getSampleMetadataRows = state => state.sampleMetadataRows
@@ -24,9 +15,6 @@ export const getSearchHashContextLoading = state => state.searchHashContextLoadi
 export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
 export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage
 export const getSeqrStats = state => state.seqrStats
-export const getQcUploadStats = state => state.qcUploadStats
-export const getAllUsersLoading = state => state.allUsersLoading.isLoading
-export const getAllUsers = state => state.allUsers
 
 export const getSampleMetadataColumns = createSelector(
   getSampleMetadataRows,

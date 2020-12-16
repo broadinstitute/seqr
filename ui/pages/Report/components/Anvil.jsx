@@ -37,7 +37,7 @@ class Anvil extends React.PureComponent {
         <Input type="date" onChange={this.onDataChange} />
         {project &&
           <div>
-            <a href={`/api/staff/anvil/${project.guid}?loadedBefore=${loadedBefore || ''}`}>
+            <a href={`/api/report/anvil/${project.guid}?loadedBefore=${loadedBefore || ''}`}>
               Download AnVIL metadata for {project.title}
             </a>
           </div>
