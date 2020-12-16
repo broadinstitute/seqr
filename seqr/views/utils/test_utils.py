@@ -746,7 +746,7 @@ PARSED_SV_VARIANT = {
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
     'hgmd': {'accession': None, 'class': None},
     'genomeVersion': '37',
-    'genotypeFilters': [],
+    'genotypeFilters': '',
     'liftedOverChrom': None,
     'liftedOverGenomeVersion': None,
     'liftedOverPos': None,

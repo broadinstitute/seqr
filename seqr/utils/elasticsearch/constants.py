@@ -251,7 +251,7 @@ CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
     'end': {'format_value': int},
-    'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
+    'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': ''},
     'num_exon': {'response_key': 'numExon'},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},

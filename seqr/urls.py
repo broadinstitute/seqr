@@ -153,8 +153,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,

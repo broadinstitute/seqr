@@ -193,8 +193,16 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView },
   [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView },
   [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView },
-  [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
-  [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
+  [FAMILY_FIELD_INTERNAL_NOTES]: {
+    name: 'Internal Notes',
+    internal: true,
+    submitArgs: { familyField: 'case_review_notes' },
+  },
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: {
+    name: 'Internal Summary',
+    internal: true,
+    submitArgs: { familyField: 'case_review_summary' },
+  },
 }
 
 export const FAMILY_DETAIL_FIELDS = [
