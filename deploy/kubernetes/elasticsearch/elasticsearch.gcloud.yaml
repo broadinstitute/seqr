@@ -8,7 +8,7 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}-{{ ELASTICSEARCH_VERSION }}
   auth:
     roles:
       - secretName: elasticsearch-secrets
@@ -29,10 +29,13 @@ spec:
       node.remote_cluster_client: false
     podTemplate:
       metadata:
+        annotations:
+          linkerd.io/inject: enabled
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        automountServiceAccountToken: true
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -60,10 +63,13 @@ spec:
       node.remote_cluster_client: false
     podTemplate:
       metadata:
+        annotations:
+          linkerd.io/inject: enabled
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        automountServiceAccountToken: true
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -92,10 +98,13 @@ spec:
       cluster.routing.allocation.disk.watermark.low: '90%'
     podTemplate:
       metadata:
+        annotations:
+          linkerd.io/inject: enabled
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        automountServiceAccountToken: true
       {% if ES_DATA_NUM_PODS > 1 %}
         affinity:
           nodeAffinity:
@@ -144,10 +153,13 @@ spec:
       node.remote_cluster_client: false
     podTemplate:
       metadata:
+        annotations:
+          linkerd.io/inject: enabled
         labels:
           name: elasticsearch
           deployment: {{ DEPLOY_TO }}
       spec:
+        automountServiceAccountToken: true
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
