@@ -9,7 +9,7 @@ DEFAULT_POOL_NUM_NODES: 1
 NODE_POOLS:
   es-data-nodes:
     num_nodes: 1
-    machine_type: n1-highmem-4
+    machine_type: n1-highmem-8
     labels: nodeType=data
 #   es-control-nodes:
 #     num_nodes: 1
