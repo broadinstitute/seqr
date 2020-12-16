@@ -18,8 +18,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
-from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, user_is_analyst, \
-    analyst_required
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
+    has_project_permissions
 
 from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
@@ -365,12 +365,14 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
-        if user_is_analyst(user) and result_model.originating_submission:
-            result['originatingSubmission'] = {
-                'originatingSubmissionGuid': result_model.originating_submission.guid,
-                'familyGuid': result_model.originating_submission.individual.family.guid,
-                'projectGuid': result_model.originating_submission.individual.family.project.guid,
-            }
+        if result_model.originating_submission:
+            originating_family = result_model.originating_submission.individual.family
+            if has_project_permissions(originating_family.project, user):
+                result['originatingSubmission'] = {
+                    'originatingSubmissionGuid': result_model.originating_submission.guid,
+                    'familyGuid': originating_family.guid,
+                    'projectGuid': originating_family.project.guid,
+                }
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 

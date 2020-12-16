@@ -515,7 +515,7 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
 
     variant_q = Q()
-    discovery_variant_q = Q()
+    discovery_variant_q = Q() # TODO project permissions
     variants_by_id = {}
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant

@@ -44,8 +44,9 @@ class AuthenticationTestCase(TestCase):
         view_group = Group.objects.get(pk=3)
         edit_group.user_set.add(cls.manager_user)
         view_group.user_set.add(cls.manager_user, cls.collaborator_user)
-        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
-        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.filter(can_edit_group=edit_group))
+        assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
     def check_require_login(self, url):
         self._check_login(url, self.AUTHENTICATED_USER)

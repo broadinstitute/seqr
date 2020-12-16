@@ -42,7 +42,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     if user_is_analyst(request.user):
         discovery_tags_query = Q()
         for variant in variant_query:
-            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
+            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id)) # TODO project permissions
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 

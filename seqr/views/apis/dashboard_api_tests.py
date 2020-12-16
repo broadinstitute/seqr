@@ -131,7 +131,7 @@ class DashboardPageTest(object):
 # Tests for AnVIL access disabled
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
-    NUM_COLLABORATOR_PROJECTS = 2
+    NUM_COLLABORATOR_PROJECTS = 3
 
 
 def assert_has_list_workspaces_calls(self):
