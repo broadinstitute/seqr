@@ -5,7 +5,7 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.views.apis.report_api import seqr_stats, get_projects_for_category, discovery_sheet, anvil_export, \
+from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
     sample_metadata_export
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
@@ -15,8 +15,6 @@ NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
-
-PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
     {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
@@ -220,15 +218,15 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response_json['familyCount'], 14)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
-    def test_get_projects_for_category(self):
-        url = reverse(get_projects_for_category, args=[PROJECT_CATEGRORY_NAME])
+    def test_get_cmg_projects(self):
+        url = reverse(get_cmg_projects)
         self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
-        self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
+        self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
     @mock.patch('seqr.views.apis.report_api.timezone')
     def test_discovery_sheet(self, mock_timezone):

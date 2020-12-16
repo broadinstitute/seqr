@@ -106,7 +106,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
-    get_projects_for_category, \
+    get_cmg_projects, \
     sample_metadata_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
@@ -253,7 +253,7 @@ api_endpoints = {
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
-    'report/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
+    'report/get_cmg_projects': get_cmg_projects,
     'report/seqr_stats': seqr_stats,
 
     'data_management/elasticsearch_status': elasticsearch_status,

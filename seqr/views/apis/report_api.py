@@ -647,10 +647,9 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 
 
 @analyst_required
-def get_projects_for_category(request, project_category_name):
-    category = ProjectCategory.objects.get(name=project_category_name) # TODO make this specifc to CMG so don't need to check permissions
+def get_cmg_projects(request):
     return create_json_response({
-        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory=category).only('guid')],
+        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory__name='CMG').only('guid')],
     })
 
 
