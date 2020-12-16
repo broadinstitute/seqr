@@ -13,7 +13,8 @@ from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.permissions_utils import analyst_required
+from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
+    check_project_permissions
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
@@ -126,7 +127,7 @@ MULTIPLE_DATASET_PRODUCTS = {
 
 @analyst_required
 def anvil_export(request, project_guid):
-    project = Project.objects.get(guid=project_guid) # TODO check permission
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
         project, request.GET.get('loadedBefore'),
@@ -148,7 +149,7 @@ def anvil_export(request, project_guid):
 
 @analyst_required
 def sample_metadata_export(request, project_guid):
-    project = Project.objects.get(guid=project_guid) # TODO check permission
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     mme_family_guids = {family.guid for family in _get_has_mme_submission_families(project)}
 
@@ -657,10 +658,11 @@ def get_projects_for_category(request, project_category_name):
 def discovery_sheet(request, project_guid):
     project = Project.objects.filter(guid=project_guid).prefetch_related(
         Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
-    ).distinct().first() # TODO check permission
+    ).distinct().first()
     if not project:
         message = 'Invalid project {}'.format(project_guid)
         return create_json_response({'error': message}, status = 400, reason = message)
+    check_project_permissions(project, request.user)
 
     rows = []
     errors = []

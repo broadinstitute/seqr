@@ -14,6 +14,7 @@ PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 COMPOUND_HET_PROJECT_GUID = 'R0003_test'
+NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 
 PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
 
@@ -215,8 +216,8 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
-        self.assertEqual(response_json['individualCount'], 17)
-        self.assertEqual(response_json['familyCount'], 13)
+        self.assertEqual(response_json['individualCount'], 18)
+        self.assertEqual(response_json['familyCount'], 14)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
     def test_get_projects_for_category(self):
@@ -240,6 +241,10 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
         response_json = response.json()
         self.assertEqual(response_json['error'], 'Invalid project {}'.format(NON_PROJECT_GUID))
+
+        unauthorized_project_url = reverse(discovery_sheet, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         empty_project_url = reverse(discovery_sheet, args=[PROJECT_EMPTY_GUID])
 
@@ -274,6 +279,10 @@ class ReportAPITest(AuthenticationTestCase):
     def test_anvil_export(self, mock_zip):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
+
+        unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         response = self.client.get(url)
@@ -343,6 +352,10 @@ class ReportAPITest(AuthenticationTestCase):
     def test_sample_metadata_export(self):
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
+
+        unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         # Test invalid airtable responses
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)
