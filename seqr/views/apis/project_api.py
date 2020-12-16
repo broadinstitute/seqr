@@ -49,6 +49,7 @@ def create_project_handler(request):
     description = request_json.get('description', '')
     genome_version = request_json.get('genomeVersion')
 
+    # TODO make sure adds for analysts, should be PM only?
     project = _create_project(name, request.user, description=description, genome_version=genome_version)
 
     return create_json_response({

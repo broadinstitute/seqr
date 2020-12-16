@@ -68,7 +68,7 @@ class DashboardPageTest(object):
         self.login_data_manager_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), 3)
+        self.assertEqual(len(response.json()['projectsByGuid']), 4)
 
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)

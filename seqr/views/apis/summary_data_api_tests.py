@@ -13,7 +13,7 @@ EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_1
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
     u'numberOfUniqueGenes': 4,
-    u'numberOfCases': 3,
+    u'numberOfCases': 4,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
     u'numberOfUniqueFeatures': 4,
