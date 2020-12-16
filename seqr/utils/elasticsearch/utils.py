@@ -42,7 +42,7 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
     try:
         mappings = client.indices.get_mapping(index=index_name)
     except Exception as e:
-        raise InvalidIndexException('Error accessing index "{}": {}'.format(
+        raise InvalidIndexException('{} - Error accessing index: {}'.format(
             index_name, e.error if hasattr(e, 'error') else str(e)))
     index_metadata = {}
     for index_name, mapping in mappings.items():
