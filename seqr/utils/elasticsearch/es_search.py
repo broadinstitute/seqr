@@ -224,7 +224,7 @@ class EsSearch(object):
         secondary_dataset_type = None
         if annotations_secondary:
             annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
-            annotations_filter, _ = _annotations_filter(annotations)
+            annotations_filter, _ = _annotations_filter(annotations or {})
             annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
             self._allowed_consequences_secondary = allowed_consequences_secondary
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
