@@ -16,7 +16,8 @@ from seqr.views.utils.json_to_orm_utils import update_individual_from_json, upda
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, pm_required
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+    get_project_and_check_pm_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -99,7 +100,7 @@ def update_individual_hpo_terms(request, individual_guid):
     })
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
 
@@ -128,7 +129,7 @@ def edit_individuals_handler(request, project_guid):
             }
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
 
@@ -173,7 +174,7 @@ def edit_individuals_handler(request, project_guid):
     })
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def delete_individuals_handler(request, project_guid):
     """Delete one or more Individual records.
 
@@ -204,7 +205,7 @@ def delete_individuals_handler(request, project_guid):
     """
 
     # validate request
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')
@@ -234,7 +235,7 @@ def delete_individuals_handler(request, project_guid):
     })
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
@@ -247,7 +248,7 @@ def receive_individuals_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     warnings = []
     def process_records(json_records, filename='ped_file'):
@@ -332,7 +333,7 @@ def receive_individuals_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def save_individuals_table_handler(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
@@ -341,7 +342,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
         project_guid (string): project GUID
         uploadedFileId (string): a token sent to the client by receive_individuals_table(..)
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     json_records = load_uploaded_file(upload_file_id)
 

@@ -15,7 +15,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
-from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_permissions, pm_required
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -24,13 +24,15 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
 
     Args:
         project_guid (string): GUID of project that contains these individuals.
     """
+
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
 
@@ -41,8 +43,6 @@ def edit_families_handler(request, project_guid):
     if modified_families is None:
         return create_json_response(
             {}, status=400, reason="'families' not specified")
-
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     updated_families = []
     for fields in modified_families:
@@ -67,7 +67,7 @@ def edit_families_handler(request, project_guid):
     return create_json_response(updated_families_by_guid)
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def delete_families_handler(request, project_guid):
     """Edit or delete one or more Individual records.
 
@@ -75,7 +75,7 @@ def delete_families_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
 
@@ -205,7 +205,7 @@ def update_family_pedigree_image(request, family_guid):
     })
 
 
-@pm_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
@@ -216,7 +216,7 @@ def receive_families_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     def _process_records(records, filename=''):
         column_map = {}

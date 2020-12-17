@@ -132,7 +132,7 @@ const ProjectOverview = React.memo((
   }
 
   let editIndividualsButton = null
-  if (user.isPm) {
+  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
   } else if (project.canEdit) {
     editIndividualsButton = <EditHpoTermsButton />

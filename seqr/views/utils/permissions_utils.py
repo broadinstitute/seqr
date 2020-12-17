@@ -20,7 +20,6 @@ def user_is_pm(user):
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
 data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
-pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
@@ -35,10 +34,22 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
          can_edit (bool): If user need edit permission
          is_owner (bool): If user need owner permission
      """
+    return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
+
+def get_project_and_check_pm_permissions(project_guid, user):
+    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission)
+
+def _get_project_and_check_permissions(project_guid, user, _check_permission_func, **kwargs):
     project = Project.objects.get(guid=project_guid)
-    check_project_permissions(project, user, **kwargs)
+    _check_permission_func(project, user, **kwargs)
     return project
 
+def _check_project_pm_permission(project, user, **kwargs):
+    if user_is_pm(user) or (project.has_case_review and has_project_permissions(project, user, can_edit=True)):
+        return
+
+    raise PermissionDenied("{user} does not have sufficient project management permissions for {project}".format(
+        user=user, project=project))
 
 def project_has_anvil(project):
     return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)

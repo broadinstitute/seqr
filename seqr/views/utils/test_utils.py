@@ -81,6 +81,9 @@ class AuthenticationTestCase(TestCase):
     def login_analyst_user(self):
         self.client.force_login(self.analyst_user)
 
+    def login_pm_user(self):
+        self.client.force_login(self.pm_user)
+
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
@@ -130,7 +133,7 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
 
-        self.client.force_login(self.pm_user)
+        self.login_pm_user()
         if permission_level in self.PM:
             return
 
