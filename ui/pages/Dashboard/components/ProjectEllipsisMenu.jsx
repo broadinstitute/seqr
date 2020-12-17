@@ -50,8 +50,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
       <Dropdown.Divider key="divider1" />,
     )
   }
-  // TODO add project created by
-  if (props.project.createdBy === props.user.email) {
+  if (props.user.isDataManager) {
     menuItems.push(
       <Dropdown.Divider key="divider2" />,
       <DeleteButton
