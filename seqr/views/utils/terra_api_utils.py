@@ -4,12 +4,14 @@ import json
 import logging
 import time
 import requests
+import hashlib
 
 from urllib.parse import urljoin
 
 from django.core.exceptions import PermissionDenied
 from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL
 
@@ -67,6 +69,12 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
+    cache_key = 'terra_req__' + hashlib.md5((url + str(headers) + str(kwargs)).encode('utf-8')).hexdigest()
+    r_text = safe_redis_get_json(cache_key)
+    if r_text:
+        logger.info('Debug: Cache {} hit. {}'.format(cache_key, r_text))
+        return json.loads(r_text)
+
     r = request_func(url, headers=headers, **kwargs)
 
     if r.status_code == 404:
@@ -82,6 +90,8 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
             path, r.status_code, r.reason))
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
+
+    safe_redis_set_json(cache_key, r.text, 60)
 
     return json.loads(r.text)
 
