@@ -17,80 +17,46 @@ from settings import API_LOGIN_REQUIRED_URL
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def save_internal_case_review_notes(request, family_guid):
-    """Updates the `case_review_notes` field for the given family.
-
-    Args:
-        family_guid  (string): GUID of the family.
-    """
-
-    family = Family.objects.get(guid=family_guid)
-    if not has_case_review_permissions(family.project, request.user):
-        raise PermissionDenied('User cannot edit case_review_notes for this project')
-
-    request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
-
-    update_model_from_json(family, {'case_review_notes': request_json['value']}, request.user)
-
-    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
-
+    return _update_family_case_review(family_guid, request, 'caseReviewNotes')
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def save_internal_case_review_summary(request, family_guid):
-    """Updates the `internal_case_review_summary` field for the given family.
-
-    Args:
-        family_guid  (string): GUID of the family.
-    """
-
-    family = Family.objects.get(guid=family_guid)
-    if not has_case_review_permissions(family.project, request.user):
-        raise PermissionDenied('User cannot edit case_review_summary for this project')
-
-    request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
-
-    update_model_from_json(family, {'case_review_summary': request_json['value']}, request.user)
-    
-    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
-
+    return _update_family_case_review(family_guid, request, 'caseReviewSummary')
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def update_case_review_discussion(request, individual_guid):
-
-    individual = Individual.objects.get(guid=individual_guid)
-
-    project = individual.family.project
-    if not has_case_review_permissions(project, request.user):
-        raise PermissionDenied('User cannot edit case_review_discussion for this project')
-
-    update_json = {'caseReviewDiscussion': json.loads(request.body).get('caseReviewDiscussion')}
-
-    update_model_from_json(individual, update_json, user=request.user)
-
-    return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
-    })
+    return _update_individual_case_review(individual_guid, request, 'caseReviewDiscussion')
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def update_case_review_status(request, individual_guid):
-
-    individual = Individual.objects.get(guid=individual_guid)
-
-    project = individual.family.project
-    if not has_case_review_permissions(project, request.user):
-        raise PermissionDenied('User cannot edit case_review_status for this project')
-
-    update_json = {
-        'caseReviewStatus': json.loads(request.body).get('caseReviewStatus'),
+    return _update_individual_case_review(individual_guid, request, 'caseReviewStatus', additional_updates={
         'caseReviewStatusLastModifiedBy': request.user,
         'caseReviewStatusLastModifiedDate': timezone.now(),
-    }
+    })
 
-    update_model_from_json(individual, update_json, user=request.user)
+def _update_case_review(model, project, request, field, get_response_json, additional_updates=None):
+    if not has_case_review_permissions(project, request.user):
+        raise PermissionDenied('User cannot edit case review for this project')
+
+    update_json = {field: json.loads(request.body).get(field)}
+    if additional_updates:
+        update_json.update(additional_updates)
+
+    update_model_from_json(model, update_json, user=request.user)
 
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
+        model.guid: get_response_json(model, request.user)
     })
+
+def _update_family_case_review(family_guid, request, field):
+    family = Family.objects.get(guid=family_guid)
+    project = family.project
+
+    return _update_case_review(family, project, request, field, _get_json_for_family)
+
+def _update_individual_case_review(individual_guid, request, field, additional_updates=None):
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
+
+    return _update_case_review(
+        individual, project, request, field, _get_json_for_individual, additional_updates=additional_updates)

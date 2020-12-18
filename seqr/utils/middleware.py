@@ -1,7 +1,7 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
-from elasticsearch.exceptions import ConnectionTimeout
+import elasticsearch.exceptions
 from requests import HTTPError
 import json
 import logging
@@ -19,8 +19,14 @@ EXCEPTION_ERROR_MAP = {
     ObjectDoesNotExist: 404,
     InvalidIndexException: 400,
     InvalidSearchException: 400,
-    ConnectionTimeout: 504,
+    elasticsearch.exceptions.ConnectionError: 504,
+    elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
+}
+
+EXCEPTION_MESSAGE_MAP = {
+    elasticsearch.exceptions.ConnectionError: str,
+    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), e.info)
 }
 
 ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
@@ -35,12 +41,16 @@ def _get_exception_status_code(exception):
     except Exception:
         return 500
 
+def _get_exception_message(exception):
+    message_func = next((f for exc, f in EXCEPTION_MESSAGE_MAP.items() if isinstance(exception, exc)), str)
+    return message_func(exception)
+
 class JsonErrorMiddleware(MiddlewareMixin):
 
     @staticmethod
     def process_exception(request, exception):
         if request.path.startswith('/api'):
-            exception_json = {'error': str(exception)}
+            exception_json = {'error': _get_exception_message(exception)}
             status = _get_exception_status_code(exception)
             if exception.__class__ in ERROR_LOG_EXCEPTIONS:
                 exception_json['log_error'] = True

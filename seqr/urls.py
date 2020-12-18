@@ -102,19 +102,14 @@ from seqr.views.apis.users_api import \
     update_policies, \
     forgot_password
 
-from seqr.views.apis.staff_api import \
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
+from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
     get_projects_for_category, \
-    success_story, \
-    elasticsearch_status, \
-    saved_variants_page, \
-    upload_qc_pipeline_output, \
-    mme_details, \
-    seqr_stats, \
     sample_metadata_export, \
-    proxy_to_kibana
-
+    seqr_stats
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -133,7 +128,9 @@ react_app_pages = [
     'gene_info/.*',
     'gene_lists/.*',
     'variant_search/.*',
-    'staff/.*',
+    'report/.*',
+    'data_management/.*',
+    'summary_data/.*',
 ]
 
 no_login_react_app_pages = [
@@ -156,8 +153,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
@@ -253,17 +250,19 @@ api_endpoints = {
 
     'upload_temp_file': save_temp_file,
 
-    'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
-    'staff/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
-    'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
-    'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
-    'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
-    'staff/elasticsearch_status': elasticsearch_status,
-    'staff/matchmaker': mme_details,
-    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
-    'staff/seqr_stats': seqr_stats,
-    'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
-    'staff/get_all_users': get_all_users,
+    'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
+    'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
+    'report/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
+    'report/seqr_stats': seqr_stats,
+
+    'data_management/elasticsearch_status': elasticsearch_status,
+    'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'data_management/get_all_users': get_all_users,
+
+    'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
+    'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
+    'summary_data/matchmaker': mme_details,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

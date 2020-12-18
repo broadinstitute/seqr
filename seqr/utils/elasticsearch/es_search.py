@@ -224,7 +224,7 @@ class EsSearch(object):
         secondary_dataset_type = None
         if annotations_secondary:
             annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
-            annotations_filter, _ = _annotations_filter(annotations)
+            annotations_filter, _ = _annotations_filter(annotations or {})
             annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
             self._allowed_consequences_secondary = allowed_consequences_secondary
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
@@ -506,7 +506,7 @@ class EsSearch(object):
             for search in searches:
                 ms = ms.add(search)
 
-        responses = self._execute_search(ms)
+        responses = self._execute_search(ms) if ms._searches else []
         parsed_responses = [self._parse_response(response) for response in responses]
         return self._process_multi_search_responses(parsed_responses, **kwargs)
 
@@ -993,6 +993,12 @@ class EsSearch(object):
         except elasticsearch.exceptions.ConnectionTimeout as e:
             canceled = self._delete_long_running_tasks()
             logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            raise e
+        except elasticsearch.exceptions.TransportError as e:
+            if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException(
+                    'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
             raise e
 
     def _delete_long_running_tasks(self):
