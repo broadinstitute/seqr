@@ -14,10 +14,6 @@ spec:
       - secretName: elasticsearch-secrets
     fileRealm:
       - secretName: elasticsearch-secrets
-  http:
-    tls:
-      selfSignedCertificate:
-        disabled: true
   nodeSets:
   - name: master
     count: {{ ES_MASTER_NUM_PODS }}
