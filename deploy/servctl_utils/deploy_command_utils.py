@@ -249,9 +249,9 @@ def deploy_elasticsearch(settings):
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
 def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
-        run('linkerd inject deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml | kubectl apply -f -')
+        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 
 def deploy_linkerd(settings):
