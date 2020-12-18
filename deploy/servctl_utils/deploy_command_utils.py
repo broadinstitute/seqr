@@ -660,7 +660,6 @@ def docker_build(component_label, settings, custom_build_args=()):
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
-    
     if component_label == 'elasticsearch' and settings.get('ELASTICSEARCH_VERSION'):
         docker_tags.add("%(DOCKER_IMAGE_TAG)s-%(ELASTICSEARCH_VERSION)s" % settings)
 

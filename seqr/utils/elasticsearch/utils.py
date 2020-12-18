@@ -30,14 +30,11 @@ def get_es_client(timeout=60, **kwargs):
     }
     if ELASTICSEARCH_CREDENTIALS:
         client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
-    
     if ELASTICSEARCH_PROTOCOL:
         client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
-    
     if ELASTICSEARCH_CA_PATH:
         ssl_context = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
         client_kwargs['ssl_context'] = ssl_context
-
     return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
