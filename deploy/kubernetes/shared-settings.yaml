@@ -11,6 +11,9 @@ DISKS: postgres, seqr-static-files
 ES_LOADING_NUM_PODS: 0
 ES_DATA_NUM_PODS: 0
 
+ELASTICSEARCH_PROTOCOL: https
+ELASTICSEARCH_CA_PATH: /elasticsearch-certs/ca.crt
+
 NODE_POOLS: {}
 
 GUNICORN_WORKER_THREADS: 4    # number of webserver threads
