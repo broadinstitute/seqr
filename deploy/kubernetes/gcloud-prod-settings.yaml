@@ -25,8 +25,7 @@ SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
 ES_DATA_NUM_DISKS: 3
 ES_DATA_DISK_TYPE: pd-ssd
 ES_DATA_DISK_SIZE: 3200
-# we can change these to the latest snapshot names and uncomment this if we want to create new disks from snapshots
-#ES_DATA_SNAPSHOTS:  es-7-data-snapshot-1,  es-7-data-snapshot-2,  es-7-data-snapshot-3
+ES_DATA_SNAPSHOTS:  snp-es-cluster-prod-es-data-disk-1, snp-es-cluster-prod-es-data-disk-2, snp-es-cluster-prod-es-data-disk-3
 
 ELASTICSEARCH_JVM_MEMORY: 22g
 ELASTICSEARCH_CONTAINER_MEMORY: 44Gi
