@@ -8,12 +8,17 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}-{{ ELASTICSEARCH_VERSION }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
   auth:
     roles:
       - secretName: elasticsearch-secrets
     fileRealm:
       - secretName: elasticsearch-secrets
+  http:
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - ip: 10.128.0.51
   nodeSets:
   - name: master
     count: {{ ES_MASTER_NUM_PODS }}
@@ -165,3 +170,20 @@ spec:
         - name: elasticsearch-data
           emptyDir: {}
 {% endif %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-es-data-nodes
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.128.0.51
+  ports:
+    - name: https
+      port: 9200
+      targetPort: 9200
+  selector:
+    elasticsearch.k8s.elastic.co/cluster-name: elasticsearch
+    elasticsearch.k8s.elastic.co/node-data: "true"
