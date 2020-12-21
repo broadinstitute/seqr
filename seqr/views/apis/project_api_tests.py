@@ -19,14 +19,12 @@ class ProjectAPITest(object):
 
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
-        self.check_require_login(create_project_url)
+        self.check_pm_login(create_project_url)
 
         # check validation of bad requests
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'bad_json': None}))
         self.assertEqual(response.status_code, 400)
-
-        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'form': {'missing_name': True}}))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Field(s) "name, genomeVersion" are required')
 
         # send valid request to create project
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
@@ -35,12 +33,13 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         # check that project was created
-        new_project = Project.objects.filter(name='new_project')
-        self.assertEqual(len(new_project), 1)
-        self.assertEqual(new_project[0].description, 'new project description')
-        self.assertEqual(new_project[0].genome_version, '38')
+        new_project = Project.objects.get(name='new_project')
+        self.assertEqual(new_project.description, 'new project description')
+        self.assertEqual(new_project.genome_version, '38')
+        self.assertEqual(new_project.created_by, self.pm_user)
+        self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
 
-        project_guid = new_project[0].guid
+        project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
 
         # update the project
