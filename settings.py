@@ -272,6 +272,8 @@ ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
 # if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
 if ELASTICSEARCH_CA_PATH:
     ES_SSL_CONTEXT = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
+else:
+    ES_SSL_CONTEXT = None
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
