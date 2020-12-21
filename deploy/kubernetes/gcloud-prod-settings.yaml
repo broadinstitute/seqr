@@ -11,7 +11,7 @@ NODE_POOLS:
     machine_type: n1-highmem-8
     labels: nodeType=data
 
-KUBERNETES_VERSION: '1.16.13-gke.401'
+KUBERNETES_VERSION: '1.16.15-gke.4300'
 
 CLUSTER_EXTERNAL_IP: '35.194.17.244'
 CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
