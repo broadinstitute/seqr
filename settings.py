@@ -4,6 +4,8 @@ import os
 import random
 import string
 
+from ssl import create_default_context
+
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -265,6 +267,11 @@ ELASTICSEARCH_SERVER = '{host}:{port}'.format(
 
 SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
 ELASTICSEARCH_CREDENTIALS = ('seqr', SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
+ELASTICSEARCH_PROTOCOL = os.environ.get('ELASTICSEARCH_PROTOCOL', 'http')
+ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
+# if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
+if ELASTICSEARCH_CA_PATH:
+    ES_SSL_CONTEXT = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),

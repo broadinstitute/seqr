@@ -10,15 +10,13 @@ spec:
   version: {{ ELASTICSEARCH_VERSION }}
   image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
   count: 1
+  elasticsearchRef:
+    name: elasticsearch
+    namespace: {{ NAMESPACE }}
   config:
-    elasticsearch.hosts:
-      - http://{{ ELASTICSEARCH_SERVICE_HOSTNAME }}:{{ ELASTICSEARCH_SERVICE_PORT }}
-    elasticsearch.username: kibana
     xpack.security.sameSiteCookies: None
     xpack.security.secureCookies: true
     server.customResponseHeaders: {"x-frame-options":"sameorigin"}
-  secureSettings:
-    - secretName: kibana-secrets
   podTemplate:
     metadata:
       annotations:
@@ -28,6 +26,8 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       automountServiceAccountToken: true
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
   http:
     tls:
       selfSignedCertificate:

@@ -11,7 +11,10 @@ DISKS: postgres, seqr-static-files
 ES_LOADING_NUM_PODS: 0
 ES_DATA_NUM_PODS: 0
 
-NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments
+ELASTICSEARCH_PROTOCOL: https
+ELASTICSEARCH_CA_PATH: /elasticsearch-certs/ca.crt
+
+NODE_POOLS: {}
 
 GUNICORN_WORKER_THREADS: 4    # number of webserver threads
 

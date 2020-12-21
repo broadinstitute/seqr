@@ -68,3 +68,5 @@ spec:
           mountPath: /var/lib/postgresql/data
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'

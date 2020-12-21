@@ -44,6 +44,7 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "linkerd",
     "nginx",
     "postgres",
+    "elasticsearch",
     "external-elasticsearch-connector",
     "kibana",
     "redis",
@@ -83,6 +84,7 @@ DEPLOYMENT_TARGET_SECRETS = {
     'gcloud-prod': [
         'seqr',
         'postgres',
+        'elasticsearch',
         'nginx',
         'matchbox',
         'kibana',
@@ -207,6 +209,9 @@ def deploy_elasticsearch(settings):
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     _set_elasticsearch_kubernetes_resources()
 
     # create persistent volumes
@@ -242,7 +247,7 @@ def deploy_elasticsearch(settings):
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
 def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
@@ -567,8 +572,8 @@ def _init_cluster_gcloud(settings):
         "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
-        "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-        "--num-nodes 1",
+        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
+        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
         "--no-enable-legacy-authorization",
         "--metadata disable-legacy-endpoints=true",
         "--no-enable-basic-auth",
@@ -585,31 +590,26 @@ def _init_cluster_gcloud(settings):
     # This way, the cluster can be scaled up and down when needed using the technique in
     #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
     #
-    i = 0
-    num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
-    num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
-    while num_nodes_remaining_to_create > 0:
-        i += 1
+
+    for pool_name, pool_settings in settings['NODE_POOLS'].items():
         command = [
-            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
+            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
             "--cluster %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--machine-type %s" % pool_settings.get('machine_type', settings['DEFAULT_POOL_MACHINE_TYPE']),
             "--node-version %(KUBERNETES_VERSION)s",
             #"--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
-            "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
+            "--num-nodes %s" % pool_settings.get('num_nodes', settings['DEFAULT_POOL_NUM_NODES']),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]
-        if settings.get('CLUSTER_NODE_LABELS'):
-            command += ['--node-labels', settings['CLUSTER_NODE_LABELS']]
+        if pool_settings.get('labels'):
+            command += ['--node-labels', pool_settings['labels']]
         run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
-
-        num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
     run(" ".join([
         "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
@@ -658,6 +658,8 @@ def docker_build(component_label, settings, custom_build_args=()):
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
+    if component_label == 'elasticsearch' and settings.get('ELASTICSEARCH_VERSION'):
+        docker_tags.add("%(DOCKER_IMAGE_TAG)s-%(ELASTICSEARCH_VERSION)s" % settings)
 
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")

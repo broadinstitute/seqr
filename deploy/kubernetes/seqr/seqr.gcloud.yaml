@@ -47,6 +47,9 @@ spec:
           # This disk must already exist.
           pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
           fsType: ext4
+      - name: elasticsearch-es-http-certs-public
+        secret:
+          secretName: elasticsearch-es-http-certs-public
       containers:
       - name: seqr-pod
         ports:
@@ -62,6 +65,9 @@ spec:
           mountPath: {{ MME_CONFIG_DIR }}
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
+        - name: elasticsearch-es-http-certs-public
+          mountPath: "/elasticsearch-certs"
+          readOnly: true
         resources:
           requests:
             memory: "0.5Gi"
@@ -171,6 +177,10 @@ spec:
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
           value: "{{ TERRA_API_ROOT_URL }}"
+        - name: ELASTICSEARCH_PROTOCOL
+          value: "{{ ELASTICSEARCH_PROTOCOL }}"
+        - name: ELASTICSEARCH_CA_PATH
+          value: "{{ ELASTICSEARCH_CA_PATH }}"
         readinessProbe:
           exec:
             command:
@@ -191,3 +201,5 @@ spec:
                       values:
                       - seqr
                 topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'

@@ -8,16 +8,12 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}-{{ ELASTICSEARCH_VERSION }}
   auth:
     roles:
       - secretName: elasticsearch-secrets
     fileRealm:
       - secretName: elasticsearch-secrets
-  http:
-    tls:
-      selfSignedCertificate:
-        disabled: true
   nodeSets:
   - name: master
     count: {{ ES_MASTER_NUM_PODS }}
