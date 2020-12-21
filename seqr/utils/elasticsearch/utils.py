@@ -2,9 +2,8 @@ from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging
-from ssl import create_default_context
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ELASTICSEARCH_CA_PATH
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY
@@ -32,9 +31,8 @@ def get_es_client(timeout=60, **kwargs):
         client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
     if ELASTICSEARCH_PROTOCOL:
         client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
-    if ELASTICSEARCH_CA_PATH:
-        ssl_context = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
-        client_kwargs['ssl_context'] = ssl_context
+    if ES_SSL_CONTEXT:
+        client_kwargs['ssl_context'] = ES_SSL_CONTEXT
     return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
