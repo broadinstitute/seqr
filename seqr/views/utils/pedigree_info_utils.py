@@ -5,10 +5,12 @@ import json
 import logging
 import tempfile
 import openpyxl as xl
+from django.contrib.auth.models import User
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-from settings import UPLOADED_PEDIGREE_FILE_RECIPIENTS
+from settings import PM_USER_GROUP
+from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
-def parse_pedigree_table(parsed_file, filename, user=None, project=None):
+def parse_pedigree_table(parsed_file, filename, user, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
@@ -49,6 +51,8 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
         is_datstat_upload = 'DATSTAT' in header_string
         is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
         if is_merged_pedigree_sample_manifest:
+            if not user_is_pm(user):
+                raise ValueError('Unsupported file format')
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
             rows = rows[2:]
@@ -347,6 +351,8 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
 
+    recipients = [u.email for u in User.objects.filter(groups__name=PM_USER_GROUP)]
+
     # write out the sample manifest file
     wb = xl.Workbook()
     ws = wb.active
@@ -363,7 +369,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     temp_sample_manifest_file.seek(0)
 
     sample_manifest_filename = kit_id+".xlsx"
-    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+    logger.info('Sending sample manifest file {} to {}'.format(sample_manifest_filename, ', '.join(recipients)))
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
@@ -387,7 +393,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
-        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS, # TODO send to PMs
+        to=recipients,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),

@@ -255,8 +255,6 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
-
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
 ANALYST_PROJECT_CATEGORY = 'analyst-projects'
