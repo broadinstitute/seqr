@@ -17,7 +17,7 @@ spec:
   http:
     tls:
       selfSignedCertificate:
-       disabled: true
+        disabled: true
   nodeSets:
   - name: master
     count: {{ ES_MASTER_NUM_PODS }}

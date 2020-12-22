@@ -272,6 +272,8 @@ ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
 # if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
 if ELASTICSEARCH_CA_PATH:
     ES_SSL_CONTEXT = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
+else:
+    ES_SSL_CONTEXT = None
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
@@ -323,6 +325,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SEC
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
 
 SOCIAL_AUTH_PIPELINE_BASE = (
     'social_core.pipeline.social_auth.social_details',
