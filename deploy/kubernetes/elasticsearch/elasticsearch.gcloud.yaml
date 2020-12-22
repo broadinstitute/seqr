@@ -169,3 +169,22 @@ spec:
         - name: elasticsearch-data
           emptyDir: {}
 {% endif %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-es-data-nodes
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+{% if ES_DATA_SERVICE_IP %}
+  loadBalancerIP: {{ ES_DATA_SERVICE_IP }}
+{% endif %}
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+  selector:
+    elasticsearch.k8s.elastic.co/cluster-name: elasticsearch
+    elasticsearch.k8s.elastic.co/node-data: "true"
