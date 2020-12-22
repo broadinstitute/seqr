@@ -11,8 +11,8 @@ DISKS: postgres, seqr-static-files
 ES_LOADING_NUM_PODS: 0
 ES_DATA_NUM_PODS: 0
 
-ELASTICSEARCH_PROTOCOL: https
-ELASTICSEARCH_CA_PATH: /elasticsearch-certs/ca.crt
+ELASTICSEARCH_PROTOCOL: http
+# ELASTICSEARCH_CA_PATH: /elasticsearch-certs/ca.crt
 
 NODE_POOLS: {}
 
