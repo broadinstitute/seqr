@@ -387,7 +387,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
-        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS, # TODO send to PMs
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
