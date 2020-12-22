@@ -1,14 +1,75 @@
 ---
-# Downloaded from https://download.elastic.co/downloads/eck/1.2.0/all-in-one.yaml
+# Downloaded from https://download.elastic.co/downloads/eck/1.3.1/all-in-one.yaml
 # From the instructions in https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-deploy-eck.html
 # Do not modify
-# Source: crds/all-crds.yaml
+# Source: eck-operator/templates/operator-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: elastic-system
+  labels:
+    name: elastic-system
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
+---
+# Source: eck-operator/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: elastic-operator
+  namespace: elastic-system
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
+---
+# Source: eck-operator/templates/webhook.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "elastic-webhook-server-cert"
+  namespace: elastic-system
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
+---
+# Source: eck-operator/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastic-operator
+  namespace: elastic-system
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
+data:
+  eck.yaml: |-
+    log-verbosity: 0
+    metrics-port: 0
+    container-registry: docker.elastic.co
+    max-concurrent-reconciles: 3
+    ca-cert-validity: 8760h
+    ca-cert-rotate-before: 24h
+    cert-validity: 8760h
+    cert-rotate-before: 24h
+    set-default-security-context: true
+    kube-client-timeout: 60s
+    elasticsearch-client-timeout: 180s
+    disable-telemetry: false
+    validate-storage-class: true
+    enable-webhook: true
+    webhook-name: elastic-webhook.k8s.elastic.co
+---
+# Source: eck-operator/charts/eck-operator-crds/templates/all-crds.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: 'elastic-operator'
+    app.kubernetes.io/name: 'eck-operator-crds'
+    app.kubernetes.io/version: '1.3.1'
   name: apmservers.apm.k8s.elastic.co
 spec:
   additionalPrinterColumns:
@@ -19,7 +80,7 @@ spec:
     description: Available nodes
     name: nodes
     type: integer
-  - JSONPath: .spec.version
+  - JSONPath: .status.version
     description: APM version
     name: version
     type: string
@@ -182,6 +243,15 @@ spec:
                             description: ServicePort contains information on service's
                               port.
                             properties:
+                              appProtocol:
+                                description: The application protocol for this port.
+                                  This field follows standard Kubernetes label syntax.
+                                  Un-prefixed names are reserved for IANA standard
+                                  service names (as per RFC-6335 and http://www.iana.org/assignments/service-names).
+                                  Non-standard protocols should use prefixed names
+                                  such as mycompany.com/my-custom-protocol. Field
+                                  can be enabled with ServiceAppProtocol feature gate.
+                                type: string
                               name:
                                 description: The name of this port within the service.
                                   This must be a DNS_LABEL. All ports within a ServiceSpec
@@ -419,6 +489,8 @@ spec:
           description: ApmServerStatus defines the observed state of ApmServer
           properties:
             availableNodes:
+              description: AvailableNodes is the number of available replicas in the
+                deployment.
               format: int32
               type: integer
             elasticsearchAssociationStatus:
@@ -426,8 +498,7 @@ spec:
                 to Elasticsearch clusters.
               type: string
             health:
-              description: ApmServerHealth expresses the status of the Apm Server
-                instances.
+              description: Health of the deployment.
               type: string
             kibanaAssociationStatus:
               description: KibanaAssociationStatus is the status of any auto-linking
@@ -440,6 +511,11 @@ spec:
             service:
               description: ExternalService is the name of the service the agents should
                 connect to.
+              type: string
+            version:
+              description: 'Version of the stack resource currently running. During
+                version upgrades, multiple versions may run in parallel: this value
+                specifies the lowest version currently running.'
               type: string
           type: object
   version: v1
@@ -460,12 +536,17 @@ status:
   conditions: []
   storedVersions: []
 ---
+# Source: eck-operator/charts/eck-operator-crds/templates/all-crds.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: 'elastic-operator'
+    app.kubernetes.io/name: 'eck-operator-crds'
+    app.kubernetes.io/version: '1.3.1'
   name: beats.beat.k8s.elastic.co
 spec:
   additionalPrinterColumns:
@@ -484,7 +565,7 @@ spec:
     description: Beat type
     name: type
     type: string
-  - JSONPath: .spec.version
+  - JSONPath: .status.version
     description: Beat version
     name: version
     type: string
@@ -551,6 +632,54 @@ spec:
                 replicas:
                   format: int32
                   type: integer
+                strategy:
+                  description: DeploymentStrategy describes how to replace existing
+                    pods with new ones.
+                  properties:
+                    rollingUpdate:
+                      description: 'Rolling update config params. Present only if
+                        DeploymentStrategyType = RollingUpdate. --- TODO: Update this
+                        to follow our convention for oneOf, whatever we decide it
+                        to be.'
+                      properties:
+                        maxSurge:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: 'The maximum number of pods that can be scheduled
+                            above the desired number of pods. Value can be an absolute
+                            number (ex: 5) or a percentage of desired pods (ex: 10%).
+                            This can not be 0 if MaxUnavailable is 0. Absolute number
+                            is calculated from percentage by rounding up. Defaults
+                            to 25%. Example: when this is set to 30%, the new ReplicaSet
+                            can be scaled up immediately when the rolling update starts,
+                            such that the total number of old and new pods do not
+                            exceed 130% of desired pods. Once old pods have been killed,
+                            new ReplicaSet can be scaled up further, ensuring that
+                            total number of pods running at any time during the update
+                            is at most 130% of desired pods.'
+                        maxUnavailable:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: 'The maximum number of pods that can be unavailable
+                            during the update. Value can be an absolute number (ex:
+                            5) or a percentage of desired pods (ex: 10%). Absolute
+                            number is calculated from percentage by rounding down.
+                            This can not be 0 if MaxSurge is 0. Defaults to 25%. Example:
+                            when this is set to 30%, the old ReplicaSet can be scaled
+                            down to 70% of desired pods immediately when the rolling
+                            update starts. Once new pods are ready, old ReplicaSet
+                            can be scaled down further, followed by scaling up the
+                            new ReplicaSet, ensuring that the total number of pods
+                            available at all times during the update is at least 70%
+                            of desired pods.'
+                      type: object
+                    type:
+                      description: Type of deployment. Can be "Recreate" or "RollingUpdate".
+                        Default is RollingUpdate.
+                      type: string
+                  type: object
               type: object
             elasticsearchRef:
               description: ElasticsearchRef is a reference to an Elasticsearch cluster
@@ -661,6 +790,11 @@ spec:
             kibanaAssociationStatus:
               description: AssociationStatus is the status of an association resource.
               type: string
+            version:
+              description: 'Version of the stack resource currently running. During
+                version upgrades, multiple versions may run in parallel: this value
+                specifies the lowest version currently running.'
+              type: string
           type: object
   version: v1beta1
   versions:
@@ -674,12 +808,17 @@ status:
   conditions: []
   storedVersions: []
 ---
+# Source: eck-operator/charts/eck-operator-crds/templates/all-crds.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: 'elastic-operator'
+    app.kubernetes.io/name: 'eck-operator-crds'
+    app.kubernetes.io/version: '1.3.1'
   name: elasticsearches.elasticsearch.k8s.elastic.co
 spec:
   additionalPrinterColumns:
@@ -690,7 +829,7 @@ spec:
     description: Available nodes
     name: nodes
     type: integer
-  - JSONPath: .spec.version
+  - JSONPath: .status.version
     description: Elasticsearch version
     name: version
     type: string
@@ -863,6 +1002,15 @@ spec:
                             description: ServicePort contains information on service's
                               port.
                             properties:
+                              appProtocol:
+                                description: The application protocol for this port.
+                                  This field follows standard Kubernetes label syntax.
+                                  Un-prefixed names are reserved for IANA standard
+                                  service names (as per RFC-6335 and http://www.iana.org/assignments/service-names).
+                                  Non-standard protocols should use prefixed names
+                                  such as mycompany.com/my-custom-protocol. Field
+                                  can be enabled with ServiceAppProtocol feature gate.
+                                type: string
                               name:
                                 description: The name of this port within the service.
                                   This must be a DNS_LABEL. All ports within a ServiceSpec
@@ -1031,8 +1179,8 @@ spec:
               description: Image is the Elasticsearch Docker image to deploy.
               type: string
             nodeSets:
-              description: 'NodeSets allow specifying groups of Elasticsearch nodes
-                sharing the same configuration and Pod templates. See: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-orchestration.html'
+              description: NodeSets allow specifying groups of Elasticsearch nodes
+                sharing the same configuration and Pod templates.
               items:
                 description: NodeSet is the specification for a group of Elasticsearch
                   nodes sharing the same configuration and a Pod template.
@@ -1057,12 +1205,12 @@ spec:
                       the Pods belonging to this NodeSet.
                     type: object
                   volumeClaimTemplates:
-                    description: 'VolumeClaimTemplates is a list of persistent volume
+                    description: VolumeClaimTemplates is a list of persistent volume
                       claims to be used by each Pod in this NodeSet. Every claim in
                       this list must have a matching volumeMount in one of the containers
                       defined in the PodTemplate. Items defined here take precedence
                       over any default claims added by the operator with the same
-                      name. See: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-volume-claim-templates.html'
+                      name.
                     items:
                       description: PersistentVolumeClaim is a user's request for and
                         claim to a persistent volume
@@ -1093,16 +1241,21 @@ spec:
                                 type: string
                               type: array
                             dataSource:
-                              description: This field requires the VolumeSnapshotDataSource
-                                alpha feature gate to be enabled and currently VolumeSnapshot
-                                is the only supported data source. If the provisioner
-                                can support VolumeSnapshot data source, it will create
-                                a new volume and data will be restored to the volume
-                                at the same time. If the provisioner does not support
-                                VolumeSnapshot data source, volume will not be created
-                                and the failure will be reported as an event. In the
-                                future, we plan to support more data source types
-                                and the behavior of the provisioner may change.
+                              description: 'This field can be used to specify either:
+                                * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot
+                                - Beta) * An existing PVC (PersistentVolumeClaim)
+                                * An existing custom resource/object that implements
+                                data population (Alpha) In order to use VolumeSnapshot
+                                object types, the appropriate feature gate must be
+                                enabled (VolumeSnapshotDataSource or AnyVolumeDataSource)
+                                If the provisioner or an external controller can support
+                                the specified data source, it will create a new volume
+                                based on the contents of the specified data source.
+                                If the specified data source is not supported, the
+                                volume will not be created and the failure will be
+                                reported as an event. In the future, we plan to support
+                                more data source types and the behavior of the provisioner
+                                may change.'
                               properties:
                                 apiGroup:
                                   description: APIGroup is the group for the resource
@@ -1202,7 +1355,7 @@ spec:
                             volumeMode:
                               description: volumeMode defines what type of volume
                                 is required by the claim. Value of Filesystem is implied
-                                when not included in claim spec. This is a beta feature.
+                                when not included in claim spec.
                               type: string
                             volumeName:
                               description: VolumeName is the binding reference to
@@ -1531,6 +1684,15 @@ spec:
                             description: ServicePort contains information on service's
                               port.
                             properties:
+                              appProtocol:
+                                description: The application protocol for this port.
+                                  This field follows standard Kubernetes label syntax.
+                                  Un-prefixed names are reserved for IANA standard
+                                  service names (as per RFC-6335 and http://www.iana.org/assignments/service-names).
+                                  Non-standard protocols should use prefixed names
+                                  such as mycompany.com/my-custom-protocol. Field
+                                  can be enabled with ServiceAppProtocol feature gate.
+                                type: string
                               name:
                                 description: The name of this port within the service.
                                   This must be a DNS_LABEL. All ports within a ServiceSpec
@@ -1691,6 +1853,7 @@ spec:
           description: ElasticsearchStatus defines the observed state of Elasticsearch
           properties:
             availableNodes:
+              description: AvailableNodes is the number of available instances.
               format: int32
               type: integer
             health:
@@ -1700,6 +1863,11 @@ spec:
             phase:
               description: ElasticsearchOrchestrationPhase is the phase Elasticsearch
                 is in from the controller point of view.
+              type: string
+            version:
+              description: 'Version of the stack resource currently running. During
+                version upgrades, multiple versions may run in parallel: this value
+                specifies the lowest version currently running.'
               type: string
           type: object
   version: v1
@@ -1720,12 +1888,17 @@ status:
   conditions: []
   storedVersions: []
 ---
+# Source: eck-operator/charts/eck-operator-crds/templates/all-crds.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: 'elastic-operator'
+    app.kubernetes.io/name: 'eck-operator-crds'
+    app.kubernetes.io/version: '1.3.1'
   name: enterprisesearches.enterprisesearch.k8s.elastic.co
 spec:
   additionalPrinterColumns:
@@ -1736,7 +1909,7 @@ spec:
     description: Available nodes
     name: nodes
     type: integer
-  - JSONPath: .spec.version
+  - JSONPath: .status.version
     description: Enterprise Search version
     name: version
     type: string
@@ -1910,6 +2083,15 @@ spec:
                             description: ServicePort contains information on service's
                               port.
                             properties:
+                              appProtocol:
+                                description: The application protocol for this port.
+                                  This field follows standard Kubernetes label syntax.
+                                  Un-prefixed names are reserved for IANA standard
+                                  service names (as per RFC-6335 and http://www.iana.org/assignments/service-names).
+                                  Non-standard protocols should use prefixed names
+                                  such as mycompany.com/my-custom-protocol. Field
+                                  can be enabled with ServiceAppProtocol feature gate.
+                                type: string
                               name:
                                 description: The name of this port within the service.
                                   This must be a DNS_LABEL. All ports within a ServiceSpec
@@ -2099,15 +2281,21 @@ spec:
                 clusters.
               type: string
             availableNodes:
+              description: AvailableNodes is the number of available replicas in the
+                deployment.
               format: int32
               type: integer
             health:
-              description: EnterpriseSearchHealth expresses the health of the Enterprise
-                Search instances.
+              description: Health of the deployment.
               type: string
             service:
               description: ExternalService is the name of the service associated to
                 the Enterprise Search Pods.
+              type: string
+            version:
+              description: 'Version of the stack resource currently running. During
+                version upgrades, multiple versions may run in parallel: this value
+                specifies the lowest version currently running.'
               type: string
           type: object
   version: v1beta1
@@ -2122,12 +2310,17 @@ status:
   conditions: []
   storedVersions: []
 ---
+# Source: eck-operator/charts/eck-operator-crds/templates/all-crds.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: 'elastic-operator'
+    app.kubernetes.io/name: 'eck-operator-crds'
+    app.kubernetes.io/version: '1.3.1'
   name: kibanas.kibana.k8s.elastic.co
 spec:
   additionalPrinterColumns:
@@ -2138,7 +2331,7 @@ spec:
     description: Available nodes
     name: nodes
     type: integer
-  - JSONPath: .spec.version
+  - JSONPath: .status.version
     description: Kibana version
     name: version
     type: string
@@ -2300,6 +2493,15 @@ spec:
                             description: ServicePort contains information on service's
                               port.
                             properties:
+                              appProtocol:
+                                description: The application protocol for this port.
+                                  This field follows standard Kubernetes label syntax.
+                                  Un-prefixed names are reserved for IANA standard
+                                  service names (as per RFC-6335 and http://www.iana.org/assignments/service-names).
+                                  Non-standard protocols should use prefixed names
+                                  such as mycompany.com/my-custom-protocol. Field
+                                  can be enabled with ServiceAppProtocol feature gate.
+                                type: string
                               name:
                                 description: The name of this port within the service.
                                   This must be a DNS_LABEL. All ports within a ServiceSpec
@@ -2525,10 +2727,17 @@ spec:
               description: AssociationStatus is the status of an association resource.
               type: string
             availableNodes:
+              description: AvailableNodes is the number of available replicas in the
+                deployment.
               format: int32
               type: integer
             health:
-              description: KibanaHealth expresses the status of the Kibana instances.
+              description: Health of the deployment.
+              type: string
+            version:
+              description: 'Version of the stack resource currently running. During
+                version upgrades, multiple versions may run in parallel: this value
+                specifies the lowest version currently running.'
               type: string
           type: object
   version: v1
@@ -2548,33 +2757,15 @@ status:
     plural: ""
   conditions: []
   storedVersions: []
-
 ---
-# Source: eck/templates/namespace.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: elastic-system
----
-# Source: eck/templates/service-account.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: elastic-operator
-  namespace: elastic-system
----
-# Source: eck/templates/webhook.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: "elastic-webhook-server-cert"
-  namespace: elastic-system
----
-# Source: eck/templates/cluster-role.yaml
+# Source: eck-operator/templates/cluster-roles.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: elastic-operator
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 rules:
 - apiGroups:
   - "authorization.k8s.io"
@@ -2686,19 +2877,6 @@ rules:
   - patch
   - delete
 - apiGroups:
-  - admissionregistration.k8s.io
-  resources:
-  - mutatingwebhookconfigurations
-  - validatingwebhookconfigurations
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
   - beat.k8s.elastic.co
   resources:
   - beats
@@ -2712,8 +2890,29 @@ rules:
   - update
   - patch
   - delete
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 ---
-# Source: eck/templates/cluster-role.yaml
+# Source: eck-operator/templates/cluster-roles.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -2722,24 +2921,26 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 rules:
-  - apiGroups: ["elasticsearch.k8s.elastic.co"]
-    resources: ["elasticsearches"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apm.k8s.elastic.co"]
-    resources: ["apmservers"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["kibana.k8s.elastic.co"]
-    resources: ["kibanas"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["enterprisesearch.k8s.elastic.co"]
-    resources: ["enterprisesearches"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["beat.k8s.elastic.co"]
-    resources: ["beats"]
-    verbs: ["get", "list", "watch"]
+- apiGroups: ["elasticsearch.k8s.elastic.co"]
+  resources: ["elasticsearches"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apm.k8s.elastic.co"]
+  resources: ["apmservers"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["kibana.k8s.elastic.co"]
+  resources: ["kibanas"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["enterprisesearch.k8s.elastic.co"]
+  resources: ["enterprisesearches"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["beat.k8s.elastic.co"]
+  resources: ["beats"]
+  verbs: ["get", "list", "watch"]
 ---
-# Source: eck/templates/cluster-role.yaml
+# Source: eck-operator/templates/cluster-roles.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -2747,28 +2948,33 @@ metadata:
   labels:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 rules:
-  - apiGroups: ["elasticsearch.k8s.elastic.co"]
-    resources: ["elasticsearches"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update"]
-  - apiGroups: ["apm.k8s.elastic.co"]
-    resources: ["apmservers"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update"]
-  - apiGroups: ["kibana.k8s.elastic.co"]
-    resources: ["kibanas"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update"]
-  - apiGroups: ["enterprisesearch.k8s.elastic.co"]
-    resources: ["enterprisesearches"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update"]
-  - apiGroups: ["beat.k8s.elastic.co"]
-    resources: ["beats"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["elasticsearch.k8s.elastic.co"]
+  resources: ["elasticsearches"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["apm.k8s.elastic.co"]
+  resources: ["apmservers"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["kibana.k8s.elastic.co"]
+  resources: ["kibanas"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["enterprisesearch.k8s.elastic.co"]
+  resources: ["enterprisesearches"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["beat.k8s.elastic.co"]
+  resources: ["beats"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
 ---
-# Source: eck/templates/managed-ns-role-bindings.yaml
+# Source: eck-operator/templates/operator-role-binding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: elastic-operator
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2778,36 +2984,24 @@ subjects:
   name: elastic-operator
   namespace: elastic-system
 ---
-# Source: eck/templates/operator-role-binding.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: elastic-operator
-  namespace: elastic-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: elastic-operator
-subjects:
-- kind: ServiceAccount
-  name: elastic-operator
-  namespace: elastic-system
----
-# Source: eck/templates/webhook.yaml
+# Source: eck-operator/templates/webhook.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: elastic-webhook-server
   namespace: elastic-system
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 spec:
   ports:
-    - name: https
-      port: 443
-      targetPort: 9443
+  - name: https
+    port: 443
+    targetPort: 9443
   selector:
     control-plane: elastic-operator
 ---
-# Source: eck/templates/statefulset.yaml
+# Source: eck-operator/templates/statefulset.yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -2815,72 +3009,81 @@ metadata:
   namespace: elastic-system
   labels:
     control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 spec:
   selector:
     matchLabels:
       control-plane: elastic-operator
   serviceName: elastic-operator
+  replicas: 1
   template:
     metadata:
       annotations:
         # Rename the fields "error" to "error.message" and "source" to "event.source"
         # This is to avoid a conflict with the ECS "error" and "source" documents.
         "co.elastic.logs/raw": "[{\"type\":\"container\",\"json.keys_under_root\":true,\"paths\":[\"/var/log/containers/*${data.kubernetes.container.id}.log\"],\"processors\":[{\"convert\":{\"mode\":\"rename\",\"ignore_missing\":true,\"fields\":[{\"from\":\"error\",\"to\":\"_error\"}]}},{\"convert\":{\"mode\":\"rename\",\"ignore_missing\":true,\"fields\":[{\"from\":\"_error\",\"to\":\"error.message\"}]}},{\"convert\":{\"mode\":\"rename\",\"ignore_missing\":true,\"fields\":[{\"from\":\"source\",\"to\":\"_source\"}]}},{\"convert\":{\"mode\":\"rename\",\"ignore_missing\":true,\"fields\":[{\"from\":\"_source\",\"to\":\"event.source\"}]}}]}]"
+        "checksum/config": ee68b5877bbac6a3071ec907276f8966d24c9878268247a2b3da09837ba8c5fa
       labels:
         control-plane: elastic-operator
     spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: elastic-operator
+      securityContext:
+        runAsNonRoot: true
       containers:
-      - image: "docker.elastic.co/eck/eck-operator:1.2.0"
+      - image: "docker.elastic.co/eck/eck-operator:1.3.1"
         imagePullPolicy: IfNotPresent
         name: manager
         args:
-          - "manager"
-          - "--log-verbosity=0"
-          - "--metrics-port=0"
-          - "--container-registry=docker.elastic.co"
-          - "--max-concurrent-reconciles=3"
-          - "--ca-cert-validity=8760h"
-          - "--ca-cert-rotate-before=24h"
-          - "--cert-validity=8760h"
-          - "--cert-rotate-before=24h"
-          - "--enable-webhook"
+        - "manager"
+        - "--config=/conf/eck.yaml"
+        - "--distribution-channel=all-in-one"
         env:
-          - name: OPERATOR_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: OPERATOR_IMAGE
-            value: "docker.elastic.co/eck/eck-operator:1.2.0"
-          - name: WEBHOOK_SECRET
-            value: "elastic-webhook-server-cert"
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: WEBHOOK_SECRET
+          value: "elastic-webhook-server-cert"
         resources:
-            limits:
-              cpu: 1
-              memory: 512Mi
-            requests:
-              cpu: 100m
-              memory: 150Mi
+          limits:
+            cpu: 1
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 150Mi
         ports:
         - containerPort: 9443
           name: https-webhook
           protocol: TCP
         volumeMounts:
-          - mountPath: /tmp/k8s-webhook-server/serving-certs
-            name: cert
-            readOnly: true
+        - mountPath: "/conf"
+          name: conf
+          readOnly: true
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
       volumes:
-        - name: cert
-          secret:
-            defaultMode: 420
-            secretName: "elastic-webhook-server-cert"
+      - name: conf
+        configMap:
+          name: elastic-operator
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: "elastic-webhook-server-cert"
 ---
-# Source: eck/templates/webhook.yaml
+# Source: eck-operator/templates/webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: elastic-webhook.k8s.elastic.co
+  labels:
+    control-plane: elastic-operator
+    app.kubernetes.io/version: "1.3.1"
 webhooks:
 - clientConfig:
     caBundle: Cg==
@@ -2936,6 +3139,24 @@ webhooks:
     - UPDATE
     resources:
     - beats
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: elastic-webhook-server
+      namespace: elastic-system
+      path: /validate-enterprisesearch-k8s-elastic-co-v1beta1-enterprisesearch
+  failurePolicy: Ignore
+  name: elastic-ent-validation-v1beta1.k8s.elastic.co
+  rules:
+  - apiGroups:
+    - enterprisesearch.k8s.elastic.co
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - enterprisesearches
 - clientConfig:
     caBundle: Cg==
     service:
@@ -3008,4 +3229,3 @@ webhooks:
     - UPDATE
     resources:
     - kibanas
-
