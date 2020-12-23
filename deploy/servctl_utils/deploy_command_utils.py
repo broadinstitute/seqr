@@ -58,10 +58,7 @@ def deploy_init_cluster(settings):
     print_separator("init-cluster")
 
     # initialize the VM
-    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        _init_cluster_gcloud(settings)
-    else:
-        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
+    _init_cluster_gcloud(settings)
 
     node_name = get_node_name()
     if not node_name:
@@ -129,8 +126,7 @@ def deploy_secrets(settings):
     for secret_label, secret_files in SECRETS.items():
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
         secret_command += [
-            '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
-                secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
+            '--from-file deploy/secrets/gcloud/{secret_label}/{file}'.format(secret_label=secret_label, file=file)
             for file in secret_files
         ]
         if secret_label == GCLOUD_CLIENT:
@@ -627,7 +623,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
 
     run(" ".join([
         "kubectl apply",
-        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
+        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".gcloud.yaml"
     ]) % settings)
 
     if wait_until_pod_is_running:
@@ -640,7 +636,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
 def delete_pod(component_label, settings, custom_yaml_filename=None):
     deployment_target = settings["DEPLOY_TO"]
 
-    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
+    yaml_filename = custom_yaml_filename or (component_label+".gcloud.yaml")
 
     if is_pod_running(component_label, deployment_target):
         run(" ".join([
