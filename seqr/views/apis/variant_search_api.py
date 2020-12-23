@@ -4,6 +4,7 @@ from collections import defaultdict
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
+from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 import logging
 
@@ -426,10 +427,12 @@ def create_saved_search_handler(request):
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)
     if not name:
-        return create_json_response({}, status=400, reason='"Name" is required')
+        error = '"Name" is required'
+        return create_json_response({'error': error}, status=400, reason=error)
 
     if (request_json.get('inheritance') or {}).get('filter', {}).get('genotype'):
-        return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
+        error = 'Saved searches cannot include custom genotype filters'
+        return create_json_response({'error': error}, status=400, reason=error)
 
     try:
         saved_search, _ = get_or_create_model_from_json(
@@ -443,6 +446,9 @@ def create_saved_search_handler(request):
         saved_search = dup_searches.first()
         VariantSearch.bulk_delete(request.user, queryset=dup_searches.exclude(guid=saved_search.guid))
         update_model_from_json(saved_search, {'name': name}, request.user)
+    except IntegrityError:
+        error = 'Saved search with name "{}" already exists'.format(name)
+        return create_json_response({'error': error}, status=400, reason=error)
 
     return create_json_response({
         'savedSearchesByGuid': {

@@ -34,6 +34,7 @@ spec:
 ---
 # Source: ingress-nginx/templates/controller-deployment.yaml
 # modified to include the linkerd-inject annotation
+# modified to deploy onto our default pool
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -142,6 +143,8 @@ spec:
               memory: 90Mi
       nodeSelector:
         kubernetes.io/os: linux
+        # only deploy into our default pool
+        cloud.google.com/gke-nodepool: 'default-pool'
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       volumes:
@@ -175,6 +178,8 @@ data:
     SecRuleRemoveById 932115
     # whitelist google auth requests from local file access attempt rule
     SecRule REQUEST_URI "@beginsWith /complete/google-oauth2" "id:2000,phase:2,pass,nolog,ctl:ruleRemoveById=930120"
+    # whitelist popup dismissal in kibana
+    SecRule REQUEST_URI "@beginsWith /api/telemetry/v2/userHasSeenNotice" "id:2001,phase:2,pass,nolog,ctl:ruleRemoveById=911100"
     Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
     # adds application/vnd.ga4gh.matchmaker.v1.0+json to the list of allowed content-types
     SecAction "id:900220,phase:1,nolog,pass,t:none,setvar:\'tx.allowed_request_content_type=|application/x-www-form-urlencoded| |multipart/form-data| |multipart/related| |text/xml| |application/xml| |application/soap+xml| |application/x-amf| |application/json| |application/cloudevents+json| |application/cloudevents-batch+json| |application/octet-stream| |application/csp-report| |application/xss-auditor-report| |application/vnd.ga4gh.matchmaker.v1.0+json| |text/plain|\'"
