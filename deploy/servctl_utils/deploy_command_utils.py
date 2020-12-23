@@ -21,9 +21,6 @@ DEPLOYABLE_COMPONENTS = [
     "init-cluster",
     "settings",
     "secrets",
-
-    "external-elasticsearch-connector",
-
     "elasticsearch",
     "postgres",
     "redis",
@@ -31,13 +28,13 @@ DEPLOYABLE_COMPONENTS = [
     "kibana",
     "nginx",
     "pipeline-runner",
-
     "kube-scan",
     "linkerd",
 ]
 
-DEPLOYMENT_TARGETS = {}
-DEPLOYMENT_TARGETS["gcloud-prod"] = [
+DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
+
+DEPLOYMENT_TARGETS = [
     "init-cluster",
     "settings",
     "secrets",
@@ -45,25 +42,13 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "nginx",
     "postgres",
     "elasticsearch",
-    "external-elasticsearch-connector",
     "kibana",
     "redis",
     "seqr",
-    #"pipeline-runner",
     "kube-scan",
 ]
 
-
-DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
-
-DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch'] = [
-    'init-cluster',
-    'settings',
-    'secrets',
-    'elasticsearch',
-    'kube-scan',
-]
-DEPLOYMENT_TARGETS['gcloud-dev-es'] = DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch']
+DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
 
 GCLOUD_CLIENT = 'gcloud-client'
 
@@ -79,23 +64,6 @@ SECRETS = {
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
     ],
 }
-
-DEPLOYMENT_TARGET_SECRETS = {
-    'gcloud-prod': [
-        'seqr',
-        'postgres',
-        'elasticsearch',
-        'nginx',
-        'matchbox',
-        'kibana',
-        GCLOUD_CLIENT,
-    ],
-    'gcloud-prod-elasticsearch': [
-        'elasticsearch',
-    ],
-}
-DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
-DEPLOYMENT_TARGET_SECRETS['gcloud-dev-es'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod-elasticsearch']
 
 
 def deploy_init_cluster(settings):
@@ -169,39 +137,19 @@ def deploy_secrets(settings):
     create_namespace(settings)
 
     # deploy secrets
-    secret_labels = DEPLOYMENT_TARGET_SECRETS[settings['DEPLOY_TO']]
-    for secret_label in secret_labels:
+    for secret_label in SECRETS.keys():
         run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    for secret_label in secret_labels:
+    for secret_label, secret_files in SECRETS.items():
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
-        if secret_label in SECRETS:
-            secret_command += [
-                '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
-                    secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
-                for file in SECRETS[secret_label]
-            ]
-        else:
-            raise ValueError('Invalid secret component {}'.format(secret_label))
+        secret_command += [
+            '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
+                secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
+            for file in secret_files
+        ]
         if secret_label == GCLOUD_CLIENT:
             secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
         run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
-
-
-def deploy_external_elasticsearch_connector(settings):
-    deploy_external_connector(settings, "elasticsearch")
-
-
-def deploy_external_connector(settings, connector_name):
-    if connector_name not in ["elasticsearch"]:
-        raise ValueError("Invalid connector name: %s" % connector_name)
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("external-%s-connector" % connector_name)
-
-    run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
 
 
 def deploy_elasticsearch(settings):
@@ -447,7 +395,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
     Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
+        deployment_target (string): value from DEPLOYMENT_ENVS - eg. "gcloud-dev"
             indentifying which cluster to deploy these components to
         components (list): The list of component names to deploy (eg. "postgres", "redis" - each string must be in
             constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.

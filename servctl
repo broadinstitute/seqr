@@ -6,7 +6,8 @@ import logging
 import os
 import sys
 
-from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS
+from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
+    DEPLOYMENT_ENVS
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
     show_status, wait_for, troubleshoot_component, delete_component, reset_database, delete_all, \
     get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
@@ -38,7 +39,7 @@ p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
-DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_TARGETS.keys())
+DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_ENVS)
 
 ## ENVIRONMENT_COMMAND
 sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'gcloud-dev', 'gcloud-prod', etc.)")
@@ -182,26 +183,15 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     runtime_settings["DOCKER_IMAGE_TAG"] = (":" + args.docker_image_tag) if args.docker_image_tag else (":" + args.deployment_target)
     runtime_settings["RESET_DB"] = bool(args.reset_db)
 
-    #email = password = None
     if args.command == DEPLOY_COMMAND:
         components_to_deploy = args.components
 
     elif args.command == DEPLOY_ALL_COMMAND:
-        # compute which components to deploy
-        components_to_deploy = DEPLOYMENT_TARGETS[args.deployment_target]
-
-        #print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
-        #      "you will be able to login to seqr with this account. Leave blank to skip.")
-
-        #email = raw_input("(optional) seqr superuser email: ")
-        #if email:
-        #    password = getpass("seqr superuser password (hidden when typed): ")
+        components_to_deploy = DEPLOYMENT_TARGETS
 
     deploy(args.deployment_target, components=components_to_deploy, runtime_settings=runtime_settings)
 
     logger.info("==> Deployed " + ", ".join(components_to_deploy))
-    #if email:
-    #    create_user(args.deployment_target, email, password)
 
     if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
         if args.command == DEPLOY_ALL_COMMAND:
