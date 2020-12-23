@@ -33,6 +33,7 @@ DEPLOYMENT_TARGETS = [
     "kube-scan",
 ]
 
+# pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
 DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
 
 GCLOUD_CLIENT = 'gcloud-client'
@@ -228,7 +229,7 @@ def deploy_postgres(settings):
 def deploy_redis(settings):
     print_separator("redis")
 
-    docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
+    docker_build("redis", settings, [])
 
     deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
@@ -244,7 +245,6 @@ def deploy_seqr(settings):
                      settings,
                      [
                          "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-                         "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
                          "-f deploy/docker/seqr/Dockerfile",
                          "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
                          ]
