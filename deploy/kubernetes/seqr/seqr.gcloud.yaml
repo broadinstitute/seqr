@@ -30,6 +30,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
+        config.linkerd.io/skip-outbound-ports: "6379"
       labels:
         name: seqr
         deployment: {{ DEPLOY_TO }}
@@ -164,7 +165,7 @@ spec:
         - name: SEQR_GIT_BRANCH
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
-          value: "{{ BASE_URL }}"
+          value: "https://{{ CLUSTER_HOSTNAME }}/"
         - name: DATABASE_BACKUP_BUCKET
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS
