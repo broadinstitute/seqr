@@ -2,80 +2,34 @@
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 
 CLUSTER_NAME: 'seqr-cluster-dev'
-DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-DEFAULT_POOL_NUM_NODES: 1
 
-# TODO decide if we need multiple pools, or any pools at all in dev
-NODE_POOLS:
-  es-data-nodes:
-    num_nodes: 3
-    machine_type: n1-highmem-8
-    labels: nodeType=data
-#   es-control-nodes:
-#     num_nodes: 1
-#     machine_type: n1-highmem-4
-#     labels: nodeType=es-control
+DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-4'
+DEFAULT_POOL_NUM_NODES: 1
+NODE_POOLS: {}
 
 CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
-BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 
-DISKS: postgres, seqr-static-files, es-data
-
-ELASTICSEARCH_SERVICE_HOSTNAME: elasticsearch-es-http
-# ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.20.0.11
-# ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
-ELASTICSEARCH_VERSION: 7.8.1
-
-KIBANA_SERVICE_HOSTNAME: kibana-kb-http
-
-GCLOUD_PROJECT: 'seqr-project'
-GCLOUD_ZONE: 'us-central1-b'
-
-SEQR_GIT_BRANCH: 'master'
+GUNICORN_WORKER_THREADS: 4
 
 SEQR_POD_MEMORY_LIMIT: 15Gi
 REDIS_POD_MEMORY_LIMIT: 8Gi
-
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: ''
-
-KUBERNETES_VERSION: '1.16.15-gke.4300'
-
-LINKERD_VERSION: 'stable-2.9.1'
 
 TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
 ####  Elasticsearch settings ####
 
-# Settings for a small, empty ES
+ ES_DATA_NUM_PODS: 1
+ ES_CLIENT_NUM_PODS: 1
+ ES_MASTER_NUM_PODS: 1
+ ES_LOADING_NUM_PODS: 0
 
-# ES_DATA_NUM_PODS: 1
-# ES_CLIENT_NUM_PODS: 1
-# ES_MASTER_NUM_PODS: 1
-# ES_LOADING_NUM_PODS: 0
+ ELASTICSEARCH_JVM_MEMORY: 1g
+ ELASTICSEARCH_CONTAINER_MEMORY: 2Gi
 
-# ELASTICSEARCH_JVM_MEMORY: 1g
-# ELASTICSEARCH_CONTAINER_MEMORY: 2Gi
-
-# ES_DATA_NUM_DISKS: 1
-# ES_DATA_DISK_TYPE: pd-standard
-# ES_DATA_DISK_SIZE: 10
-
-# Settings for a copy of production
-
-ES_DATA_NUM_PODS: 3
-ES_CLIENT_NUM_PODS: 3
-ES_MASTER_NUM_PODS: 3
-ES_LOADING_NUM_PODS: 4
-
-ELASTICSEARCH_JVM_MEMORY: 22g
-ELASTICSEARCH_CONTAINER_MEMORY: 44Gi
-
-ES_DATA_NUM_DISKS: 3
-ES_DATA_DISK_TYPE: pd-ssd
-ES_DATA_DISK_SIZE: 3200
-
-ES_DATA_SNAPSHOTS:  snp-es-cluster-prod-es-data-disk-1, snp-es-cluster-prod-es-data-disk-2, snp-es-cluster-prod-es-data-disk-3
+ ES_DATA_NUM_DISKS: 1
+ ES_DATA_DISK_TYPE: pd-standard
+ ES_DATA_DISK_SIZE: 10
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
@@ -83,5 +37,4 @@ ES_DATA_SNAPSHOTS:  snp-es-cluster-prod-es-data-disk-1, snp-es-cluster-prod-es-d
 NAMESPACE: gcloud-dev
 
 DEPLOY_TO: 'gcloud-dev'
-DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'dev'

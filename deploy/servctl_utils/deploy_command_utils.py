@@ -17,21 +17,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-DEPLOYABLE_COMPONENTS = [
-    "init-cluster",
-    "settings",
-    "secrets",
-    "elasticsearch",
-    "postgres",
-    "redis",
-    "seqr",
-    "kibana",
-    "nginx",
-    "pipeline-runner",
-    "kube-scan",
-    "linkerd",
-]
-
 DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 
 DEPLOYMENT_TARGETS = [
