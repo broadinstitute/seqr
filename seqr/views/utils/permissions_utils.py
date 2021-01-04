@@ -3,7 +3,7 @@ from django.db.models.query_utils import Q
 from django.db.models.functions import Concat
 from django.db.models import Value
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
+from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
 
@@ -16,7 +16,6 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
          project_guid (string): GUID of project to retrieve
          user (User): Django User object
          can_edit (bool): If user need edit permission
-         is_owner (bool): If user need owner permission
      """
     project = Project.objects.get(guid=project_guid)
     check_project_permissions(project, user, **kwargs)
@@ -56,12 +55,10 @@ def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     return permission_levels
 
 
-def has_project_permissions(project, user, can_edit=False, is_owner=False):
+def has_project_permissions(project, user, can_edit=False):
     permission_level = CAN_VIEW
     if can_edit:
         permission_level = CAN_EDIT
-    if is_owner:
-        permission_level = IS_OWNER
 
     return user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access)\
         or anvil_has_perm(user, permission_level, project)
