@@ -18,7 +18,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+    check_user_created_object_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -354,7 +355,8 @@ def _delete_project(project_guid, user):
         project_guid (string): GUID of the project to delete
         user (object): Django ORM model for the user
     """
-    project = get_project_and_check_permissions(project_guid, user, is_owner=True)
+    project = Project.objects.get(guid=project_guid)
+    check_user_created_object_permissions(project, user)
 
     IgvSample.bulk_delete(user, individual__family__project=project)
     Sample.bulk_delete(user, individual__family__project=project)

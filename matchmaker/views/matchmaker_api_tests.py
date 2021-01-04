@@ -236,11 +236,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
+    @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_slacker):
+    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_slacker, mock_logger):
+        mock_slacker.return_value.chat.post_message.side_effect = ValueError('Unable to connect to slack')
+
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -375,13 +378,22 @@ class MatchmakerAPITest(AuthenticationTestCase):
     """
         self.assertEqual(mock_slacker.call_count, 2)
         mock_slacker.assert_called_with(MOCK_SLACK_TOKEN)
+        slack_kwargs = {'as_user': False, 'icon_emoji': ':beaker:', 'username': 'Beaker (engineering-minion)'}
+        alert_slack_message = 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
+            json.dumps(expected_patient_body))
         mock_slacker.return_value.chat.post_message.assert_has_calls([
+            mock.call('matchmaker_alerts', alert_slack_message, **slack_kwargs),
+            mock.call('matchmaker_seqr_match', message, **slack_kwargs),
+        ])
+        mock_logger.error.assert_has_calls([
             mock.call(
-                'matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
-                    json.dumps(expected_patient_body)
-                ), as_user=False, icon_emoji=':beaker:', username='Beaker (engineering-minion)'),
-            mock.call('matchmaker_seqr_match', message,
-                      as_user=False, icon_emoji=':beaker:', username='Beaker (engineering-minion)'),
+                'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
+                    'matchmaker_alerts', alert_slack_message
+            )),
+            mock.call(
+                'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
+                    'matchmaker_seqr_match', message
+                )),
         ])
         mock_email.assert_called_with(
             subject='New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',

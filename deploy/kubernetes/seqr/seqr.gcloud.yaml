@@ -154,18 +154,12 @@ spec:
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"
-        - name: DEPLOY_TO
-          value: "{{ DEPLOY_TO }}"
-        - name: DEPLOY_TO_PREFIX
-          value: "{{ DEPLOY_TO_PREFIX }}"
         - name: DEPLOYMENT_TYPE
           value: "{{ DEPLOYMENT_TYPE }}"
-        - name: CLUSTER_NAME
-          value: "{{ CLUSTER_NAME }}"
         - name: SEQR_GIT_BRANCH
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
-          value: "{{ BASE_URL }}"
+          value: "https://{{ CLUSTER_HOSTNAME }}/"
         - name: DATABASE_BACKUP_BUCKET
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS

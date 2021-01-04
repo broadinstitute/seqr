@@ -13,7 +13,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
     get_gene_ids_for_feature, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
-from seqr.utils.communication_utils import post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -176,7 +176,7 @@ def _search_external_matches(nodes_to_query, patient_data):
             error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
                 node['name'], str(e), json.dumps(patient_data))
             logger.warning(error_message)
-            post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
+            safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
     return external_results
 
@@ -463,8 +463,7 @@ def _generate_notification_for_seqr_match(submission, results):
         project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
         host=BASE_URL, project_guid=project.guid, family_guid=submission.individual.family.guid,
     )
-
-    post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
+    safe_post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
     emails = [s.strip().split('mailto:')[-1] for s in submission.contact_href.split(',')]
     email_message = EmailMessage(
         subject='New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
