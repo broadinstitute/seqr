@@ -362,22 +362,12 @@ def delete_all(deployment_target):
         "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
     ], settings)
 
-    if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
-        run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+    run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
-        for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
-            for disk_name in  get_disk_names(disk_label, settings):
-                run('gcloud compute disks delete --zone {zone} {disk_name}'.format(
-                    zone=settings['GCLOUD_ZONE'], disk_name=disk_name), is_interactive=True)
-    else:
-        run('kubectl delete deployments --all')
-        run('kubectl delete replicationcontrollers --all')
-        run('kubectl delete services --all')
-        run('kubectl delete StatefulSets --all')
-        run('kubectl delete pods --all')
-
-        run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
-        run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
+    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
+        for disk_name in  get_disk_names(disk_label, settings):
+            run('gcloud compute disks delete --zone {zone} {disk_name}'.format(
+                zone=settings['GCLOUD_ZONE'], disk_name=disk_name), is_interactive=True)
 
 
 def get_disk_names(disk, settings):
