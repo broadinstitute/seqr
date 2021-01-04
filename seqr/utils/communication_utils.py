@@ -5,6 +5,13 @@ from settings import SLACK_TOKEN, BASE_URL
 logger = logging.getLogger(__name__)
 
 
+def safe_post_to_slack(channel, message):
+    try:
+        post_to_slack(channel, message)
+    except Exception as e:
+        logger.error('Slack error: {}: Original message in channel ({}) - {}'.format(e, channel, message))
+
+
 def post_to_slack(channel, message):
     if not SLACK_TOKEN:
         logger.info(message)
