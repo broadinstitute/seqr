@@ -12,7 +12,7 @@ from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
 from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, IS_OWNER
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
@@ -733,7 +733,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
             collaborator, include_permissions, can_edit=False
         )
 
-    for collaborator in project.get_collaborators(permissions=[CAN_EDIT, IS_OWNER]):
+    for collaborator in project.get_collaborators(permissions=[CAN_EDIT]):
         collaborators[collaborator.username] = _get_collaborator_json(
             collaborator, include_permissions, can_edit=True
         )

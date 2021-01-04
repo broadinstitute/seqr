@@ -27,13 +27,6 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_f
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
-IS_OWNER = 'is_owner'
-
-_SEQR_OBJECT_PERMISSIONS = (
-    (CAN_VIEW, CAN_VIEW),
-    (CAN_EDIT, CAN_EDIT),
-    (IS_OWNER, IS_OWNER),
-)
 
 
 def _slugify(text):
@@ -148,7 +141,6 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
@@ -181,17 +173,12 @@ class Project(ModelWithGUID):
 
         if being_created:
             # create user groups
-            self.owners_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'owners', uuid.uuid4()))
             self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
             self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
         if being_created:
-            assign_perm(user_or_group=self.owners_group, perm=IS_OWNER, obj=self)
-            assign_perm(user_or_group=self.owners_group, perm=CAN_EDIT, obj=self)
-            assign_perm(user_or_group=self.owners_group, perm=CAN_VIEW, obj=self)
-
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
@@ -199,33 +186,33 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
+            user.groups.add(self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""
 
         super(Project, self).delete(*args, **kwargs)
 
-        self.owners_group.delete()
         self.can_edit_group.delete()
         self.can_view_group.delete()
 
     def get_collaborators(self, permissions=None):
         if not permissions:
-            permissions = {CAN_VIEW, CAN_EDIT, IS_OWNER}
+            permissions = {CAN_VIEW, CAN_EDIT}
 
         collabs = set()
         if CAN_VIEW in permissions:
             collabs.update(self.can_view_group.user_set.all())
         if CAN_EDIT in permissions:
             collabs.update(self.can_edit_group.user_set.all())
-        if IS_OWNER in permissions:
-            collabs.update(self.owners_group.user_set.all())
 
         return collabs
 
     class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
+        permissions = (
+            (CAN_VIEW, CAN_VIEW),
+            (CAN_EDIT, CAN_EDIT),
+        )
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
@@ -821,7 +808,6 @@ class LocusList(ModelWithGUID):
         return 'LL%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
         unique_together = ('name', 'description', 'is_public', 'created_by')
 
         json_fields = ['guid', 'created_by', 'created_date', 'last_modified_date', 'name', 'description', 'is_public']
