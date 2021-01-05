@@ -13,7 +13,7 @@ from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_API_CACHE_EXPIRE_SECONDS
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -91,7 +91,7 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
 
-    safe_redis_set_json(cache_key, r.text, 60)
+    safe_redis_set_json(cache_key, r.text, TERRA_API_CACHE_EXPIRE_SECONDS)
 
     return json.loads(r.text)
 
