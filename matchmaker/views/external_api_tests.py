@@ -53,7 +53,7 @@ class ExternalAPITest(TestCase):
         })
 
     @mock.patch('matchmaker.views.external_api.EmailMessage')
-    @mock.patch('matchmaker.views.external_api.post_to_slack')
+    @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
     def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
         url = '/api/matchmaker/v1/match'
         request_body = {
@@ -265,7 +265,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         mock_email.assert_not_called()
 
     @mock.patch('matchmaker.views.external_api.EmailMessage')
-    @mock.patch('matchmaker.views.external_api.post_to_slack')
+    @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
     def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email):
         url = '/api/matchmaker/v1/match'
         request_body = {

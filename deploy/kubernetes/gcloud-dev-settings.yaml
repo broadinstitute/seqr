@@ -2,34 +2,34 @@
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 
 CLUSTER_NAME: 'seqr-cluster-dev'
-CLUSTER_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-CLUSTER_NUM_NODES: 1
+
+DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-4'
+DEFAULT_POOL_NUM_NODES: 1
+NODE_POOLS: {}
 
 CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
-BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.20.0.11
-ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
-ELASTICSEARCH_VERSION: 7.8.1
-
-KIBANA_SERVICE_HOSTNAME: kibana-kb-http
-
-GCLOUD_PROJECT: 'seqr-project'
-GCLOUD_ZONE: 'us-central1-b'
-
-SEQR_GIT_BRANCH: 'master'
+GUNICORN_WORKER_THREADS: 4
 
 SEQR_POD_MEMORY_LIMIT: 15Gi
 REDIS_POD_MEMORY_LIMIT: 8Gi
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: ''
-
-KUBERNETES_VERSION: '1.16.13-gke.401'
-
-LINKERD_VERSION: 'stable-2.9.0'
-
 TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
+
+####  Elasticsearch settings ####
+
+ES_DATA_NUM_PODS: 1
+ES_CLIENT_NUM_PODS: 1
+ES_MASTER_NUM_PODS: 1
+ES_LOADING_NUM_PODS: 0
+
+ELASTICSEARCH_JVM_MEMORY: 1g
+ELASTICSEARCH_CONTAINER_MEMORY: 2Gi
+
+ES_DATA_NUM_DISKS: 1
+ES_DATA_DISK_TYPE: pd-standard
+ES_DATA_DISK_SIZE: 10
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
@@ -37,5 +37,4 @@ TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org
 NAMESPACE: gcloud-dev
 
 DEPLOY_TO: 'gcloud-dev'
-DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'dev'

@@ -8,7 +8,7 @@ from matchmaker.models import MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches, \
     MME_DISCLAIMER
 
-from seqr.utils.communication_utils import post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.views.utils.json_utils import create_json_response
 
 from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, \
@@ -125,7 +125,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+        safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href
         ))
         return
@@ -136,7 +136,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+        safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href, existing_results=len(results)
         ))
         return
@@ -188,7 +188,7 @@ matchbox on {insertion_date}, with seqr link
 
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 
-    post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+    safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
         base_message=base_message, match_results='\n'.join([text for text, _ in match_results]),
         email_addresses_alert_sent_to=', '.join(sorted(all_emails)), footer=MME_EMAIL_FOOTER
     ))

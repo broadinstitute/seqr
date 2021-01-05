@@ -2,6 +2,7 @@ import json
 import mock
 from copy import deepcopy
 
+from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
@@ -483,6 +484,14 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
 
+        # Test cannot save different searches with the same name
+        body['filters'] = {'test': 'filter'}
+        with transaction.atomic():
+            response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Saved search with name "Test Search" already exists')
+
+        # Test update endpoint
         update_saved_search_url = reverse(update_saved_search_handler, args=[search_guid])
         body['name'] = None
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))

@@ -4,7 +4,6 @@ import logging
 import os
 from pprint import pformat
 import time
-import uuid
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
@@ -18,52 +17,24 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-DEPLOYABLE_COMPONENTS = [
+DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
+
+DEPLOYMENT_TARGETS = [
     "init-cluster",
     "settings",
     "secrets",
-
-    "external-elasticsearch-connector",
-
+    "linkerd",
+    "nginx",
+    "postgres",
     "elasticsearch",
-    "postgres",
-    "redis",
-    "seqr",
-    "kibana",
-    "nginx",
-    "pipeline-runner",
-
-    "kube-scan",
-    "linkerd",
-]
-
-DEPLOYMENT_TARGETS = {}
-DEPLOYMENT_TARGETS["gcloud-prod"] = [
-    "init-cluster",
-    "settings",
-    "secrets",
-    "linkerd",
-    "nginx",
-    "postgres",
-    "external-elasticsearch-connector",
     "kibana",
     "redis",
     "seqr",
-    #"pipeline-runner",
     "kube-scan",
 ]
 
-
-DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
-
-DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch'] = [
-    'init-cluster',
-    'settings',
-    'secrets',
-    'elasticsearch',
-    'kube-scan',
-]
-DEPLOYMENT_TARGETS['gcloud-dev-es'] = DEPLOYMENT_TARGETS['gcloud-prod-elasticsearch']
+# pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
+DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
 
 GCLOUD_CLIENT = 'gcloud-client'
 
@@ -73,27 +44,12 @@ SECRETS = {
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
+    'postgres': ['password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
     ],
 }
-
-DEPLOYMENT_TARGET_SECRETS = {
-    'gcloud-prod': [
-        'seqr',
-        'postgres',
-        'nginx',
-        'matchbox',
-        'kibana',
-        GCLOUD_CLIENT,
-    ],
-    'gcloud-prod-elasticsearch': [
-        'elasticsearch',
-    ],
-}
-DEPLOYMENT_TARGET_SECRETS['gcloud-dev'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod']
-DEPLOYMENT_TARGET_SECRETS['gcloud-dev-es'] = DEPLOYMENT_TARGET_SECRETS['gcloud-prod-elasticsearch']
 
 
 def deploy_init_cluster(settings):
@@ -102,10 +58,7 @@ def deploy_init_cluster(settings):
     print_separator("init-cluster")
 
     # initialize the VM
-    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        _init_cluster_gcloud(settings)
-    else:
-        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
+    _init_cluster_gcloud(settings)
 
     node_name = get_node_name()
     if not node_name:
@@ -167,47 +120,27 @@ def deploy_secrets(settings):
     create_namespace(settings)
 
     # deploy secrets
-    secret_labels = DEPLOYMENT_TARGET_SECRETS[settings['DEPLOY_TO']]
-    for secret_label in secret_labels:
+    for secret_label in SECRETS.keys():
         run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    for secret_label in secret_labels:
+    for secret_label, secret_files in SECRETS.items():
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
-        if secret_label in SECRETS:
-            secret_command += [
-                '--from-file deploy/secrets/{deploy_to_prefix}/{secret_label}/{file}'.format(
-                    secret_label=secret_label, deploy_to_prefix=settings['DEPLOY_TO_PREFIX'], file=file)
-                for file in SECRETS[secret_label]
-            ]
-        elif secret_label == 'postgres':
-            secret_command.append('--from-literal=password={}'.format(uuid.uuid4()))
-        else:
-            raise ValueError('Invalid secret component {}'.format(secret_label))
+        secret_command += [
+            '--from-file deploy/secrets/gcloud/{secret_label}/{file}'.format(secret_label=secret_label, file=file)
+            for file in secret_files
+        ]
         if secret_label == GCLOUD_CLIENT:
             secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
         run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
-
-
-def deploy_external_elasticsearch_connector(settings):
-    deploy_external_connector(settings, "elasticsearch")
-
-
-def deploy_external_connector(settings, connector_name):
-    if connector_name not in ["elasticsearch"]:
-        raise ValueError("Invalid connector name: %s" % connector_name)
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("external-%s-connector" % connector_name)
-
-    run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
 
 
 def deploy_elasticsearch(settings):
     print_separator("elasticsearch")
 
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
 
     _set_elasticsearch_kubernetes_resources()
 
@@ -244,7 +177,7 @@ def deploy_elasticsearch(settings):
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
 def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type"])
+    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
@@ -292,7 +225,7 @@ def deploy_postgres(settings):
 def deploy_redis(settings):
     print_separator("redis")
 
-    docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
+    docker_build("redis", settings, [])
 
     deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
@@ -308,7 +241,6 @@ def deploy_seqr(settings):
                      settings,
                      [
                          "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-                         "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
                          "-f deploy/docker/seqr/Dockerfile",
                          "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
                          ]
@@ -444,7 +376,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
     Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
+        deployment_target (string): value from DEPLOYMENT_ENVS - eg. "gcloud-dev"
             indentifying which cluster to deploy these components to
         components (list): The list of component names to deploy (eg. "postgres", "redis" - each string must be in
             constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
@@ -569,8 +501,8 @@ def _init_cluster_gcloud(settings):
         "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
-        "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-        "--num-nodes 1",
+        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
+        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
         "--no-enable-legacy-authorization",
         "--metadata disable-legacy-endpoints=true",
         "--no-enable-basic-auth",
@@ -587,31 +519,26 @@ def _init_cluster_gcloud(settings):
     # This way, the cluster can be scaled up and down when needed using the technique in
     #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
     #
-    i = 0
-    num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
-    num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
-    while num_nodes_remaining_to_create > 0:
-        i += 1
+
+    for pool_name, pool_settings in settings['NODE_POOLS'].items():
         command = [
-            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
+            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
             "--cluster %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--machine-type %s" % pool_settings.get('machine_type', settings['DEFAULT_POOL_MACHINE_TYPE']),
             "--node-version %(KUBERNETES_VERSION)s",
             #"--no-enable-legacy-authorization",
             "--enable-autorepair",
             "--enable-autoupgrade",
-            "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
+            "--num-nodes %s" % pool_settings.get('num_nodes', settings['DEFAULT_POOL_NUM_NODES']),
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]
-        if settings.get('CLUSTER_NODE_LABELS'):
-            command += ['--node-labels', settings['CLUSTER_NODE_LABELS']]
+        if pool_settings.get('labels'):
+            command += ['--node-labels', pool_settings['labels']]
         run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
-
-        num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
     run(" ".join([
         "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
@@ -660,6 +587,8 @@ def docker_build(component_label, settings, custom_build_args=()):
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
+    if component_label == 'elasticsearch' and settings.get('ELASTICSEARCH_VERSION'):
+        docker_tags.add("%(DOCKER_IMAGE_TAG)s-%(ELASTICSEARCH_VERSION)s" % settings)
 
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
@@ -694,7 +623,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
 
     run(" ".join([
         "kubectl apply",
-        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
+        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".gcloud.yaml"
     ]) % settings)
 
     if wait_until_pod_is_running:
@@ -707,7 +636,7 @@ def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_u
 def delete_pod(component_label, settings, custom_yaml_filename=None):
     deployment_target = settings["DEPLOY_TO"]
 
-    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
+    yaml_filename = custom_yaml_filename or (component_label+".gcloud.yaml")
 
     if is_pod_running(component_label, deployment_target):
         run(" ".join([

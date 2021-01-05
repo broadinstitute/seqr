@@ -3,7 +3,7 @@ import elasticsearch
 from elasticsearch_dsl import Q
 import logging
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY
@@ -29,6 +29,10 @@ def get_es_client(timeout=60, **kwargs):
     }
     if ELASTICSEARCH_CREDENTIALS:
         client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
+    if ELASTICSEARCH_PROTOCOL:
+        client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
+    if ES_SSL_CONTEXT:
+        client_kwargs['ssl_context'] = ES_SSL_CONTEXT
     return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 

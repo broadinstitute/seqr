@@ -30,6 +30,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
+        config.linkerd.io/skip-outbound-ports: "6379"
       labels:
         name: seqr
         deployment: {{ DEPLOY_TO }}
@@ -47,6 +48,9 @@ spec:
           # This disk must already exist.
           pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
           fsType: ext4
+      # - name: elasticsearch-es-http-certs-public
+      #   secret:
+      #     secretName: elasticsearch-es-http-certs-public
       containers:
       - name: seqr-pod
         ports:
@@ -62,6 +66,9 @@ spec:
           mountPath: {{ MME_CONFIG_DIR }}
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
+        # - name: elasticsearch-es-http-certs-public
+        #   mountPath: "/elasticsearch-certs"
+        #   readOnly: true
         resources:
           requests:
             memory: "0.5Gi"
@@ -147,18 +154,12 @@ spec:
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"
-        - name: DEPLOY_TO
-          value: "{{ DEPLOY_TO }}"
-        - name: DEPLOY_TO_PREFIX
-          value: "{{ DEPLOY_TO_PREFIX }}"
         - name: DEPLOYMENT_TYPE
           value: "{{ DEPLOYMENT_TYPE }}"
-        - name: CLUSTER_NAME
-          value: "{{ CLUSTER_NAME }}"
         - name: SEQR_GIT_BRANCH
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
-          value: "{{ BASE_URL }}"
+          value: "https://{{ CLUSTER_HOSTNAME }}/"
         - name: DATABASE_BACKUP_BUCKET
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS
@@ -171,6 +172,10 @@ spec:
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
           value: "{{ TERRA_API_ROOT_URL }}"
+        - name: ELASTICSEARCH_PROTOCOL
+          value: "{{ ELASTICSEARCH_PROTOCOL }}"
+        # - name: ELASTICSEARCH_CA_PATH
+        #   value: "{{ ELASTICSEARCH_CA_PATH }}"
         readinessProbe:
           exec:
             command:
@@ -191,3 +196,5 @@ spec:
                       values:
                       - seqr
                 topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
