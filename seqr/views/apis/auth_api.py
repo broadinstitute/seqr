@@ -3,6 +3,7 @@ Utility functions related to authentication.
 """
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
+from django.db.models.functions import Lower
 from django.shortcuts import redirect
 
 import json
@@ -21,7 +22,9 @@ def login_view(request):
     if not request_json.get('password'):
         return create_json_response({}, status=400, reason='Password is required')
 
-    users = User.objects.filter(email__iexact=request_json['email'])
+    # Django's iexact filtering will improperly match unicode characters, which creates a security risk.
+    # Instead, query for the lower case match to allow case-insensitive matching
+    users = User.objects.annotate(email_lower=Lower('email')).filter(email_lower=request_json['email'].lower())
     if users.count() != 1:
         return create_json_response({}, status=401, reason='Invalid credentials')
 
