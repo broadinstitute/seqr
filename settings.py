@@ -344,8 +344,6 @@ if TERRA_API_ROOT_URL:
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
     }
 
-
-
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
                            SOCIAL_AUTH_PIPELINE_BASE + \
                            ('social_core.pipeline.user.get_username',
