@@ -154,7 +154,7 @@ export const getIGVSamplesByFamily = createSelector(
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => (
-  state.currentProjectGuid ? state.savedVariantTableState : state.staffSavedVariantTableState
+  state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
 )
 
 export const getPairedSelectedSavedVariants = createSelector(

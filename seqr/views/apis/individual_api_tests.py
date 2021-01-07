@@ -12,6 +12,7 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
 from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
+PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 
 ID_UPDATE_GUID = "I000002_na19678"
 UPDATED_ID = "NA19678_1"
@@ -47,6 +48,8 @@ INDIVIDUAL_UPDATE_DATA = {
     'absentFeatures': [],
     'absentNonstandardFeatures': [{'id': 'Some new feature', 'notes': 'No term for this', 'details': 'extra detail'}]
 }
+
+PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {'individualGuid': 'I000017_na20889', 'individualId': 'NA20889', 'familyId': '12'}
 
 FAMILY_UPDATE_GUID = "I000007_na20870"
 INDIVIDUAL_FAMILY_UPDATE_DATA = {
@@ -112,7 +115,7 @@ class IndividualAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_edit_individuals(self, mock_update_pedigree):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
-        self.check_staff_login(edit_individuals_url)
+        self.check_manager_login(edit_individuals_url)
 
         # send invalid requests
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({}))
@@ -148,10 +151,22 @@ class IndividualAPITest(AuthenticationTestCase):
             {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list}
         )
 
+        # Test PM permission
+        pm_required_edit_individuals_url = reverse(edit_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 200)
+
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_delete_individuals(self, mock_update_pedigree):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
-        self.check_staff_login(individuals_url)
+        self.check_manager_login(individuals_url)
 
         # send invalid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
@@ -175,10 +190,24 @@ class IndividualAPITest(AuthenticationTestCase):
         mock_update_pedigree.assert_called_once()
         self.assertEqual(mock_update_pedigree.call_args.args[0].guid, 'F000001_1')
 
+        # Test PM permission
+        pm_required_delete_individuals_url = reverse(delete_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        response = self.client.post(
+            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(
+            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 200)
+
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_individuals_table_handler(self, mock_update_pedigree):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
-        self.check_staff_login(individuals_url)
+        self.check_manager_login(individuals_url)
 
         # send invalid requests
         response = self.client.get(individuals_url)
@@ -256,6 +285,23 @@ class IndividualAPITest(AuthenticationTestCase):
             {'F000001_1', new_family_guid},
             {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list}
         )
+
+        # Test PM permission
+        receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        save_url = reverse(save_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID, '123'])
+        response = self.client.post(receive_url, {'f': f})
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(save_url)
+        self.assertEqual(response.status_code, 403)
+
+        self.login_pm_user()
+        response = self.client.post(receive_url, {
+            'f': SimpleUploadedFile('individuals.tsv', 'Family ID	Individual ID\n1	2'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 200)
+        save_url = reverse(save_individuals_table_handler, args=[
+            PM_REQUIRED_PROJECT_GUID, response.json()['uploadedFileId']])
+        response = self.client.post(save_url)
+        self.assertEqual(response.status_code, 200)
 
     def _is_expected_hpo_upload(self, response):
         self.assertEqual(response.status_code, 200)

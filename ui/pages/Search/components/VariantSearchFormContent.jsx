@@ -11,7 +11,7 @@ import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  STAFF_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -173,7 +173,7 @@ const PANELS = [
   INHERITANCE_PANEL,
   {
     [DATASET_TYPE_SV_CALLS]: null,
-    isStaff: { [true]: STAFF_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
+    isAnalyst: { [true]: ANALYST_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
@@ -211,13 +211,13 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
   return {
     ...typeAcc,
-    [type]: [true, false].reduce((staffAcc, isStaffBool) => {
-      const staffPanels = typePanels.map(({ isStaff, ...panel }) => (isStaff === undefined ? panel : isStaff[isStaffBool]))
+    [type]: [true, false].reduce((analystAcc, isAnalystBool) => {
+      const analystPanels = typePanels.map(({ isAnalyst, ...panel }) => (isAnalyst === undefined ? panel : isAnalyst[isAnalystBool]))
       return {
-        ...staffAcc,
-        [isStaffBool]: [true, false].reduce((acc, annSecondaryBool) => ({
+        ...analystAcc,
+        [isAnalystBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? staffPanels : staffPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
       } }, {}),
   }
@@ -229,7 +229,7 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary,
     <VerticalSpacer height={10} />
     <InlineHeader content="Saved Search:" />
     {configuredField(SAVED_SEARCH_FIELD)}
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isStaff][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
   </div>
 ))
 

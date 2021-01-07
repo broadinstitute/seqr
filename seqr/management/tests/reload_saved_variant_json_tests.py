@@ -44,13 +44,14 @@ class ReloadSavedVariantJsonTest(TestCase):
         # Test for all projects and no specific family ids
         call_command('reload_saved_variant_json')
 
-        self.assertEqual(mock_get_variants.call_count, 2)
+        self.assertEqual(mock_get_variants.call_count, 3)
         family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
                 [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'],
             ),
-            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL'])
+            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL']),
+            mock.call([Family.objects.get(id=14)], ['12-48367227-TC-T'])
         ], any_order=True)
 
         logger_info_calls = [
@@ -60,10 +61,13 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call('Updated 0 variants for project Empty Project'),
             mock.call('Project: Test Reprocessed Project'),
             mock.call('Updated 2 variants for project Test Reprocessed Project'),
+            mock.call('Project: Non-Analyst Project'),
+            mock.call('Updated 1 variants for project Non-Analyst Project'),
             mock.call('Done'),
             mock.call('Summary: '),
             mock.call('  1kg project n\xe5me with uni\xe7\xf8de: Updated 4 variants'),
-            mock.call('  Test Reprocessed Project: Updated 2 variants')
+            mock.call('  Test Reprocessed Project: Updated 2 variants'),
+            mock.call('  Non-Analyst Project: Updated 1 variants'),
         ]
         mock_logger.info.assert_has_calls(logger_info_calls)
         mock_get_variants.reset_mock()

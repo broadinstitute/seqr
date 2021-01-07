@@ -1,4 +1,3 @@
-from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import prefetch_related_objects, Q
 import logging
 
@@ -11,18 +10,19 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants_with_tags, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
     get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions
+from seqr.views.utils.permissions_utils import analyst_required
 from seqr.views.utils.variant_utils import saved_variant_genes
-
-from settings import API_LOGIN_REQUIRED_URL
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
 MAX_SAVED_VARIANTS = 10000
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def mme_details(request):
-    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
+    submissions = MatchmakerSubmission.objects.filter(
+        deleted_date__isnull=True, individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
 
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_submissions(submissions)
 
@@ -45,13 +45,14 @@ def mme_details(request):
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def success_story(request, success_story_types):
     if success_story_types == 'all':
         families = Family.objects.filter(success_story__isnull=False)
     else:
         success_story_types = success_story_types.split(',')
         families = Family.objects.filter(success_story_types__overlap=success_story_types)
+    families = families.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).order_by('family_id')
 
     rows = [{
         "project_guid": family.project.guid,
@@ -67,15 +68,15 @@ def success_story(request, success_story_types):
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def saved_variants_page(request, tag):
     gene = request.GET.get('gene')
-
     if tag == 'ALL':
         saved_variant_models = SavedVariant.objects.exclude(varianttag=None)
     else:
         tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
         saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+    saved_variant_models = saved_variant_models.filter(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
 
     if gene:
         saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)

@@ -32,9 +32,9 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
+from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def query_variants_handler(request, search_hash):
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
     try:
@@ -135,7 +135,7 @@ def _process_variants(variants, families, user):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user_is_analyst(user))
 
     response_json.update({
         'searchedVariants': variants,
@@ -535,6 +535,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
+    discovery_variant_q &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
+
     saved_variants = SavedVariant.objects.filter(variant_q)
 
     json = get_json_for_saved_variants_with_tags(

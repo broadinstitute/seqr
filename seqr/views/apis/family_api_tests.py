@@ -13,6 +13,7 @@ FAMILY_GUID2 = 'F000002_2'
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
+PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
@@ -23,7 +24,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
     def test_edit_families_handler(self):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_manager_login(url)
 
         # send invalid request
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -51,9 +52,18 @@ class FamilyAPITest(AuthenticationTestCase):
         new_guid = new_guids.pop()
         self.assertEqual(response_json['familiesByGuid'][new_guid]['description'], 'Test descriptions for a new family')
 
+        # Test PM permission
+        url = reverse(edit_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'families': [{'familyGuid': 'F000012_12'}]}))
+        self.assertEqual(response.status_code, 200)
+
     def test_delete_families_handler(self):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_manager_login(url)
 
         # send request with a "families" attribute to provide a list of families
         req_values = {
@@ -74,6 +84,15 @@ class FamilyAPITest(AuthenticationTestCase):
                                     data=json.dumps({'families': None}))
         self.assertEqual(response.status_code, 400)
 
+        # Test PM permission
+        url = reverse(delete_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'families': [{'familyGuid': 'F000012_12'}]}))
+        self.assertEqual(response.status_code, 200)
+
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
@@ -84,7 +103,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Non Staff User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Collaborator User')
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
@@ -147,7 +166,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 403)
-        self.login_staff_user()
+        self.login_analyst_user()
 
         # send valid request
         response = self.client.post(url, content_type='application/json',
@@ -158,7 +177,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
     def test_receive_families_table_handler(self):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_manager_login(url)
 
         # send invalid request
         data = b'Description	Coded Phenotype\n\
@@ -205,3 +224,11 @@ class FamilyAPITest(AuthenticationTestCase):
         family_2 = response_json['familiesByGuid'][FAMILY_GUID2]
         self.assertEqual(family_2['description'], 'family two description')
         self.assertEqual(family_2['familyId'], '2')
+
+        # Test PM permission
+        url = reverse(receive_families_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
+        self.assertEqual(response.status_code, 200)

@@ -70,7 +70,7 @@ class DashboardPageTest(AuthenticationTestCase):
             self.client.get('/users/set_password/invalid_pwd')
 
         # Even if page does not require login, include user metadata if logged in
-        self.login_staff_user()
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
