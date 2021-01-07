@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
-    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException
+    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_google_authenticated
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
     TOKEN_AUTH_TIME, REGISTER_RESPONSE
 
@@ -20,6 +20,15 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 @mock.patch('seqr.views.utils.terra_api_utils.logger')
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
+
+    def test_is_google_authenticated(self, mock_logger):
+        user = User.objects.get(email = 'test_user@test.com')
+        r = is_google_authenticated(user)
+        self.assertTrue(r)
+        user = User.objects.get(email = 'test_local_user@test.com')
+        r = is_google_authenticated(user)
+        self.assertFalse(r)
+        self.assertEqual(len(mock_logger.method_calls), 0)
 
     @responses.activate
     def test_anvil_call(self, mock_logger):
@@ -127,12 +136,14 @@ class TerraApiUtilsCase(TestCase):
         self.assertEqual(len(mock_logger.method_calls), 1)
 
     @responses.activate
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_user_get_workspace_access_level(self, mock_time, mock_logger):
+    def test_user_get_workspace_access_level(self, mock_time, mock_redis, mock_logger):
         user = User.objects.get(email='test_user@test.com')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
+        mock_redis.return_value.get.return_value = None
         url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel'.format(TEST_TERRA_API_ROOT_URL)
         responses.add(responses.GET, url, status = 200, body = '{"accessLevel": "OWNER"}')
         permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
@@ -148,3 +159,10 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.warning.assert_called_with(
             'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel got status 404 with reason: Not Found')
         self.assertEqual(len(mock_logger.method_calls), 1)
+
+        # Test cache hit
+        url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel'.format(TEST_TERRA_API_ROOT_URL)
+        mock_redis.return_value.get.return_value = '{"accessLevel": "READER"}'
+        permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
+        self.assertDictEqual(permission, {"accessLevel": "READER"})
+        mock_redis.return_value.get.assert_called_with('terra_req__ec4582d9e5e0247385d63538686095cc')

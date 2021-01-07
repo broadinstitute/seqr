@@ -65,17 +65,12 @@ def _get_social_access_token(user):
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, **kwargs):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-    cache_key = 'terra_req__' + hashlib.md5((url + str(headers) + str(kwargs)).encode('utf-8')).hexdigest()
-    r_text = safe_redis_get_json(cache_key)
-    if r_text:
-        logger.info('Debug: Cache {} hit. {}'.format(cache_key, r_text))
-        return json.loads(r_text)
 
-    r = request_func(url, headers=headers, **kwargs)
+    r = request_func(url, headers=headers)
 
     if r.status_code == 404:
         raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
@@ -90,8 +85,6 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
             path, r.status_code, r.reason))
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
-
-    safe_redis_set_json(cache_key, r.text, TERRA_API_CACHE_EXPIRE_SECONDS)
 
     return json.loads(r.text)
 
@@ -120,11 +113,22 @@ def list_anvil_workspaces(user, fields=None):
 
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
+
+    cache_key = 'terra_req__' + hashlib.md5("{}__{}".format(user, path).encode('utf-8')).hexdigest()
+    r_text = safe_redis_get_json(cache_key)
+    if r_text:
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        return r_text
+
     try:
-        return _user_anvil_call('get', path, user)
+        r_text = _user_anvil_call('get', path, user)
     except TerraNotFoundException as et:
         logger.warning(str(et))
         return {}
+
+    safe_redis_set_json(cache_key, r_text, TERRA_API_CACHE_EXPIRE_SECONDS)
+
+    return r_text
 
 
 def user_get_workspace_acl(user, workspace_namespace, workspace_name):
