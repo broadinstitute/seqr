@@ -233,6 +233,8 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
+    STATICFILES_DIRS = [STATIC_ROOT]
+    STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin

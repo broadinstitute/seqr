@@ -311,8 +311,10 @@ urlpatterns += [
 ]
 
 if DEBUG:
+    import django.contrib.staticfiles
     urlpatterns += [
         url(r'^hijack/', include('hijack.urls')),
+        url(r'^static/(?P<path>.*)$', django.contrib.staticfiles.views.serve),
     ]
 
 # django debug toolbar
