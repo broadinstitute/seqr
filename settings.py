@@ -212,6 +212,8 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 WSGI_APPLICATION = 'wsgi.application'
 
+WHITENOISE_ALLOW_ALL_ORIGINS = False
+
 # Email settings
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
