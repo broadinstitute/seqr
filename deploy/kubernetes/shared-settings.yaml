@@ -20,6 +20,8 @@ SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
 ES_DATA_NUM_DISKS: 3
 ES_DATA_DISK_TYPE: pd-ssd
 ES_DATA_DISK_SIZE: 3200
+ES_LOADING_DISK_SIZE: '100Gi'
+ES_POD_VOLUME_SIZE: '50Gi'
 #ES_DATA_SNAPSHOTS:  snp-es-cluster-prod-es-data-disk-1, snp-es-cluster-prod-es-data-disk-2, snp-es-cluster-prod-es-data-disk-3
 
 ELASTICSEARCH_JVM_MEMORY: 22g
@@ -44,7 +46,6 @@ MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
-DEPLOY_TO_PREFIX: 'gcloud'
 
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'

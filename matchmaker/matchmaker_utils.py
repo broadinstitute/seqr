@@ -211,7 +211,7 @@ def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phe
 
     matches = []
     for item_id in query_ids:
-        matches += MatchmakerSubmission.objects.filter(**{
+        matches += MatchmakerSubmission.objects.filter(deleted_date__isnull=True, **{
             '{}__contains'.format(filter_key): [id_filter_func(item_id)]
         }).exclude(submission_id=patient_id)
 
