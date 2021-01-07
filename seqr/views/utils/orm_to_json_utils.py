@@ -227,7 +227,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     else:
         kwargs['additional_model_fields'].append('project_id')
 
-    return _get_json_for_models(families, user=user, process_result=_process_result,  **kwargs)
+    return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_family(family, user=None, **kwargs):
