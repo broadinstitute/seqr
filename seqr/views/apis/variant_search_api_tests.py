@@ -229,8 +229,8 @@ class VariantSearchAPITest(object):
         )
         mock_error_logger.assert_not_called()
 
-        # Test cross-project discovery for staff users
-        self.login_staff_user()
+        # Test cross-project discovery for analyst users
+        self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)

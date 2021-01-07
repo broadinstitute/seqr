@@ -15,8 +15,9 @@ from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, Primate
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
-    project_has_anvil, get_workspace_collaborator_perms
+    project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_google_authenticated
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
     model_class = type(models[0])
     fields = copy(model_class._meta.json_fields)
-    if user and user.is_staff:
+    if user and user_is_analyst(user):
         fields += getattr(model_class._meta, 'internal_json_fields', [])
     if additional_model_fields:
         fields += additional_model_fields
@@ -93,12 +94,15 @@ MAIN_USER_FIELDS = [
     'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id'
 ]
 BOOL_USER_FIELDS = {
-    'is_superuser': False, 'is_staff': False, 'is_active': True,
+    'is_superuser': False, 'is_active': True,
 }
 MODEL_USER_FIELDS = MAIN_USER_FIELDS + list(BOOL_USER_FIELDS.keys())
 COMPUTED_USER_FIELDS = {
     'is_anvil': lambda user, is_anvil=None: is_google_authenticated(user) if is_anvil is None else is_anvil,
     'display_name': lambda user, **kwargs: user.get_full_name(),
+    'is_analyst': lambda user, **kwargs: user_is_analyst(user),
+    'is_data_manager': lambda user, **kwargs: user_is_data_manager(user),
+    'is_pm': lambda user, **kwargs: user_is_pm(user),
 }
 
 DEFAULT_USER = {_to_camel_case(field): '' for field in MAIN_USER_FIELDS}
@@ -141,7 +145,9 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     """
     def _process_result(result, project):
         result.update({
-            'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
+            'projectCategoryGuids': [
+                c.guid for c in project.projectcategory_set.all() if c.name != ANALYST_PROJECT_CATEGORY
+            ] if add_project_category_guids_field else [],
             'canEdit': has_project_permissions(project, user, can_edit=True),
         })
 
@@ -193,7 +199,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     def _process_result(result, family):
         result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
+            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': user_is_analyst(ab.created_by)},
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
@@ -834,8 +840,8 @@ def get_json_for_gene(gene, **kwargs):
 
 def get_json_for_saved_searches(searches, user):
     def _process_result(result, search):
-        # Do not apply HGMD filters in shared searches for non-staff users
-        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
+        # Do not apply HGMD filters in shared searches for non-analyst users
+        if not search.created_by and not user_is_analyst(user) and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }

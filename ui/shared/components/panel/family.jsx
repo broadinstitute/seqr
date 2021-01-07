@@ -5,7 +5,7 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
+import { updateFamily, loadAnalystOptions } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getFirstSampleByFamily,
@@ -95,7 +95,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = {
-  load: loadStaffOptions,
+  load: loadAnalystOptions,
 }
 
 AnalystEmailDropdown.propTypes = {
@@ -169,10 +169,10 @@ export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
       analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
     )
   }
-  const staffUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isStaff)
-  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isStaff)
+  const analystUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isAnalyst)
+  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isAnalyst)
   return [
-    staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
+    analystUsers.length > 0 ? <div key="analyst"><b>CMG Analysts:</b> {formatAnalysedByList(analystUsers)}</div> : null,
     externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
   ]
 })

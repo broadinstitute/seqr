@@ -11,7 +11,7 @@ const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_MME = 'REQUEST_MME'
 const RECEIVE_MME = 'RECEIVE_MME'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
-const UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE = 'UPDATE_STAFF_VARIANT_STATE'
+const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 
 
 // Data actions
@@ -77,7 +77,7 @@ export const loadSavedVariants = ({ tag, gene = '' }) => {
   }
 }
 
-export const updateStaffSavedVariantTable = updates => ({ type: UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, updates })
+export const updateAllProjectSavedVariantTable = updates => ({ type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const reducers = {
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),
@@ -86,7 +86,7 @@ export const reducers = {
   mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
   savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
-  staffSavedVariantTableState: createSingleObjectReducer(UPDATE_STAFF_SAVED_VARIANT_TABLE_STATE, {
+  allProjectSavedVariantTableState: createSingleObjectReducer(UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, {
     categoryFilter: SHOW_ALL,
     sort: SORT_BY_XPOS,
     page: 1,

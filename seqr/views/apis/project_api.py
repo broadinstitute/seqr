@@ -10,23 +10,23 @@ from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, ProjectCategory
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_project_from_json, get_or_create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions
-from settings import API_LOGIN_REQUIRED_URL
+    check_user_created_object_permissions, pm_required
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@pm_required
 def create_project_handler(request):
     """Create a new project.
 
@@ -43,14 +43,19 @@ def create_project_handler(request):
     """
     request_json = json.loads(request.body)
 
-    name = request_json.get('name')
-    if not name:
-        return create_json_response({}, status=400, reason="'Name' cannot be blank")
+    missing_fields = [field for field in ['name', 'genomeVersion'] if not request_json.get(field)]
+    if missing_fields:
+        error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
+        return create_json_response({'error': error}, status=400, reason=error)
 
-    description = request_json.get('description', '')
-    genome_version = request_json.get('genomeVersion')
+    project_args = {
+        'name': request_json['name'],
+        'genome_version': request_json['genomeVersion'],
+        'description': request_json.get('description', ''),
+    }
 
-    project = _create_project(name, request.user, description=description, genome_version=genome_version)
+    project = create_model_from_json(Project, project_args, user=request.user)
+    ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.add(project)
 
     return create_json_response({
         'projectsByGuid': {
@@ -325,27 +330,6 @@ def _get_json_for_variant_tag_types(project):
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }
-
-
-def _create_project(name, user, description=None, genome_version=None):
-    """Creates a new project.
-
-    Args:
-        name (string): Project name
-        description (string): optional description
-        user (object): Django user that is creating this project
-    """
-    project_args = {
-        'name': name,
-        'description': description,
-        'created_by': user,
-    }
-    if genome_version:
-        project_args['genome_version'] = genome_version
-
-    project, _ = get_or_create_model_from_json(Project, project_args, update_json=None, user=user)
-
-    return project
 
 
 def _delete_project(project_guid, user):

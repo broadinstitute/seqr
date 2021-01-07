@@ -186,7 +186,7 @@ const SV_FIELDS = [
 ]
 
 const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
-  user.isStaff ? <UpdateButton
+  user.isAnalyst ? <UpdateButton
     key={`manual${variantType}`}
     modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
     modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}

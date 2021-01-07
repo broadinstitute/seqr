@@ -145,8 +145,8 @@ const COLUMNS = [
   },
 ]
 
-const STAFF_COLUMNS = [...COLUMNS]
-STAFF_COLUMNS.splice(3, 0, {
+const SUPERUSER_COLUMNS = [...COLUMNS]
+SUPERUSER_COLUMNS.splice(3, 0, {
   name: 'lastAccessedDate',
   width: 2,
   content: 'Last Accessed',
@@ -157,14 +157,14 @@ STAFF_COLUMNS.splice(3, 0, {
 const COLUMNS_NO_ANVIL = [...COLUMNS]
 COLUMNS_NO_ANVIL.splice(1, 1)
 
-const STAFF_COLUMNS_NO_ANVIL = [...STAFF_COLUMNS]
-STAFF_COLUMNS_NO_ANVIL.splice(1, 1)
+const SUPERUSER_COLUMNS_NO_ANVIL = [...SUPERUSER_COLUMNS]
+SUPERUSER_COLUMNS_NO_ANVIL.splice(1, 1)
 
-const getColumns = (googleLoginEnabled, isAnvil, isStaff) => {
+const getColumns = (googleLoginEnabled, isAnvil, isSuperuser) => {
   if (googleLoginEnabled && isAnvil) {
-    return isStaff ? STAFF_COLUMNS : COLUMNS
+    return isSuperuser ? SUPERUSER_COLUMNS : COLUMNS
   }
-  return isStaff ? STAFF_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
+  return isSuperuser ? SUPERUSER_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
 }
 
 const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
@@ -188,8 +188,8 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         emptyContent="0 projects found"
         loading={loading}
         data={visibleProjects}
-        columns={getColumns(googleLoginEnabled, user.isAnvil, user.isStaff)}
-        footer={user.isStaff ? <CreateProjectButton /> : null}
+        columns={getColumns(googleLoginEnabled, user.isAnvil, user.isSuperuser)}
+        footer={user.isPm ? <CreateProjectButton /> : null}
       />
     </ProjectTableContainer>
   </DataLoader>,

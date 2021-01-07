@@ -11,21 +11,27 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
-    cls.staff_user = User.objects.get(username='test_user')
+    cls.analyst_user = User.objects.get(username='test_user')
+    cls.pm_user = User.objects.get(username='test_pm_user')
+    cls.data_manager_user = User.objects.get(username='test_data_manager')
     cls.manager_user = User.objects.get(username='test_user_manager')
-    cls.collaborator_user = User.objects.get(username='test_user_non_staff')
+    cls.collaborator_user = User.objects.get(username='test_user_collaborator')
     cls.no_access_user = User.objects.get(username='test_user_no_access')
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
     SUPERUSER = 'superuser'
-    STAFF = 'staff'
+    ANALYST = 'analyst'
+    PM = 'project_manager'
+    DATA_MANAGER = 'data_manager'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
 
     super_user = None
-    staff_user = None
+    analyst_user = None
+    pm_user = None
+    data_manager_user = None
     manager_user = None
     collaborator_user = None
     no_access_user = None
@@ -38,8 +44,9 @@ class AuthenticationTestCase(TestCase):
         view_group = Group.objects.get(pk=3)
         edit_group.user_set.add(cls.manager_user)
         view_group.user_set.add(cls.manager_user, cls.collaborator_user)
-        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
-        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.filter(can_edit_group=edit_group))
+        assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
     def check_require_login(self, url):
         self._check_login(url, self.AUTHENTICATED_USER)
@@ -50,8 +57,14 @@ class AuthenticationTestCase(TestCase):
     def check_manager_login(self, url):
         self._check_login(url, self.MANAGER)
 
-    def check_staff_login(self, url):
-        self._check_login(url, self.STAFF)
+    def check_analyst_login(self, url):
+        self._check_login(url, self.ANALYST)
+
+    def check_pm_login(self, url):
+        self._check_login(url, self.PM)
+
+    def check_data_manager_login(self, url):
+        self._check_login(url, self.DATA_MANAGER)
 
     def check_superuser_login(self, url):
         self._check_login(url, self.SUPERUSER)
@@ -65,8 +78,14 @@ class AuthenticationTestCase(TestCase):
     def login_manager(self):
         self.client.force_login(self.manager_user)
 
-    def login_staff_user(self):
-        self.client.force_login(self.staff_user)
+    def login_analyst_user(self):
+        self.client.force_login(self.analyst_user)
+
+    def login_pm_user(self):
+        self.client.force_login(self.pm_user)
+
+    def login_data_manager_user(self):
+        self.client.force_login(self.data_manager_user)
 
     def _check_login(self, url, permission_level, request_data=None):
         """For integration tests of django views that can only be accessed by a logged-in user,
@@ -107,8 +126,22 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
 
-        self.login_staff_user()
-        if permission_level == self.STAFF:
+        self.login_analyst_user()
+        if permission_level in self.ANALYST:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.login_pm_user()
+        if permission_level in self.PM:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.login_data_manager_user()
+        if permission_level in self.DATA_MANAGER:
             return
 
         response = self.client.get(url)
@@ -128,7 +161,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
@@ -158,7 +191,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
@@ -176,7 +209,7 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_no_staff@test.com': {
+        'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
             "canShare": False,
@@ -298,10 +331,9 @@ urllib3_responses = Urllib3Responses()
 
 
 USER_FIELDS = {
-    'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id', 'isActive',
-    'isAnvil', 'isSuperuser',
+    'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive', 'isAnvil',
+    'isAnalyst', 'isDataManager', 'isPm', 'isSuperuser',
 }
-
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',

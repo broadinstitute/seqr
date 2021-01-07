@@ -16,10 +16,6 @@ GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 
-# TODO remove in https://github.com/broadinstitute/seqr-private/issues/931
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'shall@broadinstitute.org,kdelano@broadinstitute.org'
-
-
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 

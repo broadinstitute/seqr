@@ -19,14 +19,12 @@ class ProjectAPITest(object):
 
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
-        self.check_require_login(create_project_url)
+        self.check_pm_login(create_project_url)
 
         # check validation of bad requests
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'bad_json': None}))
         self.assertEqual(response.status_code, 400)
-
-        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'form': {'missing_name': True}}))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Field(s) "name, genomeVersion" are required')
 
         # send valid request to create project
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
@@ -35,12 +33,13 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         # check that project was created
-        new_project = Project.objects.filter(name='new_project')
-        self.assertEqual(len(new_project), 1)
-        self.assertEqual(new_project[0].description, 'new project description')
-        self.assertEqual(new_project[0].genome_version, '38')
+        new_project = Project.objects.get(name='new_project')
+        self.assertEqual(new_project.description, 'new project description')
+        self.assertEqual(new_project.genome_version, '38')
+        self.assertEqual(new_project.created_by, self.pm_user)
+        self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
 
-        project_guid = new_project[0].guid
+        project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
 
         # update the project
@@ -129,8 +128,8 @@ class ProjectAPITest(object):
             {'id', 'category', 'label'}
         )
 
-        # Test staff users have internal fields returned
-        self.login_staff_user()
+        # Test analyst users have internal fields returned
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -170,28 +169,29 @@ class ProjectAPITest(object):
         self.assertDictEqual(response_json['locusListsByGuid'], {})
 
 BASE_COLLABORATORS = [
+    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Collaborator User',
+     'email': 'test_user_collaborator@test.com', 'firstName': 'Test Collaborator User',
+     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
+     'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'lastLogin': mock.ANY,
+     'lastName': '', 'username': 'test_user_collaborator'},
     {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',
      'firstName': 'Test Manager User', 'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11,
-     'isActive': True, 'isAnvil': False, 'isStaff': False, 'isSuperuser': False, 'lastLogin': None, 'lastName': '',
-     'username': 'test_user_manager'},
-    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Non Staff User',
-     'email': 'test_user_no_staff@test.com', 'firstName': 'Test Non Staff User',
-     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
-     'isSuperuser': False, 'isStaff': False, 'lastLogin': mock.ANY, 'lastName': '', 'username': 'test_user_non_staff'}]
+     'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False,
+     'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'}]
 
 ANVIL_COLLABORATORS = [{
     'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
     'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
-    'isActive': True, 'isStaff': False, 'isSuperuser': False, 'lastName': '', 'lastLogin': '',
-    'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
+    'isActive': True, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False, 'lastName': '',
+    'lastLogin': '', 'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
 for collab in ANVIL_COLLABORATORS:
     collab['isAnvil'] = True
 
 LOCAL_COLLAB = {
     'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
     'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
-    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isStaff': False, 'lastLogin': None, 'lastName': '',
-    'username': 'test_local_user'}
+    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False,
+    'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
@@ -213,7 +213,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+        self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
@@ -244,7 +244,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     def test_project_page_data(self):
         super(MixProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.staff_user,
+        self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,

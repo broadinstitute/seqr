@@ -47,6 +47,52 @@ SUBMISSION_DATA = {
     }],
 }
 
+PARSED_RESULT = {
+    'id': 'P0004515',
+    'score': 0.5706712016939723,
+    'submissionGuid': SUBMISSION_GUID,
+    'patient': {
+        'genomicFeatures': [
+            {'gene': {'id': 'OR4F5'}},
+            {'gene': {'id': 'CICP27'}},
+            {'gene': {'id': 'DDX11L1'}},
+        ],
+        'contact': {
+            'href': 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org',
+            'name': 'Baylor UDN Clinical Site'
+        },
+        'id': 'P0004515',
+        'features': [
+            {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
+            {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
+        ],
+    },
+    'phenotypes': [
+        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
+        {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
+    ],
+    'geneVariants': [
+        {'geneId': 'ENSG00000186092'},
+        {'geneId': 'ENSG00000233750'},
+        {'geneId': 'ENSG00000223972'},
+    ],
+    'matchStatus': {
+        'matchmakerResultGuid': RESULT_STATUS_GUID,
+        'comments': 'AMBRA1 c.2228G>C p.(Ser743Thr) missense variant. Maternally inherited, both have epilepsy',
+        'weContacted': False,
+        'hostContacted': True,
+        'deemedIrrelevant': True,
+        'flagForAnalysis': False,
+        'matchRemoved': False,
+        'createdDate': '2019-02-12T18:43:56.358Z',
+    },
+    'originatingSubmission': {
+        'originatingSubmissionGuid': 'MS000016_P0004515',
+        'familyGuid': 'F000012_12',
+        'projectGuid': 'R0003_test',
+    }
+}
+
 NEW_MATCH_JSON = {
     "score": {
         "patient": 0.92
@@ -141,46 +187,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
         )
-        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], {
-            'id': 'P0004515',
-            'score': 0.5706712016939723,
-            'submissionGuid': SUBMISSION_GUID,
-            'patient': {
-                'genomicFeatures': [
-                    {'gene': {'id': 'OR4F5'}},
-                    {'gene': {'id': 'CICP27'}},
-                    {'gene': {'id': 'DDX11L1'}},
-                ],
-                'contact': {
-                    'href': 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org',
-                    'name': 'Baylor UDN Clinical Site'
-                },
-                'id': 'P0004515',
-                'features': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                    {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
-                ],
-            },
-            'phenotypes': [
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
-            ],
-            'geneVariants': [
-                {'geneId': 'ENSG00000186092'},
-                {'geneId': 'ENSG00000233750'},
-                {'geneId': 'ENSG00000223972'},
-            ],
-            'matchStatus': {
-                'matchmakerResultGuid': RESULT_STATUS_GUID,
-                'comments': 'AMBRA1 c.2228G>C p.(Ser743Thr) missense variant. Maternally inherited, both have epilepsy',
-                'weContacted': False,
-                'hostContacted': True,
-                'deemedIrrelevant': True,
-                'flagForAnalysis': False,
-                'matchRemoved': False,
-                'createdDate': '2019-02-12T18:43:56.358Z',
-            },
-        })
+
+        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
+        self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
             'submissionGuid': SUBMISSION_GUID,
@@ -223,16 +232,23 @@ class MatchmakerAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
-        # staff users should see originating query for results
-        self.login_staff_user()
+        # users should see originating query for results if the have correct project permissions
+        self.login_manager()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['originatingSubmission'], {
-            'originatingSubmissionGuid': 'MS000016_P0004515',
-            'familyGuid': 'F000012_12',
-            'projectGuid': 'R0003_test',
+        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
+        self.assertDictEqual(response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156']['originatingSubmission'], {
+            'originatingSubmissionGuid': 'MS000018_P0004517',
+            'familyGuid': 'F000014_14',
+            'projectGuid': 'R0004_non_analyst_project',
         })
+
+        self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
@@ -322,7 +338,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
         )
-        # non-staff users can't see contact notes
+        # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
 
         #  Test removed match is deleted
@@ -406,8 +422,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
         self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
 
-        # staff users should see contact notes
-        self.login_staff_user()
+        # analyst users should see contact notes
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -641,6 +657,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'flagForAnalysis': False,
                 'matchRemoved': False,
                 'createdDate': mock.ANY,
+            },
+            'originatingSubmission': {
+                'originatingSubmissionGuid': 'MS000015_na20885',
+                'familyGuid': 'F000011_11',
+                'projectGuid': 'R0003_test',
             }
         })
 
@@ -701,18 +722,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
-
-        # staff users should see originating query for results
-        self.login_staff_user()
-        response = self.client.post(url, content_type='application/json', data=json.dumps(update_body))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid]['originatingSubmission'], {
-            'originatingSubmissionGuid': 'MS000015_na20885',
-            'familyGuid': 'F000011_11',
-            'projectGuid': 'R0003_test',
-        })
-        self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid'][new_match_result_guid])
 
         # The results for each submission should link to one another
         result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
@@ -858,7 +867,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         # Test create
         response = self.client.post(url, content_type='application/json', data=json.dumps({

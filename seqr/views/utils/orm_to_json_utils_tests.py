@@ -35,7 +35,7 @@ class JSONUtilsTest(TestCase):
         json = _get_json_for_family(family)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
-        user = User.objects.filter(is_staff=True).first()
+        user = User.objects.get(username='test_user')
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_FAMILY_FIELDS)
 
@@ -57,7 +57,7 @@ class JSONUtilsTest(TestCase):
         json = _get_json_for_individual(individual, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS)
 
-        user = User.objects.filter(is_staff=True).first()
+        user = User.objects.get(username='test_user')
         json = _get_json_for_individual(individual, user, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_INDIVIDUAL_FIELDS)
 
@@ -152,13 +152,13 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_saved_search(self):
         search = VariantSearch.objects.first()
-        user = User.objects.filter(is_staff=True).first()
+        user = User.objects.get(username='test_user')
         json = get_json_for_saved_search(search, user)
 
         self.assertSetEqual(set(json.keys()), SAVED_SEARCH_FIELDS)
         self.assertTrue('hgmd' in json['search']['pathogenicity'])
 
-        user = User.objects.filter(is_staff=False).first()
+        user = User.objects.get(username='test_user_collaborator')
         json = get_json_for_saved_search(search, user)
         self.assertSetEqual(set(json.keys()), SAVED_SEARCH_FIELDS)
         self.assertFalse('hgmd' in json['search']['pathogenicity'])

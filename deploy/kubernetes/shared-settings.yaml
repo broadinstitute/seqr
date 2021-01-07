@@ -37,7 +37,6 @@ ELASTICSEARCH_PROTOCOL: http
 
 SEQR_GIT_BRANCH: 'master'
 POSTGRES_USERNAME: postgres
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: ''
 
 # this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
 # this allows cluster administration only from known machines or from machines on google cloud.
