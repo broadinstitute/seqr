@@ -151,6 +151,7 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.info.assert_called_with(
             'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel 200 24 test_user')
         self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 1)
 
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status = 404)
@@ -159,10 +160,12 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.warning.assert_called_with(
             'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel got status 404 with reason: Not Found')
         self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 2)
 
         # Test cache hit
-        url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel'.format(TEST_TERRA_API_ROOT_URL)
         mock_redis.return_value.get.return_value = '{"accessLevel": "READER"}'
         permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertDictEqual(permission, {"accessLevel": "READER"})
-        mock_redis.return_value.get.assert_called_with('terra_req__ec4582d9e5e0247385d63538686095cc')
+        mock_redis.return_value.get.assert_called_with(
+            'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel')
+        responses.assert_call_count(url, 2)  # No API called since the call_count is kept unchanged.

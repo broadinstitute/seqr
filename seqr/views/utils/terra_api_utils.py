@@ -4,7 +4,6 @@ import json
 import logging
 import time
 import requests
-import hashlib
 
 from urllib.parse import urljoin
 
@@ -69,7 +68,6 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-
     r = request_func(url, headers=headers)
 
     if r.status_code == 404:
@@ -89,9 +87,9 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     return json.loads(r.text)
 
 
-def _user_anvil_call(method, path, user, **kwargs):
+def _user_anvil_call(method, path, user):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, user=user, **kwargs)
+    return anvil_call(method, path, access_token, user=user)
 
 
 def list_anvil_workspaces(user, fields=None):
@@ -114,21 +112,21 @@ def list_anvil_workspaces(user, fields=None):
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
 
-    cache_key = 'terra_req__' + hashlib.md5("{}__{}".format(user, path).encode('utf-8')).hexdigest()
-    r_text = safe_redis_get_json(cache_key)
-    if r_text:
+    cache_key = 'terra_req__{}__{}'.format(user, path)
+    r = safe_redis_get_json(cache_key)
+    if r:
         logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
-        return r_text
+        return r
 
     try:
-        r_text = _user_anvil_call('get', path, user)
+        r = _user_anvil_call('get', path, user)
     except TerraNotFoundException as et:
         logger.warning(str(et))
         return {}
 
-    safe_redis_set_json(cache_key, r_text, TERRA_API_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, r, TERRA_API_CACHE_EXPIRE_SECONDS)
 
-    return r_text
+    return r
 
 
 def user_get_workspace_acl(user, workspace_namespace, workspace_name):
