@@ -212,6 +212,8 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 WSGI_APPLICATION = 'wsgi.application'
 
+WHITENOISE_ALLOW_ALL_ORIGINS = False
+
 # Email settings
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
@@ -233,6 +235,8 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
+    STATICFILES_DIRS = [STATIC_ROOT]
+    STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
