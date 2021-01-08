@@ -125,9 +125,9 @@ def export_projects_table_handler(request):
 
     rows = []
     for project in sorted(projects_by_guid.values(), key=lambda project: project.get('name') or project.get('deprecatedProjectId')):
-        project_categories = ', '.join(
+        project_categories = ', '.join(sorted(
             [project_categories_by_guid[category_guid]['name'] for category_guid in project.get('projectCategoryGuids')]
-        )
+        ))
 
         row = [
             project.get('name') or project.get('deprecatedProjectId'),
