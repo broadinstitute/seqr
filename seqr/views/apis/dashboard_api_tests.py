@@ -93,7 +93,7 @@ class DashboardPageTest(object):
             export_content[1],
             ['1kg project n\u00e5me with uni\u00e7\u00f8de',
              '1000 genomes project description with uni\u00e7\u00f8de',
-             'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, CMG',
+             'CMG, c\u00e5teg\u00f8ry with uni\u00e7\u00f8de',
              '2017-03-12 19:27:08.156000+00:00', '11', '14', '4', '14', '0', '0', '0', '0', '0', '0', '0', '0', '0',
              '0', '0', '0', '11'],
         )
@@ -112,7 +112,7 @@ class DashboardPageTest(object):
         self.assertDictEqual(export_content[0], {
             'project': '1kg project n\u00e5me with uni\u00e7\u00f8de',
             'description': '1000 genomes project description with uni\u00e7\u00f8de',
-            'categories': 'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, CMG',
+            'categories': 'CMG, c\u00e5teg\u00f8ry with uni\u00e7\u00f8de',
             'created_date': '2017-03-12 19:27:08.156000+00:00', 'families': '11', 'individuals': '14',
             'tagged_variants': '4', 'wes_samples': '14', 'wgs_samples': '0', 'rna_samples': '0',
             'solved_-_known_gene_for_phenotype': '0', 'closed,_no_longer_under_analysis': '0',
