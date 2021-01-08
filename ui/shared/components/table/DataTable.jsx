@@ -15,7 +15,7 @@ const TableContainer = styled.div`
 const RightAligned = styled.span`
   position: absolute;
   right: 20px;
-  top: 30px;
+  top: ${props => (props.topAlign || '30px')});
 `
 
 const StyledDataTable = styled(Table)`
@@ -60,6 +60,7 @@ class DataTable extends React.PureComponent {
     fixedWidth: PropTypes.bool,
     downloadTableType: PropTypes.string,
     downloadFileName: PropTypes.string,
+    downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
   }
 
@@ -125,7 +126,7 @@ class DataTable extends React.PureComponent {
   render() {
     const {
       data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
-      loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
+      loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
       fixedWidth, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
@@ -144,7 +145,7 @@ class DataTable extends React.PureComponent {
           data: {
             filename: downloadFileName,
             rawData: sortedData,
-            headers: columns.map(config => config.content),
+            headers: columns.map(config => config.downloadColumn || config.content),
             processRow: row => columns.map(getRowColumnContent(row, true)),
           },
         },
@@ -196,7 +197,7 @@ class DataTable extends React.PureComponent {
       <TableContainer horizontalScroll={horizontalScroll}>
         {!hasFooter && filterInput}
         {exportConfig &&
-          <RightAligned>
+          <RightAligned topAlign={downloadAlign}>
             <ExportTableButton downloads={exportConfig} />
           </RightAligned>
         }
