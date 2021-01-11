@@ -93,7 +93,7 @@ def query_variants_handler(request, search_hash):
 
 
 def _is_all_project_family_search(search_context):
-    return search_context.get('allProjectFamilies')
+    return bool(search_context and search_context.get('allProjectFamilies'))
 
 
 def _get_or_create_results_model(search_hash, search_context, user):

@@ -156,19 +156,19 @@ class VariantSearchAPITest(object):
         )
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False)
         mock_error_logger.assert_not_called()
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, skip_genotype_filter=False)
         mock_error_logger.assert_not_called()
 
         # Test sort
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, skip_genotype_filter=False)
         mock_error_logger.assert_not_called()
 
         # Test export
@@ -241,7 +241,7 @@ class VariantSearchAPITest(object):
 
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, skip_genotype_filter=False)
         mock_error_logger.assert_not_called()
 
         # Test no results
@@ -266,27 +266,49 @@ class VariantSearchAPITest(object):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
         self.check_require_login(url)
 
-        mock_get_variants.side_effect = _get_es_variants
+        expected_searched_families = set()
+        def _get_variants(results_model, **kwargs):
+            results_model.save()
+            global searched_families
+            searched_families = {f.guid for f in results_model.families.all()}
+            self.assertSetEqual(expected_searched_families, searched_families)
+            return deepcopy(VARIANTS), len(VARIANTS)
+
+        mock_get_variants.side_effect = _get_variants
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'allProjectFamilies': True, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        import pdb; pdb.set_trace()
-        self.assertDictEqual(response_json['search'], {
-            'search': SEARCH,
-            'projectFamilies': [],
-            'totalResults': 3,
-        })
+        self.assertDictEqual(response_json, {
+            'projectsByGuid': {}, 'familiesByGuid': {}, 'individualsByGuid': {}, 'samplesByGuid': {},
+            'igvSamplesByGuid': {}, 'locusListsByGuid': {}, 'analysisGroupsByGuid': {}, 'variantTagsByGuid': mock.ANY,
+            'variantNotesByGuid': mock.ANY, 'variantFunctionalDataByGuid': {}, 'genesById': mock.ANY,
+            'savedVariantsByGuid': mock.ANY, 'searchedVariants': VARIANTS, 'search': {
+                'search': SEARCH,
+                'projectFamilies': [],
+                'totalResults': 3,
+        }})
+        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True)
 
-        VariantSearchResults.objects.get(search_hash=SEARCH_HASH).delete()
+        results_model.delete()
         self.login_collaborator()
+        expected_searched_families = {
+            'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
+            'F000009_9', 'F000010_10', 'F000013_13'}
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'allProjectFamilies': True, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        self.assertSetEqual(
+            set(response_json),
+            {'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
+             'variantFunctionalDataByGuid', 'locusListsByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid',
+             'samplesByGuid', 'igvSamplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', }
+        )
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
@@ -294,9 +316,17 @@ class VariantSearchAPITest(object):
         })
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']),
-            {'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
-             'F000009_9', 'F000010_10', 'F000013_13'}
+            {'F000001_1', 'F000002_2'}
         )
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+
+        result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
+
+        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100,
+                                             skip_genotype_filter=True)
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
@@ -414,6 +444,18 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+
+        # Test all project search context
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
+            {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allProjectFamilies': True, 'search': SEARCH}}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'savedSearchesByGuid': mock.ANY, 'projectsByGuid': {}, 'familiesByGuid': {}, 'individualsByGuid': {},
+            'samplesByGuid': {}, 'igvSamplesByGuid': {}, 'locusListsByGuid': {}, 'analysisGroupsByGuid': {},
+        })
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
@@ -557,7 +599,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
         self.mock_get_ws_acl.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
