@@ -175,8 +175,10 @@ spec:
           value: "{{ ELASTICSEARCH_PROTOCOL }}"
         # - name: ELASTICSEARCH_CA_PATH
         #   value: "{{ ELASTICSEARCH_CA_PATH }}"
-        - name: TERRA_API_CACHE_EXPIRE_SECONDS
-          value: "{{ TERRA_API_CACHE_EXPIRE_SECONDS }}"
+        - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_PERMS_CACHE_EXPIRE_SECONDS }}"
+        - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS }}"
         readinessProbe:
           exec:
             command:
