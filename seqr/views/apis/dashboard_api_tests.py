@@ -5,7 +5,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
-    WORKSPACE_FIELDS, PROJECT_FIELDS
+    PROJECT_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -132,9 +132,9 @@ class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
 
 def assert_has_anvil_calls(self):
     calls = [
-        mock.call(self.no_access_user, fields = WORKSPACE_FIELDS),
-        mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
-        mock.call(self.staff_user, fields = WORKSPACE_FIELDS)
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
+        mock.call(self.staff_user)
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     calls = [
@@ -156,7 +156,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(AnvilDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_list_workspaces.assert_called_with(self.staff_user)
         self.mock_get_ws_acl.assert_not_called()
 
 
@@ -171,5 +171,5 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(MixDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user, fields=WORKSPACE_FIELDS)
+        self.mock_list_workspaces.assert_called_with(self.staff_user)
         self.mock_get_ws_acl.assert_not_called()

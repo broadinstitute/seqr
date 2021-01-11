@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, WORKSPACE_FIELDS
+    MixAuthenticationTestCase
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -550,8 +550,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
         calls = [
-            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+            mock.call(self.no_access_user),
+            mock.call(self.collaborator_user),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
@@ -588,8 +588,8 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
     def test_query_all_projects_variants(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
         calls = [
-            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+            mock.call(self.no_access_user),
+            mock.call(self.collaborator_user),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_acl.assert_not_called()
