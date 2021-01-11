@@ -19,7 +19,7 @@ spec:
       selfSignedCertificate:
         disabled: true
   nodeSets:
-  - name: master
+  - name: master-node
     count: {{ ES_MASTER_NUM_PODS }}
     config:
       node.master: true
@@ -50,7 +50,17 @@ spec:
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-  - name: client
+    volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: standard
+            resources:
+              requests:
+                storage: {{ ES_POD_VOLUME_SIZE }}
+  - name: client-node
     count: {{ ES_CLIENT_NUM_PODS }}
     config:
       node.master: false
@@ -81,6 +91,16 @@ spec:
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+    volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: standard
+            resources:
+              requests:
+                storage: {{ ES_POD_VOLUME_SIZE }}
   - name: data
     count:  {{ ES_DATA_NUM_PODS }}
     config:
@@ -134,7 +154,7 @@ spec:
           requests:
             storage: {{ ES_DATA_DISK_SIZE }}
 {% if ES_LOADING_NUM_PODS > 0 %}
-  - name: data-loading
+  - name: data-loading-node
     count: {{ ES_LOADING_NUM_PODS }}
     config:
       node.master: false
@@ -165,9 +185,16 @@ spec:
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        volumes:
-        - name: elasticsearch-data
-          emptyDir: {}
+    volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: standard
+            resources:
+              requests:
+                storage: {{ ES_LOADING_DISK_SIZE }}
 {% endif %}
 ---
 apiVersion: v1

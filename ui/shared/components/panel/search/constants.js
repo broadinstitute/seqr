@@ -187,7 +187,7 @@ export const PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
 ]
 
-export const STAFF_PATHOGENICITY_FIELDS = [
+export const ANALYST_PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
   {
     name: HGMD_NAME,
@@ -205,7 +205,7 @@ export const ANY_PATHOGENICITY_FILTER = {
   },
 }
 
-export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
+export const ANALYST_PATHOGENICITY_FILTER_OPTIONS = [
   ANY_PATHOGENICITY_FILTER,
   {
     text: 'Pathogenic/ Likely Path.',
@@ -222,7 +222,7 @@ export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
     },
   },
 ]
-export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
+export const PATHOGENICITY_FILTER_OPTIONS = ANALYST_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
   text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
 

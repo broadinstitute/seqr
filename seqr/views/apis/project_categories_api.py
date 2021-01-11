@@ -7,7 +7,7 @@ from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import check_project_permissions
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -76,6 +76,8 @@ def _update_project_categories(project, user, category_guids):
     current_categories_in_db = set()
     for project_category in project.projectcategory_set.all():
         if project_category.guid not in category_guids:
+            if project_category.name == ANALYST_PROJECT_CATEGORY:
+                continue
             project_category.projects.remove(project)
             if project_category.projects.count() == 0:
                 project_category.delete_model(user, user_can_delete=True)

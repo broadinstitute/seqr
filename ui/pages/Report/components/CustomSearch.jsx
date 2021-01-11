@@ -8,14 +8,14 @@ import { Select, InlineToggle, JsonInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
-  STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils/constants'
-import { STAFF_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
+import { CUSTOM_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
 import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
 import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading } from '../selectors'
 
@@ -67,7 +67,7 @@ const INHERITANCE_PANEL = {
 }
 
 const PANELS = [
-  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  INHERITANCE_PANEL, ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
 const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
@@ -78,7 +78,7 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
           <VariantSearchFormContainer
             history={history}
             resultsPath="/report/custom_search"
-            form={STAFF_SEARCH_FORM_NAME}
+            form={CUSTOM_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >
             <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}

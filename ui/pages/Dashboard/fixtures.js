@@ -61,7 +61,6 @@ export const STATE1 = {
     first_name: '',
     id: 1,
     is_active: true,
-    is_staff: true,
     last_login: '2017-03-02T17:58:05.166Z',
     last_name: '',
     username: 'test'

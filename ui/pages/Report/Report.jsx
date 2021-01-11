@@ -22,7 +22,7 @@ export const REPORT_PAGES = [
 ]
 
 const Report = ({ match, user }) => (
-  user.isStaff ? (
+  user.isAnalyst ? (
     <Switch>
       {REPORT_PAGES.map(({ path, params, component }) =>
         <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,

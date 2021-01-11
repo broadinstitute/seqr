@@ -12,7 +12,7 @@ from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ def _retrieve_project_categories_by_guid(project_guids):
         return {}
 
     # retrieve all project categories
-    project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
+    project_categories = ProjectCategory.objects.filter(
+        projects__guid__in=project_guids).exclude(name=ANALYST_PROJECT_CATEGORY).distinct()
 
     project_categories_by_guid = {}
     for project_category in project_categories:
@@ -124,9 +125,9 @@ def export_projects_table_handler(request):
 
     rows = []
     for project in sorted(projects_by_guid.values(), key=lambda project: project.get('name') or project.get('deprecatedProjectId')):
-        project_categories = ', '.join(
+        project_categories = ', '.join(sorted(
             [project_categories_by_guid[category_guid]['name'] for category_guid in project.get('projectCategoryGuids')]
-        )
+        ))
 
         row = [
             project.get('name') or project.get('deprecatedProjectId'),

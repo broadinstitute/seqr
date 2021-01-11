@@ -4,7 +4,6 @@ import requests
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
-from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -14,12 +13,14 @@ from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
+from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
+    check_project_permissions
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import API_LOGIN_REQUIRED_URL, AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ HOM_ALT = 'Homozygous'
 HEMI = 'Hemizygous'
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def seqr_stats(request):
 
     families_count = Family.objects.only('family_id').distinct('family_id').count()
@@ -124,9 +125,9 @@ MULTIPLE_DATASET_PRODUCTS = {
 }
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def anvil_export(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
         project, request.GET.get('loadedBefore'),
@@ -146,9 +147,9 @@ def anvil_export(request, project_guid):
     ], '{}_AnVIL_Metadata'.format(project.name), add_header_prefix=True, file_format='tsv', blank_value='-')
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def sample_metadata_export(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     mme_family_guids = {family.guid for family in _get_has_mme_submission_families(project)}
 
@@ -645,15 +646,14 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 }
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def get_projects_for_category(request, project_category_name):
-    category = ProjectCategory.objects.get(name=project_category_name)
+@analyst_required
+def get_cmg_projects(request):
     return create_json_response({
-        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory=category).only('guid')],
+        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory__name='CMG').only('guid')],
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@analyst_required
 def discovery_sheet(request, project_guid):
     project = Project.objects.filter(guid=project_guid).prefetch_related(
         Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
@@ -661,6 +661,7 @@ def discovery_sheet(request, project_guid):
     if not project:
         message = 'Invalid project {}'.format(project_guid)
         return create_json_response({'error': message}, status = 400, reason = message)
+    check_project_permissions(project, request.user)
 
     rows = []
     errors = []

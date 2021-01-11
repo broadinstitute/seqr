@@ -32,7 +32,7 @@ class LocusListAPITest(AuthenticationTestCase):
         fields.update(LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
-        self.login_staff_user()
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         locus_lists_dict = response.json()['locusListsByGuid']

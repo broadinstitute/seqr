@@ -79,7 +79,7 @@ const clinvarUrl = (clinvar) => {
 
 const Pathogenicity = React.memo(({ variant, user }) => {
   const clinvar = variant.clinvar || {}
-  if (!clinvar.variationId && !clinvar.alleleId && !(user.isStaff && (variant.hgmd || {}).class)) {
+  if (!clinvar.variationId && !clinvar.alleleId && !(user.isAnalyst && (variant.hgmd || {}).class)) {
     return null
   }
 
@@ -97,7 +97,7 @@ const Pathogenicity = React.memo(({ variant, user }) => {
           />
         </span>
       }
-      {user.isStaff && variant.hgmd.class &&
+      {user.isAnalyst && variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>

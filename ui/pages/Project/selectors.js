@@ -429,14 +429,14 @@ export const getCollaborators = createSelector(
   project => project.collaborators,
 )
 
-// analyst option selectors (add project collaborators to staff users)
+// analyst option selectors (add project collaborators to analysts)
 export const getAnalystOptions = createSelector(
   getCollaborators,
   getUserOptionsByUsername,
   (collaborators, usersOptionsByUsername) => {
-    const staff = Object.values(usersOptionsByUsername).filter(user => user.isStaff)
-    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
-    return [...uniqueCollaborators, ...staff].map(
+    const analyst = Object.values(usersOptionsByUsername).filter(user => user.isAnalyst)
+    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isAnalyst)
+    return [...uniqueCollaborators, ...analyst].map(
       user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
     )
   },

@@ -60,11 +60,15 @@ class DashboardPageTest(object):
             set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
 
-        # Staff users can see all projects
-        self.login_staff_user()
+        self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 3)
+
+        self.login_data_manager_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['projectsByGuid']), 4)
 
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
@@ -79,17 +83,17 @@ class DashboardPageTest(object):
         self.assertListEqual(export_content, [PROJECT_EXPORT_HEADER])
 
         # test with access to data
-        self.login_staff_user()
+        self.login_collaborator()
         response = self.client.get('{}?file_format=tsv'.format(url))
         self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 4)
+        self.assertEqual(len(export_content), self.NUM_COLLABORATOR_PROJECTS + 1)
         self.assertListEqual(export_content[0], PROJECT_EXPORT_HEADER)
         self.assertListEqual(
             export_content[1],
             ['1kg project n\u00e5me with uni\u00e7\u00f8de',
              '1000 genomes project description with uni\u00e7\u00f8de',
-             'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, test category name',
+             'CMG, c\u00e5teg\u00f8ry with uni\u00e7\u00f8de',
              '2017-03-12 19:27:08.156000+00:00', '11', '14', '4', '14', '0', '0', '0', '0', '0', '0', '0', '0', '0',
              '0', '0', '0', '11'],
         )
@@ -104,11 +108,11 @@ class DashboardPageTest(object):
         self.assertEqual(response.get('Content-Type'), 'application/json')
         self.assertEqual(response.get('Content-Disposition'), 'attachment; filename="projects.json"')
         export_content = [json.loads(row) for row in response.content.decode('utf-8').rstrip('\n').split('\n')]
-        self.assertEqual(len(export_content), 3)
+        self.assertEqual(len(export_content), self.NUM_COLLABORATOR_PROJECTS)
         self.assertDictEqual(export_content[0], {
             'project': '1kg project n\u00e5me with uni\u00e7\u00f8de',
             'description': '1000 genomes project description with uni\u00e7\u00f8de',
-            'categories': 'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de, test category name',
+            'categories': 'CMG, c\u00e5teg\u00f8ry with uni\u00e7\u00f8de',
             'created_date': '2017-03-12 19:27:08.156000+00:00', 'families': '11', 'individuals': '14',
             'tagged_variants': '4', 'wes_samples': '14', 'wgs_samples': '0', 'rna_samples': '0',
             'solved_-_known_gene_for_phenotype': '0', 'closed,_no_longer_under_analysis': '0',
@@ -127,21 +131,23 @@ class DashboardPageTest(object):
 # Tests for AnVIL access disabled
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
-    NUM_COLLABORATOR_PROJECTS = 2
+    NUM_COLLABORATOR_PROJECTS = 3
 
 
-def assert_has_anvil_calls(self):
+def assert_has_list_workspaces_calls(self):
     calls = [
         mock.call(self.no_access_user),
         mock.call(self.collaborator_user),
-        mock.call(self.staff_user)
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
+
+def assert_has_anvil_calls(self):
+    assert_has_list_workspaces_calls(self)
     calls = [
         mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
         mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo')
     ]
-    self.mock_get_ws_access_level.assert_has_calls(calls)
+    self.mock_get_ws_access_level.assert_has_calls(calls, any_order=True)
     self.mock_get_ws_acl.assert_not_called()
 
 
@@ -156,7 +162,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(AnvilDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user)
+        assert_has_list_workspaces_calls(self)
         self.mock_get_ws_acl.assert_not_called()
 
 
@@ -171,5 +177,5 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(MixDashboardPageTest, self).test_export_projects_table()
-        self.mock_list_workspaces.assert_called_with(self.staff_user)
+        assert_has_list_workspaces_calls(self)
         self.mock_get_ws_acl.assert_not_called()

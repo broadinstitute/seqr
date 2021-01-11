@@ -23,7 +23,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
 
       const errors = new Set()
       const rows = []
-      new HttpRequestHelper('/api/report/projects_for_category/CMG',
+      new HttpRequestHelper('/api/report/get_cmg_projects',
         (projectsResponseJson) => {
           const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
             if (acc[0].length === 5) {

@@ -188,14 +188,14 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Analysed By:',
     name: 'Analysed By CMG',
     createFilter: () => family =>
-      family.analysedBy.some(analysedBy => analysedBy.createdBy.isStaff),
+      family.analysedBy.some(analysedBy => analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Not Analysed By CMG',
     createFilter: () => family =>
-      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isStaff),
+      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_ANALYSED,

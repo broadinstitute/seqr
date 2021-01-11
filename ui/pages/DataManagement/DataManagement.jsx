@@ -20,7 +20,7 @@ export const DATA_MANAGEMENT_PAGES = [
 ]
 
 const DataManagement = ({ match, user }) => (
-  user.isStaff ? (
+  user.isDataManager ? (
     <Switch>
       {DATA_MANAGEMENT_PAGES.map(({ path, params, component }) =>
         <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,

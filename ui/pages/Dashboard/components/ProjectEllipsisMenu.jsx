@@ -22,7 +22,7 @@ const EllipsisContainer = styled.span`
 `
 
 const ProjectEllipsisMenu = React.memo((props) => {
-  if (!props.user.isStaff && !props.project.canEdit) {
+  if (!props.project.canEdit) {
     return null
   }
 
@@ -50,7 +50,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
       <Dropdown.Divider key="divider1" />,
     )
   }
-  if (props.user.isStaff) {
+  if (props.user.isDataManager) {
     menuItems.push(
       <Dropdown.Divider key="divider2" />,
       <DeleteButton

@@ -13,10 +13,11 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+    user_is_analyst
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -38,10 +39,11 @@ def saved_variant_data(request, project_guid, variant_guids=None):
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
     discovery_tags_query = None
-    if request.user.is_staff:
+    if user_is_analyst(request.user):
         discovery_tags_query = Q()
         for variant in variant_query:
             discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
+        discovery_tags_query &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
 
