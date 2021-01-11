@@ -84,10 +84,11 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertListEqual(response.json()['invalidLocusListItems'], ['chr10:10-1', 'chr100:1-10', 'foo'])
 
         # send valid request to create locus_list
-        response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
+        body = {
             'name': 'new_locus_list', 'isPublic': True, 'ignoreInvalidItems': True,
             'rawItems': 'DDX11L1, foo   chr100:1-1 \nchr2:1234-5678',
-        }))
+        }
+        response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         new_locus_list_response = response.json()
         self.assertEqual(len(new_locus_list_response['locusListsByGuid']), 1)
@@ -120,6 +121,11 @@ class LocusListAPITest(AuthenticationTestCase):
         new_interval = new_locus_list_model.locuslistinterval_set.first()
         self.assertEqual(new_interval.chrom, '2')
         self.assertEqual(new_interval.start, 1234)
+
+        # Re-creating the same list throws an error
+        response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'This list already exists')
 
     def test_create_update_and_delete_locus_list(self):
         update_locus_list_url = reverse(update_locus_list_handler, args=[LOCUS_LIST_GUID])
