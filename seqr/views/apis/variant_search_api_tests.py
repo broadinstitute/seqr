@@ -273,6 +273,7 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        import pdb; pdb.set_trace()
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
             'projectFamilies': [],
