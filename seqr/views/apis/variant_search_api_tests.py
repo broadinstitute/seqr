@@ -269,9 +269,7 @@ class VariantSearchAPITest(object):
         expected_searched_families = set()
         def _get_variants(results_model, **kwargs):
             results_model.save()
-            global searched_families
-            searched_families = {f.guid for f in results_model.families.all()}
-            self.assertSetEqual(expected_searched_families, searched_families)
+            self.assertSetEqual(expected_searched_families, {f.guid for f in results_model.families.all()})
             return deepcopy(VARIANTS), len(VARIANTS)
 
         mock_get_variants.side_effect = _get_variants
