@@ -30,8 +30,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
-        config.linkerd.io/skip-outbound-ports: "6379"
-        config.linkerd.io/skip-outbound-ports: "5432"
+        config.linkerd.io/skip-outbound-ports: "6379,5432"
       labels:
         name: seqr
         deployment: {{ DEPLOY_TO }}
@@ -175,6 +174,10 @@ spec:
           value: "{{ ELASTICSEARCH_PROTOCOL }}"
         # - name: ELASTICSEARCH_CA_PATH
         #   value: "{{ ELASTICSEARCH_CA_PATH }}"
+        - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_PERMS_CACHE_EXPIRE_SECONDS }}"
+        - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS }}"
         readinessProbe:
           exec:
             command:

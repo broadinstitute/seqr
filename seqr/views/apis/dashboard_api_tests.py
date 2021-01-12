@@ -5,7 +5,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
-    WORKSPACE_FIELDS, PROJECT_FIELDS
+    PROJECT_FIELDS
 
 PROJECT_EXPORT_HEADER = [
     'Project',
@@ -136,8 +136,8 @@ class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
 
 def assert_has_list_workspaces_calls(self):
     calls = [
-        mock.call(self.no_access_user, fields = WORKSPACE_FIELDS),
-        mock.call(self.collaborator_user, fields = WORKSPACE_FIELDS),
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
 
