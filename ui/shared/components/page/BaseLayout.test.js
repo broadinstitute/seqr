@@ -18,7 +18,6 @@ test('shallow-render without crashing', () => {
       first_name: '',
       id: 1,
       is_active: true,
-      is_staff: true,
       last_login: '2017-03-14T17:44:53.403Z',
       last_name: '',
       username: 'test',

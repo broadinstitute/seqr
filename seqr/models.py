@@ -151,7 +151,6 @@ class Project(ModelWithGUID):
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
-    disable_staff_access = models.BooleanField(default=False)
     has_case_review = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
@@ -187,8 +186,7 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            if user and not user.is_staff:  # staff have access to all resources anyway
-                user.groups.add(self.can_edit_group, self.can_view_group)
+            user.groups.add(self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""

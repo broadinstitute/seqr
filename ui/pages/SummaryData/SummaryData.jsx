@@ -27,7 +27,7 @@ const SUMMARY_DATA_PAGES = [
   { path: 'gene_lists', component: LocusLists },
 ]
 
-const STAFF_SUMMARY_DATA_PAGES = [
+const ANALYST_SUMMARY_DATA_PAGES = [
   ...SUMMARY_DATA_PAGES,
   { path: 'saved_variants', component: SavedVariants },
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
@@ -35,7 +35,7 @@ const STAFF_SUMMARY_DATA_PAGES = [
 ]
 
 const BaseSummaryDataPageHeader = ({ user }) =>
-  <SimplePageHeader page="summary_data" pages={user.isStaff ? STAFF_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />
+  <SimplePageHeader page="summary_data" pages={user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />
 
 BaseSummaryDataPageHeader.propTypes = {
   user: PropTypes.object,
@@ -49,7 +49,7 @@ export const SummaryDataPageHeader = connect(mapStateToProps)(BaseSummaryDataPag
 
 const SummaryData = ({ match, user }) => (
   <Switch>
-    {(user.isStaff ? STAFF_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES).map(({ path, params, component }) =>
+    {(user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES).map(({ path, params, component }) =>
       <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
     )}
     <Route path={match.url} component={null} />

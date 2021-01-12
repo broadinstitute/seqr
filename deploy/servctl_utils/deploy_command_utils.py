@@ -44,7 +44,7 @@ SECRETS = {
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
-    'postgres': ['password'],
+    'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
@@ -356,8 +356,6 @@ def deploy_pipeline_runner(settings):
     docker_build("pipeline-runner", settings, [
         "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
     ])
-
-    deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
 
 def deploy_kube_scan(settings):

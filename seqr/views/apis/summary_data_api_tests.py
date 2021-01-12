@@ -13,7 +13,7 @@ EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_1
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
     u'numberOfUniqueGenes': 4,
-    u'numberOfCases': 3,
+    u'numberOfCases': 4,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
     u'numberOfUniqueFeatures': 4,
@@ -26,7 +26,7 @@ class SummaryDataAPITest(AuthenticationTestCase):
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 1)
         response = self.client.get(url)
@@ -40,7 +40,7 @@ class SummaryDataAPITest(AuthenticationTestCase):
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -63,7 +63,7 @@ class SummaryDataAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)

@@ -4,6 +4,7 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 from seqr.models import Project
+from settings import ANALYST_PROJECT_CATEGORY
 
 PROJECT_GUID = 'R0001_1kg'
 PROJECT_CAT_GUID2 = 'PC000002_categry_with_unicde'
@@ -32,7 +33,8 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         project = Project.objects.get(guid=PROJECT_GUID)
 
-        project_categories = [ project_category for project_category in project.projectcategory_set.all()]
+        project_categories = [project_category for project_category in
+                              project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY).order_by('guid')]
         self.assertEqual(project_categories[0].guid, PROJECT_CAT_GUID2)
         self.assertNotIn(project_categories[0].guid, updated_guid_set)
         self.assertEqual(project_categories[1].guid, PROJECT_CAT_GUID4)
@@ -58,7 +60,8 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 0)
 
         project = Project.objects.get(guid=PROJECT_GUID)
-        project_category_guids_in_db = [project_category.guid for project_category in project.projectcategory_set.all()]
+        project_category_guids_in_db = [
+            project_category.guid for project_category in project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY)]
         self.assertListEqual(project_category_guids_in_db, [])
         self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID2])
         self.assertIsNone(response_json['projectCategoriesByGuid'][new_guid])

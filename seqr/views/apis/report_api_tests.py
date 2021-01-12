@@ -5,7 +5,7 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.views.apis.report_api import seqr_stats, get_projects_for_category, discovery_sheet, anvil_export, \
+from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
     sample_metadata_export
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
@@ -14,8 +14,7 @@ PROJECT_GUID = 'R0001_1kg'
 NON_PROJECT_GUID ='NON_GUID'
 PROJECT_EMPTY_GUID = 'R0002_empty'
 COMPOUND_HET_PROJECT_GUID = 'R0003_test'
-
-PROJECT_CATEGRORY_NAME = u'c\u00e5teg\u00f8ry with uni\u00e7\u00f8de'
+NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
     {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
@@ -209,30 +208,30 @@ class ReportAPITest(AuthenticationTestCase):
 
     def test_seqr_stats(self):
         url = reverse(seqr_stats)
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
-        self.assertEqual(response_json['individualCount'], 17)
-        self.assertEqual(response_json['familyCount'], 13)
+        self.assertEqual(response_json['individualCount'], 18)
+        self.assertEqual(response_json['familyCount'], 14)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
-    def test_get_projects_for_category(self):
-        url = reverse(get_projects_for_category, args=[PROJECT_CATEGRORY_NAME])
-        self.check_staff_login(url)
+    def test_get_cmg_projects(self):
+        url = reverse(get_cmg_projects)
+        self.check_analyst_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
-        self.assertListEqual(response_json['projectGuids'], [PROJECT_GUID])
+        self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
     @mock.patch('seqr.views.apis.report_api.timezone')
     def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
-        self.check_staff_login(non_project_url)
+        self.check_analyst_login(non_project_url)
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -240,6 +239,10 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Invalid project {}'.format(NON_PROJECT_GUID))
         response_json = response.json()
         self.assertEqual(response_json['error'], 'Invalid project {}'.format(NON_PROJECT_GUID))
+
+        unauthorized_project_url = reverse(discovery_sheet, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         empty_project_url = reverse(discovery_sheet, args=[PROJECT_EMPTY_GUID])
 
@@ -273,7 +276,11 @@ class ReportAPITest(AuthenticationTestCase):
     @responses.activate
     def test_anvil_export(self, mock_zip):
         url = reverse(anvil_export, args=[PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
+
+        unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         response = self.client.get(url)
@@ -342,7 +349,11 @@ class ReportAPITest(AuthenticationTestCase):
     @responses.activate
     def test_sample_metadata_export(self):
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
-        self.check_staff_login(url)
+        self.check_analyst_login(url)
+
+        unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
+        response = self.client.get(unauthorized_project_url)
+        self.assertEqual(response.status_code, 403)
 
         # Test invalid airtable responses
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)

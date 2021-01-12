@@ -212,6 +212,8 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 WSGI_APPLICATION = 'wsgi.application'
 
+WHITENOISE_ALLOW_ALL_ORIGINS = False
+
 # Email settings
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
@@ -233,6 +235,8 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
+    STATICFILES_DIRS = [STATIC_ROOT]
+    STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
@@ -255,9 +259,11 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
-
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
+
+ANALYST_PROJECT_CATEGORY = 'analyst-projects'
+ANALYST_USER_GROUP = 'analysts'
+PM_USER_GROUP = 'project-managers'
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')

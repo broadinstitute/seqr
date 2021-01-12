@@ -9,7 +9,7 @@ from django.core.management.base import CommandError
 from django.contrib.auth.models import User
 
 TEST_USER_EMAIL = 'test_user@test.com'
-REFERRER_EMAIL = 'test_user_no_staff@test.com'
+REFERRER_EMAIL = 'test_user_collaborator@test.com'
 
 
 class ResendWelcomeEmailTest(TestCase):

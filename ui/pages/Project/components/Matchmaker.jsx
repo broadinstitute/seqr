@@ -251,7 +251,7 @@ const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
 const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) =>
   <TextFieldView
-    isVisible={user.isStaff}
+    isVisible={user.isAnalyst}
     fieldName="Contact Notes"
     field="comments"
     idField="contactInstitution"

@@ -6,7 +6,6 @@ import re
 import requests
 import urllib3
 
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Max
 from django.http.response import HttpResponse
@@ -18,15 +17,16 @@ from seqr.utils.file_utils import file_iter
 
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
+from seqr.views.utils.permissions_utils import data_manager_required
 
 from seqr.models import Sample, Individual
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL, KIBANA_ELASTICSEARCH_PASSWORD
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = logging.getLogger(__name__)
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 def elasticsearch_status(request):
     client = get_es_client()
 
@@ -83,7 +83,7 @@ def elasticsearch_status(request):
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file']
     raw_records = parse_file(file_path, file_iter(file_path))
@@ -298,7 +298,7 @@ EXCLUDE_HTTP_RESPONSE_HEADERS = {
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@data_manager_required
 @csrf_exempt
 def proxy_to_kibana(request):
     headers = _convert_django_meta_to_http_headers(request.META)

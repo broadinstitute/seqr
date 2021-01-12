@@ -22,7 +22,9 @@ const COLUMNS = [
   { name: 'username', content: 'Username' },
   { name: 'dateJoined', content: 'Date Joined', format: ({ dateJoined }) => (dateJoined || '').slice(0, 10) },
   { name: 'lastLogin', content: 'Last Login', format: ({ lastLogin }) => (lastLogin || '').slice(0, 10) },
-  hasPrivilegeColumn('isStaff', 'Staff?'),
+  hasPrivilegeColumn('isAnalyst', 'Analyst?'),
+  hasPrivilegeColumn('isPm', 'PM?'),
+  hasPrivilegeColumn('isDataManager', 'Data Manager?'),
   hasPrivilegeColumn('isSuperuser', 'Superuser?'),
   {
     name: 'isActive',

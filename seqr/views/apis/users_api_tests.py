@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff_options, update_policies
+    get_all_analyst_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
 
@@ -17,21 +17,21 @@ from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 
 PROJECT_GUID = 'R0001_1kg'
-USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isStaff'}
+USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
 
 class UsersAPITest(object):
 
-    def test_get_all_staff_options(self):
-        get_all_staff_url = reverse(get_all_staff_options)
-        self.check_require_login(get_all_staff_url)
-        response = self.client.get(get_all_staff_url)
+    def test_get_all_analyst_options(self):
+        get_all_analyst_url = reverse(get_all_analyst_options)
+        self.check_require_login(get_all_analyst_url)
+        response = self.client.get(get_all_analyst_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        all_staff_usernames = list(response_json.keys())
-        first_staff_user = response_json[all_staff_usernames[0]]
+        all_analyst_usernames = list(response_json.keys())
+        first_analyst_user = response_json[all_analyst_usernames[0]]
 
-        self.assertSetEqual(set(first_staff_user), USER_OPTION_FIELDS)
-        self.assertTrue(first_staff_user['isStaff'])
+        self.assertSetEqual(set(first_analyst_user), USER_OPTION_FIELDS)
+        self.assertTrue(first_analyst_user['isAnalyst'])
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -49,17 +49,6 @@ class UsersAPITest(object):
         if self.LOCAL_COLLABORATOR_NAMES:
             self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
-        self.login_staff_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'test_user_manager', 'test_user_non_staff', 'test_user_no_access', 'test_user', 'test_local_user',
-            'test_superuser',
-        })
-        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
-
-
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail, mock_logger):
@@ -69,7 +58,7 @@ class UsersAPITest(object):
         # send invalid request
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
+        self.assertEqual(response.json()['error'], 'Email is required')
 
         # create
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
@@ -82,7 +71,10 @@ class UsersAPITest(object):
         self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
-        self.assertFalse(collaborators[0]['isStaff'])
+        self.assertFalse(collaborators[0]['isSuperuser'])
+        self.assertFalse(collaborators[0]['isAnalyst'])
+        self.assertFalse(collaborators[0]['isDataManager'])
+        self.assertFalse(collaborators[0]['isPm'])
         self.assertTrue(collaborators[0]['hasViewPermissions'])
         self.assertFalse(collaborators[0]['hasEditPermissions'])
 
@@ -135,7 +127,7 @@ class UsersAPITest(object):
         self.assertEqual(len(collaborators), self.NUM_USERS)
         self.assertEqual(collaborators[NEW_USER_IDX]['email'], 'test@test.com')
         self.assertEqual(collaborators[NEW_USER_IDX]['displayName'], 'Edited Collaborator')
-        self.assertFalse(collaborators[NEW_USER_IDX]['isStaff'])
+        self.assertFalse(collaborators[NEW_USER_IDX]['isSuperuser'])
         self.assertTrue(collaborators[NEW_USER_IDX]['hasViewPermissions'])
         self.assertTrue(collaborators[NEW_USER_IDX]['hasEditPermissions'])
 
@@ -252,7 +244,7 @@ class UsersAPITest(object):
 # Tests for AnVIL access disabled
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff'}
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
     NUM_USERS = 3
 
@@ -269,7 +261,7 @@ def assert_has_anvil_calls(self):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_user_pure_anvil@test.com'}
+    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
     LOCAL_COLLABORATOR_NAMES = set()
     NUM_USERS = 4
 
@@ -277,8 +269,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff_options(self):
-        super(AnvilUsersAPITest, self).test_get_all_staff_options()
+    def test_get_all_analyst_options(self):
+        super(AnvilUsersAPITest, self).test_get_all_analyst_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
@@ -305,7 +297,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
 class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_non_staff', 'test_local_user'}
+    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_local_user'}
     COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     NUM_USERS = 5
@@ -314,8 +306,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
         assert_has_anvil_calls(self)
 
-    def test_get_all_staff_options(self):
-        super(MixUsersAPITest, self).test_get_all_staff_options()
+    def test_get_all_analyst_options(self):
+        super(MixUsersAPITest, self).test_get_all_analyst_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 

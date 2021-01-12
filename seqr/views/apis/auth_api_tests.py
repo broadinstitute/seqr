@@ -10,7 +10,7 @@ class AuthAPITest(TestCase):
     fixtures = ['users']
 
     def setUp(self):
-        User.objects.create_user('test_new_user', 'test_new_user@test.com', 'password123')
+        User.objects.create_user('test_new_user', 'test_new_user@institute.com', 'password123')
 
     def test_login_view(self):
         url = reverse(login_view)
@@ -49,9 +49,17 @@ class AuthAPITest(TestCase):
                                     data=json.dumps(req_values))
         self.assertEqual(response.status_code, 401)
 
+        # send login request with unicode character
+        req_values = {
+            'email': 'test_new_user@instıtute.com',
+            'password': 'password123'
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 401)
+
         # send login request with a correct password
         req_values = {
-            'email': 'test_new_user@test.com',
+            'email': 'Test_New_User@institute.com',
             'password': 'password123'
         }
         response = self.client.post(url, content_type='application/json',
@@ -63,7 +71,7 @@ class AuthAPITest(TestCase):
     def test_logout_view(self):
         url = reverse(login_view)
         req_values = {
-            'email': 'test_new_user@test.com',
+            'email': 'test_new_user@institute.com',
             'password': 'password123'
         }
         response = self.client.post(url, content_type='application/json',

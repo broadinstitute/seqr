@@ -31,6 +31,7 @@ spec:
       annotations:
         linkerd.io/inject: enabled
         config.linkerd.io/skip-outbound-ports: "6379"
+        config.linkerd.io/skip-outbound-ports: "5432"
       labels:
         name: seqr
         deployment: {{ DEPLOY_TO }}
@@ -164,8 +165,6 @@ spec:
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS
           value: "{{ ENABLE_DATABASE_BACKUPS }}"
-        - name: UPLOADED_PEDIGREE_FILE_RECIPIENTS
-          value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
         - name: STATIC_MEDIA_DIR
           value: "{{ STATIC_MEDIA_DIR }}"
         - name: MME_CONFIG_DIR

@@ -2,15 +2,14 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Icon, Segment } from 'semantic-ui-react'
+import { Icon, Segment, Popup } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
-import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import DeleteButton from '../../buttons/DeleteButton'
 import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
-import { ButtonLink } from '../..//StyledComponents'
+import { ButtonLink } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 
 const FieldValue = styled.div`
@@ -40,7 +39,7 @@ class BaseFieldView extends React.PureComponent {
     if (this.props.isVisible !== undefined && !this.props.isVisible) {
       return null
     }
-    if (this.props.isPrivate && !this.props.user.isStaff) {
+    if (this.props.isPrivate && !this.props.user.isAnalyst) {
       return null
     }
     const fieldValue = this.props.fieldValue || this.props.initialValues[this.props.field]
@@ -123,7 +122,12 @@ class BaseFieldView extends React.PureComponent {
 
     return (
       <span style={this.props.style || {}}>
-        {this.props.isPrivate && <StaffOnlyIcon />}
+        {this.props.isPrivate && <Popup
+          trigger={<Icon name="lock" size="small" />}
+          position="top center"
+          size="small"
+          content="Only visible to internal users."
+        />}
         {this.props.fieldName && [
           <b key="name">{this.props.fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
           ...buttons,
