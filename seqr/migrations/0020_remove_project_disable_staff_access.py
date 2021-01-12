@@ -4,8 +4,9 @@
 
 from django.db import migrations
 
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP
-
+ANALYST_PROJECT_CATEGORY = 'analyst-projects'
+ANALYST_USER_GROUP = 'analysts'
+PM_USER_GROUP = 'project-managers'
 
 def create_analyst_project_group(apps, schema_editor):
     ProjectCategory = apps.get_model('seqr', 'ProjectCategory')
