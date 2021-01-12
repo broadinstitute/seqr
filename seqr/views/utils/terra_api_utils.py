@@ -10,8 +10,9 @@ from urllib.parse import urljoin
 from django.core.exceptions import PermissionDenied
 from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -63,11 +64,11 @@ def _get_social_access_token(user):
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, **kwargs):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-    r = request_func(url, headers=headers, **kwargs)
+    r = request_func(url, headers=headers)
 
     if r.status_code == 404:
         raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
@@ -86,35 +87,55 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     return json.loads(r.text)
 
 
-def _user_anvil_call(method, path, user, **kwargs):
+def _user_anvil_call(method, path, user):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, user=user, **kwargs)
+    return anvil_call(method, path, access_token, user=user)
 
 
-def list_anvil_workspaces(user, fields=None):
+def list_anvil_workspaces(user):
     """Get all the workspaces accessible by the logged-in user.
 
     :param
     user (User model): who's credentials will be used to access AnVIL
-    fields (str): a comma-delimited list of values that limits the
-        response payload to include only those keys and exclude other
-        keys (e.g., to include {"workspace": {"attributes": {...}}},
-        specify "workspace.attributes").
     :return
     A list of workspaces that the user has access (OWNER, WRITER, or READER). Each of the workspace has
-    the fields that specified by the 'fields' parameter or all the fields that AnVIL provides.
+    its name and namespace.
     """
-    path = 'api/workspaces?fields={}'.format(fields) if fields else 'api/workspaces'
-    return _user_anvil_call('get', path, user)
+    path = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
+    cache_key = 'terra_req__{}__{}'.format(user, path)
+    r = safe_redis_get_json(cache_key)
+    if r:
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        return r
+
+    r = _user_anvil_call('get', path, user)
+
+    # remove the public workspaces which can't be the projects in seqr
+    r = [{'workspace': ws['workspace']} for ws in r if not ws.get('public', True)]
+
+    safe_redis_set_json(cache_key, r, TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+
+    return r
 
 
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
+
+    cache_key = 'terra_req__{}__{}'.format(user, path)
+    r = safe_redis_get_json(cache_key)
+    if r:
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        return r
+
     try:
-        return _user_anvil_call('get', path, user)
+        r = _user_anvil_call('get', path, user)
     except TerraNotFoundException as et:
         logger.warning(str(et))
         return {}
+
+    safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
+
+    return r
 
 
 def user_get_workspace_acl(user, workspace_namespace, workspace_name):

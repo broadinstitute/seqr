@@ -343,6 +343,9 @@ SOCIAL_AUTH_PIPELINE_USER_EXIST = ('seqr.utils.social_auth_pipeline.validate_use
 SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associate_user',)
 SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
 
+TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
+TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
+
 if TERRA_API_ROOT_URL:
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
