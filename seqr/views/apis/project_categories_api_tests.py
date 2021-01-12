@@ -33,8 +33,8 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         project = Project.objects.get(guid=PROJECT_GUID)
 
-        project_categories = [
-            project_category for project_category in project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY)]
+        project_categories = [project_category for project_category in
+                              project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY).order_by('guid')]
         self.assertEqual(project_categories[0].guid, PROJECT_CAT_GUID2)
         self.assertNotIn(project_categories[0].guid, updated_guid_set)
         self.assertEqual(project_categories[1].guid, PROJECT_CAT_GUID4)

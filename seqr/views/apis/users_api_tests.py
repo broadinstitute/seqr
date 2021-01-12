@@ -11,7 +11,7 @@ from seqr.views.apis.users_api import get_all_collaborator_options, set_password
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_analyst_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+    MixAuthenticationTestCase, USER_FIELDS
 
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -251,8 +251,8 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 
 def assert_has_anvil_calls(self):
     calls = [
-        mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-        mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     self.mock_get_ws_acl.assert_not_called()
