@@ -10,7 +10,8 @@ import json
 import logging
 
 from seqr.views.utils.json_utils import create_json_response
-
+from seqr.views.utils.permissions_utils import user_is_data_manager
+from settings import SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,12 @@ def login_view(request):
     if users.count() != 1:
         return create_json_response({}, status=401, reason='Invalid credentials')
 
-    u = authenticate(username=users.first().username, password=request_json['password'])
+    user = users.first()
+    if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY and (user_is_data_manager(user) or user.is_superuser):
+        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user))
+        return create_json_response({}, status=401, reason='Privileged user must login with Google authentication.')
+
+    u = authenticate(username=user.username, password=request_json['password'])
     if not u:
         return create_json_response({}, status=401, reason='Invalid credentials')
 
