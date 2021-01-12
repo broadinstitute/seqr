@@ -3,6 +3,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
+from django.db.utils import IntegrityError
 
 
 from reference_data.models import GENOME_VERSION_GRCh37
@@ -62,11 +63,14 @@ def create_locus_list_handler(request):
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
-    locus_list = create_model_from_json(LocusList, {
-        'name': request_json['name'],
-        'description': request_json.get('description') or '',
-        'is_public': request_json.get('isPublic') or False,
-    }, request.user)
+    try:
+        locus_list = create_model_from_json(LocusList, {
+            'name': request_json['name'],
+            'description': request_json.get('description') or '',
+            'is_public': request_json.get('isPublic') or False,
+        }, request.user)
+    except IntegrityError:
+        return create_json_response({'error': 'This list already exists'}, status=400)
     _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
 
     return create_json_response({
