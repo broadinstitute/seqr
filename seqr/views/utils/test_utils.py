@@ -87,6 +87,9 @@ class AuthenticationTestCase(TestCase):
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
+    def login_super_user(self):
+        self.client.force_login(self.super_user)
+
     def _check_login(self, url, permission_level, request_data=None):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests

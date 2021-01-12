@@ -27,9 +27,8 @@ class ProjectAPITest(object):
         self.assertEqual(response.json()['error'], 'Field(s) "name, genomeVersion" are required')
 
         # send valid request to create project
-        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
-            {'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38'}
-        ))
+        create_body = {'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38'}
+        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(create_body))
         self.assertEqual(response.status_code, 200)
 
         # check that project was created
@@ -67,6 +66,15 @@ class ProjectAPITest(object):
         # check that project was deleted
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
+
+        # test superuser access
+        self.login_data_manager_user()
+        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(create_body))
+        self.assertEqual(response.status_code, 302)
+
+        self.login_super_user()
+        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(create_body))
+        self.assertEqual(response.status_code, 200)
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])

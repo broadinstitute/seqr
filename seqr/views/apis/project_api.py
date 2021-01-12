@@ -19,14 +19,14 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required
+    check_user_created_object_permissions, pm_or_superuser_required
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
 
 
-@pm_required
+@pm_or_superuser_required
 def create_project_handler(request):
     """Create a new project.
 
