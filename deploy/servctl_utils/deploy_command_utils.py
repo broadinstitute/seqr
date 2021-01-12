@@ -357,8 +357,6 @@ def deploy_pipeline_runner(settings):
         "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
     ])
 
-    deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
-
 
 def deploy_kube_scan(settings):
     print_separator("kube-scan")
