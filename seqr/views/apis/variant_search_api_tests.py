@@ -55,10 +55,13 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 
 class VariantSearchAPITest(object):
 
+    @mock.patch('seqr.views.apis.variant_search_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger, mock_analyst_group):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -232,6 +235,11 @@ class VariantSearchAPITest(object):
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
+        response = self.client.get('{}?sort=pathogenicity'.format(url))
+        self.assertEqual(response.status_code, 403)
+
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -545,7 +553,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 12)
+        assert_no_list_ws_has_al(self, 13)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
@@ -583,7 +591,7 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_query_variants(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self, 2)
 
     def test_query_all_projects_variants(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
