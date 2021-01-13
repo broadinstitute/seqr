@@ -88,7 +88,7 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'Invalid credentials')
 
-    @mock.patch('seqr.views.apis.auth_api.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
     def test_login_view_with_google(self):
         url = reverse(login_view)
 
@@ -110,6 +110,17 @@ class AuthAPITest(TestCase):
                                     data=json.dumps(req_values))
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'Privileged user must login with Google authentication.')
+
+        # send login request with a non-privileged user and a correct password
+        req_values = {
+            'email': 'test_new_user@institute.com',
+            'password': 'password123'
+        }
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertTrue(response_json['success'])
 
     def test_logout_view(self):
         url = reverse(login_view)
