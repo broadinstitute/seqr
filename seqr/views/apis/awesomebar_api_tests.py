@@ -1,8 +1,7 @@
 import mock
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
-    WORKSPACE_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 class AwesomebarAPITest(object):
@@ -46,9 +45,9 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
     def test_awesomebar_autocomplete_handler(self):
         super(AnvilAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
         calls = [
-            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.no_access_user),
+            mock.call(self.collaborator_user),
+            mock.call(self.collaborator_user),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_acl.assert_not_called()
@@ -62,9 +61,9 @@ class MixAwesomebarAPITest(MixAuthenticationTestCase, AwesomebarAPITest):
     def test_awesomebar_autocomplete_handler(self):
         super(MixAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
         calls = [
-            mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
-            mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
+            mock.call(self.no_access_user),
+            mock.call(self.collaborator_user),
+            mock.call(self.collaborator_user),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_acl.assert_not_called()

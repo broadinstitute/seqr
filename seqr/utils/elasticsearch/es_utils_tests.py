@@ -2184,6 +2184,23 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
         ])
 
+    @urllib3_responses.activate
+    def test_skip_genotype_filter(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'locus': {'rawItems': 'ENSG00000223972'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2', 'F000005_5']))
+
+        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        self.assertExecutedSearch(
+            index='{},{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME),
+            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}],
+            sort=['xpos'],
+            size=6,
+        )
+
     @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
     @mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')
     @urllib3_responses.activate
