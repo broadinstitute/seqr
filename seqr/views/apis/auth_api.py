@@ -10,8 +10,7 @@ import json
 import logging
 
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import user_is_data_manager
-from seqr.views.utils.terra_api_utils import google_auth_enabled
+
 
 logger = logging.getLogger(__name__)
 
@@ -19,29 +18,19 @@ logger = logging.getLogger(__name__)
 def login_view(request):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
-        error = 'Email is required'
-        return create_json_response({'error': error}, status=400, reason=error)
+        return create_json_response({}, status=400, reason='Email is required')
     if not request_json.get('password'):
-        error = 'Password is required'
-        return create_json_response({'error': error}, status=400, reason=error)
+        return create_json_response({}, status=400, reason='Password is required')
 
     # Django's iexact filtering will improperly match unicode characters, which creates a security risk.
     # Instead, query for the lower case match to allow case-insensitive matching
     users = User.objects.annotate(email_lower=Lower('email')).filter(email_lower=request_json['email'].lower())
     if users.count() != 1:
-        error = 'Invalid credentials'
-        return create_json_response({'error': error}, status=401, reason=error)
+        return create_json_response({}, status=401, reason='Invalid credentials')
 
-    user = users.first()
-    if google_auth_enabled() and (user_is_data_manager(user) or user.is_superuser):
-        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user))
-        error = 'Privileged user must login with Google authentication.'
-        return create_json_response({'error': error}, status=401, reason=error)
-
-    u = authenticate(username=user.username, password=request_json['password'])
+    u = authenticate(username=users.first().username, password=request_json['password'])
     if not u:
-        error = 'Invalid credentials'
-        return create_json_response({'error': error}, status=401, reason=error)
+        return create_json_response({}, status=401, reason='Invalid credentials')
 
     login(request, u)
     logger.info('Logged in {}'.format(u.email), extra={'user': u})
