@@ -4,6 +4,7 @@ import requests
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -15,6 +16,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     check_project_permissions
+from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
@@ -533,7 +535,8 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 
 def _validate_airtable_access(user):
-    pass
+    if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
+        raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
 
 
 def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):

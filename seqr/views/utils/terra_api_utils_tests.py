@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
-    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_google_authenticated
+    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
     TOKEN_AUTH_TIME, REGISTER_RESPONSE
 
@@ -23,10 +23,10 @@ class TerraApiUtilsCase(TestCase):
 
     def test_is_google_authenticated(self):
         user = User.objects.get(email = 'test_user@test.com')
-        r = is_google_authenticated(user)
+        r = is_anvil_authenticated(user)
         self.assertTrue(r)
         user = User.objects.get(email = 'test_local_user@test.com')
-        r = is_google_authenticated(user)
+        r = is_anvil_authenticated(user)
         self.assertFalse(r)
 
     @responses.activate
