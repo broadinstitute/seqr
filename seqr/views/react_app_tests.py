@@ -2,6 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
 import json
 import re
+import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
@@ -21,7 +22,7 @@ class DashboardPageTest(AuthenticationTestCase):
         m = re.search(INITIAL_JSON_REGEX, content)
         return json.loads(m.group('initial_json'))
 
-    def test_react_page(self):
+    def run_react_page(self, google_enabled):
         url = reverse(main_app)
         self.check_require_login(url)
 
@@ -32,11 +33,19 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
         self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
         self.assertFalse(initial_json['user']['currentPolicies'])
+        self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
         self.assertRegex(content, r'static/app(-.*)js')
         self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
+
+    def test_react_page(self):
+        self.run_react_page(False)
+
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
+    def test_react_page_google_enabled(self):
+        self.run_react_page(True)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
@@ -65,6 +74,7 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertSetEqual(set(initial_json['newUser'].keys()), MAIN_APP_USER_FIELDS)
         self.assertEqual(initial_json['newUser']['username'], 'test_user_manager')
         self.assertFalse(initial_json['newUser']['currentPolicies'])
+        self.assertFalse(initial_json['meta']['googleLoginEnabled'])
 
         with self.assertRaises(ObjectDoesNotExist):
             self.client.get('/users/set_password/invalid_pwd')
