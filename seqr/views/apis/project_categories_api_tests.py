@@ -44,9 +44,9 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         new_guid = project_categories[2].guid
 
         self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 3)
-        self.assertListEqual(
-            [PROJECT_CAT_GUID2, PROJECT_CAT_GUID4, new_guid],
-            response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids'])
+        self.assertSetEqual(
+            {PROJECT_CAT_GUID2, PROJECT_CAT_GUID4, new_guid},
+            set(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']))
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'categories': []

@@ -21,6 +21,8 @@ USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email
 
 class UsersAPITest(object):
 
+    @mock.patch('seqr.views.apis.users_api.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_get_all_analyst_options(self):
         get_all_analyst_url = reverse(get_all_analyst_options)
         self.check_require_login(get_all_analyst_url)

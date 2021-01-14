@@ -112,8 +112,9 @@ class IndividualAPITest(AuthenticationTestCase):
             {'id': 'HP:0011675', 'notes': 'A new term'},
         ])
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
-    def test_edit_individuals(self, mock_update_pedigree):
+    def test_edit_individuals(self, mock_update_pedigree, mock_pm_group):
         edit_individuals_url = reverse(edit_individuals_handler, args=[PROJECT_GUID])
         self.check_manager_login(edit_individuals_url)
 
@@ -157,14 +158,23 @@ class IndividualAPITest(AuthenticationTestCase):
             'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 403)
+
         self.login_pm_user()
+        response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 403)
+
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
         response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
-    def test_delete_individuals(self, mock_update_pedigree):
+    def test_delete_individuals(self, mock_update_pedigree, mock_pm_group):
         individuals_url = reverse(delete_individuals_handler, args=[PROJECT_GUID])
         self.check_manager_login(individuals_url)
 
@@ -197,13 +207,23 @@ class IndividualAPITest(AuthenticationTestCase):
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
             }))
         self.assertEqual(response.status_code, 403)
+
         self.login_pm_user()
+        response = self.client.post(
+            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 403)
+
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
         response = self.client.post(
             pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
             }))
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.pedigree_image_utils._update_pedigree_image')
     def test_individuals_table_handler(self, mock_update_pedigree):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
