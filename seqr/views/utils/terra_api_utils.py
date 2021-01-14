@@ -11,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -24,10 +24,6 @@ class TerraAPIException(Exception):
 
 class TerraNotFoundException(TerraAPIException):
     pass
-
-
-def google_auth_enabled():
-    return bool(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
 
 
 def anvil_enabled():
