@@ -37,6 +37,8 @@ DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 
 class DashboardPageTest(object):
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
         self.check_require_login(url)
@@ -70,6 +72,7 @@ class DashboardPageTest(object):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 4)
 
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
         self.check_require_login(url)

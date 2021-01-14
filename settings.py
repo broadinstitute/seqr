@@ -261,9 +261,9 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
-ANALYST_PROJECT_CATEGORY = 'analyst-projects'
-ANALYST_USER_GROUP = 'analysts'
-PM_USER_GROUP = 'project-managers'
+ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
+ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
+PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')

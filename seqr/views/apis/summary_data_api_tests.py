@@ -23,10 +23,18 @@ EXPECTED_MME_DETAILS_METRICS = {
 class SummaryDataAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('matchmaker.matchmaker_utils.datetime')
-    def test_mme_details(self, mock_datetime):
+    def test_mme_details(self, mock_datetime, mock_analyst_group):
         url = reverse(mme_details)
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 1)
         response = self.client.get(url)
@@ -38,9 +46,17 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
-    def test_success_story(self):
+    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_success_story(self, mock_analyst_group):
         url = reverse(success_story, args=['all'])
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -60,10 +76,18 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
 
+    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
-    def test_saved_variants_page(self):
+    def test_saved_variants_page(self, mock_analyst_group):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)

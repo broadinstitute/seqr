@@ -206,9 +206,16 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 class ReportAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    def test_seqr_stats(self):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_seqr_stats(self, mock_analyst_group):
         url = reverse(seqr_stats)
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -218,9 +225,16 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response_json['familyCount'], 14)
         self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
 
-    def test_get_cmg_projects(self):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_get_cmg_projects(self, mock_analyst_group):
         url = reverse(get_cmg_projects)
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -228,10 +242,17 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.report_api.timezone')
-    def test_discovery_sheet(self, mock_timezone):
+    def test_discovery_sheet(self, mock_timezone, mock_analyst_group):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         self.check_analyst_login(non_project_url)
+
+        response = self.client.get(non_project_url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -272,11 +293,18 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
-    def test_anvil_export(self, mock_zip):
+    def test_anvil_export(self, mock_zip, mock_analyst_group):
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -346,10 +374,17 @@ class ReportAPITest(AuthenticationTestCase):
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-']), discovery_file)
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @responses.activate
-    def test_sample_metadata_export(self):
+    def test_sample_metadata_export(self, mock_analyst_group):
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
