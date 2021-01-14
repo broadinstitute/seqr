@@ -134,7 +134,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        project, individual_samples, include_collaborator=False)
+        project, individual_samples, request.user, include_collaborator=False)
 
     # Flatten lists of discovery rows so there is one row per variant
     discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
@@ -157,7 +157,7 @@ def sample_metadata_export(request, project_guid):
         project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        project, individual_samples, include_collaborator=True)
+        project, individual_samples, request.user, include_collaborator=True)
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
@@ -192,7 +192,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, include_collaborator=False):
+def _parse_anvil_metadata(project, individual_samples, user, include_collaborator=False):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -209,7 +209,7 @@ def _parse_anvil_metadata(project, individual_samples, include_collaborator=Fals
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), include_collaborator=include_collaborator)
+    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), user, include_collaborator=include_collaborator)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
@@ -484,7 +484,8 @@ SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'd
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, include_collaborator=False):
+def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
+    _validate_airtable_access(user)
     raw_records = {}
     # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
@@ -529,6 +530,10 @@ def _get_sample_airtable_metadata(sample_ids, include_collaborator=False):
             sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
 
     return sample_records
+
+
+def _validate_airtable_access(user):
+    pass
 
 
 def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):
