@@ -9,13 +9,13 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
 
 def user_is_analyst(user):
-    return user.groups.filter(name=ANALYST_USER_GROUP).exists()
+    return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
 def user_is_data_manager(user):
     return user.is_staff
 
 def user_is_pm(user):
-    return user.groups.filter(name=PM_USER_GROUP).exists()
+    return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
 
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
