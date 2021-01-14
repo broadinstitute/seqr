@@ -233,6 +233,7 @@ ANVIL_WORKSPACES = [{
 
 
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
+TEST_OAUTH2_KEY = 'abc123'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
@@ -274,6 +275,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
     # mock the terra apis
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')

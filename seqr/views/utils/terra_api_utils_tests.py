@@ -6,7 +6,8 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
-    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated
+    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated, \
+    is_google_authenticated
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
     TOKEN_AUTH_TIME, REGISTER_RESPONSE
 
@@ -21,11 +22,35 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
 
-    def test_is_google_authenticated(self):
-        user = User.objects.get(email = 'test_user@test.com')
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+    def test_is_google_authenticated(self, mock_social_auth_key):
+        user = User.objects.get(username='test_user')
+        r = is_google_authenticated(user)
+        self.assertTrue(r)
+
+        local_user = User.objects.get(username='test_local_user')
+        r = is_google_authenticated(local_user)
+        self.assertFalse(r)
+
+        mock_social_auth_key.__bool__.return_value = False
+        r = is_google_authenticated(user)
+        self.assertFalse(r)
+
+    @mock.patch('seqr.views.utils.terra_api_utils.anvil_enabled')
+    @mock.patch('seqr.views.utils.terra_api_utils.is_google_authenticated')
+    def test_is_anvil_authenticated(self, mock_is_google_authenticated, mock_anvil_enabled):
+        mock_is_google_authenticated.return_value = True
+        mock_anvil_enabled.return_value = True
+        user = User.objects.get(username='test_user')
         r = is_anvil_authenticated(user)
         self.assertTrue(r)
-        user = User.objects.get(email = 'test_local_user@test.com')
+
+        mock_is_google_authenticated.return_value = False
+        r = is_anvil_authenticated(user)
+        self.assertFalse(r)
+
+        mock_is_google_authenticated.return_value = True
+        mock_anvil_enabled.return_value = False
         r = is_anvil_authenticated(user)
         self.assertFalse(r)
 
@@ -51,7 +76,7 @@ class TerraApiUtilsCase(TestCase):
     @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
     def test_list_workspaces(self, mock_time, mock_logger, mock_redis):
-        user = User.objects.get(email='test_user@test.com')
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
@@ -104,7 +129,7 @@ class TerraApiUtilsCase(TestCase):
     @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
     def test_get_workspace_acl(self, mock_time, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
@@ -147,7 +172,7 @@ class TerraApiUtilsCase(TestCase):
     @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
     def test_user_get_workspace_access_level(self, mock_time, mock_redis, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 

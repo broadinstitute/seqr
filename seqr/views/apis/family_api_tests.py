@@ -164,7 +164,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['email'], 'test_user@test.com')
+        self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['email'], 'test_user@broadinstitute.org')
         self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['fullName'], 'Test User')
 
         # unassign analyst

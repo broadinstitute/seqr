@@ -18,7 +18,7 @@ class AuthAPITest(TestCase):
 
         # send login request without a password
         req_values = {
-            'email': 'test_user@test.com'
+            'email': 'test_user_manager@test.com'
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
@@ -43,7 +43,7 @@ class AuthAPITest(TestCase):
 
         # send login request with a wrong password
         req_values = {
-            'email': 'test_user@test.com',
+            'email': 'test_user_manager@test.com',
             'password': 'not_a_password'
         }
         response = self.client.post(url, content_type='application/json',

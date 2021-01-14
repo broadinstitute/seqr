@@ -184,7 +184,7 @@ class UsersAPITest(object):
 
         # Send valid request
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@test.com'
+            'email': 'test_user@broadinstitute.org'
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -198,14 +198,14 @@ class UsersAPITest(object):
             'Reset your seqr password',
             expected_email_content,
             None,
-            ['test_user@test.com'],
+            ['test_user@broadinstitute.org'],
             fail_silently=False,
         )
 
         # Test email failure
         mock_send_mail.side_effect = AnymailError('Connection err')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@test.com'
+            'email': 'test_user@broadinstitute.org'
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')

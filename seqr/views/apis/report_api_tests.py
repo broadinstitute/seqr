@@ -296,8 +296,10 @@ class ReportAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    @mock.patch('seqr.views.apis.report_api.is_google_authenticated')
     @responses.activate
-    def test_anvil_export(self, mock_zip, mock_analyst_group):
+    def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
+        mock_google_authenticated.return_value = False
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
 
@@ -309,6 +311,14 @@ class ReportAPITest(AuthenticationTestCase):
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        mock_google_authenticated.return_value = True
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         response = self.client.get(url)
@@ -374,10 +384,19 @@ class ReportAPITest(AuthenticationTestCase):
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-']), discovery_file)
 
+        # Test non-broad analysts do not have access
+        self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.apis.report_api.is_google_authenticated')
     @responses.activate
-    def test_sample_metadata_export(self, mock_analyst_group):
+    def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+        mock_google_authenticated.return_value = False
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
 
@@ -389,6 +408,14 @@ class ReportAPITest(AuthenticationTestCase):
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        mock_google_authenticated.return_value = True
 
         # Test invalid airtable responses
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)
@@ -426,3 +453,10 @@ class ReportAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
+
+        # Test non-broad analysts do not have access
+        self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
