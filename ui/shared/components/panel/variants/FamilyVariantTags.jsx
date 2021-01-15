@@ -216,7 +216,7 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyLabel = React.memo(({ family, disableEdit, target, to }) =>
+const FamilyLabel = React.memo(({ family, disableEdit, target, path }) =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <PopupWithModal
@@ -226,7 +226,7 @@ const FamilyLabel = React.memo(({ family, disableEdit, target, to }) =>
       keepInViewPort
       trigger={
         <ColoredLink
-          to={to || `/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+          to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
           color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
           target={target}
         >
@@ -242,7 +242,7 @@ const FamilyLabel = React.memo(({ family, disableEdit, target, to }) =>
 FamilyLabel.propTypes = {
   family: PropTypes.object,
   disableEdit: PropTypes.bool,
-  to: PropTypes.string,
+  path: PropTypes.string,
   target: PropTypes.string,
 }
 
@@ -252,7 +252,8 @@ export const LoadedFamilyLabel = connect((state, ownProps) => ({
 
 const FamilyVariantTags = React.memo((
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
-    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
+    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
+    linkToSavedVariants },
 ) => (
   family ?
     <NoBorderTable basic="very" compact="very" celled>
@@ -260,7 +261,7 @@ const FamilyVariantTags = React.memo((
         <Table.Row verticalAlign="top">
           {!isCompoundHet &&
           <Table.Cell collapsing rowSpan={2}>
-            <FamilyLabel family={family} />
+            <FamilyLabel family={family} path={linkToSavedVariants && `saved_variants/family/${family.familyGuid}`} />
           </Table.Cell>}
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Tags:</TagTitle>
@@ -347,6 +348,7 @@ FamilyVariantTags.propTypes = {
   projectTagTypes: PropTypes.array,
   projectFunctionalTagTypes: PropTypes.array,
   isCompoundHet: PropTypes.bool,
+  linkToSavedVariants: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
   dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func,
