@@ -17,13 +17,13 @@ export default () =>
       <Grid columns="equal">
         <Grid.Column width={3} />
         <Grid.Column>
-          <img src="/media/images/landing_page_icon1.png" alt="Identify disease causing variants" width="100%" />
+          <img src="/static/images/landing_page_icon1.png" alt="Identify disease causing variants" width="100%" />
         </Grid.Column>
         <Grid.Column>
-          <img src="/media/images/landing_page_icon3.png" alt="Integrate data sources" width="100%" />
+          <img src="/static/images/landing_page_icon3.png" alt="Integrate data sources" width="100%" />
         </Grid.Column>
         <Grid.Column>
-          <img src="/media/images/landing_page_icon2.png" alt="Collaborate" width="100%" />
+          <img src="/static/images/landing_page_icon2.png" alt="Collaborate" width="100%" />
         </Grid.Column>
         <Grid.Column width={3} />
       </Grid>
