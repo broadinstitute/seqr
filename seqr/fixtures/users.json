@@ -41,7 +41,7 @@
         "username": "test_user",
         "first_name": "Test User",
         "last_name": "",
-        "email": "test_user@test.com",
+        "email": "test_user@broadinstitute.org",
         "is_staff": false,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",

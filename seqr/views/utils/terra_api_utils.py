@@ -37,13 +37,17 @@ def anvil_enabled():
 
 
 def is_google_authenticated(user):
-    if not anvil_enabled():
+    if not google_auth_enabled():
         return False
     try:
         _ = user.social_auth.get(provider = 'google-oauth2')
     except UserSocialAuth.DoesNotExist:  # Exception happen when the user has never logged-in with Google
         return False
     return True
+
+
+def is_anvil_authenticated(user):
+    return anvil_enabled() and is_google_authenticated(user)
 
 
 def _get_call_args(path, headers=None, root_url=None):

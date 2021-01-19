@@ -4,7 +4,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
-from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
 
@@ -131,7 +131,7 @@ def get_projects_user_can_view(user):
     if user_is_analyst(user):
         projects = (projects | _get_analyst_projects())
 
-    if is_google_authenticated(user):
+    if is_anvil_authenticated(user):
         workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in list_anvil_workspaces(user)]
         anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
