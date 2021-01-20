@@ -50,7 +50,8 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
             index_name, e.error if hasattr(e, 'error') else str(e)))
     index_metadata = {}
     for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings']
+        variant_mapping_type = mapping['mappings'].get('variant', mapping['mappings'].get('structural_variant', None))
+        variant_mapping = mapping['mappings'] if variant_mapping_type is None else variant_mapping_type
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         if include_fields:
             index_metadata[index_name]['fields'] = {

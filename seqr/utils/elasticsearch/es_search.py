@@ -558,7 +558,8 @@ class EsSearch(object):
             response_hits, response_total = self._parse_compound_het_response(response)
             return response_hits, response_total, True, index_name
 
-        response_total = response.hits.total['value']
+        hits_total = response.hits.total
+        response_total = hits_total if (isinstance(hits_total, int)) else hits_total['value']
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
