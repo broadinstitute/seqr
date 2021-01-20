@@ -37,5 +37,7 @@ def _stream_file(request, path):
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
         resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
+        # resp['content-disposition'] = 'attachment'
+        # resp['content-length'] = '17314'
     resp['Accept-Ranges'] = 'bytes'
     return resp
