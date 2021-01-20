@@ -1,3 +1,4 @@
+import Cookies from 'js-cookie'
 import delay from 'timeout-as-promise'
 
 export const getUrlQueryString = urlParams =>
@@ -54,10 +55,12 @@ export class HttpRequestHelper {
     if (this.debug) {
       console.log(`${this.url} httpHelder - request: `, jsonBody)
     }
+    const csrfToken = Cookies.get('csrf_token')
     const promise = fetch(this.url, {
       method: 'POST',
       credentials: 'include',
       body: JSON.stringify(jsonBody),
+      headers: { 'X-CSRFToken': csrfToken },
     })
 
     return this.handlePromise(promise, jsonBody)
@@ -76,7 +79,7 @@ export class HttpRequestHelper {
       if (!response.ok) {
         console.log('ERROR: ', response.statusText, response.status, response)
         const throwJsonError = (responseJson) => {
-          const message = responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
+          const message = responseJson.error || responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
           const err = new Error(message)
           err.body = responseJson
           throw err

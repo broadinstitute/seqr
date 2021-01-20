@@ -69,10 +69,10 @@ const MME_COLUMNS = [
       </NavLink>,
   },
   { name: 'familyName', content: 'Family', width: 2 },
-  { name: 'individualName', content: 'Individual', width: 2 },
+  { name: 'geneSymbols', content: 'Genes', width: 3, format: ({ geneSymbols }) => (geneSymbols || []).join(', ') },
   { name: 'createdDate', content: 'Created Date', width: 2, format: ({ createdDate }) => createdDate && new Date(createdDate).toLocaleDateString() },
   { name: 'deletedDate', content: 'Removed Date', width: 2, format: ({ deletedDate }) => deletedDate && new Date(deletedDate).toLocaleDateString() },
-  { name: 'mmeNotes', content: 'Notes', width: 7 },
+  { name: 'mmeNotes', content: 'Notes', width: 6 },
 ]
 
 const MatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
@@ -132,7 +132,7 @@ const ProjectOverview = React.memo((
   }
 
   let editIndividualsButton = null
-  if (user.isStaff) {
+  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
   } else if (project.canEdit) {
     editIndividualsButton = <EditHpoTermsButton />
@@ -179,7 +179,7 @@ const ProjectOverview = React.memo((
         {datasetSections.map((sectionProps, i) =>
           <DetailSection
             {...sectionProps}
-            button={(datasetSections.length - 1 === i && project.canEdit) ? <EditDatasetsButton /> : null}
+            button={(datasetSections.length - 1 === i && user.isDataManager) ? <EditDatasetsButton /> : null}
           />,
         )}
       </Grid.Column>

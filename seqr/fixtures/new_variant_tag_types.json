@@ -3,51 +3,16 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_test_segregation",
-        "created_date": "2018-04-27T00:00:00.000Z",
+        "guid": "VTT_multi_nucleotide_variant",
+        "created_date": "2020-11-17T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Test segregation",
+        "name": "Multi-Nucleotide Variant",
         "category": "Collaboration",
-        "description": "",
-        "color": "#c17110",
-        "order": 14.6,
-        "is_built_in": true
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_segregation _validated",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Segregation validated",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#799a5b",
-        "order": 14.7,
-        "is_built_in": true
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_segregation_did_not_confir",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Segregation did not confirm",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#b44b4b",
-        "order": 14.8,
-        "is_built_in": true
+        "description": "MNV",
+        "color": "#c283ce",
+        "order": 15.5
     }
 }
 ]

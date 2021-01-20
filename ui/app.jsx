@@ -7,19 +7,20 @@ import { connect, Provider } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import BaseLayout from 'shared/components/page/BaseLayout'
-import GeneDetail from 'shared/components/panel/genes/GeneDetail'
 import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
 import VariantSearch from 'pages/Search/VariantSearch'
-import GeneInfoSearch from 'pages/GeneInfoSearch'
-import LocusLists from 'pages/LocusLists'
-import Staff from 'pages/Staff/Staff'
+import DataManagement from 'pages/DataManagement/DataManagement'
+import Report from 'pages/Report/Report'
+import SummaryData from 'pages/SummaryData/SummaryData'
 import Login from 'pages/Login/components/Login'
 import ForgotPassword from 'pages/Login/components/ForgotPassword'
 import SetPassword from 'pages/Login/components/SetPassword'
 import LandingPage from 'pages/Public/LandingPage'
 import MatchmakerDisclaimer from 'pages/Public/MatchmakerDisclaimer'
 import MatchmakerInfo from 'pages/Public/MatchmakerInfo'
+import PrivacyPolicy from 'pages/Public/PrivacyPolicy'
+import TermsOfService from 'pages/Public/TermsOfService'
 import rootReducer from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
 import { configureStore } from 'redux/utils/configureStore'
@@ -52,15 +53,16 @@ ReactDOM.render(
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
             <Route path="/variant_search" component={VariantSearch} />
-            <Route path="/gene_info/:geneId" component={({ match }) => <GeneDetail geneId={match.params.geneId} />} />
-            <Route path="/gene_info" component={GeneInfoSearch} />
-            <Route path="/gene_lists" component={LocusLists} />
-            <Route path="/staff" component={Staff} />
+            <Route path="/data_management" component={DataManagement} />
+            <Route path="/report" component={Report} />
+            <Route path="/summary_data" component={SummaryData} />
             <Route path="/login" component={Login} />
             <Route path="/users/forgot_password" component={ForgotPassword} />
             <Route path="/users/set_password" component={SetPassword} />
             <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
             <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
+            <Route path="/privacy_policy" component={PrivacyPolicy} />
+            <Route path="/terms_of_service" component={TermsOfService} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>

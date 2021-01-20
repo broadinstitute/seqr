@@ -1,52 +1,47 @@
-from __future__ import unicode_literals
-
 from requests.utils import quote
 
 import json
+import logging
 from anymail.exceptions import AnymailError
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User, Group
 
+from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
-    get_project_collaborators_by_username
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
-from settings import API_LOGIN_REQUIRED_URL, BASE_URL
+from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
+logger = logging.getLogger(__name__)
 
-class CreateUserException(Exception):
-    def __init__(self, error, status_code=400, existing_user=None):
-        Exception.__init__(self, error)
-        self.status_code = status_code
-        self.existing_user = existing_user
+USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def get_all_collaborators(request):
-    if request.user.is_staff:
-        collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
-    else:
-        collaborators = {}
-        for project in get_projects_user_can_view(request.user):
-            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False))
+def get_all_collaborator_options(request):
+    collaborators = set()
+    for project in get_projects_user_can_view(request.user):
+        collaborators.update(project.get_collaborators())
 
-    return create_json_response(collaborators)
+    return create_json_response({
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
+    })
 
+def _get_all_analysts():
+    return Group.objects.get(name=ANALYST_USER_GROUP).user_set.all()
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def get_all_staff(request):
-    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
+def get_all_analyst_options(request):
+    analysts = {
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in _get_all_analysts()
+    }
 
-    return create_json_response(staff_analysts)
+    return create_json_response(analysts)
 
 
-@csrf_exempt
 def forgot_password(request):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
@@ -76,7 +71,6 @@ def forgot_password(request):
     return create_json_response({'success': True})
 
 
-@csrf_exempt
 def set_password(request, username):
     user = User.objects.get(username=username)
 
@@ -85,9 +79,8 @@ def set_password(request, username):
         return create_json_response({}, status=400, reason='Password is required')
 
     user.set_password(request_json['password'])
-    user.first_name = request_json.get('firstName') or ''
-    user.last_name = request_json.get('lastName') or ''
-    user.save()
+    update_model_from_json(user, _get_user_json(request_json), user=user, updated_fields={'password'})
+    logger.info('Set password for user {}'.format(user.email), extra={'user': user})
 
     u = authenticate(username=username, password=request_json['password'])
     login(request, u)
@@ -95,45 +88,33 @@ def set_password(request, username):
     return create_json_response({'success': True})
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def create_staff_user(request):
-    try:
-        _create_user(request, is_staff=True)
-    except CreateUserException as e:
-        return create_json_response({'error': str(e)}, status=e.status_code, reason=str(e))
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def update_policies(request):
+    request_json = json.loads(request.body)
+    if not request_json.get('acceptedPolicies'):
+        message = 'User must accept current policies'
+        return create_json_response({'error': message}, status=400, reason=message)
 
-    return create_json_response({'success': True})
+    get_or_create_model_from_json(
+        UserPolicy, {'user': request.user}, update_json={
+            'privacy_version': SEQR_PRIVACY_VERSION,
+            'tos_version': SEQR_TOS_VERSION,
+        }, user=request.user)
+
+    return create_json_response({'currentPolicies': True})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
-    try:
-        user = _create_user(request)
-    except CreateUserException as e:
-        if e.existing_user:
-            return _update_existing_user(e.existing_user, project, json.loads(request.body))
-        else:
-            return create_json_response({'error': str(e)}, status=e.status_code, reason=str(e))
-
-    project.can_view_group.user_set.add(user)
-
-    return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
-    })
-
-
-def _create_user(request, is_staff=False):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
-        raise CreateUserException('Email is required')
+        return create_json_response({'error': 'Email is required'}, status=400)
 
     existing_user = User.objects.filter(email__iexact=request_json['email']).first()
     if existing_user:
-        raise CreateUserException('This user already exists', existing_user=existing_user)
+        return _update_existing_user(existing_user, project, request_json)
 
     username = User.objects.make_random_password()
     user = User.objects.create_user(
@@ -141,21 +122,27 @@ def _create_user(request, is_staff=False):
         email=request_json['email'],
         first_name=request_json.get('firstName') or '',
         last_name=request_json.get('lastName') or '',
-        is_staff=is_staff,
     )
+    logger.info('Created user {} (local)'.format(request_json['email']), extra={'user': request.user})
 
     try:
         send_welcome_email(user, request.user)
     except AnymailError as e:
-        raise CreateUserException(str(e), status_code=getattr(e, 'status_code', None) or 400)
+        return create_json_response({'error': str(e)}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
 
-    return user
+    project.can_view_group.user_set.add(user)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(request.user, project)}}
+    })
+
+
+def _get_user_json(request_json):
+    return {k: request_json.get(k) or '' for k in ['firstName', 'lastName']}
 
 
 def _update_existing_user(user, project, request_json):
-    user.first_name = request_json.get('firstName') or ''
-    user.last_name = request_json.get('lastName') or ''
-    user.save()
+    update_model_from_json(user, _get_user_json(request_json), user=user)
 
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):
@@ -164,12 +151,11 @@ def _update_existing_user(user, project, request_json):
         project.can_edit_group.user_set.remove(user)
 
     return create_json_response({
-        'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(user, project)}}
     })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -179,7 +165,6 @@ def update_project_collaborator(request, project_guid, username):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -188,5 +173,5 @@ def delete_project_collaborator(request, project_guid, username):
     project.can_edit_group.user_set.remove(user)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(request.user, project)}}
     })

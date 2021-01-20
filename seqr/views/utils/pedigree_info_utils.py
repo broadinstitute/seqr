@@ -1,18 +1,16 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
-from __future__ import unicode_literals
-from builtins import str
-
 import difflib
 import os
 import json
 import logging
 import tempfile
-import traceback
 import openpyxl as xl
+from django.contrib.auth.models import User
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-from settings import UPLOADED_PEDIGREE_FILE_RECIPIENTS
+from settings import PM_USER_GROUP
+from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
-def parse_pedigree_table(parsed_file, filename, user=None, project=None):
+def parse_pedigree_table(parsed_file, filename, user, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
@@ -53,6 +51,8 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
         is_datstat_upload = 'DATSTAT' in header_string
         is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
         if is_merged_pedigree_sample_manifest:
+            if not user_is_pm(user):
+                raise ValueError('Unsupported file format')
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
             rows = rows[2:]
@@ -89,7 +89,6 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         rows = [dict(zip(header, row)) for row in rows]
     except Exception as e:
-        traceback.print_exc()
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -106,7 +105,6 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
-        traceback.print_exc()
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -353,6 +351,8 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
 
+    recipients = [u.email for u in User.objects.filter(groups__name=PM_USER_GROUP)]
+
     # write out the sample manifest file
     wb = xl.Workbook()
     ws = wb.active
@@ -369,7 +369,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     temp_sample_manifest_file.seek(0)
 
     sample_manifest_filename = kit_id+".xlsx"
-    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+    logger.info('Sending sample manifest file {} to {}'.format(sample_manifest_filename, ', '.join(recipients)))
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
@@ -393,7 +393,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
-        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        to=recipients,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
@@ -438,8 +438,7 @@ def _parse_datstat_export_format(rows):
 
 
 def _get_datstat_family_notes(row):
-    row = {k: v.encode('ascii', errors='ignore').decode() if isinstance(v, str) else str(v, 'ascii', errors='ignore')
-           for k, v in row.items()}
+    row = {k: v.encode('ascii', errors='ignore').decode() for k, v in row.items()}
 
     DC = DatstatConstants
 
@@ -614,15 +613,8 @@ class JsonConstants:
     SAMPLE_ID_COLUMN = 'sampleId'
     NOTES_COLUMN = 'notes'
     FAMILY_NOTES_COLUMN = 'familyNotes'
-
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
-
-    # staff-only uploads
     PROBAND_RELATIONSHIP = 'probandRelationship'
-    #CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
-
-    #POST_DISCOVERY_OMIM_COLUMN = 'postDiscoveryOmim'
-    #FUNDING_SOURCE_COLUMN = 'fundingSource'
 
 
 class MergedPedigreeSampleManifestConstants:

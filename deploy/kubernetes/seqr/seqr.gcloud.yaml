@@ -14,7 +14,7 @@ spec:
     name: seqr
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: seqr
   namespace: {{ NAMESPACE }}
@@ -23,8 +23,14 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: seqr
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/skip-outbound-ports: "6379,5432"
       labels:
         name: seqr
         deployment: {{ DEPLOY_TO }}
@@ -42,6 +48,9 @@ spec:
           # This disk must already exist.
           pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
           fsType: ext4
+      # - name: elasticsearch-es-http-certs-public
+      #   secret:
+      #     secretName: elasticsearch-es-http-certs-public
       containers:
       - name: seqr-pod
         ports:
@@ -57,6 +66,9 @@ spec:
           mountPath: {{ MME_CONFIG_DIR }}
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
+        # - name: elasticsearch-es-http-certs-public
+        #   mountPath: "/elasticsearch-certs"
+        #   readOnly: true
         resources:
           requests:
             memory: "0.5Gi"
@@ -69,15 +81,12 @@ spec:
               name: all-settings
         env:
         - name: POSTGRES_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.username
+          value: "{{ POSTGRES_USERNAME }}"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres.password
+              key: password
         - name: OMIM_KEY
           valueFrom:
             secretKeyRef:
@@ -103,6 +112,26 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: django_key
+        - name: SEQR_ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: seqr_es_password
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_id
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_secret
+        - name: KIBANA_ES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kibana-secrets
+              key: elasticsearch.password
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
@@ -125,28 +154,36 @@ spec:
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"
-        - name: DEPLOY_TO
-          value: "{{ DEPLOY_TO }}"
-        - name: DEPLOY_TO_PREFIX
-          value: "{{ DEPLOY_TO_PREFIX }}"
         - name: DEPLOYMENT_TYPE
           value: "{{ DEPLOYMENT_TYPE }}"
-        - name: CLUSTER_NAME
-          value: "{{ CLUSTER_NAME }}"
         - name: SEQR_GIT_BRANCH
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
-          value: "{{ BASE_URL }}"
+          value: "https://{{ CLUSTER_HOSTNAME }}/"
         - name: DATABASE_BACKUP_BUCKET
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS
           value: "{{ ENABLE_DATABASE_BACKUPS }}"
-        - name: UPLOADED_PEDIGREE_FILE_RECIPIENTS
-          value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
         - name: STATIC_MEDIA_DIR
           value: "{{ STATIC_MEDIA_DIR }}"
         - name: MME_CONFIG_DIR
           value: "{{ MME_CONFIG_DIR }}"
+        - name: TERRA_API_ROOT_URL
+          value: "{{ TERRA_API_ROOT_URL }}"
+        - name: ELASTICSEARCH_PROTOCOL
+          value: "{{ ELASTICSEARCH_PROTOCOL }}"
+        # - name: ELASTICSEARCH_CA_PATH
+        #   value: "{{ ELASTICSEARCH_CA_PATH }}"
+        - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_PERMS_CACHE_EXPIRE_SECONDS }}"
+        - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS }}"
+        - name: ANALYST_PROJECT_CATEGORY
+          value: "{{ ANALYST_PROJECT_CATEGORY }}"
+        - name: ANALYST_USER_GROUP
+          value: "{{ ANALYST_USER_GROUP }}"
+        - name: PM_USER_GROUP
+          value: "{{ PM_USER_GROUP }}"
         readinessProbe:
           exec:
             command:
@@ -167,3 +204,5 @@ spec:
                       values:
                       - seqr
                 topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'

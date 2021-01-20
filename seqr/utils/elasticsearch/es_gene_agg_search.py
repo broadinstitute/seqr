@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from collections import defaultdict
 import logging
 
@@ -16,7 +14,7 @@ class EsGeneAggSearch(EsSearch):
     def aggregate_by_gene(self):
         searches = [self._search]
         for index_searches in self._index_searches.values():
-            searches += [index_search for index_search in index_searches if index_search not in searches]
+            searches += [index_search for index_search in index_searches]
 
         for search in searches:
             agg = search.aggs.bucket(
@@ -60,7 +58,8 @@ class EsGeneAggSearch(EsSearch):
 
     def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
-            raise Exception('This search returned too many genes')
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('This search returned too many genes')
 
         gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int), 'sample_ids': set()})
         for gene_agg in response.aggregations.genes.buckets:

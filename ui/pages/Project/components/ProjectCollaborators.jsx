@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUsersByUsername, getCurrentProject, getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsByUsername, getCurrentProject, getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -41,7 +41,7 @@ CollaboratorEmailDropdown.propTypes = {
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
-  usersByUsername: getUsersByUsername(state),
+  usersByUsername: getUserOptionsByUsername(state),
 })
 
 const mapDropdownDispatchToProps = {
@@ -105,10 +105,11 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
-  orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
+const ProjectCollaborators = React.memo(({ project, anvilCollaborator, onSubmit }) => (
+  <div>{anvilCollaborator && project.collaborators.filter(col => col.isAnvil === anvilCollaborator).length > 0 && <p>AnVIL Workspace Users</p>}{
+  orderBy(project.collaborators.filter(col => col.isAnvil === anvilCollaborator), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
     <CollaboratorContainer key={c.username}>
-      {project.canEdit &&
+      {project.canEdit && !c.isAnvil &&
         <span>
           <HorizontalSpacer width={10} />
           <UpdateButton
@@ -133,7 +134,6 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
             }
           />
         </span>
-
       }
       <Popup
         position="top center"
@@ -144,12 +144,14 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => (
       {c.displayName && `${c.displayName} - `}
       <a href={`mailto:${c.email}`}>{c.email}</a>
     </CollaboratorContainer>,
-  )
+  )}
+  </div>
 ))
 
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  anvilCollaborator: PropTypes.bool.isRequired,
   onSubmit: PropTypes.func,
 }
 

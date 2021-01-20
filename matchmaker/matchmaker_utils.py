@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -8,6 +6,7 @@ from django.db.models import prefetch_related_objects, Q
 from reference_data.models import HumanPhenotypeOntology
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols, get_filtered_gene_ids
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
 logger = logging.getLogger(__name__)
@@ -97,6 +96,7 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
+                    'end': gene_feature['variant'].get('end'),
                     'genomeVersion': gene_feature['variant'].get('assembly'),
                 })
             gene_variants.append(gene_variant)
@@ -150,7 +150,7 @@ def get_submission_json_for_external_match(submission, score=None):
     return submission_json
 
 
-def get_mme_matches(patient_data, origin_request_host=None, user=None):
+def get_mme_matches(patient_data, origin_request_host=None, user=None, originating_submission=None):
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results([patient_data])
 
     genomic_features = _get_patient_genomic_features(patient_data)
@@ -182,22 +182,23 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None):
         **get_submission_kwargs
     )
 
-    incoming_query = MatchmakerIncomingQuery.objects.create(
-        institution=patient_data['patient']['contact'].get('institution') or origin_request_host,
-        patient_id=query_patient_id if scored_matches else None,
-    )
+    incoming_query = create_model_from_json(MatchmakerIncomingQuery, {
+        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
+        'patient_id': query_patient_id if scored_matches else None,
+    }, user)
     if not scored_matches:
         return [], incoming_query
 
     prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
-            MatchmakerResult.objects.create(
-                submission=match_submission,
-                originating_query=incoming_query,
-                result_data=patient_data,
-                last_modified_by=user,
-            )
+            create_model_from_json( MatchmakerResult, {
+                'submission': match_submission,
+                'originating_submission': originating_submission,
+                'originating_query': incoming_query,
+                'result_data': patient_data,
+                'last_modified_by': user,
+            }, user)
 
     return [get_submission_json_for_external_match(match_submission, score=score)
             for match_submission, score in scored_matches.items()], incoming_query
@@ -210,7 +211,7 @@ def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phe
 
     matches = []
     for item_id in query_ids:
-        matches += MatchmakerSubmission.objects.filter(**{
+        matches += MatchmakerSubmission.objects.filter(deleted_date__isnull=True, **{
             '{}__contains'.format(filter_key): [id_filter_func(item_id)]
         }).exclude(submission_id=patient_id)
 

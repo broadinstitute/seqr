@@ -1,14 +1,6 @@
 [
 {
     "model": "auth.group",
-    "pk": 1,
-    "fields": {
-        "name": "_owners_f3bb72ba-270e-4bd6-a756-34abef69cc5f",
-        "permissions": []
-    }
-},
-{
-    "model": "auth.group",
     "pk": 2,
     "fields": {
         "name": "_can_edit_a848cbf1-2278-4dba-9bcd-d97b42e4b1ac",
@@ -24,6 +16,22 @@
     }
 },
 {
+    "model": "auth.group",
+    "pk": 4,
+    "fields": {
+        "name": "analysts",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 5,
+    "fields": {
+        "name": "project-managers",
+        "permissions": []
+    }
+},
+{
     "model": "auth.user",
     "pk": 10,
     "fields": {
@@ -33,11 +41,11 @@
         "username": "test_user",
         "first_name": "Test User",
         "last_name": "",
-        "email": "test_user@test.com",
-        "is_staff": true,
+        "email": "test_user@broadinstitute.org",
+        "is_staff": false,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",
-        "groups": [],
+        "groups": [4],
         "user_permissions": []
     }
 }, {
@@ -64,10 +72,10 @@
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
         "last_login": null,
         "is_superuser": false,
-        "username": "test_user_non_staff",
-        "first_name": "Test Non Staff User",
+        "username": "test_user_collaborator",
+        "first_name": "Test Collaborator User",
         "last_name": "",
-        "email": "test_user_no_staff@test.com",
+        "email": "test_user_collaborator@test.com",
         "is_staff": false,
         "is_active": true,
         "date_joined": "2017-03-12T23:09:54.180Z",
@@ -91,5 +99,94 @@
         "groups": [],
         "user_permissions": []
     }
+}, {
+    "model": "auth.user",
+    "pk": 14,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCyrtyrty+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "test_local_user",
+        "first_name": "Test seqr local User",
+        "last_name": "",
+        "email": "test_local_user@test.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 15,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": true,
+        "username": "test_superuser",
+        "first_name": "Test Superuser",
+        "last_name": "",
+        "email": "test_superuser@test.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 16,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "test_data_manager",
+        "first_name": "Test Data Manager",
+        "last_name": "",
+        "email": "test_data_manager@test.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 17,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "test_pm_user",
+        "first_name": "Test PM User",
+        "last_name": "",
+        "email": "test_pm_user@test.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [4, 5],
+        "user_permissions": []
+    }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 1,
+  "fields": {
+    "user_id": 10,
+    "privacy_version": 1.0,
+    "tos_version": 1.0
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 2,
+  "fields": {
+    "user_id": 11,
+    "privacy_version": 0.7,
+    "tos_version": 0.3
+  }
 }
 ]

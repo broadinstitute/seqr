@@ -5,7 +5,9 @@ import hash from 'object-hash'
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
-import { reducers as staffReducers } from 'pages/Staff/reducers'
+import { reducers as dataManagementReducers } from 'pages/DataManagement/reducers'
+import { reducers as reportReducers } from 'pages/Report/reducers'
+import { reducers as summaryDataReducers } from 'pages/SummaryData/reducers'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import {
@@ -32,8 +34,9 @@ export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
-const REQUEST_USERS = 'REQUEST_USERS'
-const RECEIVE_USERS = 'RECEIVE_USERS'
+const REQUEST_USER_OPTIONS = 'REQUEST_USER_OPTIONS'
+const RECEIVE_USER_OPTIONS = 'RECEIVE_USER_OPTIONS'
+const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 
@@ -77,23 +80,36 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadUserOptions = (staffOnly) => {
+export const loadUserOptions = (analystsOnly) => {
 
   return (dispatch) => {
-    const url = staffOnly ? '/api/users/get_all_staff' : '/api/users/get_all'
-    dispatch({ type: REQUEST_USERS })
+    const url = analystsOnly ? '/api/users/get_analyst_options' : '/api/users/get_options'
+    dispatch({ type: REQUEST_USER_OPTIONS })
     new HttpRequestHelper(url,
       (responseJson) => {
-        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+        dispatch({ type: RECEIVE_USER_OPTIONS, newValue: responseJson })
       },
       (e) => {
-        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+        dispatch({ type: RECEIVE_USER_OPTIONS, error: e.message, newValue: [] })
       },
     ).get()
   }
 }
 
-export const loadStaffOptions = () => loadUserOptions(true)
+export const loadAnalystOptions = () => loadUserOptions(true)
+
+export const updateUserPolicies = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/users/update_policies',
+      (responseJson) => {
+        dispatch({ type: UPDATE_USER, updates: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
 
 export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
   return (dispatch, getState) => {
@@ -336,7 +352,7 @@ export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).get()
+    ).post()
   }
 }
 
@@ -397,10 +413,10 @@ const rootReducer = combineReducers(Object.assign({
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
-  user: zeroActionsReducer,
+  user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
-  usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
-  userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
+  userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
   form: formReducer,
   igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
@@ -409,6 +425,6 @@ const rootReducer = combineReducers(Object.assign({
     page: 1,
     recordsPerPage: 100,
   }, false),
-}, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
+}, modalReducers, dashboardReducers, projectReducers, searchReducers, reportReducers, dataManagementReducers, summaryDataReducers))
 
 export default rootReducer

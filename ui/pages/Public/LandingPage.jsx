@@ -17,13 +17,13 @@ export default () =>
       <Grid columns="equal">
         <Grid.Column width={3} />
         <Grid.Column>
-          <img src="/media/images/landing_page_icon1.png" alt="Identify disease causing variants" width="100%" />
+          <img src="/static/images/landing_page_icon1.png" alt="Identify disease causing variants" width="100%" />
         </Grid.Column>
         <Grid.Column>
-          <img src="/media/images/landing_page_icon3.png" alt="Integrate data sources" width="100%" />
+          <img src="/static/images/landing_page_icon3.png" alt="Integrate data sources" width="100%" />
         </Grid.Column>
         <Grid.Column>
-          <img src="/media/images/landing_page_icon2.png" alt="Collaborate" width="100%" />
+          <img src="/static/images/landing_page_icon2.png" alt="Collaborate" width="100%" />
         </Grid.Column>
         <Grid.Column width={3} />
       </Grid>
@@ -60,9 +60,9 @@ export default () =>
               </a>
             </List.Item>
             <List.Item>
-              The <a target="_blank" href="http://github.com/macarthur-lab/seqr"><b>source code</b></a> is available on
+              The <a target="_blank" href="http://github.com/broadinstitute/seqr"><b>source code</b></a> is available on
               github. Please use the &nbsp;
-              <a target="_blank" href="http://github.com/macarthur-lab/seqr/issues"><b>github issues page</b></a> to
+              <a target="_blank" href="http://github.com/broadinstitute/seqr/issues"><b>github issues page</b></a> to
               submit bug reports or feature requests
             </List.Item>
           </List>

@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Icon, Transition } from 'semantic-ui-react'
+import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
 import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP, getVariantMainGeneId } from 'shared/utils/constants'
@@ -20,35 +20,62 @@ const PredictionValue = styled.span`
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
 
-const predictionFieldValue = (predictions, { field, dangerThreshold, warningThreshold, indicatorMap, noSeverity }) => {
+const predictionFieldValue = (predictions, { field, dangerThreshold, warningThreshold, indicatorMap, noSeverity, infoField, infoTitle }) => {
   let value = predictions[field]
-  if (noSeverity || value === null) {
+  if (noSeverity || value === null || value === undefined) {
     return { value }
   }
 
+  const infoValue = predictions[infoField]
+
   if (dangerThreshold) {
     value = parseFloat(value).toPrecision(2)
+    let color = 'green'
     if (value >= dangerThreshold) {
-      return { value, color: 'red' }
+      color = 'red'
     } else if (value >= warningThreshold) {
-      return { value, color: 'yellow' }
+      color = 'yellow'
     }
-    return { value, color: 'green' }
+    return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
   }
 
   return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } : PREDICTION_INDICATOR_MAP[value[0]]
 }
 
-const Prediction = ({ field, value, color }) =>
-  <div>
-    <Icon name="circle" size="small" color={color} /> {snakecaseToTitlecase(field)}
-    <PredictionValue> {value}</PredictionValue>
-  </div>
+const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
+  const indicator = infoValue ? <Popup
+    header={infoTitle}
+    content={infoValue}
+    trigger={<Icon name="question circle" size="small" color={color} />}
+  /> : <Icon name="circle" size="small" color={color} />
+  const fieldName = snakecaseToTitlecase(field)
+  const fieldDisplay = dangerThreshold ? <Popup
+    header={`${fieldName} Color Ranges`}
+    content={
+      <div>
+        <div>Red &gt; {dangerThreshold}</div>
+        <div>Yellow &gt; {warningThreshold}</div>
+      </div>}
+    trigger={<span>{fieldName}</span>}
+  /> : fieldName
+
+  return (
+    <div>
+      {indicator} {fieldDisplay}
+      <PredictionValue> {value}</PredictionValue>
+    </div>
+  )
+}
+
 
 Prediction.propTypes = {
   field: PropTypes.string.isRequired,
   value: PropTypes.any.isRequired,
+  infoValue: PropTypes.any,
+  infoTitle: PropTypes.string,
   color: PropTypes.string,
+  warningThreshold: PropTypes.number,
+  dangerThreshold: PropTypes.number,
 }
 
 const PREDICTOR_FIELDS = [
@@ -56,7 +83,7 @@ const PREDICTOR_FIELDS = [
   { field: 'revel', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
   { field: 'mpc', warningThreshold: 1, dangerThreshold: 2 },
-  { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8 },
+  { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
   { field: 'eigen', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'dann', warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'strvctvre', warningThreshold: 0.5, dangerThreshold: 0.75 },

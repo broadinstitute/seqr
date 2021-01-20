@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from builtins import str
-
 from io import TextIOWrapper
 
 import csv
@@ -13,7 +10,6 @@ import tempfile
 import openpyxl as xl
 
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from settings import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
@@ -22,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def save_temp_file(request):
 
     try:

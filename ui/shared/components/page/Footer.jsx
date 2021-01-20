@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 
 import { getVersion } from 'redux/selectors'
 
@@ -20,12 +21,14 @@ const Footer = React.memo(({ version }) =>
     <Table.Header>
       <Table.Row>
         <TableHeaderCell width={1} />
-        <TableHeaderCell width={2} disabled>seqr {version}</TableHeaderCell>
-        <TableHeaderCell width={6}>
+        <TableHeaderCell collapsing disabled>seqr {version}</TableHeaderCell>
+        <TableHeaderCell collapsing><Link to="/privacy_policy">Privacy Policy</Link></TableHeaderCell>
+        <TableHeaderCell collapsing><Link to="/terms_of_service">Terms of Service</Link></TableHeaderCell>
+        <TableHeaderCell>
           For bug reports or feature requests please submit  &nbsp;
-          <a href="https://github.com/macarthur-lab/seqr/issues">Github Issues</a>
+          <a href="https://github.com/broadinstitute/seqr/issues">Github Issues</a>
         </TableHeaderCell>
-        <TableHeaderCell width={5} textAlign="right">
+        <TableHeaderCell collapsing textAlign="right">
           If you have questions or feedback, &nbsp;
           <a
             href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org"
@@ -34,7 +37,7 @@ const Footer = React.memo(({ version }) =>
             Contact Us
           </a>
         </TableHeaderCell>
-        <TableHeaderCell width={2} />
+        <TableHeaderCell width={1} />
       </Table.Row>
     </Table.Header>
   </Table>,

@@ -39,9 +39,11 @@ export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
-export const getUsersByUsername = state => state.usersByUsername
+export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getVersion = state => state.meta.version
+export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
+export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
@@ -64,10 +66,6 @@ export const getAnnotationSecondary = (state) => {
   }
 }
 
-export const getAllUsers = createSelector(
-  getUsersByUsername,
-  usersByUsername => Object.values(usersByUsername),
-)
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
@@ -156,7 +154,7 @@ export const getIGVSamplesByFamily = createSelector(
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => (
-  state.currentProjectGuid ? state.savedVariantTableState : state.staffSavedVariantTableState
+  state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
 )
 
 export const getPairedSelectedSavedVariants = createSelector(
@@ -415,7 +413,7 @@ export const getTagTypesByProject = createSelector(
   getProjectsByGuid,
   projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [project.projectGuid]: project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+    [project.projectGuid]: (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
   }), {}),
 )
 

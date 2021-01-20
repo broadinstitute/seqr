@@ -1,11 +1,6 @@
-from __future__ import unicode_literals
-from builtins import int
-
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
-VARIANT_DOC_TYPE = 'variant'
-SV_DOC_TYPE = 'structural_variant'
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 7500
@@ -26,8 +21,7 @@ GENOTYPE_QUERY_MAP = {
     ALT_ALT: {'allowed_num_alt': ['samples_num_alt_2', 'samples_cn_0', 'samples_cn_2', 'samples_cn_gte_4']},
     HAS_ALT: {'allowed_num_alt': ['samples_num_alt_1', 'samples_num_alt_2', 'samples']},
     HAS_REF: {
-        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2'],
-        'allowed_num_alt': ['samples_cn_1', 'samples_cn_3'],
+        'not_allowed_num_alt': ['samples_no_call', 'samples_num_alt_2', 'samples_cn_0', 'samples_cn_gte_4'],
     },
 }
 
@@ -192,12 +186,6 @@ SORT_FIELDS = {
             }
         }
     }],
-    'cadd': [{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'revel': [{'dbnsfp_REVEL_score': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'eigen': [{'eigen_Eigen_phred': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'mpc': [{'mpc_MPC': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'splice_ai': [{'splice_ai_delta_score': {'order': 'desc', 'unmapped_type': 'float'}}],
-    'primate_ai': [{'primate_ai_score': {'order': 'desc', 'unmapped_type': 'float'}}],
     'constraint': [{
         '_script': {
             'order': 'asc',
@@ -233,6 +221,18 @@ POPULATION_SORTS = {
         }
     }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
+PREDICTOR_SORT_FIELDS = {
+    'cadd': 'cadd_PHRED',
+    'revel': 'dbnsfp_REVEL_score',
+    'eigen': 'eigen_Eigen_phred',
+    'mpc': 'mpc_MPC',
+    'splice_ai': 'splice_ai_delta_score',
+    'primate_ai': 'primate_ai_score',
+}
+SORT_FIELDS.update({
+    sort: [{sort_field: {'order': 'desc', 'unmapped_type': True}}]
+    for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
+})
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
@@ -246,11 +246,12 @@ NESTED_FIELDS = {
     }.items()
 }
 
+GRCH38_LOCUS_FIELD = 'rg37_locus'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
     'end': {'format_value': int},
-    'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
+    'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': ''},
     'num_exon': {'response_key': 'numExon'},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
@@ -259,6 +260,7 @@ CORE_FIELDS_CONFIG = {
     'svType': {},
     'variantId': {},
     'xpos': {'format_value': int},
+    GRCH38_LOCUS_FIELD: {},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -273,6 +275,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': 'splice_ai'},
+    'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},

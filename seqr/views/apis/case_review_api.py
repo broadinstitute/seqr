@@ -1,56 +1,62 @@
 """
 APIs used by the case review page
 """
-from __future__ import unicode_literals
-
 import json
 
-from django.contrib.admin.views.decorators import staff_member_required
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_family
-from seqr.models import Family
+from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individual
+from seqr.views.utils.permissions_utils import has_case_review_permissions
+from seqr.models import Family, Individual
 from settings import API_LOGIN_REQUIRED_URL
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def save_internal_case_review_notes(request, family_guid):
-    """Updates the `case_review_notes` field for the given family.
+    return _update_family_case_review(family_guid, request, 'caseReviewNotes')
 
-    Args:
-        family_guid  (string): GUID of the family.
-    """
-
-    family = Family.objects.get(guid=family_guid)
-    request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
-
-    family.internal_case_review_notes = request_json['value']
-    family.save()
-
-    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
-
-
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def save_internal_case_review_summary(request, family_guid):
-    """Updates the `internal_case_review_summary` field for the given family.
+    return _update_family_case_review(family_guid, request, 'caseReviewSummary')
 
-    Args:
-        family_guid  (string): GUID of the family.
-    """
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def update_case_review_discussion(request, individual_guid):
+    return _update_individual_case_review(individual_guid, request, 'caseReviewDiscussion')
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def update_case_review_status(request, individual_guid):
+    return _update_individual_case_review(individual_guid, request, 'caseReviewStatus', additional_updates={
+        'caseReviewStatusLastModifiedBy': request.user,
+        'caseReviewStatusLastModifiedDate': timezone.now(),
+    })
+
+def _update_case_review(model, project, request, field, get_response_json, additional_updates=None):
+    if not has_case_review_permissions(project, request.user):
+        raise PermissionDenied('User cannot edit case review for this project')
+
+    update_json = {field: json.loads(request.body).get(field)}
+    if additional_updates:
+        update_json.update(additional_updates)
+
+    update_model_from_json(model, update_json, user=request.user)
+
+    return create_json_response({
+        model.guid: get_response_json(model, request.user)
+    })
+
+def _update_family_case_review(family_guid, request, field):
     family = Family.objects.get(guid=family_guid)
-    request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
+    project = family.project
 
-    family.internal_case_review_summary = request_json['value']
-    family.save()
-    
-    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
+    return _update_case_review(family, project, request, field, _get_json_for_family)
 
+def _update_individual_case_review(individual_guid, request, field, additional_updates=None):
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
 
+    return _update_case_review(
+        individual, project, request, field, _get_json_for_individual, additional_updates=additional_updates)

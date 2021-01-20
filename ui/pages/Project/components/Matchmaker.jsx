@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
@@ -36,6 +37,7 @@ import {
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
+  getVariantUniqueId,
 } from '../selectors'
 
 const BreakWordLink = styled.a.attrs({ target: '_blank' })`
@@ -59,14 +61,14 @@ const MATCH_STATUS_EDIT_FIELDS = [
 const variantSummary = variant => (
   <span>
     {variant.chrom}:{variant.pos}
-    {variant.alt && <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span>}
+    {variant.alt ? <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span> : `-${variant.end}`}
   </span>
 )
 
 const GENOTYPE_FIELDS = [
   { name: 'geneSymbol', content: 'Gene', width: 2 },
   { name: 'xpos', content: 'Variant', width: 3, format: val => variantSummary(val) },
-  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} numAlt={val.numAlt} /> },
+  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} numAlt={val.numAlt} cn={val.cn} /> },
   {
     name: 'tags',
     content: 'Tags',
@@ -156,7 +158,7 @@ const SUBMISSION_EDIT_FIELDS = [
     name: 'geneVariants',
     component: EditGenotypesTable,
     format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantId || `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`]: true }), {}),
+      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: true }), {}),
   },
   {
     name: 'phenotypes',
@@ -249,7 +251,7 @@ const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
 const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) =>
   <TextFieldView
-    isVisible={user.isStaff}
+    isVisible={user.isAnalyst}
     fieldName="Contact Notes"
     field="comments"
     idField="contactInstitution"
@@ -279,18 +281,27 @@ const mapContactNotesDispatchToProps = {
 
 const ContactNotes = connect(mapContactNotesStateToProps, mapContactNotesDispatchToProps)(BaseContactNotes)
 
+const formatYesNo = bool => (bool ? 'Yes' : 'No')
+
 const DISPLAY_FIELDS = [
   {
     name: 'id',
     width: 2,
     content: 'Match',
     verticalAlign: 'top',
-    format: (val) => {
+    format: (val, isDownload) => {
       const patientFields = Object.keys(val.patient).filter(k => val.patient[k] && !PATIENT_CORE_FIELDS.includes(k))
       let displayName = val.id
       if (val.patient.label) {
         displayName = val.patient.label
         patientFields.unshift('id')
+      }
+      if (isDownload) {
+        return displayName
+      }
+      if (val.originatingSubmission) {
+        const href = `/project/${val.originatingSubmission.projectGuid}/family_page/${val.originatingSubmission.familyGuid}/matchmaker_exchange`
+        displayName = <Link to={href} target="_blank">{displayName}</Link>
       }
       return patientFields.length ? <Popup
         header="Patient Details"
@@ -315,40 +326,52 @@ const DISPLAY_FIELDS = [
     width: 3,
     content: 'Contact',
     verticalAlign: 'top',
-    format: val => val.patient.contact &&
+    format: ({ patient }, isDownload) => patient.contact && (isDownload ?
+      patient.contact.institution || patient.contact.name :
       <div>
-        <div><b>{val.patient.contact.institution}</b></div>
-        <div>{val.patient.contact.name}</div>
-        {val.patient.contact.email &&
+        <div><b>{patient.contact.institution}</b></div>
+        <div>{patient.contact.name}</div>
+        {patient.contact.email &&
           <div>
-            <BreakWordLink href={val.patient.contact.email}>{val.patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
           </div>
         }
-        <BreakWordLink href={val.patient.contact.href}>{val.patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+        <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
         <VerticalSpacer height={10} />
-        <ContactNotes contact={val.patient.contact} modalId={val.patient.id} />
-      </div>,
+        <ContactNotes contact={patient.contact} modalId={patient.id} />
+      </div>
+    ),
   },
   {
     name: 'geneVariants',
     width: 2,
     content: 'Genes',
     verticalAlign: 'top',
-    format: val => <SubmissionGeneVariants geneVariants={val.geneVariants} modalId={val.id} />,
+    downloadColumn: 'We Contacted Host',
+    format: (val, isDownload) => (
+      isDownload ? formatYesNo(val.weContacted) :
+      <SubmissionGeneVariants geneVariants={val.geneVariants} modalId={val.id} />
+    ),
   },
   {
     name: 'phenotypes',
     width: 4,
     content: 'Phenotypes',
     verticalAlign: 'top',
-    format: val => <Phenotypes phenotypes={val.phenotypes} />,
+    downloadColumn: 'Host Contacted Us',
+    format: (val, isDownload) => (
+      isDownload ? formatYesNo(val.hostContacted) : <Phenotypes phenotypes={val.phenotypes} />
+    ),
   },
   {
     name: 'comments',
     width: 4,
     content: 'Follow Up Status',
     verticalAlign: 'top',
-    format: initialValues => <MatchStatus initialValues={initialValues} />,
+    downloadColumn: 'Notes',
+    format: (initialValues, isDownload) => (
+      isDownload ? initialValues.comments : <MatchStatus initialValues={initialValues} />
+    ),
   },
 ]
 
@@ -438,6 +461,8 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
             data={mmeResults.active}
             loading={loading}
             emptyContent="No matches found"
+            downloadFileName={`MME_matches_${individual.displayName}`}
+            downloadAlign="none"
           />
         </div>}
       {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 &&

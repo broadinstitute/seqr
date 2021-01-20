@@ -187,7 +187,7 @@ export const PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
 ]
 
-export const STAFF_PATHOGENICITY_FIELDS = [
+export const ANALYST_PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
   {
     name: HGMD_NAME,
@@ -205,7 +205,7 @@ export const ANY_PATHOGENICITY_FILTER = {
   },
 }
 
-export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
+export const ANALYST_PATHOGENICITY_FILTER_OPTIONS = [
   ANY_PATHOGENICITY_FILTER,
   {
     text: 'Pathogenic/ Likely Path.',
@@ -222,7 +222,7 @@ export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
     },
   },
 ]
-export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
+export const PATHOGENICITY_FILTER_OPTIONS = ANALYST_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
   text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
 
@@ -310,13 +310,13 @@ export const FREQUENCIES = [
     name: 'gnomad_genomes',
     label: 'gnomAD genomes',
     homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ',
+    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these five subpopulations defined for gnomAD genomes: AFR, AMR, EAS, NFE, SAS',
   },
   {
     name: 'gnomad_exomes',
     label: 'gnomAD exomes',
     homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS',
+    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these five subpopulations defined for gnomAD exomes: AFR, AMR, EAS, NFE, SAS',
   },
   {
     name: 'topmed',

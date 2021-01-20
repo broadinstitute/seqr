@@ -2,31 +2,35 @@
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 
 CLUSTER_NAME: 'seqr-cluster-dev'
-CLUSTER_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-CLUSTER_NUM_NODES: 1
+
+DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-4'
+DEFAULT_POOL_NUM_NODES: 1
+NODE_POOLS: {}
 
 CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
-BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.0.3
-ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
-
-GCLOUD_PROJECT: 'seqr-project'
-GCLOUD_ZONE: 'us-central1-b'
-
-SEQR_GIT_BRANCH: 'master'
+GUNICORN_WORKER_THREADS: 4
 
 SEQR_POD_MEMORY_LIMIT: 15Gi
 REDIS_POD_MEMORY_LIMIT: 8Gi
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS: ''
+TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
-KUBERNETES_VERSION: '1.15.7-gke.23'
+####  Elasticsearch settings ####
 
-# this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
-# this allows cluster administration only from known machines or from machines on google cloud.
-MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26,69.173.127.0/25,69.173.127.240/28,69.173.127.224/30,69.173.127.230/31,69.173.120.0/22,69.173.127.228/32,69.173.126.0/24,69.173.96.0/20,69.173.64.0/19,69.173.127.192/27,69.173.124.0/23'
+ES_DATA_NUM_PODS: 1
+ES_CLIENT_NUM_PODS: 1
+ES_MASTER_NUM_PODS: 1
+ES_LOADING_NUM_PODS: 0
+
+ELASTICSEARCH_JVM_MEMORY: 1g
+ELASTICSEARCH_CONTAINER_MEMORY: 2Gi
+
+ES_DATA_NUM_DISKS: 1
+ES_DATA_DISK_TYPE: pd-standard
+ES_DATA_DISK_SIZE: 10
+ES_POD_VOLUME_SIZE: '1Gi'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
@@ -34,5 +38,4 @@ MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26
 NAMESPACE: gcloud-dev
 
 DEPLOY_TO: 'gcloud-dev'
-DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'dev'

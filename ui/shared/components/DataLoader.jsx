@@ -13,6 +13,7 @@ class DataLoader extends React.PureComponent
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func,
     unload: PropTypes.func,
+    initialLoad: PropTypes.func,
     hideError: PropTypes.bool,
     errorMessage: PropTypes.node,
     children: PropTypes.node,
@@ -24,6 +25,9 @@ class DataLoader extends React.PureComponent
 
     if (props.load) {
       props.load(props.contentId)
+    }
+    if (props.initialLoad) {
+      props.initialLoad(props.contentId)
     }
   }
 

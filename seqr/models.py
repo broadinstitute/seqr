@@ -1,22 +1,25 @@
-from __future__ import unicode_literals
-
 from abc import abstractmethod
 import uuid
 import json
+import logging
 import random
 
 from django.contrib.auth.models import User, Group
-from django.contrib.postgres.fields import JSONField, ArrayField
+from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import options, ForeignKey
+from django.db.models import options, ForeignKey, JSONField
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
+from seqr.utils.logging_utils import log_model_update, log_model_bulk_update
 from seqr.utils.xpos_utils import get_chrom_pos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
+
+logger = logging.getLogger(__name__)
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -24,13 +27,6 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_f
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
-IS_OWNER = 'is_owner'
-
-_SEQR_OBJECT_PERMISSIONS = (
-    (CAN_VIEW, CAN_VIEW),
-    (CAN_EDIT, CAN_EDIT),
-    (IS_OWNER, IS_OWNER),
-)
 
 
 def _slugify(text):
@@ -98,6 +94,46 @@ class ModelWithGUID(models.Model):
             self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
             super(ModelWithGUID, self).save()
 
+    def delete_model(self, user, user_can_delete=False):
+        """Helper delete method that logs the deletion"""
+        if not (user_can_delete or self.created_by == user):
+            raise PermissionDenied('User does not have permission to delete this {}'.format(type(self).__name__))
+        self.delete()
+        log_model_update(logger, self, user, 'delete')
+
+    @classmethod
+    def bulk_create(cls, user, new_models):
+        """Helper bulk create method that logs the creation"""
+        for model in new_models:
+            model.created_by = user
+        models = cls.objects.bulk_create(new_models)
+        log_model_bulk_update(logger, models, user, 'create')
+        return models
+
+    @classmethod
+    def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
+        """Helper bulk update method that logs the update"""
+        if queryset is None:
+            queryset = cls.objects.filter(**filter_kwargs)
+
+        entity_ids = log_model_bulk_update(logger, queryset, user, 'update', update_fields=update_json.keys())
+        queryset.update(**update_json)
+        return entity_ids
+
+    @classmethod
+    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
+        """Helper bulk delete method that logs the deletion"""
+        if queryset is None:
+            queryset = cls.objects.filter(**filter_kwargs)
+        log_model_bulk_update(logger, queryset, user, 'delete')
+        queryset.delete()
+
+
+class UserPolicy(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    privacy_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
+    tos_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
+
 
 class Project(ModelWithGUID):
     name = models.TextField()  # human-readable project name
@@ -105,7 +141,6 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
@@ -116,9 +151,12 @@ class Project(ModelWithGUID):
     mme_contact_url = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
-    disable_staff_access = models.BooleanField(default=False)
+    has_case_review = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    workspace_namespace = models.TextField(null = True, blank = True)
+    workspace_name = models.TextField(null = True, blank = True)
 
     def __unicode__(self):
         return self.name.strip()
@@ -135,17 +173,12 @@ class Project(ModelWithGUID):
 
         if being_created:
             # create user groups
-            self.owners_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'owners', uuid.uuid4()))
             self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
             self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
         if being_created:
-            assign_perm(user_or_group=self.owners_group, perm=IS_OWNER, obj=self)
-            assign_perm(user_or_group=self.owners_group, perm=CAN_EDIT, obj=self)
-            assign_perm(user_or_group=self.owners_group, perm=CAN_VIEW, obj=self)
-
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
@@ -153,24 +186,38 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            if user and not user.is_staff:  # staff have access to all resources anyway
-                user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
+            user.groups.add(self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):
         """Override the delete method to also delete the project-specific user groups"""
 
         super(Project, self).delete(*args, **kwargs)
 
-        self.owners_group.delete()
         self.can_edit_group.delete()
         self.can_view_group.delete()
 
+    def get_collaborators(self, permissions=None):
+        if not permissions:
+            permissions = {CAN_VIEW, CAN_EDIT}
+
+        collabs = set()
+        if CAN_VIEW in permissions:
+            collabs.update(self.can_view_group.user_set.all())
+        if CAN_EDIT in permissions:
+            collabs.update(self.can_edit_group.user_set.all())
+
+        return collabs
+
     class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
+        permissions = (
+            (CAN_VIEW, CAN_VIEW),
+            (CAN_EDIT, CAN_EDIT),
+        )
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
-            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid'
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
+            'workspace_namespace', 'workspace_name', 'has_case_review'
         ]
 
 
@@ -231,7 +278,7 @@ class Family(ModelWithGUID):
         choices=SUCCESS_STORY_TYPE_CHOICES,
         null=True,
         blank=True
-    ), default=list())
+    ), default=list)
     success_story = models.TextField(null=True, blank=True)
 
     mme_notes = models.TextField(null=True, blank=True)
@@ -240,7 +287,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
-    pubmed_ids = ArrayField(models.TextField(), default=list())
+    pubmed_ids = ArrayField(models.TextField(), default=list)
 
     analysis_status = models.CharField(
         max_length=10,
@@ -248,15 +295,8 @@ class Family(ModelWithGUID):
         default="Q"
     )
 
-    internal_analysis_status = models.CharField(
-        max_length=10,
-        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
-        null=True,
-        blank=True
-    )
-
-    internal_case_review_notes = models.TextField(null=True, blank=True)
-    internal_case_review_summary = models.TextField(null=True, blank=True)
+    case_review_notes = models.TextField(null=True, blank=True)
+    case_review_summary = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.family_id.strip()
@@ -273,14 +313,13 @@ class Family(ModelWithGUID):
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
-            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
             'success_story_types', 'success_story'
         ]
 
 
-# TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/macarthur-lab/seqr-private/issues/449)
+# TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/broadinstitute/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
     def __unicode__(self):
         return '{}_{}'.format(self.family.guid, self.created_by)
@@ -431,8 +470,8 @@ class Individual(ModelWithGUID):
 
     maternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
     paternal_ethnicity = ArrayField(models.CharField(max_length=40), null=True)
-    consanguinity = models.NullBooleanField()
-    affected_relatives = models.NullBooleanField()
+    consanguinity = models.BooleanField(null=True)
+    affected_relatives = models.BooleanField(null=True)
     expected_inheritance = ArrayField(models.CharField(max_length=1, choices=INHERITANCE_CHOICES), null=True)
 
     # features are objects with an id field for HPO id and optional notes and qualifiers fields
@@ -450,13 +489,13 @@ class Individual(ModelWithGUID):
     candidate_genes = JSONField(null=True)
     rejected_genes = JSONField(null=True)
 
-    ar_fertility_meds = models.NullBooleanField()
-    ar_iui = models.NullBooleanField()
-    ar_ivf = models.NullBooleanField()
-    ar_icsi = models.NullBooleanField()
-    ar_surrogacy = models.NullBooleanField()
-    ar_donoregg = models.NullBooleanField()
-    ar_donorsperm = models.NullBooleanField()
+    ar_fertility_meds = models.BooleanField(null=True)
+    ar_iui = models.BooleanField(null=True)
+    ar_ivf = models.BooleanField(null=True)
+    ar_icsi = models.BooleanField(null=True)
+    ar_surrogacy = models.BooleanField(null=True)
+    ar_donoregg = models.BooleanField(null=True)
+    ar_donorsperm = models.BooleanField(null=True)
 
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
@@ -480,8 +519,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship', 'case_review_status', 'case_review_discussion',
-            'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
+            'proband_relationship'
         ]
 
 
@@ -770,7 +808,6 @@ class LocusList(ModelWithGUID):
         return 'LL%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
         unique_together = ('name', 'description', 'is_public', 'created_by')
 
         json_fields = ['guid', 'created_by', 'created_date', 'last_modified_date', 'name', 'description', 'is_public']

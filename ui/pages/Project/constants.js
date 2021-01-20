@@ -188,14 +188,14 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Analysed By:',
     name: 'Analysed By CMG',
     createFilter: () => family =>
-      family.analysedBy.some(analysedBy => analysedBy.createdBy.isStaff),
+      family.analysedBy.some(analysedBy => analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Not Analysed By CMG',
     createFilter: () => family =>
-      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isStaff),
+      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_ANALYSED,
@@ -246,7 +246,7 @@ export const FAMILY_FILTER_OPTIONS = [
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Analysis Status:' },
 ]
 
-export const INTERNAL_FAMILY_FILTER_OPTIONS = [
+export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
@@ -267,7 +267,7 @@ export const INTERNAL_FAMILY_FILTER_OPTIONS = [
   })),
 ]
 
-export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...INTERNAL_FAMILY_FILTER_OPTIONS].reduce(
+export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...CASE_REVIEW_FAMILY_FILTER_OPTIONS].reduce(
   (acc, opt) => ({
     ...acc,
     [opt.value]: opt,
@@ -277,10 +277,11 @@ export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...INTERNAL_FAMIL
 
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
-export const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
-export const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
-export const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
-export const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
+const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
+const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
+const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
+const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
+const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
 export const FAMILY_SORT_OPTIONS = [
   {
@@ -321,6 +322,14 @@ export const FAMILY_SORT_OPTIONS = [
     name: 'Analysis Status',
     createSortKeyGetter: () => family =>
       FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
+  },
+  {
+    value: SORT_BY_ANALYSED_DATE,
+    name: 'Date Last Analysed',
+    createSortKeyGetter: () => family =>
+      family.analysedBy.map(
+        ({ lastModifiedDate }) => lastModifiedDate,
+      ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
   },
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
@@ -405,10 +414,13 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
-export const INTERNAL_FAMILY_EXPORT_DATA = [
+export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
+  ...FAMILY_EXPORT_DATA,
   { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
   { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
+
+
 export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
 
 export const INDIVIDUAL_ID_EXPORT_DATA = [
@@ -432,7 +444,8 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
 )
 
 
-export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
+export const CASE_REVIEW_INDIVIDUAL_EXPORT_DATA = [
+  ...INDIVIDUAL_EXPORT_DATA,
   { header: 'Case Review Status', field: 'caseReviewStatus', format: status => CASE_REVIEW_STATUS_OPT_LOOKUP[status].name },
   { header: 'Case Review Status Last Modified', field: 'caseReviewStatusLastModifiedDate' },
   { header: 'Case Review Status Last Modified By', field: 'caseReviewStatusLastModifiedBy' },

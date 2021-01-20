@@ -1,13 +1,12 @@
-from __future__ import unicode_literals
-
+from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
 import logging
 
-from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, VARIANT_DOC_TYPE, SV_DOC_TYPE
+from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY
 from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -19,28 +18,47 @@ logger = logging.getLogger(__name__)
 class InvalidIndexException(Exception):
     pass
 
+class InvalidSearchException(Exception):
+    pass
 
-def get_es_client(timeout=60):
-    return elasticsearch.Elasticsearch(hosts=[{"host": ELASTICSEARCH_SERVICE_HOSTNAME, "port": ELASTICSEARCH_SERVICE_PORT}],  timeout=timeout)
+
+def get_es_client(timeout=60, **kwargs):
+    client_kwargs = {
+        'hosts': [{'host': ELASTICSEARCH_SERVICE_HOSTNAME, 'port': ELASTICSEARCH_SERVICE_PORT}],
+        'timeout': timeout,
+    }
+    if ELASTICSEARCH_CREDENTIALS:
+        client_kwargs['http_auth'] = ELASTICSEARCH_CREDENTIALS
+    if ELASTICSEARCH_PROTOCOL:
+        client_kwargs['scheme'] = ELASTICSEARCH_PROTOCOL
+    if ES_SSL_CONTEXT:
+        client_kwargs['ssl_context'] = ES_SSL_CONTEXT
+    return elasticsearch.Elasticsearch(**client_kwargs, **kwargs)
 
 
-def get_index_metadata(index_name, client):
-    cache_key = 'index_metadata__{}'.format(index_name)
-    cached_metadata = safe_redis_get_json(cache_key)
-    if cached_metadata:
-        return cached_metadata
+def get_index_metadata(index_name, client, include_fields=False, use_cache=True):
+    if use_cache:
+        cache_key = 'index_metadata__{}'.format(index_name)
+        cached_metadata = safe_redis_get_json(cache_key)
+        if cached_metadata:
+            return cached_metadata
 
     try:
         mappings = client.indices.get_mapping(index=index_name)
     except Exception as e:
-        raise InvalidIndexException('Error accessing index "{}": {}'.format(
+        raise InvalidIndexException('{} - Error accessing index: {}'.format(
             index_name, e.error if hasattr(e, 'error') else str(e)))
     index_metadata = {}
     for index_name, mapping in mappings.items():
-        variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE) or mapping['mappings'].get(SV_DOC_TYPE, {})
+        variant_mapping = mapping['mappings']
         index_metadata[index_name] = variant_mapping.get('_meta', {})
-        index_metadata[index_name]['fields'] = list(variant_mapping['properties'].keys())
-    safe_redis_set_json(cache_key, index_metadata)
+        if include_fields:
+            index_metadata[index_name]['fields'] = {
+                field: field_props.get('type') for field, field_props in variant_mapping['properties'].items()
+            }
+    if use_cache and include_fields:
+        # Only cache metadata with fields
+        safe_redis_set_json(cache_key, index_metadata)
     return index_metadata
 
 
@@ -49,7 +67,7 @@ def get_single_es_variant(families, variant_id, return_all_queried_families=Fals
         families, return_all_queried_families=return_all_queried_families,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
-        raise Exception('Variant {} not found'.format(variant_id))
+        raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
@@ -70,7 +88,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return get_es_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
-def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **kwargs):
+def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, **kwargs):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     previous_search_results = safe_redis_get_json(cache_key) or {}
 
@@ -82,10 +100,10 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
     if invalid_items:
-        raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
+        raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
 
     es_search = es_search_cls(
         search_model.families.all(),
@@ -112,17 +130,18 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
     if search.get('freqs'):
         es_search.filter_by_frequency(search['freqs'])
 
-    es_search.filter_by_annotation_and_genotype(
-        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
-        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity=search.get('pathogenicity'))
+    if not skip_genotype_filter:
+        es_search.filter_by_annotation_and_genotype(
+            search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+            annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+            pathogenicity=search.get('pathogenicity'))
 
     if hasattr(es_search, 'aggregate_by_gene'):
         es_search.aggregate_by_gene()
 
     variant_results = es_search.search(**search_kwargs)
 
-    safe_redis_set_json(cache_key, es_search.previous_search_results)
+    safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
     return variant_results, es_search.previous_search_results['total_results']
 

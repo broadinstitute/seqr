@@ -1,27 +1,25 @@
-from __future__ import unicode_literals
-
 import json
 import jmespath
 from collections import defaultdict
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
+from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
-from django.views.decorators.csrf import csrf_exempt
-from elasticsearch.exceptions import ConnectionTimeout
 import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
     IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
-from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
-    InvalidIndexException
+from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
+    create_model_from_json
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_functional_data_tag_types, \
     get_json_for_projects, \
@@ -34,9 +32,9 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view
+from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -53,37 +51,49 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
+    search_context = json.loads(request.body or '{}')
     try:
-        results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
+        results_model = _get_or_create_results_model(search_hash, search_context, request.user)
     except Exception as e:
-        logger.error(e)
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
     _check_results_permission(results_model, request.user)
+    is_all_project_search = _is_all_project_family_search(search_context)
 
-    try:
-        variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
-    except InvalidIndexException as e:
-        logger.error('InvalidIndexException: {}'.format(e))
-        return create_json_response({'error': str(e)}, status=400, reason=str(e))
-    except ConnectionTimeout:
-        return create_json_response({}, status=504, reason='Query Time Out')
+    variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
+                                              skip_genotype_filter=is_all_project_search)
+
+    response_context = {}
+    if is_all_project_search and len(variants) == total_results:
+        # For all project search only save the relevant families
+        family_guids = set()
+        for variant in variants:
+            family_guids.update(variant['familyGuids'])
+        families = results_model.families.filter(guid__in=family_guids)
+        results_model.families.set(families)
+
+        projects = Project.objects.filter(family__in=families).distinct()
+        response_context = _get_projects_details(projects, request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
+    response.update(response_context)
 
     return create_json_response(response)
+
+
+def _is_all_project_family_search(search_context):
+    return bool(search_context and search_context.get('allProjectFamilies'))
 
 
 def _get_or_create_results_model(search_hash, search_context, user):
@@ -98,7 +108,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
             for project_family in project_families:
                 all_families.update(project_family['familyGuids'])
             families = Family.objects.filter(guid__in=all_families)
-        elif search_context.get('allProjectFamilies'):
+        elif _is_all_project_family_search(search_context):
             omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
             projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
@@ -111,18 +121,19 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
         if not search_model:
-            search_model = VariantSearch.objects.create(created_by=user, search=search_dict)
+            search_model = create_model_from_json(VariantSearch, {'search': search_dict}, user)
 
         # If a search_context request and results request are dispatched at the same time, its possible the other
         # request already created the model
-        results_model, _ = VariantSearchResults.objects.get_or_create(search_hash=search_hash, variant_search=search_model)
+        results_model, _ = get_or_create_model_from_json(
+            VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model},
+            update_json=None, user=user)
 
         results_model.families.set(families)
     return results_model
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
@@ -144,7 +155,7 @@ def _process_variants(variants, families, user):
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
     locus_lists_by_guid = _add_locus_lists(projects, genes)
-    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user.is_staff)
+    response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user_is_analyst(user))
 
     response_json.update({
         'searchedVariants': variants,
@@ -226,7 +237,6 @@ VARIANT_FAMILY_EXPORT_DATA = [
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
@@ -239,7 +249,6 @@ def get_variant_gene_breakdown(request, search_hash):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
@@ -294,7 +303,6 @@ def _get_field_value(value, config):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def search_context_handler(request):
     """Search variants.
     """
@@ -310,11 +318,15 @@ def search_context_handler(request):
     elif context.get('projectCategoryGuid'):
         projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
-        try:
-            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
-        except Exception as e:
-            return create_json_response({'error': str(e)}, status=400, reason=str(e))
-        projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
+        search_context = context.get('searchParams')
+        if _is_all_project_family_search(search_context):
+            projects = []
+        else:
+            try:
+                results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
+            except Exception as e:
+                return create_json_response({'error': str(e)}, status=400, reason=str(e))
+            projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
     else:
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
@@ -430,38 +442,37 @@ def _get_projects_details(projects, user, project_category_guid=None):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def get_saved_search_handler(request):
     return create_json_response(_get_saved_searches(request.user))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def create_saved_search_handler(request):
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)
     if not name:
-        return create_json_response({}, status=400, reason='"Name" is required')
+        error = '"Name" is required'
+        return create_json_response({'error': error}, status=400, reason=error)
 
     if (request_json.get('inheritance') or {}).get('filter', {}).get('genotype'):
-        return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
+        error = 'Saved searches cannot include custom genotype filters'
+        return create_json_response({'error': error}, status=400, reason=error)
 
     try:
-        saved_search, _ = VariantSearch.objects.get_or_create(
-            search=request_json,
-            created_by=request.user,
-        )
+        saved_search, _ = get_or_create_model_from_json(
+            VariantSearch, {'search': request_json, 'created_by': request.user}, {'name': name}, request.user)
     except MultipleObjectsReturned:
         # Can't create a unique constraint on JSON field, so its possible that a duplicate gets made by accident
         dup_searches = VariantSearch.objects.filter(
             search=request_json,
             created_by=request.user,
         ).order_by('created_date')
-        saved_search = dup_searches[0]
-        for search in dup_searches:
-            search.delete()
-    saved_search.name = name
-    saved_search.save()
+        saved_search = dup_searches.first()
+        VariantSearch.bulk_delete(request.user, queryset=dup_searches.exclude(guid=saved_search.guid))
+        update_model_from_json(saved_search, {'name': name}, request.user)
+    except IntegrityError:
+        error = 'Saved search with name "{}" already exists'.format(name)
+        return create_json_response({'error': error}, status=400, reason=error)
 
     return create_json_response({
         'savedSearchesByGuid': {
@@ -471,7 +482,6 @@ def create_saved_search_handler(request):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     if search.created_by != request.user:
@@ -482,8 +492,7 @@ def update_saved_search_handler(request, saved_search_guid):
     if not name:
         return create_json_response({}, status=400, reason='"Name" is required')
 
-    search.name = name
-    search.save()
+    update_model_from_json(search, {'name': name}, request.user)
 
     return create_json_response({
         'savedSearchesByGuid': {
@@ -493,13 +502,9 @@ def update_saved_search_handler(request, saved_search_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def delete_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
-    if search.created_by != request.user:
-        return create_json_response({}, status=403, reason='User does not have permission to delete this search')
-
-    search.delete()
+    search.delete_model(request.user)
     return create_json_response({'savedSearchesByGuid': {saved_search_guid: None}})
 
 
@@ -554,6 +559,8 @@ def _get_saved_variants(variants, families, include_discovery_tags=False):
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
+    discovery_variant_q &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
+
     saved_variants = SavedVariant.objects.filter(variant_q)
 
     json = get_json_for_saved_variants_with_tags(

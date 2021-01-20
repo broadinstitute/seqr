@@ -1,8 +1,6 @@
-from __future__ import unicode_literals
-
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 
 from seqr.models import ModelWithGUID, Individual
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF
@@ -52,6 +50,7 @@ class MatchmakerIncomingQuery(ModelWithGUID):
 
 class MatchmakerResult(ModelWithGUID):
     submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT, null=True)
+    originating_submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT, null=True, related_name='origin_results')
     originating_query = models.ForeignKey(MatchmakerIncomingQuery, on_delete=models.SET_NULL, null=True)
     result_data = JSONField()
 

@@ -13,14 +13,20 @@ spec:
     name: postgres
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: postgres
   namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: postgres
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/skip-inbound-ports: "5432"
       labels:
         name: postgres
         deployment: {{ DEPLOY_TO }}
@@ -48,25 +54,20 @@ spec:
             cpu: "2"
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.username
+          value: "{{ POSTGRES_USERNAME }}"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres.password
+              key: password
         readinessProbe:
           exec:
             command:
-            - /usr/lib/postgresql/9.6/bin/pg_isready
-            - -U
-            - postgres
-            - -d
-            - postgres
+            - pg_isready
         volumeMounts:
         - name: postgres-dbpath
           mountPath: /var/lib/postgresql/data
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'

@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 
 import React from 'react'
+import Cookies from 'js-cookie'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Field } from 'redux-form'
@@ -39,7 +40,9 @@ export class XHRUploaderWithEvents extends XHRUploader {
   }
 
   /**
-   * Override the default implementation to call the onUpload callback with the server's response.
+   * Override the default implementation to call the onUpload callback with the server's response and add CSRF header
+   * Taken from https://github.com/harunhasdal/react-xhr-uploader/blob/master/src/index.js
+   *
    * @param file
    * @param progressCallback
    */
@@ -48,18 +51,27 @@ export class XHRUploaderWithEvents extends XHRUploader {
       this.props.onUploadStarted()
     }
 
-    super.uploadFile(file, progressCallback)
+    if (file) {
+      const formData = new FormData()
+      const xhr = new XMLHttpRequest()
 
-    if (this.xhrs) {
-      const xhr = this.xhrs[file.index]
-      const originalOnLoad = xhr.onload
+      formData.append(this.props.fieldName, file, file.name)
 
-      xhr.onload = (e) => {
-        originalOnLoad(e)
+      xhr.onload = () => {
+        progressCallback(100)
         if (this.props.onUploadFinished) {
           this.props.onUploadFinished(xhr, this.state)
         }
       }
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          progressCallback(e.loaded / e.total * 100) // eslint-disable-line no-mixed-operators
+        }
+      }
+      xhr.open(this.props.method, this.props.url, true)
+      xhr.setRequestHeader('X-CSRFToken', Cookies.get('csrf_token'))
+      xhr.send(formData)
+      this.xhrs[file.index] = xhr
     }
   }
 

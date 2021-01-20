@@ -22,7 +22,7 @@ const EllipsisContainer = styled.span`
 `
 
 const ProjectEllipsisMenu = React.memo((props) => {
-  if (!props.user.isStaff && !props.project.canEdit) {
+  if (!props.project.canEdit) {
     return null
   }
 
@@ -40,13 +40,17 @@ const ProjectEllipsisMenu = React.memo((props) => {
     />,
   ]
 
-  if (props.user.isStaff) {
+  if (props.project.hasCaseReview) {
     menuItems.unshift(
-      <Dropdown.Item key="caseReview" onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}>
+      <Dropdown.Item key="caseReview" onClick={() => {
+        window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}
+      >
         Case Review Page
       </Dropdown.Item>,
       <Dropdown.Divider key="divider1" />,
     )
+  }
+  if (props.user.isDataManager) {
     menuItems.push(
       <Dropdown.Divider key="divider2" />,
       <DeleteButton

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 import mock
 
 from django.core.management import call_command
@@ -44,6 +43,13 @@ class ResetCachedSearchResultsTest(TestCase):
         call_command('reset_cached_search_results')
         mock_redis.return_value.delete.assert_called_with('search_results__*')
         mock_utils_logger.info.assert_called_with('Reset 1 cached results')
+        mock_command_logger.info.assert_called_with('Reset cached search results for all projects')
+
+        # Test command for reset metadata
+        mock_redis.reset_mock()
+        call_command('reset_cached_search_results', '--reset-index-metadata')
+        mock_redis.return_value.delete.assert_called_with('search_results__*', 'index_metadata__*')
+        mock_utils_logger.info.assert_called_with('Reset 2 cached results')
         mock_command_logger.info.assert_called_with('Reset cached search results for all projects')
 
         # Test with connection error

@@ -1,25 +1,21 @@
 """
 APIs used to retrieve and modify Individual fields
 """
-
-from __future__ import unicode_literals
-
 import json
 import logging
 
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib.auth.models import User
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
-from seqr.views.utils.json_to_orm_utils import update_family_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
+    get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
-from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -28,14 +24,15 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
 
     Args:
         project_guid (string): GUID of project that contains these individuals.
     """
+
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
 
@@ -47,8 +44,6 @@ def edit_families_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="'families' not specified")
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-
     updated_families = []
     for fields in modified_families:
         if fields.get('familyGuid'):
@@ -56,7 +51,9 @@ def edit_families_handler(request, project_guid):
         elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
             family = Family.objects.get(project=project, family_id=fields[PREVIOUS_FAMILY_ID_FIELD])
         else:
-            family, _ = Family.objects.get_or_create(project=project, family_id=fields[FAMILY_ID_FIELD])
+            family, _ = get_or_create_model_from_json(
+                Family, {'project': project, 'family_id': fields[FAMILY_ID_FIELD]},
+                update_json=None, user=request.user)
 
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
@@ -70,8 +67,7 @@ def edit_families_handler(request, project_guid):
     return create_json_response(updated_families_by_guid)
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def delete_families_handler(request, project_guid):
     """Edit or delete one or more Individual records.
 
@@ -79,7 +75,7 @@ def delete_families_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
 
@@ -94,10 +90,10 @@ def delete_families_handler(request, project_guid):
     # delete individuals 1st
     individual_guids_to_delete = [i.guid for i in Individual.objects.filter(
         family__project=project, family__guid__in=family_guids_to_delete)]
-    delete_individuals(project, individual_guids_to_delete)
+    delete_individuals(project, individual_guids_to_delete, request.user)
 
     # delete families
-    Family.objects.filter(project=project, guid__in=family_guids_to_delete).delete()
+    Family.bulk_delete(request.user, project=project, guid__in=family_guids_to_delete)
 
     # send response
     return create_json_response({
@@ -111,7 +107,6 @@ def delete_families_handler(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_fields_handler(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -135,7 +130,6 @@ def update_family_fields_handler(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_assigned_analyst(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -157,8 +151,7 @@ def update_family_assigned_analyst(request, family_guid):
                 {}, status=400, reason="specified user does not exist")
     else:
         assigned_analyst = None
-    family.assigned_analyst = assigned_analyst
-    family.save()
+    update_model_from_json(family, {'assigned_analyst': assigned_analyst}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
@@ -166,7 +159,6 @@ def update_family_assigned_analyst(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_analysed_by(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -179,7 +171,7 @@ def update_family_analysed_by(request, family_guid):
     # analysed_by can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
 
-    FamilyAnalysedBy.objects.create(family=family, created_by=request.user)
+    create_model_from_json(FamilyAnalysedBy, {'family': family}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
@@ -187,7 +179,6 @@ def update_family_analysed_by(request, family_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_pedigree_image(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -207,16 +198,14 @@ def update_family_pedigree_image(request, family_guid):
     else:
         pedigree_image = next(iter((request.FILES.values())))
 
-    family.pedigree_image = pedigree_image
-    family.save()
+    update_model_from_json(family, {'pedigree_image': pedigree_image}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
     })
 
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
@@ -227,7 +216,7 @@ def receive_families_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     def _process_records(records, filename=''):
         column_map = {}

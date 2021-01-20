@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import logging
 import os
 import subprocess
@@ -32,12 +30,13 @@ def does_file_exist(file_path):
     return os.path.isfile(file_path)
 
 
-def file_iter(file_path, byte_range=None):
+def file_iter(file_path, byte_range=None, raw_content=False):
     if _is_google_bucket_file_path(file_path):
-        for line in _google_bucket_file_iter(file_path, byte_range=byte_range):
+        for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content):
             yield line
     else:
-        with open(file_path) as f:
+        mode = 'rb' if raw_content else 'r'
+        with open(file_path, mode) as f:
             if byte_range:
                 f.seek(byte_range[0])
                 for line in f:
@@ -50,10 +49,12 @@ def file_iter(file_path, byte_range=None):
                     yield line
 
 
-def _google_bucket_file_iter(gs_path, byte_range=None):
+def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False):
     """Iterate over lines in the given file"""
     range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
     process = _run_gsutil_command('cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz"))
     for line in process.stdout:
+        if not raw_content:
+            line = line.decode('utf-8')
         yield line
 

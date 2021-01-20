@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Header } from 'semantic-ui-react'
 
-import { getLocusListsByGuid, getLocusListsIsLoading, getUser } from 'redux/selectors'
+import { getLocusListsByGuid, getLocusListsIsLoading } from 'redux/selectors'
 import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
 import DataTable from './DataTable'
 import { VerticalSpacer } from '../Spacers'
@@ -30,7 +30,7 @@ const FIELD_LOOKUP = LOCUS_LIST_FIELDS.reduce(
 )
 FIELD_LOOKUP[NAME_WITH_LINK_FIELD] = {
   ...FIELD_LOOKUP[LOCUS_LIST_NAME_FIELD],
-  format: locusList => <Link to={`/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>,
+  format: locusList => <Link to={`/summary_data/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>,
 }
 FIELD_LOOKUP[EDIT_FIELD] = {
   name: '',
@@ -60,14 +60,9 @@ const PUBLIC_TABLE = {
   name: 'Public',
   tableFields: [...CORE_FIELDS, LOCUS_LIST_CURATOR_FIELD_NAME],
 }
-const EDITABLE_PUBLIC_TABLE = { ...PUBLIC_TABLE, tableFields: [...PUBLIC_TABLE.tableFields, EDIT_FIELD] }
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
-const PRIVATE_LIST_TABLES = [MY_TABLE, EDITABLE_PUBLIC_TABLE, {
-  name: 'Private',
-  tableFields: [...CORE_FIELDS, LOCUS_LIST_CURATOR_FIELD_NAME],
-}]
 
-const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, hidePrivateLists, user, ...tableProps }) => {
+const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, tableButtons, ...tableProps }) => {
   let data = Object.values(locusListsByGuid)
   if (omitLocusLists) {
     data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
@@ -78,13 +73,11 @@ const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, 
       acc.My.push(locusList)
     } else if (locusList.isPublic) {
       acc.Public.push(locusList)
-    } else {
-      acc.Private.push(locusList)
     }
     return acc
-  }, { My: [], Public: [], Private: [] })
+  }, { My: [], Public: [] })
 
-  return ((!hidePrivateLists && user.isStaff) ? PRIVATE_LIST_TABLES : TABLES).map(
+  return TABLES.map(
     ({ name, tableFields }) =>
       <div key={name}>
         <VerticalSpacer height={5} />
@@ -98,6 +91,7 @@ const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, 
           data={tableData[name]}
           {...tableProps}
         />
+        {tableButtons && tableButtons[name]}
       </div>,
   )
 })
@@ -106,15 +100,13 @@ LocusListTables.propTypes = {
   locusListsByGuid: PropTypes.object,
   fields: PropTypes.array,
   omitLocusLists: PropTypes.array,
-  hidePrivateLists: PropTypes.bool,
-  user: PropTypes.object,
+  tableButtons: PropTypes.node,
 }
 
 
 const mapStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
   loading: getLocusListsIsLoading(state),
-  user: getUser(state),
 })
 
 export default connect(mapStateToProps)(LocusListTables)

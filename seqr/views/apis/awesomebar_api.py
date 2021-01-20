@@ -1,6 +1,4 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-from __future__ import unicode_literals
-
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -12,7 +10,7 @@ from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +19,7 @@ MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100
 
 
-def _get_matching_objects(query, projects, object_cls, filter_fields, object_fields, get_title, get_href, get_description=None, project_field=None, select_related_project=True):
+def _get_matching_objects(query, projects, object_cls, filter_fields, object_fields, get_title, get_href, get_description=None, project_field=None, select_related_project=True, exclude_criteria=None):
     """Returns objects that match the given query string, and that the user can view, for the given object criteria.
 
     Args:
@@ -43,6 +41,9 @@ def _get_matching_objects(query, projects, object_cls, filter_fields, object_fie
             matching_objects = matching_objects.select_related(project_field)
     else:
         matching_objects = projects
+
+    if exclude_criteria:
+        matching_objects = matching_objects.exclude(**exclude_criteria)
 
     object_filter = Q()
     for field in filter_fields:
@@ -116,6 +117,7 @@ def _get_matching_project_groups(query, projects):
         get_href=lambda p: p.guid,
         project_field='projects',
         select_related_project=False,
+        exclude_criteria={'name': ANALYST_PROJECT_CATEGORY}
     )
 
 
@@ -141,7 +143,7 @@ def _get_matching_genes(query, projects):
             'key': g['gene_id'],
             'title': title,
             'description': '('+description+')' if description else '',
-            'href': '/gene_info/'+g['gene_id'],
+            'href': '/summary_data/gene_info/'+g['gene_id'],
         })
 
     return result

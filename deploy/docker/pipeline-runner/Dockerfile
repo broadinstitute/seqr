@@ -1,6 +1,6 @@
 FROM bitnami/minideb:stretch
 
-MAINTAINER MacArthur Lab
+LABEL maintainer="Broad TGG"
 
 # install commmon utilities
 RUN install_packages \
@@ -94,7 +94,7 @@ RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
 RUN cd hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 

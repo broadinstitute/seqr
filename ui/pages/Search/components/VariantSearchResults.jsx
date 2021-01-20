@@ -8,7 +8,7 @@ import { InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchResults, { DisplayVariants } from 'shared/components/panel/search/VariantSearchResults'
 
-import { updateCompoundHetDisplay, loadSingleSearchedVariant } from '../reducers'
+import { updateCompoundHetDisplay, loadSingleSearchedVariant, loadProjectFamiliesContext } from '../reducers'
 import { getFlattenCompoundHet, getSearchContextIsLoading, getInhertanceFilterMode } from '../selectors'
 import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
@@ -19,7 +19,7 @@ const COMPOUND_HET_TOGGLE_FIELDS = [{
   labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
 }]
 
-const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, flattenCompoundHet, match, ...props }) => {
+const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props }) => {
   const resultProps = {
     loadVariants: loadSearchedVariants,
     flattenCompoundHet,
@@ -29,6 +29,8 @@ const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, 
   if (variantId) {
     resultProps.loadVariants = loadSingleSearchedVariant
     resultProps.contentComponent = DisplayVariants
+  } else {
+    resultProps.initialLoad = initialLoad
   }
 
   if (ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter)) {
@@ -58,6 +60,7 @@ BaseVariantSearchResults.propTypes = {
   inheritanceFilter: PropTypes.string,
   flattenCompoundHet: PropTypes.bool,
   toggleUnpair: PropTypes.func,
+  initialLoad: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -72,6 +75,9 @@ const mapDispatchToProps = (dispatch) => {
       dispatch(updateCompoundHetDisplay({
         updates,
       }))
+    },
+    initialLoad: (params) => {
+      dispatch(loadProjectFamiliesContext(params))
     },
   }
 }

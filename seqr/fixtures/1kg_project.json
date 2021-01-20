@@ -9,11 +9,13 @@
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
         "description": "1000 genomes project description with uni\u00e7\u00f8de",
-	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
+    "workspace_name": "anvil-1kg project n\u00e5me with uni\u00e7\u00f8de",
+    "workspace_namespace": "my-seqr-billing",
     "genome_version": "37",
 	"is_mme_enabled": true,
+    "has_case_review": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
@@ -29,7 +31,6 @@
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Empty Project",
         "description": "",
-	"owners_group": 1,
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -47,13 +48,42 @@
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Test Reprocessed Project",
         "description": "",
-	"owners_group": 1,
 	"can_edit_group": 2,
-	"can_view_group": 2,
+	"can_view_group": 3,
+    "workspace_name": "anvil-project 1000 Genomes Demo",
+    "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
+    }
+},
+{
+    "model": "seqr.project",
+    "pk": 4,
+    "fields": {
+        "guid": "R0004_non_analyst_project",
+        "created_date": "2017-03-12T19:27:08.156Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.582Z",
+        "name": "Non-Analyst Project",
+	    "can_edit_group": 2,
+	    "can_view_group": 2,
+	    "last_accessed_date": "2017-09-15T18:15:50.827Z"
+    }
+},
+{
+    "model": "seqr.projectcategory",
+    "pk": 1,
+    "fields": {
+        "guid": "PC000001_analyst_projects",
+        "created_date": "2020-03-12T23:52:36.401Z",
+        "created_by": null,
+        "last_modified_date": "2020-03-12T23:52:36.401Z",
+        "name": "analyst-projects",
+        "projects": [
+            1, 2, 3
+        ]
     }
 },
 {
@@ -78,7 +108,7 @@
         "created_date": "2017-03-12T23:52:55.846Z",
         "created_by": null,
         "last_modified_date": "2017-03-12T23:52:55.846Z",
-        "name": "test category name",
+        "name": "CMG",
         "projects": [
             1, 3
         ]
@@ -115,9 +145,8 @@
         "analysis_notes": "<b>\r\n                        F\u00e5mily analysis n\u00f8tes\r\n                    </b>",
         "analysis_summary": "<b>\r\n                        F\u00e5mily analysis summ\u00e5ry.\r\n                    </b>",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
-        "internal_case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
+        "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
+        "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
     }
 },
 {
@@ -136,9 +165,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
-        "internal_case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
+        "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
+        "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
     }
 },
 {
@@ -157,9 +185,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -178,9 +205,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -199,9 +225,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -220,9 +245,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -241,9 +265,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -262,9 +285,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -283,9 +305,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -304,9 +325,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "",
+        "case_review_summary": "internal_case_review_summary"
     }
 },
 {
@@ -325,9 +345,8 @@
         "analysis_notes": "",
         "analysis_summary": "",
         "analysis_status": "Q",
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "",
-        "internal_case_review_summary": ""
+        "case_review_notes": "",
+        "case_review_summary": ""
     }
 },
 {
@@ -348,9 +367,8 @@
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
-        "internal_case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
+        "case_review_notes": "<div><span style=\"text-decoration: underline;\"><span style=\"font-family: 'book antiqua', palatino, serif;\">case review notes for family 12</span></span></div>\n<ul>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note1</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 2</span></li>\n<li><span style=\"font-family: 'book antiqua', palatino, serif;\">note 3</span></li>\n</ul>",
+        "case_review_summary": "<div><span style=\"font-family: 'courier new', courier, monospace;\"><strong>summary for family 12</strong></span></div>"
     }
 },
 {
@@ -371,9 +389,22 @@
         "analysis_status": "Q",
         "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
         "success_story_types": ["A"],
-        "internal_analysis_status": null,
-        "internal_case_review_notes": "family without individuals and samples",
-        "internal_case_review_summary": "internal_case_review_summary"
+        "case_review_notes": "family without individuals and samples",
+        "case_review_summary": "internal_case_review_summary"
+    }
+},
+{
+    "model": "seqr.family",
+    "pk": 14,
+    "fields": {
+        "guid": "F000014_14",
+        "created_date": "2017-03-12T19:27:08.848Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-12T22:37:17.555Z",
+        "project": 4,
+        "family_id": "14",
+        "success_story": "Differential treatement",
+        "success_story_types": ["A", "D"]
     }
 },
 {
@@ -396,6 +427,7 @@
         "case_review_status_last_modified_date": "2017-03-12T22:34:43.204Z",
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
+        "proband_relationship": "S",
         "birth_year": null,
         "death_year": null,
         "onset_age": "A",
@@ -773,6 +805,22 @@
     }
 },
 {
+    "model": "seqr.individual",
+    "pk": 18,
+    "fields": {
+        "guid": "I000018_na21234",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.980Z",
+        "family": 14,
+        "individual_id": "NA21234",
+        "mother_id": null,
+        "father_id": null,
+        "sex": "F",
+        "affected": "A"
+    }
+},
+{
     "model": "seqr.sample",
     "pk": 129,
     "fields": {
@@ -1130,8 +1178,7 @@
         "name": "Tier 1 - Novel gene and phenotype",
         "category": "CMG Discovery Tags",
         "description": "Gene not previously associated with a Mendelian condition",
-        "color": "#03441E",
-        "order": 1.0
+        "color": "#03441E"
     }
 },
 {
@@ -1330,7 +1377,6 @@
                         "codons": "ctTCTc/ctc",
                         "hgvsc": "ENST00000258436.5:c.375_377delTCT",
                         "transcriptRank": 0,
-                        "geneId": "ENSG00000135953",
                         "aminoAcids": "LL/L",
                         "cdnaPosition": "419-421"
                     }
@@ -1568,6 +1614,37 @@
     }
 },
 {
+    "model": "seqr.savedvariant",
+    "pk": 8,
+    "fields": {
+        "guid": "SV0000006_1248367227_r0004_non",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos_start": 1248367227,
+        "xpos_end": 1248367228,
+        "ref": "TC",
+        "alt": "T",
+        "variant_id": "12-48367227-TC-T",
+        "saved_variant_json": {
+            "liftedOverGenomeVersion": "38",  "liftedOverPos": "", "genomeVersion": "37", "pos": 248367227,
+            "mainTranscriptId": "ENST00000505820", "transcripts": {
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
+                ],
+                "ENSG00000240361": [
+                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
+                        "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
+                        "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
+                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
+                        "aminoAcids": "V/M", "cdnaPosition": "3955"}
+                ]
+            }, "chrom": "1", "genotypes": {
+                "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}}},
+        "family": 14
+    }
+},
+{
     "model": "seqr.variantnote",
     "pk": 714935,
     "fields": {
@@ -1643,6 +1720,19 @@
         "last_modified_date": "2018-05-29T16:32:51.449Z",
         "saved_variants": [2],
         "variant_tag_type": 4,
+        "search_hash": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726973,
+    "fields": {
+        "guid": "VT1726961_2103343353_r0005_tes",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variants": [8],
+        "variant_tag_type": 1,
         "search_hash": null
     }
 },
@@ -1935,8 +2025,28 @@
         ]
     }
 },
-
-    {
+{
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 4,
+    "fields": {
+        "individual": 18,
+        "guid": "MS000018_P0004517",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "P0004517",
+        "label": "P0004517",
+       "contact_name": "Sam Baxter",
+        "contact_href": "mailto:matchmaker@broadinstitute.org",
+        "genomic_features": [
+            {
+                "gene": {
+                    "id": "ENSG00000233750"
+                }
+            }
+        ]
+    }
+},
+{
     "model": "matchmaker.matchmakerresult",
     "pk": 3552,
     "fields": {
@@ -1945,6 +2055,7 @@
         "created_by": null,
         "last_modified_date": "2019-04-29T17:48:46.367Z",
         "submission": 1,
+        "originating_submission": 3,
         "result_data": {
             "score": {
                 "patient": 0.5706712016939723
@@ -2001,6 +2112,7 @@
         "created_by": null,
         "last_modified_date": "2019-04-29T17:50:03.101Z",
         "submission": 1,
+        "originating_submission": 4,
         "result_data": {
             "score": {
                 "patient": 1.0

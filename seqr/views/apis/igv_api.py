@@ -1,9 +1,6 @@
-from __future__ import unicode_literals
-
 import re
 from django.http import StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -14,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def fetch_igv_track(request, project_guid, igv_track_path):
 
     get_project_and_check_permissions(project_guid, request.user)
@@ -36,10 +32,10 @@ def _stream_file(request, path):
         last_byte = int(last_byte)
         length = last_byte - first_byte + 1
         resp = StreamingHttpResponse(
-            file_iter(path, byte_range=(first_byte, last_byte)), status=206, content_type=content_type)
+            file_iter(path, byte_range=(first_byte, last_byte), raw_content=True), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
-        resp = StreamingHttpResponse(file_iter(path), content_type=content_type)
+        resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp

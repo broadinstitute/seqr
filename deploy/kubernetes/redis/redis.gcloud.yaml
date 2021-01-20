@@ -13,14 +13,21 @@ spec:
     name: redis
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: redis
   namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: redis
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/skip-outbound-ports: "6379"
+        config.linkerd.io/skip-inbound-ports: "6379"
       labels:
         name: redis
         deployment: {{ DEPLOY_TO }}
@@ -41,6 +48,8 @@ spec:
             cpu: "1"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

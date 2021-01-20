@@ -1,11 +1,4 @@
-from __future__ import unicode_literals
-
 import json
-if hasattr(json, 'JSONDecodeError'):
-    from json import JSONDecodeError
-else:
-    class JSONDecodeError(ValueError):
-        pass
 
 import logging
 from django.core.mail.message import EmailMessage
@@ -15,7 +8,7 @@ from matchmaker.models import MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches, \
     MME_DISCLAIMER
 
-from seqr.utils.communication_utils import post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.views.utils.json_utils import create_json_response
 
 from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, \
@@ -47,11 +40,10 @@ def authenticate_mme_request(view_func):
             }, status=401)
 
         return view_func(request, originating_node['name'], *args, **kwargs)
-    return _wrapped_view
+    return csrf_exempt(_wrapped_view)
 
 
 @authenticate_mme_request
-@csrf_exempt
 def mme_metrics_proxy(request, originating_node_name):
     """
     -Proxies public metrics endpoint
@@ -63,7 +55,6 @@ def mme_metrics_proxy(request, originating_node_name):
 
 
 @authenticate_mme_request
-@csrf_exempt
 def mme_match_proxy(request, originating_node_name):
     """
     -Looks for matches for the given individual ONLY in the local MME DB.
@@ -79,10 +70,10 @@ def mme_match_proxy(request, originating_node_name):
     try:
         query_patient_data = json.loads(request.body)
         _validate_patient_data(query_patient_data)
-    except JSONDecodeError:
-        return create_json_response({'message': 'No JSON object could be decoded'}, status = 400)
+    except json.JSONDecodeError:
+        return create_json_response({'error': 'No JSON object could be decoded'}, status = 400)
     except Exception as e:
-        return create_json_response({'message': str(e)}, status=400)
+        return create_json_response({'error': str(e)}, status=400)
 
     results, incoming_query = get_mme_matches(
         patient_data=query_patient_data, origin_request_host=originating_node_name,
@@ -134,7 +125,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+        safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href
         ))
         return
@@ -145,7 +136,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+        safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href, existing_results=len(results)
         ))
         return
@@ -197,7 +188,7 @@ matchbox on {insertion_date}, with seqr link
 
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 
-    post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+    safe_post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
         base_message=base_message, match_results='\n'.join([text for text, _ in match_results]),
         email_addresses_alert_sent_to=', '.join(sorted(all_emails)), footer=MME_EMAIL_FOOTER
     ))

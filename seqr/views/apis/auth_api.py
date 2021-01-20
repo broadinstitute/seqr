@@ -1,45 +1,58 @@
 """
 Utility functions related to authentication.
 """
-from __future__ import unicode_literals
-
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
+from django.db.models.functions import Lower
 from django.shortcuts import redirect
-from django.views.decorators.csrf import csrf_exempt
 
 import json
 import logging
 
 from seqr.views.utils.json_utils import create_json_response
-
+from seqr.views.utils.permissions_utils import user_is_data_manager
+from seqr.views.utils.terra_api_utils import google_auth_enabled
 
 logger = logging.getLogger(__name__)
 
 
-@csrf_exempt
 def login_view(request):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
-        return create_json_response({}, status=400, reason='Email is required')
+        error = 'Email is required'
+        return create_json_response({'error': error}, status=400, reason=error)
     if not request_json.get('password'):
-        return create_json_response({}, status=400, reason='Password is required')
+        error = 'Password is required'
+        return create_json_response({'error': error}, status=400, reason=error)
 
-    users = User.objects.filter(email__iexact=request_json['email'])
+    # Django's iexact filtering will improperly match unicode characters, which creates a security risk.
+    # Instead, query for the lower case match to allow case-insensitive matching
+    users = User.objects.annotate(email_lower=Lower('email')).filter(email_lower=request_json['email'].lower())
     if users.count() != 1:
-        return create_json_response({}, status=401, reason='Invalid credentials')
+        error = 'Invalid credentials'
+        return create_json_response({'error': error}, status=401, reason=error)
 
-    u = authenticate(username=users.first().username, password=request_json['password'])
+    user = users.first()
+    if google_auth_enabled() and (user_is_data_manager(user) or user.is_superuser):
+        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user))
+        error = 'Privileged user must login with Google authentication.'
+        return create_json_response({'error': error}, status=401, reason=error)
+
+    u = authenticate(username=user.username, password=request_json['password'])
     if not u:
-        return create_json_response({}, status=401, reason='Invalid credentials')
+        error = 'Invalid credentials'
+        return create_json_response({'error': error}, status=401, reason=error)
 
     login(request, u)
+    logger.info('Logged in {}'.format(u.email), extra={'user': u})
 
     return create_json_response({'success': True})
 
 
 def logout_view(request):
+    user = request.user
     logout(request)
+    logger.info('Logged out {}'.format(user.email), extra={'user': user})
     return redirect('/login')
 
 
@@ -48,6 +61,4 @@ def login_required_error(request):
 
     This is used to redirect AJAX HTTP handlers to the login page.
     """
-    assert not request.user.is_authenticated()
-
     return create_json_response({}, status=401, reason="login required")

@@ -3,8 +3,9 @@ version: '2.4'
 services:
   postgres:
     image: gcr.io/seqr-project/postgres:gcloud-prod
-    ports:
-      - 5432:5432
+    environment:
+      - PGPORT=5433
+      - POSTGRES_PASSWORD=docker-compose-postgres-password
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
@@ -16,8 +17,6 @@ services:
 
   redis:
     image: gcr.io/seqr-project/redis:gcloud-prod
-    ports:
-      - 6379:6379
     healthcheck:
       test: redis-cli ping
       interval: 3s
@@ -26,25 +25,27 @@ services:
 
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch:gcloud-prod
-    ports:
-      - 9200:9200
+    image: gcr.io/seqr-project/elasticsearch:gcloud-prod-elasticsearch
     volumes:
-      - ./data/elasticsearch:/elasticsearch-data
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    container_name: elasticsearch
+    environment:
+      - http.host=0.0.0.0
+      - discovery.type=single-node
+      - cluster.routing.allocation.disk.threshold_enabled=false
     healthcheck:
-      test: bash -c "curl -s elasticsearch:9200 | grep search"
+      test: bash -c "curl -s elasticsearch:9200/_cat/health | grep green"
       interval: 3s
       timeout: 5s
       retries: 100
+    ports:
+      - 9200:9200
 
 
   kibana:
     image: gcr.io/seqr-project/kibana:gcloud-prod
-    ports:
-      - 5601:5601
     environment:
-      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
-      - ELASTICSEARCH_SERVICE_PORT=9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -56,6 +57,8 @@ services:
 
   seqr:
     image: gcr.io/seqr-project/seqr:gcloud-prod
+    volumes:
+    - ./data/readviz:/readviz
     ports:
       - 80:8000
     environment:
@@ -63,10 +66,13 @@ services:
       - PYTHONPATH=/seqr
       - STATIC_MEDIA_DIR=/seqr_static_files
       - POSTGRES_SERVICE_HOSTNAME=postgres
+      - POSTGRES_SERVICE_PORT=5433
+      - POSTGRES_PASSWORD=docker-compose-postgres-password
       - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
       - REDIS_SERVICE_HOSTNAME=redis
       - KIBANA_SERVICE_HOSTNAME=kibana
       - PGHOST=postgres
+      - PGPORT=5433
       - PGUSER=postgres
       - GUNICORN_WORKER_THREADS=4
     depends_on:

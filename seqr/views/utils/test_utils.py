@@ -1,33 +1,52 @@
 # Utilities used for unit and integration tests.
-from __future__ import unicode_literals
-
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
+import mock
+from urllib3_mock import Responses
+
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 
-class AuthenticationTestCase(TestCase):
+def _initialize_users(cls):
+    cls.super_user = User.objects.get(username='test_superuser')
+    cls.analyst_user = User.objects.get(username='test_user')
+    cls.pm_user = User.objects.get(username='test_pm_user')
+    cls.data_manager_user = User.objects.get(username='test_data_manager')
+    cls.manager_user = User.objects.get(username='test_user_manager')
+    cls.collaborator_user = User.objects.get(username='test_user_collaborator')
+    cls.no_access_user = User.objects.get(username='test_user_no_access')
 
-    STAFF = 'staff'
+class AuthenticationTestCase(TestCase):
+    databases = '__all__'
+    SUPERUSER = 'superuser'
+    ANALYST = 'analyst'
+    PM = 'project_manager'
+    DATA_MANAGER = 'data_manager'
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
 
+    super_user = None
+    analyst_user = None
+    pm_user = None
+    data_manager_user = None
+    manager_user = None
+    collaborator_user = None
+    no_access_user = None
+
     @classmethod
     def setUpTestData(cls):
-        cls.staff_user = User.objects.get(username='test_user')
-        cls.manager_user = User.objects.get(username='test_user_manager')
-        cls.collaborator_user = User.objects.get(username='test_user_non_staff')
-        cls.no_access_user = User.objects.get(username='test_user_no_access')
+        _initialize_users(cls)
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
         edit_group.user_set.add(cls.manager_user)
         view_group.user_set.add(cls.manager_user, cls.collaborator_user)
-        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.all())
-        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.all())
+        assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.filter(can_edit_group=edit_group))
+        assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
+        assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
     def check_require_login(self, url):
         self._check_login(url, self.AUTHENTICATED_USER)
@@ -38,8 +57,17 @@ class AuthenticationTestCase(TestCase):
     def check_manager_login(self, url):
         self._check_login(url, self.MANAGER)
 
-    def check_staff_login(self, url):
-        self._check_login(url, self.STAFF)
+    def check_analyst_login(self, url):
+        self._check_login(url, self.ANALYST)
+
+    def check_pm_login(self, url):
+        self._check_login(url, self.PM)
+
+    def check_data_manager_login(self, url):
+        self._check_login(url, self.DATA_MANAGER)
+
+    def check_superuser_login(self, url):
+        self._check_login(url, self.SUPERUSER)
 
     def login_base_user(self):
         self.client.force_login(self.no_access_user)
@@ -47,8 +75,17 @@ class AuthenticationTestCase(TestCase):
     def login_collaborator(self):
         self.client.force_login(self.collaborator_user)
 
-    def login_staff_user(self):
-        self.client.force_login(self.staff_user)
+    def login_manager(self):
+        self.client.force_login(self.manager_user)
+
+    def login_analyst_user(self):
+        self.client.force_login(self.analyst_user)
+
+    def login_pm_user(self):
+        self.client.force_login(self.pm_user)
+
+    def login_data_manager_user(self):
+        self.client.force_login(self.data_manager_user)
 
     def _check_login(self, url, permission_level, request_data=None):
         """For integration tests of django views that can only be accessed by a logged-in user,
@@ -89,15 +126,220 @@ class AuthenticationTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
 
-        self.login_staff_user()
+        self.login_analyst_user()
+        if permission_level in self.ANALYST:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.login_pm_user()
+        if permission_level in self.PM:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.login_data_manager_user()
+        if permission_level in self.DATA_MANAGER:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+
+        self.client.force_login(self.super_user)
 
 
-USER_FIELDS = {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
+ANVIL_WORKSPACES = [{
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_collaborator@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_not_registered@test.com': {
+            "accessLevel": "READER",
+            "pending": True,
+            "canShare": False,
+            "canCompute": True
+        },
+        'test_user_pure_anvil@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-project 1000 Genomes Demo',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_collaborator@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": False
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace1',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_collaborator@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
+        }
+    }
+}, {
+    'workspace_namespace': 'my-seqr-billing',
+    'workspace_name': 'anvil-no-project-workspace2',
+    'public': False,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        }
+    }
+}
+]
 
+
+TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
+TEST_OAUTH2_KEY = 'abc123'
+
+# the time must the same as that in 'auth_time' in the social_auth fixture data
+TOKEN_AUTH_TIME = 1603287741
+REGISTER_RESPONSE = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"test@test.com","userSubjectId":"123456"}}'
+
+
+def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    return wss[0]['acl'] if wss else {}
+
+
+def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
+    wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
+    wss = list(wss)
+    acl = wss[0]['acl'] if wss else {}
+    if user.email in acl.keys():
+        return {'accessLevel': acl[user.email]['accessLevel']}
+    return {}
+
+
+def get_workspaces_side_effect(user):
+    return [
+        {
+            'public': ws['public'],
+            'workspace':{
+                'namespace': ws['workspace_namespace'],
+                'name': ws['workspace_name']
+            }
+        } for ws in ANVIL_WORKSPACES if user.email in ws['acl'].keys()
+    ]
+
+
+class AnvilAuthenticationTestCase(AuthenticationTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        _initialize_users(cls)
+
+    # mock the terra apis
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
+        patcher.start().return_value = TOKEN_AUTH_TIME + 10
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.list_anvil_workspaces')
+        self.mock_list_workspaces = patcher.start()
+        self.mock_list_workspaces.side_effect = get_workspaces_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_acl')
+        self.mock_get_ws_acl = patcher.start()
+        self.mock_get_ws_acl.side_effect = get_ws_acl_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
+        self.mock_get_ws_access_level = patcher.start()
+        self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
+        self.addCleanup(patcher.stop)
+
+
+# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
+class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
+    LOCAL_USER = 'local_user'
+
+    # use the local permissions set-up by AuthenticationTestCase
+    @classmethod
+    def setUpTestData(cls):
+        AuthenticationTestCase.setUpTestData()
+        cls.local_user = User.objects.get(username = 'test_local_user')
+        view_group = Group.objects.get(pk=3)
+        view_group.user_set.add(cls.local_user)
+
+
+# The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
+# The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper
+# methods for easier usage
+class Urllib3Responses(Responses):
+    def add_json(self, url, json_response, method=None, match_querystring=True, **kwargs):
+        if not method:
+            method = self.GET
+        body = json.dumps(json_response)
+        self.add(method, url, match_querystring=match_querystring, content_type='application/json', body=body, **kwargs)
+
+    def replace_json(self, url, *args, **kwargs):
+        existing_index = next(i for i, match in enumerate(self._urls) if match['url'] == url)
+        self.add_json(url, *args, **kwargs)
+        self._urls[existing_index] = self._urls.pop()
+
+    def call_request_json(self, index=-1):
+        return json.loads(self.calls[index].request.body)
+
+
+urllib3_responses = Urllib3Responses()
+
+
+USER_FIELDS = {
+    'dateJoined', 'email', 'firstName', 'lastLogin', 'lastName', 'username', 'displayName', 'id',  'isActive', 'isAnvil',
+    'isAnalyst', 'isDataManager', 'isPm', 'isSuperuser',
+}
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
-    'isMmeEnabled',
+    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview'
 }
 
 FAMILY_FIELDS = {
@@ -105,10 +347,11 @@ FAMILY_FIELDS = {
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
     'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'mmeNotes',
 }
-
+CASE_REVIEW_FAMILY_FIELDS = {
+    'caseReviewNotes', 'caseReviewSummary'
+}
 INTERNAL_FAMILY_FIELDS = {
-    'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary', 'individualGuids', 'successStory',
-    'successStoryTypes',
+    'individualGuids', 'successStory', 'successStoryTypes',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
@@ -415,8 +658,9 @@ PARSED_VARIANTS = [
         },
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
-                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': 25.9, 'metasvm': None, 'primate_ai': None,
-                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None},
+                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'metasvm': None, 'primate_ai': None,
+                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+                        'splice_ai_consequence': None},
         'ref': 'TC',
         'rsid': None,
         'transcripts': {
@@ -474,7 +718,7 @@ PARSED_VARIANTS = [
         'predictions': {
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
             'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': 1, 'gerp_rs': None,
-            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None, 'splice_ai_consequence': None,
         },
         'ref': 'GAGA',
         'rsid': None,
@@ -507,7 +751,7 @@ PARSED_SV_VARIANT = {
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
     'hgmd': {'accession': None, 'class': None},
     'genomeVersion': '37',
-    'genotypeFilters': [],
+    'genotypeFilters': '',
     'liftedOverChrom': None,
     'liftedOverGenomeVersion': None,
     'liftedOverPos': None,
@@ -525,7 +769,8 @@ PARSED_SV_VARIANT = {
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
-                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374},
+                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374,
+                    'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
     'transcripts': {
@@ -549,3 +794,8 @@ PARSED_SV_VARIANT = {
     'numExon': 2,
     '_sort': [1049045387],
 }
+
+GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
+
+GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'

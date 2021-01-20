@@ -4,6 +4,8 @@ import os
 import random
 import string
 
+from ssl import create_default_context
+
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -31,46 +33,38 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'seqr.apps.SuperuserAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.staticfiles',
-    'hijack',
-    'corsheaders',
     'guardian',
     'anymail',
     'seqr',
     'reference_data',
     'matchmaker',
+    'social_django',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
-# django-hijack plugin
-HIJACK_DISPLAY_WARNING = True
-HIJACK_LOGIN_REDIRECT_URL = '/'
-
-# cors settings
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'http://localhost:8000',
-)
-CORS_ALLOW_CREDENTIALS = True
-
 ALLOWED_HOSTS = ['*']
 
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_NAME = 'csrf_token'
+CSRF_COOKIE_HTTPONLY = False
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -106,7 +100,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'ui/dist')
+STATICFILES_DIRS = ['ui/dist']
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -123,6 +118,9 @@ TEMPLATES = [
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',  # required for admin template
+                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
+                'social_django.context_processors.backends',  # required for social_auth, same for below
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -136,48 +134,48 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '%(asctime)s %(levelname)s: %(message)s     (%(name)s.%(funcName)s:%(lineno)d)',
+        'json_log_formatter': {
+            '()': 'seqr.utils.logging_utils.JsonLogFormatter',
         },
-        'simple': {
-            'format': '%(asctime)s %(levelname)s:  %(message)s'
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
     },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': 'INFO',
-            'filters': ['require_debug_false'],
-            'class': 'logging.FileHandler',
-            'filename': 'django.info.log',
-            'formatter': 'verbose',
-        },
-        'console': {
+        'console_json': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'json_log_formatter',
+        },
+        'null': {
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
+        # By default, log to console as json. Gunicorn will forward console logs to kubernetes and stackdriver
         '': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console_json'],
             'level': 'INFO',
-            'formatter': 'verbose',
             'propagate': True,
+        },
+        # Disable default server logging since we use custom request logging middlewear
+        'django.server': {
+            'handlers': ['null'],
+            'propagate': False,
+        },
+        # Log all other django logs to console as json
+        'django': {
+            'handlers': ['console_json'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console_json'],
+            'propagate': False,
         },
     }
 }
 
+TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
+
 AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
@@ -192,7 +190,7 @@ except IOError:
         with open(SECRET_FILE, 'w') as f:
             f.write(SECRET_KEY)
     except IOError as e:
-        logger.warn('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
         SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 ROOT_URLCONF = 'seqr.urls'
@@ -215,6 +213,8 @@ DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 WSGI_APPLICATION = 'wsgi.application'
 
+WHITENOISE_ALLOW_ALL_ORIGINS = False
+
 # Email settings
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
@@ -223,19 +223,35 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
-if os.environ.get('DEPLOYMENT_TYPE') == 'prod':
+if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
 else:
     DEBUG = True
-
+    # Enable CORS and hijak for local development
+    INSTALLED_APPS += ['corsheaders', 'hijack']
+    MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+    CORS_ORIGIN_WHITELIST = (
+        'http://localhost:3000',
+        'http://localhost:8000',
+    )
+    STATICFILES_DIRS.append(STATIC_ROOT)
+    STATIC_ROOT = None
+    CORS_ALLOW_CREDENTIALS = True
+    CORS_REPLACE_HTTPS_REFERER = True
+    # django-hijack plugin
+    HIJACK_DISPLAY_WARNING = True
+    HIJACK_ALLOW_GET_REQUESTS = True
+    HIJACK_LOGIN_REDIRECT_URL = '/'
 
 #########################################################
 #  seqr specific settings
 #########################################################
 
 SEQR_VERSION = 'v1.0'
+SEQR_PRIVACY_VERSION = 1.0
+SEQR_TOS_VERSION = 1.0
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 
@@ -244,9 +260,11 @@ SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
-
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
+
+ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
+ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
+PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
@@ -254,10 +272,21 @@ ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200'
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
     host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
+SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
+ELASTICSEARCH_CREDENTIALS = ('seqr', SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
+ELASTICSEARCH_PROTOCOL = os.environ.get('ELASTICSEARCH_PROTOCOL', 'http')
+ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
+# if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
+if ELASTICSEARCH_CA_PATH:
+    ES_SSL_CONTEXT = create_default_context(cafile=ELASTICSEARCH_CA_PATH)
+else:
+    ES_SSL_CONTEXT = None
+
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
     port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
+KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 
@@ -282,3 +311,55 @@ MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
+
+#########################################################
+#  Social auth specific settings
+#########################################################
+SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/cloud-billing',
+    'openid'
+]
+
+# Use Google sub ID as the user ID, safer than using email
+USE_UNIQUE_USER_ID = True
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+
+SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
+
+SOCIAL_AUTH_PIPELINE_BASE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.social_auth.associate_by_email',
+)
+SOCIAL_AUTH_PIPELINE_USER_EXIST = ('seqr.utils.social_auth_pipeline.validate_user_exist',)
+SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associate_user',)
+SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
+
+TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
+TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
+
+if TERRA_API_ROOT_URL:
+    SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+        'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
+    }
+
+    SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
+                           SOCIAL_AUTH_PIPELINE_BASE + \
+                           ('social_core.pipeline.user.get_username',
+                            'social_core.pipeline.user.create_user') + \
+                           SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + \
+                           ('social_core.pipeline.social_auth.load_extra_data',
+                            'social_core.pipeline.user.user_details') + \
+                           SOCIAL_AUTH_PIPELINE_LOG
+else:
+    SOCIAL_AUTH_PIPELINE = SOCIAL_AUTH_PIPELINE_BASE + SOCIAL_AUTH_PIPELINE_USER_EXIST + \
+                           SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER + SOCIAL_AUTH_PIPELINE_LOG

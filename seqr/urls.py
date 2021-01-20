@@ -3,17 +3,16 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
-from __future__ import unicode_literals
-
 from seqr.views.react_app import main_app, no_login_main_app
+from seqr.views.status import status_view
 from seqr.views.apis.dataset_api import \
     update_individual_igv_sample, \
     add_variants_dataset_handler, \
     receive_igv_table_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG
 from django.conf.urls import url, include
 from django.contrib import admin
-import django.contrib.admindocs.urls
+from django.views.generic.base import RedirectView
 import django.views.static
 
 from seqr.views.apis.family_api import \
@@ -37,6 +36,8 @@ from seqr.views.apis.individual_api import \
     save_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
+    update_case_review_discussion, \
+    update_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
@@ -92,27 +93,24 @@ from seqr.views.apis.variant_search_api import \
     delete_saved_search_handler
 
 from seqr.views.apis.users_api import \
-    get_all_collaborators, \
-    get_all_staff, \
+    get_all_collaborator_options, \
+    get_all_analyst_options, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
     set_password, \
-    forgot_password, \
-    create_staff_user
+    update_policies, \
+    forgot_password
 
-from seqr.views.apis.staff_api import \
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
+from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
-    get_projects_for_category, \
-    success_story, \
-    elasticsearch_status, \
-    saved_variants_page, \
-    upload_qc_pipeline_output, \
-    mme_details, \
-    seqr_stats, \
+    get_cmg_projects, \
     sample_metadata_export, \
-    proxy_to_kibana
+    seqr_stats
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
+from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
@@ -130,7 +128,9 @@ react_app_pages = [
     'gene_info/.*',
     'gene_lists/.*',
     'variant_search/.*',
-    'staff/.*',
+    'report/.*',
+    'data_management/.*',
+    'summary_data/.*',
 ]
 
 no_login_react_app_pages = [
@@ -140,6 +140,9 @@ no_login_react_app_pages = [
     'users/set_password/(?P<user_token>.+)',
     'matchmaker/matchbox',
     'matchmaker/disclaimer',
+    'privacy_policy',
+    'terms_of_service',
+
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -147,9 +150,11 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
-    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
+    'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
@@ -233,10 +238,10 @@ api_endpoints = {
     'login': login_view,
     'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/update_policies': update_policies,
 
-    'users/get_all': get_all_collaborators,
-    'users/get_all_staff': get_all_staff,
-    'users/create_staff_user': create_staff_user,
+    'users/get_options': get_all_collaborator_options,
+    'users/get_analyst_options': get_all_analyst_options,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
@@ -245,16 +250,19 @@ api_endpoints = {
 
     'upload_temp_file': save_temp_file,
 
-    'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
-    'staff/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
-    'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
-    'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
-    'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
-    'staff/elasticsearch_status': elasticsearch_status,
-    'staff/matchmaker': mme_details,
-    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
-    'staff/seqr_stats': seqr_stats,
-    'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
+    'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
+    'report/get_cmg_projects': get_cmg_projects,
+    'report/seqr_stats': seqr_stats,
+
+    'data_management/elasticsearch_status': elasticsearch_status,
+    'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
+    'data_management/get_all_users': get_all_users,
+
+    'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
+    'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
+    'summary_data/matchmaker': mme_details,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
@@ -263,7 +271,7 @@ api_endpoints = {
 
 }
 
-urlpatterns = []
+urlpatterns = [url('^status', status_view)]
 
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
@@ -279,13 +287,11 @@ urlpatterns += [
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
-#urlpatterns += [
-#   url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
-
-kibana_urls = '^(?:%s)' % ('|'.join([
-    "app", "bundles", "elasticsearch", "plugins", "ui", "api/apm", "api/console", "api/index_management", "api/index_patterns",
-    "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
-    "es_admin",
+kibana_urls = '^(?:{})'.format('|'.join([
+    'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
+    'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
+    'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
+    'api/timelion', 'api/ui_metric', 'api/xpack',
 ]))
 
 urlpatterns += [
@@ -293,13 +299,21 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url(r'^hijack/', include('hijack.urls')),
-    url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
+    url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
     }),
 ]
+
+urlpatterns += [
+    url('', include('social_django.urls')),
+]
+
+if DEBUG:
+    urlpatterns += [
+        url(r'^hijack/', include('hijack.urls')),
+    ]
 
 # django debug toolbar
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
