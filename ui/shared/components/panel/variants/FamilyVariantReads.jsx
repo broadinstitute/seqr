@@ -6,6 +6,7 @@ import { Segment, Icon } from 'semantic-ui-react'
 
 import { updateIgvReadsVisibility } from 'redux/rootReducer'
 import { getIndividualsByGuid, getIGVSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
+import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
@@ -76,7 +77,7 @@ const FamilyVariantReads = React.memo(({ variant, igvSamples, individualsByGuid,
 
   const igvOptions = {
     locus,
-    tracks: igvTracks,
+    tracks: [],
     genome,
     showKaryo: false,
     showIdeogram: true,
@@ -119,4 +120,18 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantReads)
+const ConnectedFamilyVariantReads = connect(mapStateToProps, mapDispatchToProps)(FamilyVariantReads)
+
+const VariantWithReads = React.memo(({ variant, variantLayout, ...props }) => {
+  const showReads = variant.familyGuids.map(familyGuid =>
+    <ShowReadsButton key={familyGuid} familyGuid={familyGuid} igvId={variant.variantId} />)
+  const reads = <ConnectedFamilyVariantReads variant={variant} />
+  return React.createElement(variantLayout, { variant, reads, showReads, ...props })
+})
+
+VariantWithReads.propTypes = {
+  variant: PropTypes.object,
+  variantLayout: PropTypes.object,
+}
+
+export default VariantWithReads

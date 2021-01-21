@@ -60,13 +60,11 @@ const tagFamily = tag =>
   />
 
 
-const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVariants }) => {
+const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVariants, reads, showReads }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
-  const variantIndividuals = variant.familyGuids.map(familyGuid =>
-    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
-  )
+
   const severity = CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]
   return (
     <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet >
@@ -97,17 +95,19 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
         {!isCompoundHet && mainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
         <VariantGenes mainGeneId={mainGeneId} variant={variant} />
         {isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <VerticalSpacer height={20} />}
-        {isCompoundHet && variantIndividuals}
+        {isCompoundHet && <VariantIndividuals variant={variant} isCompoundHet />}
+        {isCompoundHet && showReads}
       </Grid.Column>
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
       {!isCompoundHet &&
       <Grid.Column width={16}>
-        {variantIndividuals}
+        <VariantIndividuals variant={variant} />
+        {showReads}
       </Grid.Column>}
       <Grid.Column width={16}>
-        <FamilyVariantReads variant={variant} />
+        {reads}
       </Grid.Column>
     </StyledVariantRow>
   )
@@ -118,8 +118,11 @@ Variant.propTypes = {
   isCompoundHet: PropTypes.bool,
   mainGeneId: PropTypes.string,
   linkToSavedVariants: PropTypes.bool,
+  reads: PropTypes.object,
+  showReads: PropTypes.array,
 }
 
+const VariantWithReads = props => <FamilyVariantReads variantLayout={Variant} {...props} />
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
@@ -149,7 +152,7 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {variants.map(compoundHet =>
-          <Variant variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
+          <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
         )}
       </StyledCompoundHetRows>
     </StyledVariantRow>
@@ -165,7 +168,7 @@ const Variants = React.memo(({ variants, ...props }) => (
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} {...props} /> :
-      <Variant variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
+      <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
     ))}
   </Grid>
 ))
