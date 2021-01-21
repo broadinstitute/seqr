@@ -100,7 +100,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'ui/dist')
+STATICFILES_DIRS = ['ui/dist']
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -235,7 +236,7 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    STATICFILES_DIRS = [STATIC_ROOT]
+    STATICFILES_DIRS.append(STATIC_ROOT)
     STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
