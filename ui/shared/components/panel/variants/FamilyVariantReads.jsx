@@ -122,16 +122,21 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const ConnectedFamilyVariantReads = connect(mapStateToProps, mapDispatchToProps)(FamilyVariantReads)
 
-const VariantWithReads = React.memo(({ variant, variantLayout, ...props }) => {
-  const showReads = variant.familyGuids.map(familyGuid =>
-    <ShowReadsButton key={familyGuid} familyGuid={familyGuid} igvId={variant.variantId} />)
-  const reads = <ConnectedFamilyVariantReads variant={variant} />
-  return React.createElement(variantLayout, { variant, reads, showReads, ...props })
+const VariantWithReads = React.memo(({ variant, familyGuid, layout, buttonProps, ...props }) => {
+  const familyGuids = variant ? variant.familyGuids : [familyGuid]
+  const igvId = variant ? variant.variantId : familyGuid
+  const showReads = familyGuids.map(fGuid =>
+    <ShowReadsButton key={fGuid} familyGuid={fGuid} igvId={igvId} {...buttonProps} />)
+  const reads = <ConnectedFamilyVariantReads variant={variant} igvId={igvId} />
+
+  return React.createElement(layout, { variant, reads, showReads, ...props })
 })
 
 VariantWithReads.propTypes = {
   variant: PropTypes.object,
-  variantLayout: PropTypes.object,
+  layout: PropTypes.any,
+  familyGuid: PropTypes.string,
+  buttonProps: PropTypes.object,
 }
 
 export default VariantWithReads

@@ -122,7 +122,7 @@ Variant.propTypes = {
   showReads: PropTypes.array,
 }
 
-const VariantWithReads = props => <FamilyVariantReads variantLayout={Variant} {...props} />
+const VariantWithReads = props => <FamilyVariantReads layout={Variant} {...props} />
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)

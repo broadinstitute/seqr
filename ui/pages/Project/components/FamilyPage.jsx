@@ -4,10 +4,11 @@ import { connect } from 'react-redux'
 
 import { getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
-import ShowReadsButton from 'shared/components/buttons/ShowReadsButton'
 import Family from 'shared/components/panel/family'
 import FamilyVariantReads from 'shared/components/panel/variants/FamilyVariantReads'
 import IndividualRow from './FamilyTable/IndividualRow'
+
+const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
 
 const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, ...props }) =>
   <div>
@@ -16,8 +17,15 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
       compact={compact}
       {...props}
     />
-    {!compact && <ShowReadsButton familyGuid={family.familyGuid} igvId={family.familyGuid} padding="0.5em 0 1.5em 0" />}
-    <FamilyVariantReads igvId={family.familyGuid} />
+    {!compact && <FamilyVariantReads
+      layout={({ reads, showReads }) =>
+        <div>
+          {showReads}
+          {reads}
+        </div>}
+      familyGuid={family.familyGuid}
+      buttonProps={READ_BUTTON_PROPS}
+    />}
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
