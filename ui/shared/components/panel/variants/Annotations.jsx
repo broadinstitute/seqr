@@ -156,7 +156,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
   if (variant.svType) {
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
-    if (variant.liftedOverGenomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
+    if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
       const endOffset = variant.end - variant.pos
       const start = useLiftover ? variant.liftedOverPos : variant.pos
       const region = `${variant.chrom}-${start}-${start + endOffset}`
