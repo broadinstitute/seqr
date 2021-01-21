@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -22,7 +23,8 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    def test_edit_families_handler(self):
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
+    def test_edit_families_handler(self, mock_pm_group):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -56,12 +58,19 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(edit_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
+
         self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
 
-    def test_delete_families_handler(self):
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
+    def test_delete_families_handler(self, mock_pm_group):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -88,7 +97,13 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(delete_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
+
         self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
@@ -149,7 +164,7 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['email'], 'test_user@test.com')
+        self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['email'], 'test_user@broadinstitute.org')
         self.assertEqual(response_json[FAMILY_GUID]['assignedAnalyst']['fullName'], 'Test User')
 
         # unassign analyst
@@ -159,14 +174,21 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['assignedAnalyst'])
 
-    def test_update_success_story_types(self):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_update_success_story_types(self, mock_analyst_group):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         self.check_manager_login(url)
 
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 403)
+
         self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         # send valid request
         response = self.client.post(url, content_type='application/json',
@@ -175,7 +197,8 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
 
-    def test_receive_families_table_handler(self):
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
+    def test_receive_families_table_handler(self, mock_pm_group):
         url = reverse(receive_families_table_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
@@ -229,6 +252,12 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(receive_families_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
+
         self.login_pm_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+
         response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
         self.assertEqual(response.status_code, 200)

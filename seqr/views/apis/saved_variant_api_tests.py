@@ -106,7 +106,10 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
-    def test_saved_variant_data(self):
+    @mock.patch('seqr.views.apis.saved_variant_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_saved_variant_data(self, mock_analyst_group):
         url = reverse(saved_variant_data, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
@@ -159,6 +162,10 @@ class SavedVariantAPITest(object):
 
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -775,7 +782,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 5)
+        assert_no_list_ws_has_al(self, 6)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
@@ -832,7 +839,7 @@ class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
 
     def test_saved_variant_data(self):
         super(MixSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self, 2)
 
     def test_create_saved_variant(self):
         super(MixSavedVariantAPITest, self).test_create_saved_variant()

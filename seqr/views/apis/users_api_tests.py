@@ -11,7 +11,7 @@ from seqr.views.apis.users_api import get_all_collaborator_options, set_password
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_all_analyst_options, update_policies
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, WORKSPACE_FIELDS, USER_FIELDS
+    MixAuthenticationTestCase, USER_FIELDS
 
 from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -21,6 +21,8 @@ USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email
 
 class UsersAPITest(object):
 
+    @mock.patch('seqr.views.apis.users_api.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_get_all_analyst_options(self):
         get_all_analyst_url = reverse(get_all_analyst_options)
         self.check_require_login(get_all_analyst_url)
@@ -182,7 +184,7 @@ class UsersAPITest(object):
 
         # Send valid request
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@test.com'
+            'email': 'test_user@broadinstitute.org'
         }))
         self.assertEqual(response.status_code, 200)
 
@@ -196,14 +198,14 @@ class UsersAPITest(object):
             'Reset your seqr password',
             expected_email_content,
             None,
-            ['test_user@test.com'],
+            ['test_user@broadinstitute.org'],
             fail_silently=False,
         )
 
         # Test email failure
         mock_send_mail.side_effect = AnymailError('Connection err')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@test.com'
+            'email': 'test_user@broadinstitute.org'
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')
@@ -251,8 +253,8 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 
 def assert_has_anvil_calls(self):
     calls = [
-        mock.call(self.no_access_user, fields=WORKSPACE_FIELDS),
-        mock.call(self.collaborator_user, fields=WORKSPACE_FIELDS),
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
     ]
     self.mock_list_workspaces.assert_has_calls(calls)
     self.mock_get_ws_acl.assert_not_called()

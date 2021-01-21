@@ -4,18 +4,18 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
-from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
 
 def user_is_analyst(user):
-    return user.groups.filter(name=ANALYST_USER_GROUP).exists()
+    return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
 def user_is_data_manager(user):
     return user.is_staff
 
 def user_is_pm(user):
-    return user.groups.filter(name=PM_USER_GROUP).exists()
+    return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
 
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
@@ -119,13 +119,9 @@ def check_multi_project_permissions(obj, user):
     raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
-def _get_workspaces_user_can_view(user):
-    workspace_list = list_anvil_workspaces(user, fields='public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
-    return ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in workspace_list if not ws.get('public', True)]
-
-
 def _get_analyst_projects():
     return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
+
 
 def get_projects_user_can_view(user):
     if user_is_data_manager(user):
@@ -135,8 +131,8 @@ def get_projects_user_can_view(user):
     if user_is_analyst(user):
         projects = (projects | _get_analyst_projects())
 
-    if is_google_authenticated(user):
-        workspaces = _get_workspaces_user_can_view(user)
+    if is_anvil_authenticated(user):
+        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in list_anvil_workspaces(user)]
         anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
         return (anvil_permitted_projects | projects).distinct()

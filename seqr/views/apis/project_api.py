@@ -55,7 +55,8 @@ def create_project_handler(request):
     }
 
     project = create_model_from_json(Project, project_args, user=request.user)
-    ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.add(project)
+    if ANALYST_PROJECT_CATEGORY:
+        ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.add(project)
 
     return create_json_response({
         'projectsByGuid': {

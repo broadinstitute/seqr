@@ -36,21 +36,32 @@ const predictionFieldValue = (predictions, { field, dangerThreshold, warningThre
     } else if (value >= warningThreshold) {
       color = 'yellow'
     }
-    return { value, color, infoValue, infoTitle }
+    return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
   }
 
   return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } : PREDICTION_INDICATOR_MAP[value[0]]
 }
 
-const Prediction = ({ field, value, color, infoValue, infoTitle }) => {
+const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
   const indicator = infoValue ? <Popup
     header={infoTitle}
     content={infoValue}
     trigger={<Icon name="question circle" size="small" color={color} />}
   /> : <Icon name="circle" size="small" color={color} />
+  const fieldName = snakecaseToTitlecase(field)
+  const fieldDisplay = dangerThreshold ? <Popup
+    header={`${fieldName} Color Ranges`}
+    content={
+      <div>
+        <div>Red &gt; {dangerThreshold}</div>
+        <div>Yellow &gt; {warningThreshold}</div>
+      </div>}
+    trigger={<span>{fieldName}</span>}
+  /> : fieldName
+
   return (
     <div>
-      {indicator} {snakecaseToTitlecase(field)}
+      {indicator} {fieldDisplay}
       <PredictionValue> {value}</PredictionValue>
     </div>
   )
@@ -63,6 +74,8 @@ Prediction.propTypes = {
   infoValue: PropTypes.any,
   infoTitle: PropTypes.string,
   color: PropTypes.string,
+  warningThreshold: PropTypes.number,
+  dangerThreshold: PropTypes.number,
 }
 
 const PREDICTOR_FIELDS = [

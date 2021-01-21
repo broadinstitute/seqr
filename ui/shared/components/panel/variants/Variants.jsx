@@ -54,13 +54,13 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
 const tagFamily = tag =>
   <LoadedFamilyLabel
     familyGuid={tag.savedVariant.familyGuid}
-    to={`/project/${tag.savedVariant.projectGuid}/saved_variants/variant/${tag.savedVariant.variantGuid}`}
+    path={`saved_variants/variant/${tag.savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
   />
 
 
-const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
+const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVariants }) => {
   if (!mainGeneId) {
     mainGeneId = getVariantMainGeneId(variant)
   }
@@ -88,7 +88,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId }) => {
       </Grid.Column>
       {variant.familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} />
+          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} linkToSavedVariants={linkToSavedVariants} />
         </Grid.Column>,
       )}
       <Grid.Column>
@@ -117,6 +117,7 @@ Variant.propTypes = {
   variant: PropTypes.object,
   isCompoundHet: PropTypes.bool,
   mainGeneId: PropTypes.string,
+  linkToSavedVariants: PropTypes.bool,
 }
 
 

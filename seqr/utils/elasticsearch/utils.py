@@ -88,7 +88,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return get_es_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
-def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **kwargs):
+def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, **kwargs):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     previous_search_results = safe_redis_get_json(cache_key) or {}
 
@@ -130,10 +130,11 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, **
     if search.get('freqs'):
         es_search.filter_by_frequency(search['freqs'])
 
-    es_search.filter_by_annotation_and_genotype(
-        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
-        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity=search.get('pathogenicity'))
+    if not skip_genotype_filter:
+        es_search.filter_by_annotation_and_genotype(
+            search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+            annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+            pathogenicity=search.get('pathogenicity'))
 
     if hasattr(es_search, 'aggregate_by_gene'):
         es_search.aggregate_by_gene()

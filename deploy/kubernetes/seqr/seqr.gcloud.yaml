@@ -174,6 +174,16 @@ spec:
           value: "{{ ELASTICSEARCH_PROTOCOL }}"
         # - name: ELASTICSEARCH_CA_PATH
         #   value: "{{ ELASTICSEARCH_CA_PATH }}"
+        - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_PERMS_CACHE_EXPIRE_SECONDS }}"
+        - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+          value: "{{ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS }}"
+        - name: ANALYST_PROJECT_CATEGORY
+          value: "{{ ANALYST_PROJECT_CATEGORY }}"
+        - name: ANALYST_USER_GROUP
+          value: "{{ ANALYST_USER_GROUP }}"
+        - name: PM_USER_GROUP
+          value: "{{ PM_USER_GROUP }}"
         readinessProbe:
           exec:
             command:

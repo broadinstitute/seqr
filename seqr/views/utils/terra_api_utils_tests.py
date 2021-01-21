@@ -6,10 +6,12 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
-    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException
+    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated, \
+    is_google_authenticated
 from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
     TOKEN_AUTH_TIME, REGISTER_RESPONSE
 
+GET_WORKSPACE_PATH = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
 LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": false, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}},\
 {"accessLevel": "READER","public": true, "workspace": {"attributes": {"tag:tags": {"itemsType": "AttributeValue","items": ["differential-expression","tutorial"]},"description": "[DEGenome](https://github.com/eweitz/degenome) transforms differential expression data into inputs for [exploratory genome analysis with Ideogram.js](https://eweitz.github.io/ideogram/differential-expression?annots-url=https://www.googleapis.com/storage/v1/b/degenome/o/GLDS-4_array_differential_expression_ideogram_annots.json).  \\n\\nTry the [Notebook tutorial](https://app.terra.bio/#workspaces/degenome/degenome/notebooks/launch/degenome-tutorial.ipynb), where you can step through using DEGenome to analyze expression for mice flown in space!"},"authorizationDomain": [],"bucketName": "fc-2706d493-5fce-4fb2-9993-457c30364a06","createdBy": "test2@test.com","createdDate": "2020-01-14T10:21:14.575Z","isLocked": false,"lastModified": "2020-02-01T13:28:27.309Z","name": "degenome","namespace": "degenome","workflowCollectionName": "2706d493-5fce-4fb2-9993-457c30364a06","workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"},"workspaceSubmissionStats": {"runningSubmissionsCount": 0}},\
@@ -17,11 +19,43 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 
 
 @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
-@mock.patch('seqr.views.utils.terra_api_utils.logger')
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
 
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+    def test_is_google_authenticated(self, mock_social_auth_key):
+        user = User.objects.get(username='test_user')
+        r = is_google_authenticated(user)
+        self.assertTrue(r)
+
+        local_user = User.objects.get(username='test_local_user')
+        r = is_google_authenticated(local_user)
+        self.assertFalse(r)
+
+        mock_social_auth_key.__bool__.return_value = False
+        r = is_google_authenticated(user)
+        self.assertFalse(r)
+
+    @mock.patch('seqr.views.utils.terra_api_utils.anvil_enabled')
+    @mock.patch('seqr.views.utils.terra_api_utils.is_google_authenticated')
+    def test_is_anvil_authenticated(self, mock_is_google_authenticated, mock_anvil_enabled):
+        mock_is_google_authenticated.return_value = True
+        mock_anvil_enabled.return_value = True
+        user = User.objects.get(username='test_user')
+        r = is_anvil_authenticated(user)
+        self.assertTrue(r)
+
+        mock_is_google_authenticated.return_value = False
+        r = is_anvil_authenticated(user)
+        self.assertFalse(r)
+
+        mock_is_google_authenticated.return_value = True
+        mock_anvil_enabled.return_value = False
+        r = is_anvil_authenticated(user)
+        self.assertFalse(r)
+
     @responses.activate
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     def test_anvil_call(self, mock_logger):
         url = '{}register'.format(TEST_TERRA_API_ROOT_URL)
         responses.add(responses.GET, url, status=200, body=REGISTER_RESPONSE)
@@ -38,40 +72,46 @@ class TerraApiUtilsCase(TestCase):
         self.assertEqual(len(mock_logger.method_calls), 0)
 
     @responses.activate
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_list_workspaces(self, mock_time, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
+    def test_list_workspaces(self, mock_time, mock_logger, mock_redis):
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
-        url = '{}api/workspaces'.format(TEST_TERRA_API_ROOT_URL)
-        responses.add(responses.GET, url, status = 200, body = LIST_WORKSPACE_RESPONSE)
+        url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, GET_WORKSPACE_PATH)
+        mock_redis.return_value.get.return_value = None
+        responses.add(responses.GET, url, status = 200,
+            body = '[{"public": false, "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing" }},' +
+                   '{"public": true,"workspace": {"name": "degenome","namespace": "degenome"}},' +
+                   '{"public": false,"workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing"}}]')
         workspaces = list_anvil_workspaces(user)
-        self.assertEqual(len(workspaces), 3)
-        self.assertDictEqual(workspaces[0], {"accessLevel": "PROJECT_OWNER", "public": False, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": False, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}})
-        mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces 200 2348 test_user')
+        self.assertEqual(len(workspaces), 2)
+        self.assertEqual(workspaces[1]['workspace']['namespace'], 'my-seqr-billing')
+        mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces?fields=public,workspace.name,workspace.namespace 200 276 test_user')
         self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 1)
 
         mock_logger.reset_mock()
         responses.reset()
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status = 200, body = GOOGLE_TOKEN_RESULT)
-        responses.add(responses.GET, url+'?fields=accessLevel,workspace.name,workspace.namespace,workspace.workspaceId', status = 200,
-            body = '[{"accessLevel": "PROJECT_OWNER", "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }},'
-                   '{"accessLevel": "READER","workspace": {"name": "degenome","namespace": "degenome", "workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"}},'
-                   '{"accessLevel": "PROJECT_OWNER","workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"}}]')
-        workspaces = list_anvil_workspaces(user,
-            fields='accessLevel,workspace.name,workspace.namespace,workspace.workspaceId')
-        self.assertNotIn('public', workspaces[0].keys())
-        mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces?fields=accessLevel,workspace.name,workspace.namespace,workspace.workspaceId 200 479 test_user')
-        self.assertEqual(len(mock_logger.method_calls), 1)
+        mock_redis.return_value.get.return_value = '[{"workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing" }},' +\
+                   '{"workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing"}}]'
+        workspaces = list_anvil_workspaces(user)
+        self.assertEqual(len(workspaces), 2)
+        self.assertEqual(workspaces[1]['workspace']['namespace'], 'my-seqr-billing')
+        mock_logger.info.assert_called_with('Terra API cache hit for: GET {} {}'.format(GET_WORKSPACE_PATH, user))
+        mock_redis.return_value.get.assert_called_with('terra_req__{}__{}'.format(user, GET_WORKSPACE_PATH))
+        responses.assert_call_count(url, 0)  # no call to the Terra API
 
         mock_logger.reset_mock()
+        mock_redis.return_value.get.return_value = None
         responses.add(responses.GET, url, status = 401)
         with self.assertRaises(Exception) as ec:
             _ = list_anvil_workspaces(user)
         self.assertEqual(str(ec.exception),
-            'Error: called Terra API: GET /api/workspaces got status: 401 with a reason: Unauthorized')
-        mock_logger.error.assert_called_with('GET https://terra.api/api/workspaces 401 0 test_user')
+            'Error: called Terra API: GET /api/workspaces?fields=public,workspace.name,workspace.namespace got status: 401 with a reason: Unauthorized')
+        mock_logger.error.assert_called_with('GET https://terra.api/api/workspaces?fields=public,workspace.name,workspace.namespace 401 0 test_user')
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_time.reset_mock()
@@ -86,9 +126,10 @@ class TerraApiUtilsCase(TestCase):
         self.assertEqual(len(mock_logger.method_calls), 1)
 
     @responses.activate
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
     def test_get_workspace_acl(self, mock_time, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
@@ -127,12 +168,15 @@ class TerraApiUtilsCase(TestCase):
         self.assertEqual(len(mock_logger.method_calls), 1)
 
     @responses.activate
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_user_get_workspace_access_level(self, mock_time, mock_logger):
-        user = User.objects.get(email='test_user@test.com')
+    def test_user_get_workspace_access_level(self, mock_time, mock_redis, mock_logger):
+        user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
 
+        mock_redis.return_value.get.return_value = None
         url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel'.format(TEST_TERRA_API_ROOT_URL)
         responses.add(responses.GET, url, status = 200, body = '{"accessLevel": "OWNER"}')
         permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
@@ -140,6 +184,7 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.info.assert_called_with(
             'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel 200 24 test_user')
         self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 1)
 
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status = 404)
@@ -148,3 +193,12 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.warning.assert_called_with(
             'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel got status 404 with reason: Not Found')
         self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 2)
+
+        # Test cache hit
+        mock_redis.return_value.get.return_value = '{"accessLevel": "READER"}'
+        permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
+        self.assertDictEqual(permission, {"accessLevel": "READER"})
+        mock_redis.return_value.get.assert_called_with(
+            'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel')
+        responses.assert_call_count(url, 2)  # No API called since the call_count is kept unchanged.
