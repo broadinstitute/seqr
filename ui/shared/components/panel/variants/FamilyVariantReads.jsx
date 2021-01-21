@@ -15,6 +15,7 @@ import { getLocus } from './Annotations'
 const ALIGNMENT_TRACK_OPTIONS = {
   alignmentShading: 'strand',
   type: 'alignment',
+  format: 'cram',
   showSoftClips: true,
 }
 
@@ -22,14 +23,13 @@ const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
-  format: 'bam',
   ...ALIGNMENT_TRACK_OPTIONS,
 }
 
 const BAM_TRACK_OPTIONS = {
+  ...ALIGNMENT_TRACK_OPTIONS,
   indexed: true,
   format: 'bam',
-  ...ALIGNMENT_TRACK_OPTIONS,
 }
 
 const COVERAGE_TRACK_OPTIONS = {
@@ -44,7 +44,7 @@ const COVERAGE_TRACK_OPTIONS = {
 const JUNCTION_TRACK_OPTIONS = {
   type: 'spliceJunctions',
   format: 'bed',
-  order: 10,
+  order: 10, // TODO
   height: 170,
   minUniquelyMappedReads: 0,
   minTotalReads: 1,
@@ -73,15 +73,17 @@ const FamilyVariantReads = React.memo(({ variant, igvSamples, individualsByGuid,
     return null
   }
 
-  // const igvTracks = igvSamples.map((sample) => {
-  const igvTracks = [
-    { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz' },
-    // { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig' }
-  ].map((sample) => {
+  const igvTracks = igvSamples.map((sample) => {
+  // const igvTracks = [
+  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz' },
+  //   // { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig' }
+  // ].map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
 
     const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
 
+    const sampleType = sample.sampleType || 'cram' // TODO
+    // currently all file paths end with .cram or .bam
     let trackOptions = BAM_TRACK_OPTIONS
     if (sample.filePath.endsWith('.cram')) {
       if (sample.filePath.startsWith('gs://')) {

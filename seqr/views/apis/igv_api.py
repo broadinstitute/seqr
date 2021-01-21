@@ -33,7 +33,7 @@ def _stream_file(request, path):
         length = last_byte - first_byte + 1
         resp = StreamingHttpResponse(
             file_iter(path, byte_range=(first_byte, last_byte), raw_content=True), status=206, content_type=content_type)
-        resp['Content-Length'] = str(length)
+        # resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
         resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
