@@ -6,12 +6,12 @@ import { Segment, Icon } from 'semantic-ui-react'
 
 import { updateIgvReadsVisibility } from 'redux/rootReducer'
 import { getIndividualsByGuid, getIGVSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
-import ShowReadsButton from '../../buttons/ShowReadsButton'
-import PedigreeIcon from '../../icons/PedigreeIcon'
-import IGV from '../../graph/IGV'
-import { ButtonLink } from '../../StyledComponents'
-import { VerticalSpacer } from '../../Spacers'
-import { getLocus } from './Annotations'
+import ShowReadsButton from '../buttons/ShowReadsButton'
+import PedigreeIcon from '../icons/PedigreeIcon'
+import IGV from '../graph/IGV'
+import { ButtonLink } from '../StyledComponents'
+import { VerticalSpacer } from '../Spacers'
+import { getLocus } from './variants/Annotations'
 
 const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',

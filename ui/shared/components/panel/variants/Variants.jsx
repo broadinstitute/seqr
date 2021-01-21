@@ -5,7 +5,7 @@ import { Grid, Divider, Popup, Label, Button, Header } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
-import FamilyVariantReads from './FamilyVariantReads'
+import FamilyReads from '../FamilyReads'
 import FamilyVariantTags, { LoadedFamilyLabel, taggedByPopup } from './FamilyVariantTags'
 import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'
@@ -122,7 +122,7 @@ Variant.propTypes = {
   showReads: PropTypes.array,
 }
 
-const VariantWithReads = props => <FamilyVariantReads layout={Variant} {...props} />
+const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
