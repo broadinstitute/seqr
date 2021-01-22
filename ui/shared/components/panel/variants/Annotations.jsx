@@ -153,7 +153,6 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
   }
 
-
   if (variant.svType) {
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
