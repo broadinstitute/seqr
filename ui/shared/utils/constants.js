@@ -291,8 +291,8 @@ export const INDIVIDUAL_FIELD_NOTES = 'notes'
 export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
-  [FAMILY_FIELD_ID]: { label: 'Family ID' },
-  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
+  [FAMILY_FIELD_ID]: { label: 'Family ID', description: 'Family ID of the individual' },
+  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID', description: 'ID of the Individual' },
   [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
   [INDIVIDUAL_FIELD_MATERNAL_ID]: { label: 'Maternal ID', description: 'Individual ID of the mother' },
   [INDIVIDUAL_FIELD_SEX]: {

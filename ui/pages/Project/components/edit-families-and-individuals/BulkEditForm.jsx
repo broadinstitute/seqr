@@ -22,6 +22,7 @@ const Container = styled.div`
   textAlign: left;
   width: 100%;
   padding: 5px 15px 5px 35px;
+  border-bottom: solid gray 1px;
 `
 
 const BoldText = styled.span`
@@ -43,9 +44,13 @@ const TableCell = styled(Table.Cell)`
   vertical-align: top;
 `
 
+const TitleTableCell = styled(TableCell)`
+  width: 25%;
+`
+
 const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
-const BASE_UPLOAD_FORMATS = [
+export const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
     title: 'Text',
@@ -62,7 +67,7 @@ const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const BaseBulkContent = React.memo(({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+export const BaseBulkContent = React.memo(({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
   <div>
     <Container>
       To {actionDescription}, upload a table in one of these formats:
@@ -70,13 +75,13 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
         <Table.Body>
           {uploadFormats.map(({ title, ext, formatLinks }) =>
             <TableRow key={title}>
-              <TableCell>
+              <TitleTableCell>
                 <BoldText>{title}</BoldText> ({formatLinks ? formatLinks.map(
                   ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
                   : `.${ext}`})
-              </TableCell>
+              </TitleTableCell>
               <TableCell>
-                {ext &&
+                {ext && project ?
                   <span>
                     download &nbsp;
                     {blankExportConfig &&
@@ -85,6 +90,13 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
                     </span>
                     }
                     <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                  </span> :
+                  <span>
+                    {blankExportConfig &&
+                    <span>
+                      download &nbsp;<FileLink data={blankExportConfig} ext={ext} linkContent="blank template" />
+                    </span>
+                    }
                   </span>
                 }
               </TableCell>
@@ -101,8 +113,8 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
           <Table.Body>
             {requiredFields.map(field =>
               <TableRow key={field.header}>
-                <TableCell><BoldText>{field.header}</BoldText></TableCell>
-                <TableCell />
+                <TitleTableCell><BoldText>{field.header}</BoldText></TitleTableCell>
+                <TableCell>{field.description}</TableCell>
               </TableRow>,
             )}
           </Table.Body>
@@ -112,21 +124,21 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
           <Table.Body>
             {optionalFields.map(field =>
               <TableRow key={field.header}>
-                <TableCell><BoldText>{field.header}</BoldText></TableCell>
+                <TitleTableCell><BoldText>{field.header}</BoldText></TitleTableCell>
                 <TableCell>{field.description}</TableCell>
               </TableRow>,
             )}
           </Table.Body>
         </StyledTable>
       </div>
-      {details && <div><br />{details}</div>}
-      <br />
     </Container>
+    {details && <div><br />{details}</div>}
     <br />
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={`/api/project/${project.projectGuid}/upload_${name}_table`}
+      url={project ? `/api/project/${project.projectGuid}/upload_${name}_table`
+          : '/api/create_project_from_workspace/upload_individual_table'}
       auto
       required
       name={FILE_FIELD_NAME}

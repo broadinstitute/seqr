@@ -119,12 +119,14 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data
 from seqr.views.apis.project_categories_api import update_project_categories_handler
+from seqr.views.apis.anvil_workspace_api import anvil_workspace_page
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
+    'create_project_from_workspace/(?P<workspace>[^/]+)',
     'gene_info/.*',
     'gene_lists/.*',
     'variant_search/.*',
@@ -269,6 +271,7 @@ api_endpoints = {
     'matchmaker/v1/match': external_api.mme_match_proxy,
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 
+    'anvil_workspace/(?P<workspace_name>[^/]+)': anvil_workspace_page,
 }
 
 urlpatterns = [url('^status', status_view)]

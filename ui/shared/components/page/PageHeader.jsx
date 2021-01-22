@@ -171,7 +171,7 @@ SimplePageHeader.propTypes = {
   pages: PropTypes.array,
 }
 
-const NO_HEADER_PAGES = ['/dashboard', '/users', '/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
+const NO_HEADER_PAGES = ['/dashboard', '/create_project_from_workspace', '/users', '/login', '/matchmaker', '/privacy_policy', '/terms_of_service']
 
 const SIMPLE_HEADER_PAGES = [
   { page: 'data_management', pages: DATA_MANAGEMENT_PAGES },
