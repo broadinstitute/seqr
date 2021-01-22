@@ -119,7 +119,7 @@ Variant.propTypes = {
   mainGeneId: PropTypes.string,
   linkToSavedVariants: PropTypes.bool,
   reads: PropTypes.object,
-  showReads: PropTypes.array,
+  showReads: PropTypes.object,
 }
 
 const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />

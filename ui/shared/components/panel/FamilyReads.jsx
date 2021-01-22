@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid, getIGVSamplesByFamily } from 'redux/selectors'
+import { getIndividualsByGuid, getIGVSamplesByFamily, getFamiliesByGuid } from 'redux/selectors'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
@@ -67,11 +67,10 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
     name: `gencode ${genome}v27`,
     displayMode: 'SQUISHED',
   })
-  igvTracks.map(console.log)
 
   return {
     locus,
-    tracks: [], // TODO undo
+    tracks: igvTracks,
     genome,
     showKaryo: false,
     showIdeogram: true,
@@ -83,6 +82,55 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
   }
 }
 
+const ReadIconButton = props => <ButtonLink icon="options" content="SHOW READS" {...props} />
+
+const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamily, familiesByGuid, buttonProps, showReads }) => {
+  const familyGuids = variant ? variant.familyGuids : [familyGuid]
+
+  const familiesWithReads = familyGuids.filter(fGuid => (igvSamplesByFamily[fGuid] || []).length > 0)
+  if (!familiesWithReads.length) {
+    return null
+  }
+
+  if (familiesWithReads.length === 1) {
+    return <ReadIconButton onClick={showReads(familiesWithReads[0])} {...buttonProps} />
+  }
+
+  return [
+    <ReadIconButton key="showReads" {...buttonProps} />,
+    ...familiesWithReads.map(fGuid => (
+      <ButtonLink key={fGuid} content={`| ${familiesByGuid[fGuid].familyId}`} onClick={showReads(fGuid)} padding="0" />
+    )),
+  ]
+})
+
+ReadButtons.propTypes = {
+  variant: PropTypes.object,
+  familyGuid: PropTypes.string,
+  buttonProps: PropTypes.object,
+  familiesByGuid: PropTypes.object,
+  igvSamplesByFamily: PropTypes.object,
+  showReads: PropTypes.func,
+}
+
+const IgvPanel = React.memo(({ variant, igvSamples, individualsByGuid, hideReads }) => {
+  const igvOptions = getIgvOptions(variant, igvSamples, individualsByGuid)
+  return (
+    <Segment>
+      <ButtonLink onClick={hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
+      <VerticalSpacer height={20} />
+      <IGV igvOptions={igvOptions} />
+    </Segment>
+  )
+})
+
+IgvPanel.propTypes = {
+  variant: PropTypes.object,
+  individualsByGuid: PropTypes.object,
+  igvSamples: PropTypes.array,
+  hideReads: PropTypes.func,
+}
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -90,6 +138,7 @@ class FamilyReads extends React.PureComponent {
     layout: PropTypes.any,
     familyGuid: PropTypes.string,
     buttonProps: PropTypes.object,
+    familiesByGuid: PropTypes.object,
     individualsByGuid: PropTypes.object,
     igvSamplesByFamily: PropTypes.object,
   }
@@ -114,25 +163,27 @@ class FamilyReads extends React.PureComponent {
   }
 
   render() {
-    const { variant, familyGuid, buttonProps, layout, igvSamplesByFamily, individualsByGuid, ...props } = this.props
-    const familyGuids = variant ? variant.familyGuids : [familyGuid]
+    const {
+      variant, familyGuid, buttonProps, layout, igvSamplesByFamily, individualsByGuid, familiesByGuid, ...props
+    } = this.props
 
-    const showReads = familyGuids.filter(fGuid => (igvSamplesByFamily[fGuid] || []).length > 0).map(fGuid =>
-      //TODO better display for mutliple families
-      <ButtonLink key={fGuid} icon="options" content="SHOW READS" onClick={this.showReads(fGuid)} {...buttonProps} />,
-    )
+    const showReads = <ReadButtons
+      variant={variant}
+      familyGuid={familyGuid}
+      buttonProps={buttonProps}
+      igvSamplesByFamily={igvSamplesByFamily}
+      familiesByGuid={familiesByGuid}
+      showReads={this.showReads}
+    />
 
-    let reads = null
     const igvSamples = this.state.openFamily && igvSamplesByFamily[this.state.openFamily]
-    if (igvSamples && igvSamples.length) {
-      const igvOptions = getIgvOptions(variant, igvSamples, individualsByGuid)
-      reads =
-        <Segment>
-          <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
-          <VerticalSpacer height={20} />
-          <IGV igvOptions={igvOptions} />
-        </Segment>
-    }
+    const reads = (igvSamples && igvSamples.length) ?
+      <IgvPanel
+        variant={variant}
+        igvSamples={igvSamples}
+        individualsByGuid={individualsByGuid}
+        hideReads={this.hideReads}
+      /> : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
@@ -141,6 +192,7 @@ class FamilyReads extends React.PureComponent {
 const mapStateToProps = state => ({
   igvSamplesByFamily: getIGVSamplesByFamily(state),
   individualsByGuid: getIndividualsByGuid(state),
+  familiesByGuid: getFamiliesByGuid(state),
 })
 
 export default connect(mapStateToProps)(FamilyReads)
