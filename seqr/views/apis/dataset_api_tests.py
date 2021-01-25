@@ -324,7 +324,7 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675_new.cram'}}})
+            'filePath': '/readviz/NA19675_new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
         mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
 
         new_sample_url = reverse(update_individual_igv_sample, args=['I000003_na19679'])
@@ -339,7 +339,7 @@ class DatasetAPITest(object):
         sample_guid = next(iter(response_json['igvSamplesByGuid']))
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
-            'filePath': 'gs://readviz/NA19679.bam'})
+            'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None, 'sampleType': ''})
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000003_na19679'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
