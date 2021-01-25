@@ -10,10 +10,12 @@ import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
+import { AFFECTED } from '../../utils/constants'
 
 const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'
 const JUNCTION_TYPE = 'spliceJunctions'
+const GCNV_TYPE = 'gcnv'
 
 
 const ALIGNMENT_TRACK_OPTIONS = {
@@ -36,46 +38,45 @@ const BAM_TRACK_OPTIONS = {
 const COVERAGE_TRACK_OPTIONS = {
   format: 'bigwig',
   height: 170,
-  // order: 11, // TODO
 }
 
 const JUNCTION_TRACK_OPTIONS = {
   format: 'bed',
-  // order: 10, // TODO
   height: 170,
   minUniquelyMappedReads: 0,
   minTotalReads: 1,
   maxFractionMultiMappedReads: 1,
   minSplicedAlignmentOverhang: 0,
-  thicknessBasedOn: 'numUniqueReads', //options: numUniqueReads (default), numReads, isAnnotatedJunction
-  bounceHeightBasedOn: 'random', //options: random (default), distance, thickness
-  colorBy: 'strand', //options: numUniqueReads (default), numReads, isAnnotatedJunction, strand, motif
-  colorByNumReadsThreshold: 5, //!== undefined ? sjOptions.colorByNumReadsThreshold : SJ_DEFAULT_COLOR_BY_NUM_READS_THRESHOLD,
-  hideStrand: undefined, //sjOptions.showOnlyPlusStrand ? '-' : (sjOptions.showOnlyMinusStrand ? '+' : undefined),
+  colorBy: 'isAnnotatedJunction',
   labelUniqueReadCount: true,
-  labelMultiMappedReadCount: false,
-  labelTotalReadCount: false,
-  labelMotif: false,
-  labelAnnotatedJunction: false, //sjOptions.labelAnnotatedJunction && sjOptions.labelAnnotatedJunctionValue,
-  hideAnnotatedJunctions: false,
-  hideUnannotatedJunctions: false,
-  //hideMotifs: SJ_MOTIFS.filter((motif) => sjOptions[`hideMotif${motif}`]), //options: 'GT/AG', 'CT/AC', 'GC/AG', 'CT/GC', 'AT/AC', 'GT/AT', 'non-canonical'
+}
+
+const GCNV_TRACK_OPTIONS = {
+  format: 'gcnv',
+  height: 200,
+  min: 0,
+  max: 5,
+  autoscale: true,
+  onlyHandleClicksForHighlightedSamples: true,
 }
 
 const TRACK_OPTIONS = {
   [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
   [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
   [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
+  [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
 }
 
 const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
-  // const igvTracksByIndividual = igvSamples.reduce((acc, sample) => {
-  const igvTracksByIndividual = [
+  // const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
+  const igvTracksBySampleIndividual = [
     ...igvSamples,
     { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz', sampleType: JUNCTION_TYPE },
     { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig', sampleType: COVERAGE_TYPE },
+    { ...igvSamples[0], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MAAC019_v1_Exome_GCP' },
+    { ...igvSamples[1], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MCOP047_v1_Exome_GCP' },
   ].reduce((acc, sample) => {
-    const type = sample.sampleType || ALIGNMENT_TYPE // TODO
+    const type = sample.sampleType || ALIGNMENT_TYPE // TODO add to model
 
     const individual = individualsByGuid[sample.individualGuid]
     const trackName = ReactDOMServer.renderToString(
@@ -101,35 +102,50 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
       }
     } else if (type === JUNCTION_TYPE) {
       trackOptions.indexURL = `${url}.tbi`
+    } else if (type === GCNV_TYPE) {
+      trackOptions.indexURL = `${url}.tbi`
+      trackOptions.highlightSamples = { [sample.sampleId]: individual.affected === AFFECTED ? 'red' : 'blue' } // TODO add sampleId to model
     }
 
-    if (!acc[sample.individualGuid]) {
-      acc[sample.individualGuid] = []
+    if (!acc[type]) {
+      acc[type] = {}
     }
-    acc[sample.individualGuid].push({
+    acc[type][sample.individualGuid] = {
       url,
       name: trackName,
       ...trackOptions,
-    })
+    }
     return acc
   }, {})
 
-  const igvTracks = Object.values(igvTracksByIndividual).reduce((acc, tracks) => ([
+  const gcnvSamplesByBatch = Object.entries(igvTracksBySampleIndividual[GCNV_TYPE] || {}).reduce(
+    (acc, [individualGuid, { url, highlightSamples }]) => {
+      if (!acc[url]) {
+        acc[url] = { individualGuid, highlightSamples }
+      } else {
+        acc[url].highlightSamples = { ...acc[url].highlightSamples, ...highlightSamples }
+      }
+      return acc
+    }, {})
+
+  const igvTracks = Object.values(igvTracksBySampleIndividual).reduce((acc, tracksByIndividual) => ([
     ...acc,
-    ...tracks.map((track) => {
+    ...Object.entries(tracksByIndividual).map(([individualGuid, track]) => {
       if (track.type === JUNCTION_TYPE) {
-        const coverageTrack = tracks.find(({ type }) => (type === COVERAGE_TYPE))
+        const coverageTrack = igvTracksBySampleIndividual[COVERAGE_TYPE][individualGuid]
         if (coverageTrack) {
           return {
             type: 'merged',
             name: track.name,
             height: track.height,
             tracks: [coverageTrack, track],
-            // order: 12, TODO
           }
         }
-      } else if (track.type === COVERAGE_TYPE && tracks.find(({ type }) => (type === JUNCTION_TYPE))) {
+      } else if (track.type === COVERAGE_TYPE && igvTracksBySampleIndividual[JUNCTION_TYPE][individualGuid]) {
         return null
+      } else if (track.type === GCNV_TYPE) {
+        const batch = gcnvSamplesByBatch[track.url]
+        return batch.individualGuid === individualGuid ? { ...track, highlightSamples: batch.highlightSamples } : null
       }
 
       return track
