@@ -68,14 +68,14 @@ const TRACK_OPTIONS = {
 }
 
 const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
-  // const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
-  const igvTracksBySampleIndividual = [
-    ...igvSamples,
-    { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz', sampleType: JUNCTION_TYPE },
-    { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig', sampleType: COVERAGE_TYPE },
-    { ...igvSamples[0], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MAAC019_v1_Exome_GCP' },
-    { ...igvSamples[1], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MCOP047_v1_Exome_GCP' },
-  ].reduce((acc, sample) => {
+  const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
+  // const igvTracksBySampleIndividual = [
+  //   ...igvSamples,
+  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz', sampleType: JUNCTION_TYPE },
+  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig', sampleType: COVERAGE_TYPE },
+  //   { ...igvSamples[0], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MAAC019_v1_Exome_GCP' },
+  //   { ...igvSamples[1], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MCOP047_v1_Exome_GCP' },
+  // ].reduce((acc, sample) => {
     const type = sample.sampleType || ALIGNMENT_TYPE // TODO add to model
 
     const individual = individualsByGuid[sample.individualGuid]
@@ -121,9 +121,10 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
   const gcnvSamplesByBatch = Object.entries(igvTracksBySampleIndividual[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { url, highlightSamples }]) => {
       if (!acc[url]) {
-        acc[url] = { individualGuid, highlightSamples }
+        acc[url] = { individualGuids: [individualGuid], highlightSamples }
       } else {
         acc[url].highlightSamples = { ...acc[url].highlightSamples, ...highlightSamples }
+        acc[url].individualGuids.push(individualGuid)
       }
       return acc
     }, {})
@@ -132,7 +133,7 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
     ...acc,
     ...Object.entries(tracksByIndividual).map(([individualGuid, track]) => {
       if (track.type === JUNCTION_TYPE) {
-        const coverageTrack = igvTracksBySampleIndividual[COVERAGE_TYPE][individualGuid]
+        const coverageTrack = (igvTracksBySampleIndividual[COVERAGE_TYPE] || {})[individualGuid]
         if (coverageTrack) {
           return {
             type: 'merged',
@@ -141,11 +142,16 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
             tracks: [coverageTrack, track],
           }
         }
-      } else if (track.type === COVERAGE_TYPE && igvTracksBySampleIndividual[JUNCTION_TYPE][individualGuid]) {
+      } else if (track.type === COVERAGE_TYPE && (igvTracksBySampleIndividual[JUNCTION_TYPE] || {})[individualGuid]) {
         return null
       } else if (track.type === GCNV_TYPE) {
         const batch = gcnvSamplesByBatch[track.url]
-        return batch.individualGuid === individualGuid ? { ...track, highlightSamples: batch.highlightSamples } : null
+        return batch.individualGuids[0] === individualGuid ? {
+          ...track,
+          highlightSamples: batch.highlightSamples,
+          name: batch.individualGuids.length === 1 ? track.name : batch.individualGuids.map(
+            iGuid => individualsByGuid[iGuid].displayName).join(', '),
+        } : null
       }
 
       return track
