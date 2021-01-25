@@ -16,7 +16,7 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
-from seqr.views.utils.terra_api_utils import is_google_authenticated
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ BOOL_USER_FIELDS = {
 }
 MODEL_USER_FIELDS = MAIN_USER_FIELDS + list(BOOL_USER_FIELDS.keys())
 COMPUTED_USER_FIELDS = {
-    'is_anvil': lambda user, is_anvil=None: is_google_authenticated(user) if is_anvil is None else is_anvil,
+    'is_anvil': lambda user, is_anvil=None: is_anvil_authenticated(user) if is_anvil is None else is_anvil,
     'display_name': lambda user, **kwargs: user.get_full_name(),
     'is_analyst': lambda user, **kwargs: user_is_analyst(user),
     'is_data_manager': lambda user, **kwargs: user_is_data_manager(user),

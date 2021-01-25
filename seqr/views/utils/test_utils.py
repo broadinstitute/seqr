@@ -233,10 +233,10 @@ ANVIL_WORKSPACES = [{
 
 
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
+TEST_OAUTH2_KEY = 'abc123'
 
 # the time must the same as that in 'auth_time' in the social_auth fixture data
 TOKEN_AUTH_TIME = 1603287741
-WORKSPACE_FIELDS = 'public,accessLevel,workspace.name,workspace.namespace,workspace.workspaceId'
 REGISTER_RESPONSE = '{"enabled":{"ldap":true,"allUsersGroup":true,"google":true},"userInfo": {"userEmail":"test@test.com","userSubjectId":"123456"}}'
 
 
@@ -255,11 +255,10 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
     return {}
 
 
-def get_workspaces_side_effect(user, fields):
+def get_workspaces_side_effect(user):
     return [
         {
             'public': ws['public'],
-            'accessLevel': ws['acl'][user.email]['accessLevel'],
             'workspace':{
                 'namespace': ws['workspace_namespace'],
                 'name': ws['workspace_name']
@@ -276,6 +275,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
     # mock the terra apis
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')

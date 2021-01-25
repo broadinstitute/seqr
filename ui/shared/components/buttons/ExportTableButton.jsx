@@ -38,7 +38,7 @@ export const FileLink = React.memo(({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
     linkContent =
-      <span><img alt={ext} src={`/media/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
+      <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
   }
 
   if (data) {

@@ -164,7 +164,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    def test_get_individual_mme_matches(self):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_get_individual_mme_matches(self, mock_analyst_group):
         url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -246,11 +248,18 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.login_analyst_user()
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
@@ -865,6 +874,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'email error')
         self.assertDictEqual(response.json(), {'error': 'no connection'})
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
         self.check_analyst_login(url)

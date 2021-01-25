@@ -39,7 +39,7 @@ const FIELDS = [
 export const DisplayVariants = React.memo(({ displayVariants }) =>
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants variants={displayVariants} />
+      <Variants variants={displayVariants} linkToSavedVariants />
     </Grid.Column>
   </Grid.Row>,
 )

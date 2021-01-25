@@ -100,7 +100,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'ui/dist')
+STATICFILES_DIRS = ['ui/dist']
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -235,7 +236,7 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    STATICFILES_DIRS = [STATIC_ROOT]
+    STATICFILES_DIRS.append(STATIC_ROOT)
     STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
@@ -261,9 +262,9 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
-ANALYST_PROJECT_CATEGORY = 'analyst-projects'
-ANALYST_USER_GROUP = 'analysts'
-PM_USER_GROUP = 'project-managers'
+ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
+ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
+PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
@@ -342,6 +343,9 @@ SOCIAL_AUTH_PIPELINE_BASE = (
 SOCIAL_AUTH_PIPELINE_USER_EXIST = ('seqr.utils.social_auth_pipeline.validate_user_exist',)
 SOCIAL_AUTH_PIPELINE_ASSOCIATE_USER = ('social_core.pipeline.social_auth.associate_user',)
 SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
+
+TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
+TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
 
 if TERRA_API_ROOT_URL:
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
