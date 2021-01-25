@@ -11,9 +11,13 @@ import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
 
+const ALIGNMENT_TYPE = 'alignment'
+const COVERAGE_TYPE = 'wig'
+const JUNCTION_TYPE = 'spliceJunctions'
+
+
 const ALIGNMENT_TRACK_OPTIONS = {
   alignmentShading: 'strand',
-  type: 'alignment',
   format: 'cram',
   showSoftClips: true,
 }
@@ -22,28 +26,22 @@ const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
-  ...ALIGNMENT_TRACK_OPTIONS,
 }
 
 const BAM_TRACK_OPTIONS = {
-  ...ALIGNMENT_TRACK_OPTIONS,
   indexed: true,
   format: 'bam',
 }
 
 const COVERAGE_TRACK_OPTIONS = {
-  type: 'wig',
   format: 'bigwig',
   height: 170,
-  order: 11, // TODO
-  rowName: 'row.name',
-  categoryName: 'categoryName',
+  // order: 11, // TODO
 }
 
 const JUNCTION_TRACK_OPTIONS = {
-  type: 'spliceJunctions',
   format: 'bed',
-  order: 10, // TODO
+  // order: 10, // TODO
   height: 170,
   minUniquelyMappedReads: 0,
   minTotalReads: 1,
@@ -62,62 +60,81 @@ const JUNCTION_TRACK_OPTIONS = {
   hideAnnotatedJunctions: false,
   hideUnannotatedJunctions: false,
   //hideMotifs: SJ_MOTIFS.filter((motif) => sjOptions[`hideMotif${motif}`]), //options: 'GT/AG', 'CT/AC', 'GC/AG', 'CT/GC', 'AT/AC', 'GT/AT', 'non-canonical'
-  rowName: 'row.name',
-  categoryName: 'categoryName',
+}
+
+const TRACK_OPTIONS = {
+  [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
+  [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
+  [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
 }
 
 const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
-  const igvTracks = igvSamples.map((sample) => {
-  // const igvTracks = [
-  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz' },
-  //   // { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig' }
-  // ].map((sample) => {
+  // const igvTracksByIndividual = igvSamples.reduce((acc, sample) => {
+  const igvTracksByIndividual = [
+    ...igvSamples,
+    { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz', sampleType: JUNCTION_TYPE },
+    { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig', sampleType: COVERAGE_TYPE },
+  ].reduce((acc, sample) => {
+    const type = sample.sampleType || ALIGNMENT_TYPE // TODO
+
     const individual = individualsByGuid[sample.individualGuid]
-
-    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
-
-    const sampleType = sample.sampleType || 'cram' // TODO
-    // currently all file paths end with .cram or .bam
-    let trackOptions = BAM_TRACK_OPTIONS
-    if (sample.filePath.endsWith('.cram')) {
-      if (sample.filePath.startsWith('gs://')) {
-        trackOptions = {
-          format: 'cram',
-          indexURL: `${url}.crai`,
-          ...ALIGNMENT_TRACK_OPTIONS,
-        }
-      } else {
-        trackOptions = CRAM_PROXY_TRACK_OPTIONS
-      }
-    } else if (sample.filePath.endsWith('.bigWig')) {
-      trackOptions = COVERAGE_TRACK_OPTIONS
-    } else if (sample.filePath.endsWith('.junctions.bed.gz')) {
-      trackOptions = {
-        indexURL: `${url}.tbi`,
-        ...JUNCTION_TRACK_OPTIONS,
-      }
-    }
-
-    //
-    // igvTracks.push({
-    //   type: 'merged',
-    //   name: junctionsTrack.name,
-    //   height: sjOptions.trackHeight,
-    //   tracks: [coverageTrack, junctionsTrack],
-    //   order: 12,
-    //   rowName: 'row.name',
-    //   categoryName: 'categoryName',
-    // })
-
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
     )
-    return {
+
+    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
+
+    const trackOptions = { type, ...TRACK_OPTIONS[type] }
+
+    if (type === ALIGNMENT_TYPE) {
+      if (sample.filePath.endsWith('.cram')) {
+        if (sample.filePath.startsWith('gs://')) {
+          Object.assign(trackOptions, {
+            format: 'cram',
+            indexURL: `${url}.crai`,
+          })
+        } else {
+          Object.assign(trackOptions, CRAM_PROXY_TRACK_OPTIONS)
+        }
+      } else {
+        Object.assign(trackOptions, BAM_TRACK_OPTIONS)
+      }
+    } else if (type === JUNCTION_TYPE) {
+      trackOptions.indexURL = `${url}.tbi`
+    }
+
+    if (!acc[sample.individualGuid]) {
+      acc[sample.individualGuid] = []
+    }
+    acc[sample.individualGuid].push({
       url,
       name: trackName,
       ...trackOptions,
-    }
-  }).filter(track => track)
+    })
+    return acc
+  }, {})
+
+  const igvTracks = Object.values(igvTracksByIndividual).reduce((acc, tracks) => ([
+    ...acc,
+    ...tracks.map((track) => {
+      if (track.type === JUNCTION_TYPE) {
+        const coverageTrack = tracks.find(({ type }) => (type === COVERAGE_TYPE))
+        if (coverageTrack) {
+          return {
+            type: 'merged',
+            name: track.name,
+            height: track.height,
+            tracks: [coverageTrack, track],
+            // order: 12, TODO
+          }
+        }
+      } else if (track.type === COVERAGE_TYPE && tracks.find(({ type }) => (type === JUNCTION_TYPE))) {
+        return null
+      }
+
+      return track
+    }),
+  ]), []).filter(track => track)
 
   // TODO better determiner of genome version?
   const isBuild38 = igvSamples.some(sample => sample.filePath.endsWith('.cram'))
@@ -127,11 +144,11 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
     variant.chrom, (!isBuild38 && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos, 100,
   )
 
-  // igvTracks.push({
-  //   url: `https://storage.googleapis.com/seqr-reference-data/${isBuild38 ? 'GRCh38' : 'GRCh37'}/gencode/gencode.v27${isBuild38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
-  //   name: `gencode ${genome}v27`,
-  //   displayMode: 'SQUISHED',
-  // })
+  igvTracks.push({
+    url: `https://storage.googleapis.com/seqr-reference-data/${isBuild38 ? 'GRCh38' : 'GRCh37'}/gencode/gencode.v27${isBuild38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
+    name: `gencode ${genome}v27`,
+    displayMode: 'SQUISHED',
+  })
 
   return {
     locus,
