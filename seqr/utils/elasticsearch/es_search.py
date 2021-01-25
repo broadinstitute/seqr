@@ -812,7 +812,8 @@ class EsSearch(object):
                     continue
 
                 if self._allowed_consequences and self._allowed_consequences_secondary:
-                    consequences = variant_1['gene_consequences'].get(gene_id, [])
+                    # Make a copy of lists to prevent blowing up memory usage
+                    consequences = [] + variant_1['gene_consequences'].get(gene_id, [])
                     consequences += variant_2['gene_consequences'].get(gene_id, [])
                     if all(consequence not in self._allowed_consequences for consequence in consequences) or all(
                             consequence not in self._allowed_consequences_secondary for consequence in consequences):
