@@ -318,6 +318,14 @@ export const STATE1 = {
   },
   analysisGroupsByGuid: {},
   samplesByGuid: {},
+  igvSamplesByGuid: {
+    S2310656_wal_mc16200_mc16203: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      individualGuid: 'I021474_na19679',
+      sampleGuid: 'S2310656_wal_mc16200_mc16203',
+      filePath: 'gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ_MC16203.cram',
+    },
+  },
   mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
