@@ -53,7 +53,7 @@ def receive_workspace_table_handler(request):
         'uploadedFileId': uploaded_file_id,
         'errors': [],
         'warnings': [],
-        'info': [],
+        'info': ['File {} uploaded.'.format(filename)],
     }
     logger.info(response)
     return create_json_response(response)

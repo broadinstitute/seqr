@@ -7,6 +7,7 @@ import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/e
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const StyledTitle = styled.h3`
   text-align: center;
@@ -25,6 +26,7 @@ const StyledField = styled.div`
   border: solid gray 1px;
   border-color: rgb(202, 202, 202);
   border-radius: .28571429rem;
+  margin-bottom: 10px;
 `
 
 const FIELD_DESCRIPTIONS = {
@@ -66,7 +68,13 @@ const UPLOAD_PEDIGREE_FIELD = {
   component: UploadPedigreeField,
 }
 
-const FORM_FIELDS = [PROJECT_DESC_FIELDS, UPLOAD_PEDIGREE_FIELD]
+const AGREE_CHECKBOX = {
+  name: 'agreeCheckbox',
+  component: BooleanCheckbox,
+  label: 'By submitting this form I agree to grant seqr access to the data in the associated workspace',
+}
+
+const FORM_FIELDS = [PROJECT_DESC_FIELDS, UPLOAD_PEDIGREE_FIELD, AGREE_CHECKBOX]
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
   <div>
