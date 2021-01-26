@@ -130,10 +130,13 @@ def receive_igv_table_handler(request, project_guid):
     info = []
 
     def _process_alignment_records(rows, **kwargs):
-        invalid_row = next((row for row in rows if len(row) != 2), None)
+        invalid_row = next((row for row in rows if not 2 <= len(row) <= 3), None)
         if invalid_row:
-            raise ValueError("Must contain 2 columns: " + ', '.join(invalid_row))
-        return {row[0]: row[1] for row in rows}
+            raise ValueError("Must contain 2 or 3 columns: " + ', '.join(invalid_row))
+        parsed_records = defaultdict(list)
+        for row in rows:
+            parsed_records[row[0]].append({'filePath': row[1], 'sampleId': row[2] if len(row)> 2 else None})
+        return parsed_records
 
     try:
         uploaded_file_id, filename, individual_dataset_mapping = save_uploaded_file(request, process_records=_process_alignment_records)
@@ -143,28 +146,49 @@ def receive_igv_table_handler(request, project_guid):
         if len(unmatched_individuals) > 0:
             raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
 
-        info.append('Parsed {} rows from {}'.format(len(individual_dataset_mapping), filename))
+        info.append('Parsed {} rows in {} individuals from {}'.format(
+            sum([len(rows) for rows in individual_dataset_mapping.values()]), len(individual_dataset_mapping), filename))
 
-        existing_samples = IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals)
-        unchanged_individual_ids = {s.individual.individual_id for s in existing_samples
-                                    if individual_dataset_mapping[s.individual.individual_id] == s.file_path}
-        if unchanged_individual_ids:
-            info.append('No change detected for {} individuals'.format(len(unchanged_individual_ids)))
+        existing_sample_files = defaultdict(set)
+        for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals):
+            existing_sample_files[sample.individual.individual_id].add(sample.file_path)
 
-        updates_by_individual_guid = {i.guid: individual_dataset_mapping[i.individual_id] for i in matched_individuals
-                                      if i.individual_id not in unchanged_individual_ids}
+        unchanged_rows = set()
+        for individual_id, updates in individual_dataset_mapping.items():
+            unchanged_rows.update([
+                (individual_id, update['filePath']) for update in updates
+                if update['filePath'] in existing_sample_files[individual_id]
+            ])
+
+        if unchanged_rows:
+            info.append('No change detected for {} rows'.format(len(unchanged_rows)))
+
+        all_updates = []
+        for i in matched_individuals:
+            all_updates += [
+                dict(individualGuid=i.guid, **update) for update in individual_dataset_mapping[i.individual_id]
+                if (i.individual_id, update['filePath']) not in unchanged_rows
+            ]
 
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
     response = {
-        'updatesByIndividualGuid': updates_by_individual_guid,
+        'updates': all_updates,
         'uploadedFileId': uploaded_file_id,
         'errors': [],
         'info': info,
     }
     return create_json_response(response)
 
+
+SAMPLE_TYPE_MAP = {
+    'bam': IgvSample.SAMPLE_TYPE_ALIGNMENT,
+    'cram': IgvSample.SAMPLE_TYPE_ALIGNMENT,
+    'bigWig': IgvSample.SAMPLE_TYPE_COVERAGE,
+    'junctions.bed.gz': IgvSample.SAMPLE_TYPE_JUNCTION,
+    'dcr.bed.gz': IgvSample.SAMPLE_TYPE_GCNV,
+}
 
 @data_manager_required
 def update_individual_igv_sample(request, individual_guid):
@@ -175,18 +199,20 @@ def update_individual_igv_sample(request, individual_guid):
     request_json = json.loads(request.body)
 
     try:
-        required_fields = ['filePath']
-        if any(field not in request_json for field in required_fields):
-            raise ValueError(
-                "request must contain fields: {}".format(', '.join(required_fields)))
+        file_path = request_json.get('filePath')
+        if not file_path:
+            raise ValueError('request must contain fields: filePath')
 
-        file_path = request_json['filePath']
-        if not (file_path.endswith(".bam") or file_path.endswith(".cram")):
-            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(file_path))
+        suffix = '.'.join(file_path.split('.')[1:])
+        sample_type = SAMPLE_TYPE_MAP.get(suffix)
+        if not sample_type:
+            raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
+                file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
         validate_alignment_dataset_path(file_path)
 
         sample, created = get_or_create_model_from_json(
-            IgvSample, create_json={'individual': individual}, update_json={'file_path': file_path}, user=request.user)
+            IgvSample, create_json={'individual': individual, 'sample_type': sample_type},
+            update_json={'file_path': file_path, 'sample_id': request_json.get('sampleId')}, user=request.user)
 
         response = {
             'igvSamplesByGuid': {
