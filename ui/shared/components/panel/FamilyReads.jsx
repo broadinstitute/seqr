@@ -69,14 +69,7 @@ const TRACK_OPTIONS = {
 
 const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
   const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
-  // const igvTracksBySampleIndividual = [
-  //   ...igvSamples,
-  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/junctions_bed_for_igv_js/250DV_LR_M1.junctions.bed.gz', sampleType: JUNCTION_TYPE },
-  //   { ...igvSamples[0], filePath: 'gs://macarthurlab-rnaseq/batch_0/bigWig/250DV_LR_M1.bigWig', sampleType: COVERAGE_TYPE },
-  //   { ...igvSamples[0], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MAAC019_v1_Exome_GCP' },
-  //   { ...igvSamples[1], filePath: 'gs://seqr-datasets-gcnv/GRCh38/RDG_WES_Broad_Internal/v1/beds/cc_20_1.dcr.bed.gz', sampleType: GCNV_TYPE, sampleId: 'C1847_MCOP047_v1_Exome_GCP' },
-  // ].reduce((acc, sample) => {
-    const type = sample.sampleType || ALIGNMENT_TYPE // TODO add to model
+    const type = sample.sampleType
 
     const individual = individualsByGuid[sample.individualGuid]
     const trackName = ReactDOMServer.renderToString(
@@ -103,8 +96,9 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
     } else if (type === JUNCTION_TYPE) {
       trackOptions.indexURL = `${url}.tbi`
     } else if (type === GCNV_TYPE) {
+      const sampleId = sample.sampleId || individual.individualId
+      trackOptions.highlightSamples = { [sampleId]: individual.affected === AFFECTED ? 'red' : 'blue' }
       trackOptions.indexURL = `${url}.tbi`
-      trackOptions.highlightSamples = { [sample.sampleId]: individual.affected === AFFECTED ? 'red' : 'blue' } // TODO add sampleId to model
     }
 
     if (!acc[type]) {

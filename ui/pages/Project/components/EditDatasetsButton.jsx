@@ -1,12 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import styled from 'styled-components'
-import { Tab } from 'semantic-ui-react'
+import { Tab, Table } from 'semantic-ui-react'
 
 import { getProjectGuid } from 'redux/selectors'
 import Modal from 'shared/components/modal/Modal'
-import { ButtonLink } from 'shared/components/StyledComponents'
+import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
@@ -14,14 +13,7 @@ import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
 
-const DropzoneLabel = styled.span`
-  text-align: left;
-  display: inline-block;
-  margin-left: -5em;
-  margin-right: -5em;
-`
-
-const UPLOADER_STYLE = { textAlign: 'left' }
+const UPLOADER_STYLES = { placeHolderStyle: { paddingLeft: '5%', paddingRight: '5%' } }
 
 const MODAL_NAME = 'Datasets'
 
@@ -98,19 +90,41 @@ const IGVFileUploadField = React.memo(({ projectGuid, ...props }) =>
   <FileUploadField
     clearTimeOut={0}
     dropzoneLabel={
-      <DropzoneLabel>
-        Upload a file that maps seqr Individual Ids to their BAM or CRAM file path
-        <br />
-        <br />
-        <b>File Format:</b> Tab-separated file (.tsv) or Excel spreadsheet (.xls)<br />
-        <b>Column 1:</b> Individual ID<br />
-        <b>Column 2:</b> gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual<br />
-      </DropzoneLabel>
+      <NoBorderTable basic="very" compact="very">
+        <Table.Body>
+          <Table.Row>
+            <Table.Cell colSpan={2}>
+              Upload a file that maps seqr Individual Ids to IGV file paths
+            </Table.Cell>
+          </Table.Row>
+          <Table.Row><Table.Cell /></Table.Row>
+          <Table.Row>
+            <Table.HeaderCell>File Format:</Table.HeaderCell>
+            <Table.Cell>Tab-separated file (.tsv) or Excel spreadsheet (.xls)</Table.Cell>
+          </Table.Row>
+          <Table.Row><Table.Cell /></Table.Row>
+          <Table.Row>
+            <Table.HeaderCell>Column 1:</Table.HeaderCell>
+            <Table.Cell>Individual ID</Table.Cell>
+          </Table.Row>
+          <Table.Row>
+            <Table.HeaderCell>Column 2:</Table.HeaderCell>
+            <Table.Cell>gs:// Google bucket path or server filesystem path for this Individual</Table.Cell>
+          </Table.Row>
+          <Table.Row>
+            <Table.HeaderCell>Column 3 (Optional):</Table.HeaderCell>
+            <Table.Cell>
+              Sample ID for this file, if different from the Individual ID. Used primarily for gCNV files to identify
+              the sample in the batch path
+            </Table.Cell>
+          </Table.Row>
+        </Table.Body>
+      </NoBorderTable>
     }
     url={`/api/project/${projectGuid}/upload_igv_dataset`}
     auto
     required
-    uploaderStyle={UPLOADER_STYLE}
+    styles={UPLOADER_STYLES}
     {...props}
   />,
 )
@@ -141,7 +155,7 @@ const PANES = [
     initialValues: DEFAULT_UPLOAD_CALLSET_VALUE,
   },
   {
-    title: 'Add BAM/CRAM Paths',
+    title: 'Add IGV Paths',
     formType: ADD_IGV_FORM,
     formFields: UPLOAD_IGV_FIELDS,
   },
