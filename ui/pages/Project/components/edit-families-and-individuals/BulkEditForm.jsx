@@ -9,6 +9,7 @@ import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { INDIVIDUAL_HPO_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
+import { NoBorderTable } from 'shared/components/StyledComponents'
 import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_BULK_UPDATE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
@@ -17,39 +18,17 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-
-const Container = styled.div`
-  textAlign: left;
-  width: 100%;
-  padding: 5px 15px 5px 35px;
-`
-
-const StyledSpacer = styled.div`
-  padding: 5px 15px 5px 35px;
-  border-top: solid gray 1px;
-`
-
 const BoldText = styled.span`
   font-weight: 600
 `
 
-const StyledTable = styled(Table)`
-  padding: 5px 0px 5px 25px !important;
-  border: none !important;
+const StyledForm = styled.div`
+  margin: 10px;
 `
 
-const TableRow = styled(Table.Row)`
-  border-top: none !important;
-`
-
-const TableCell = styled(Table.Cell)`
-  padding: 2px 5px 2px 0px !important;
-  border-top: none !important;
-  vertical-align: top;
-`
-
-const TitleTableCell = styled(TableCell)`
-  width: 15%;
+const TableHeaderCell = styled(Table.HeaderCell)`
+  width: 20%;
+  text-indent: 15px;
 `
 
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
@@ -71,70 +50,78 @@ FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_
 
 
 export const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
-  <div>
-    <Container>
-      To {actionDescription}, upload a table in one of these formats:
-      <StyledTable>
-        <Table.Body>
-          {uploadFormats.map(({ title, ext, formatLinks }) =>
-            <TableRow key={title}>
-              <TitleTableCell>
-                <BoldText>{title}</BoldText> ({formatLinks ? formatLinks.map(
-                  ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
-                  : `.${ext}`})
-              </TitleTableCell>
-              <TableCell>
-                {ext &&
+  <StyledForm>
+    <NoBorderTable basic="very" compact="very">
+      <Table.Body>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            To {actionDescription}, upload a table in one of these formats:
+          </Table.Cell>
+        </Table.Row>
+        <Table.Row><Table.Cell /></Table.Row>
+        {uploadFormats.map(({ title, ext, formatLinks }) =>
+          <Table.Row key={title}>
+            <TableHeaderCell>
+              {title} ({formatLinks ? formatLinks.map(
+                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
+                : `.${ext}`})
+            </TableHeaderCell>
+            <Table.Cell>
+              {ext &&
+                <span>
+                  download &nbsp;
+                  {blankExportConfig &&
                   <span>
-                    download &nbsp;
-                    {blankExportConfig &&
-                    <span>
-                      template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
-                    </span>
-                    }
-                    {exportConfig &&
-                    <span>
-                      or <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
-                    </span>
-                    }
+                    template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
                   </span>
-                }
-              </TableCell>
-            </TableRow>,
-          )}
-        </Table.Body>
-      </StyledTable>
-
-      The table must have a header row with the following column names.<br />
-      <br />
-      <div>
-        <BoldText>Required Columns:</BoldText><br />
-        <StyledTable>
-          <Table.Body>
-            {requiredFields.map(field =>
-              <TableRow key={field.header}>
-                <TitleTableCell><BoldText>{field.header}</BoldText></TitleTableCell>
-                <TableCell>{field.description}</TableCell>
-              </TableRow>,
-            )}
-          </Table.Body>
-        </StyledTable>
-        <BoldText>Optional Columns:</BoldText>
-        <StyledTable>
-          <Table.Body>
-            {optionalFields.map(field =>
-              <TableRow key={field.header}>
-                <TitleTableCell><BoldText>{field.header}</BoldText></TitleTableCell>
-                <TableCell>{field.description}</TableCell>
-              </TableRow>,
-            )}
-          </Table.Body>
-        </StyledTable>
-      </div>
-      {details && <div><br />{details}</div>}
-      <br />
-    </Container>
-    {!details && <StyledSpacer />}
+                  }
+                  {exportConfig &&
+                  <span>
+                    or <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                  </span>
+                  }
+                </span>
+              }
+            </Table.Cell>
+          </Table.Row>,
+        )}
+        <Table.Row><Table.Cell /></Table.Row>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            The table must have a header row with the following column names.
+          </Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            <BoldText>Required Columns:</BoldText>
+          </Table.Cell>
+        </Table.Row>
+        {requiredFields.map(field =>
+          <Table.Row key={field.header}>
+            <TableHeaderCell>{field.header}</TableHeaderCell>
+            <Table.Cell>{field.description}</Table.Cell>
+          </Table.Row>,
+        )}
+        <Table.Row><Table.Cell /></Table.Row>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            <BoldText>Optional Columns:</BoldText>
+          </Table.Cell>
+        </Table.Row>
+        {optionalFields.map(field =>
+          <Table.Row key={field.header}>
+            <TableHeaderCell>{field.header}</TableHeaderCell>
+            <Table.Cell>{field.description}</Table.Cell>
+          </Table.Row>,
+        )}
+        {details &&
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            {details}
+          </Table.Cell>
+        </Table.Row>}
+      </Table.Body>
+    </NoBorderTable>
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
@@ -144,7 +131,7 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
       name={FILE_FIELD_NAME}
       uploaderStyle={UPLOADER_STYLE}
     />
-  </div>,
+  </StyledForm>,
 )
 
 BaseBulkContent.propTypes = {

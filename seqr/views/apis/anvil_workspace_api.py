@@ -2,12 +2,10 @@
 APIs for management of projects related to AnVIL workspaces.
 """
 
-import json
 import logging
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import Project
-from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
+from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from settings import API_LOGIN_REQUIRED_URL
 
