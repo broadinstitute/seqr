@@ -55,7 +55,6 @@ export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAnnotationSecondary = (state) => {
   try {

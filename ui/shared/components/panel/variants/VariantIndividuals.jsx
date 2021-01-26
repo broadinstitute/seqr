@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily } from 'redux/selectors'
-import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
@@ -188,7 +187,7 @@ Genotype.propTypes = {
 }
 
 
-const VariantIndividuals = React.memo(({ variant, individuals, familyGuid, isCompoundHet }) => (
+const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
@@ -205,12 +204,10 @@ const VariantIndividuals = React.memo(({ variant, individuals, familyGuid, isCom
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} />
       </IndividualCell>,
     )}
-    <ShowReadsButton familyGuid={familyGuid} igvId={variant.variantId} />
   </IndividualsContainer>
 ))
 
-VariantIndividuals.propTypes = {
-  familyGuid: PropTypes.string,
+BaseVariantIndividuals.propTypes = {
   variant: PropTypes.object,
   individuals: PropTypes.array,
   isCompoundHet: PropTypes.bool,
@@ -220,4 +217,20 @@ const mapStateToProps = (state, ownProps) => ({
   individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
 })
 
-export default connect(mapStateToProps)(VariantIndividuals)
+const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)
+
+const VariantIndividuals = React.memo(({ variant, isCompoundHet }) =>
+  <span>
+    {variant.familyGuids.map(familyGuid =>
+      <FamilyVariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
+    )}
+  </span>,
+)
+
+
+VariantIndividuals.propTypes = {
+  variant: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
+}
+
+export default VariantIndividuals
