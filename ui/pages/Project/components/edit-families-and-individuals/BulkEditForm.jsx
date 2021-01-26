@@ -8,7 +8,7 @@ import { getCurrentProject } from 'redux/selectors'
 import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'
+import { INDIVIDUAL_HPO_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
 import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_BULK_UPDATE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
@@ -22,7 +22,11 @@ const Container = styled.div`
   textAlign: left;
   width: 100%;
   padding: 5px 15px 5px 35px;
-  border-bottom: solid gray 1px;
+`
+
+const StyledSpacer = styled.div`
+  padding: 5px 15px 5px 35px;
+  border-top: solid gray 1px;
 `
 
 const BoldText = styled.span`
@@ -45,10 +49,9 @@ const TableCell = styled(Table.Cell)`
 `
 
 const TitleTableCell = styled(TableCell)`
-  width: 25%;
+  width: 15%;
 `
 
-const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 export const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
@@ -67,7 +70,7 @@ const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-export const BaseBulkContent = React.memo(({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+export const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
   <div>
     <Container>
       To {actionDescription}, upload a table in one of these formats:
@@ -81,20 +84,17 @@ export const BaseBulkContent = React.memo(({ actionDescription, details, project
                   : `.${ext}`})
               </TitleTableCell>
               <TableCell>
-                {ext && project ?
+                {ext &&
                   <span>
                     download &nbsp;
                     {blankExportConfig &&
                     <span>
-                      template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
+                      template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
                     </span>
                     }
-                    <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
-                  </span> :
-                  <span>
-                    {blankExportConfig &&
+                    {exportConfig &&
                     <span>
-                      download &nbsp;<FileLink data={blankExportConfig} ext={ext} linkContent="blank template" />
+                      or <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
                     </span>
                     }
                   </span>
@@ -131,14 +131,14 @@ export const BaseBulkContent = React.memo(({ actionDescription, details, project
           </Table.Body>
         </StyledTable>
       </div>
+      {details && <div><br />{details}</div>}
+      <br />
     </Container>
-    {details && <div><br />{details}</div>}
-    <br />
+    {!details && <StyledSpacer />}
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={project ? `/api/project/${project.projectGuid}/upload_${name}_table`
-          : '/api/create_project_from_workspace/upload_individual_table'}
+      url={url || `/api/project/${project.projectGuid}/upload_${name}_table`}
       auto
       required
       name={FILE_FIELD_NAME}
@@ -148,6 +148,7 @@ export const BaseBulkContent = React.memo(({ actionDescription, details, project
 )
 
 BaseBulkContent.propTypes = {
+  url: PropTypes.string,
   actionDescription: PropTypes.string.isRequired,
   requiredFields: PropTypes.array.isRequired,
   optionalFields: PropTypes.array.isRequired,

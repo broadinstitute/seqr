@@ -41,9 +41,13 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 // PROJECT FIELDS
 
+export const FILE_FIELD_NAME = 'uploadedFile'
+
+export const PROJECT_DESC_FIELDS = { name: 'description', label: 'Project Description', placeholder: 'Description' }
+
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  { name: 'description', label: 'Project Description', placeholder: 'Description' },
+  PROJECT_DESC_FIELDS,
 ]
 
 export const PROJECT_FIELDS = [
@@ -59,7 +63,6 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
   format: val => (val || '').replace('mailto:', ''),
   validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
 }
-
 
 // SAMPLES
 
@@ -291,8 +294,8 @@ export const INDIVIDUAL_FIELD_NOTES = 'notes'
 export const INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP = 'probandRelationship'
 
 export const INDIVIDUAL_FIELD_CONFIGS = {
-  [FAMILY_FIELD_ID]: { label: 'Family ID', description: 'Family ID of the individual' },
-  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID', description: 'ID of the Individual' },
+  [FAMILY_FIELD_ID]: { label: 'Family ID' },
+  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
   [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
   [INDIVIDUAL_FIELD_MATERNAL_ID]: { label: 'Maternal ID', description: 'Individual ID of the mother' },
   [INDIVIDUAL_FIELD_SEX]: {
