@@ -44,7 +44,7 @@ const TableCell = styled(Table.Cell)`
 `
 
 const FILE_FIELD_NAME = 'uploadedFile'
-const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
+const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
 const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
@@ -130,7 +130,7 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
       auto
       required
       name={FILE_FIELD_NAME}
-      uploaderStyle={UPLOADER_STYLE}
+      styles={UPLOADER_STYLES}
     />
   </div>,
 )

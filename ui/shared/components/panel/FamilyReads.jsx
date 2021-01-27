@@ -10,12 +10,24 @@ import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
+import { AFFECTED } from '../../utils/constants'
+
+const ALIGNMENT_TYPE = 'alignment'
+const COVERAGE_TYPE = 'wig'
+const JUNCTION_TYPE = 'spliceJunctions'
+const GCNV_TYPE = 'gcnv'
+
+
+const ALIGNMENT_TRACK_OPTIONS = {
+  alignmentShading: 'strand',
+  format: 'cram',
+  showSoftClips: true,
+}
 
 const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
-  format: 'bam',
 }
 
 const BAM_TRACK_OPTIONS = {
@@ -23,36 +35,122 @@ const BAM_TRACK_OPTIONS = {
   format: 'bam',
 }
 
+const COVERAGE_TRACK_OPTIONS = {
+  format: 'bigwig',
+  height: 170,
+}
+
+const JUNCTION_TRACK_OPTIONS = {
+  format: 'bed',
+  height: 170,
+  minUniquelyMappedReads: 0,
+  minTotalReads: 1,
+  maxFractionMultiMappedReads: 1,
+  minSplicedAlignmentOverhang: 0,
+  colorBy: 'isAnnotatedJunction',
+  labelUniqueReadCount: true,
+}
+
+const GCNV_TRACK_OPTIONS = {
+  format: 'gcnv',
+  height: 200,
+  min: 0,
+  max: 5,
+  autoscale: true,
+  onlyHandleClicksForHighlightedSamples: true,
+}
+
+const TRACK_OPTIONS = {
+  [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
+  [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
+  [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
+  [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
+}
+
 const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
-  const igvTracks = igvSamples.map((sample) => {
+  const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
+    const type = sample.sampleType
+
     const individual = individualsByGuid[sample.individualGuid]
-
-    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
-
-    let trackOptions = BAM_TRACK_OPTIONS
-    if (sample.filePath.endsWith('.cram')) {
-      if (sample.filePath.startsWith('gs://')) {
-        trackOptions = {
-          format: 'cram',
-          indexURL: `${url}.crai`,
-        }
-      } else {
-        trackOptions = CRAM_PROXY_TRACK_OPTIONS
-      }
-    }
-
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
     )
-    return {
+
+    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
+
+    const trackOptions = { type, ...TRACK_OPTIONS[type] }
+
+    if (type === ALIGNMENT_TYPE) {
+      if (sample.filePath.endsWith('.cram')) {
+        if (sample.filePath.startsWith('gs://')) {
+          Object.assign(trackOptions, {
+            format: 'cram',
+            indexURL: `${url}.crai`,
+          })
+        } else {
+          Object.assign(trackOptions, CRAM_PROXY_TRACK_OPTIONS)
+        }
+      } else {
+        Object.assign(trackOptions, BAM_TRACK_OPTIONS)
+      }
+    } else if (type === JUNCTION_TYPE) {
+      trackOptions.indexURL = `${url}.tbi`
+    } else if (type === GCNV_TYPE) {
+      const sampleId = sample.sampleId || individual.individualId
+      trackOptions.highlightSamples = { [sampleId]: individual.affected === AFFECTED ? 'red' : 'blue' }
+      trackOptions.indexURL = `${url}.tbi`
+    }
+
+    if (!acc[type]) {
+      acc[type] = {}
+    }
+    acc[type][sample.individualGuid] = {
       url,
       name: trackName,
-      alignmentShading: 'strand',
-      type: 'alignment',
-      showSoftClips: true,
       ...trackOptions,
     }
-  }).filter(track => track)
+    return acc
+  }, {})
+
+  const gcnvSamplesByBatch = Object.entries(igvTracksBySampleIndividual[GCNV_TYPE] || {}).reduce(
+    (acc, [individualGuid, { url, highlightSamples }]) => {
+      if (!acc[url]) {
+        acc[url] = { individualGuids: [individualGuid], highlightSamples }
+      } else {
+        acc[url].highlightSamples = { ...acc[url].highlightSamples, ...highlightSamples }
+        acc[url].individualGuids.push(individualGuid)
+      }
+      return acc
+    }, {})
+
+  const igvTracks = Object.values(igvTracksBySampleIndividual).reduce((acc, tracksByIndividual) => ([
+    ...acc,
+    ...Object.entries(tracksByIndividual).map(([individualGuid, track]) => {
+      if (track.type === JUNCTION_TYPE) {
+        const coverageTrack = (igvTracksBySampleIndividual[COVERAGE_TYPE] || {})[individualGuid]
+        if (coverageTrack) {
+          return {
+            type: 'merged',
+            name: track.name,
+            height: track.height,
+            tracks: [coverageTrack, track],
+          }
+        }
+      } else if (track.type === COVERAGE_TYPE && (igvTracksBySampleIndividual[JUNCTION_TYPE] || {})[individualGuid]) {
+        return null
+      } else if (track.type === GCNV_TYPE) {
+        const batch = gcnvSamplesByBatch[track.url]
+        return batch.individualGuids[0] === individualGuid ? {
+          ...track,
+          highlightSamples: batch.highlightSamples,
+          name: batch.individualGuids.length === 1 ? track.name : batch.individualGuids.map(
+            iGuid => individualsByGuid[iGuid].displayName).join(', '),
+        } : null
+      }
+
+      return track
+    }),
+  ]), []).filter(track => track)
 
   // TODO better determiner of genome version?
   const isBuild38 = igvSamples.some(sample => sample.filePath.endsWith('.cram'))
