@@ -55,7 +55,7 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
     <Table basic="very" compact>
       <Table.Body>
         {individuals.map((individual, i) =>
-          <Table.Row key={individual.individualGuid}>
+          <Table.Row key={individual.individualGuid} disabled={!individual.sampleGuids.length}>
             <Table.Cell collapsing key={`${individual.individualGuid}-pedigree`}>
               <PedigreeIcon sex={individual.sex} affected={individual.affected} />
               &nbsp;
@@ -66,6 +66,7 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
               <Table.Cell key={filterField}>
                 <Select
                   {...fieldProps}
+                  disabled={!individual.sampleGuids.length}
                   value={individualFilters[individual.individualGuid][filterField]}
                   onChange={handleChange(individual, filterField)}
                 />

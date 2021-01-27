@@ -63,7 +63,7 @@ class EsSearch(object):
                     del self.samples_by_family_index[index]
 
             if len(self.samples_by_family_index) < 1:
-                raise InvalidSearchException('Inheritance based search is disabled in families with no affected individuals')
+                raise InvalidSearchException('Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
