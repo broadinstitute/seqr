@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getCurrentProject, getUser } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid, getCurrentProject } from 'redux/selectors'
 import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD } from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ButtonLink } from '../../StyledComponents'
@@ -203,7 +203,7 @@ GeneDetails.propTypes = {
   containerStyle: PropTypes.object,
 }
 
-const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, compact, showInlineDetails, areCompoundHets }) => {
+const BaseVariantGene = React.memo(({ geneId, gene, project, variant, compact, showInlineDetails, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -232,9 +232,8 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
     summaryDetail = (
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        {/* TODO should be available to all users (https://github.com/broadinstitute/seqr-private/issues/891) */}
-        {user.isAnalyst && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
-        {user.isAnalyst && <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
+        <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>
+        <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
         {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
         {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
       </GeneLinks>
@@ -269,7 +268,6 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
   project: PropTypes.object,
-  user: PropTypes.object,
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
@@ -279,7 +277,6 @@ BaseVariantGene.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  user: getUser(state),
   gene: getGenesById(state)[ownProps.geneId],
 })
 
