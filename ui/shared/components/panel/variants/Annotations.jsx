@@ -104,8 +104,6 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
     if (variant.ref) {
       variations.unshift(
-        `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
-        `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
         `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
         `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
         `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
@@ -115,22 +113,18 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
       variations.unshift(
-        ...geneNames.map(geneName => `${geneName}:p.${hgvsp}`), //TTN:p.Ile26225Thr
-        ...geneNames.map(geneName => `${geneName}:${hgvsp}`), //TTN:Ile26225Thr
+        `p.${hgvsp}`,
+        hgvsp,
       )
     }
 
     if (mainTranscript.hgvsc) {
       const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
-        ...geneNames.map(geneName => `${geneName}:c.${hgvsc}`), //TTN:c.78674T>C
         `c.${hgvsc}`, //c.1282C>T
         hgvsc, //1282C>T
-        hgvsc.replace('>', '->'), //1282C->T
-        hgvsc.replace('>', '-->'), //1282C-->T
         (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
         hgvsc.replace('>', '/'), //1282C/T
-        ...geneNames.map(geneName => `${geneName}:${hgvsc}`), //TTN:78674T>C
       )
     }
   } else {
@@ -147,7 +141,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     let pubmedSearch = `(${geneNames.join(' OR ')})`
     if (variations.length) {
       pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
-      addDividedLink(links, 'google', `https://www.google.com/search?q=(${variations.join('+')}`)
+      addDividedLink(links, 'google', `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}`)
     }
 
     addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
