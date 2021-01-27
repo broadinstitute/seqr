@@ -20,22 +20,40 @@ EXPECTED_MME_DETAILS_METRICS = {
     u'dateGenerated': '2020-04-27'
 }
 
+SAVED_VARIANT_RESPONSE_KEYS = {
+    'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
+    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid',
+}
+
+MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
+
 class SummaryDataAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('matchmaker.matchmaker_utils.datetime')
-    def test_mme_details(self, mock_datetime, mock_analyst_group):
+    def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
-        self.check_analyst_login(url)
-
+        self.check_require_login(url)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'genesById': {}, 'submissions': []})
 
+        # Test behavior for non-analysts
+        self.login_manager()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'genesById', 'submissions'})
+        self.assertEqual(len(response_json['genesById']), 4)
+        self.assertSetEqual(set(response_json['genesById'].keys()),
+                            {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
+        self.assertEqual(len(response_json['submissions']), 4)
+
+        # Test analyst behavior
+        self.login_analyst_user()
         mock_datetime.now.return_value = datetime(2020, 4, 27, 20, 16, 1)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -78,29 +96,39 @@ class SummaryDataAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
-    def test_saved_variants_page(self, mock_analyst_group):
+    def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
-        self.check_analyst_login(url)
+        self.check_require_login(url)
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        response = self.client.get('{}?gene=ENSG00000135953'.format(url))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {k: {} for k in SAVED_VARIANT_RESPONSE_KEYS})
 
+        self.login_manager()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Select a gene to filter variants')
 
-        response = self.client.get('{}?gene=ENSG00000135953'.format(url))
+        gene_url = '{}?gene=ENSG00000135953'.format(url)
+        response = self.client.get(gene_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-            'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids = {
-            'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes'}
+            'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
+            MANAGER_VARIANT_GUID,
+        }
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
+
+        # Test analyst behavior
+        self.login_analyst_user()
+        response = self.client.get(gene_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        expected_variant_guids.remove(MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
