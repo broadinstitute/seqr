@@ -263,7 +263,7 @@ class DatasetAPITest(object):
         f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19675']})
+        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 or 3 columns: NA19675']})
 
         f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
@@ -271,18 +271,19 @@ class DatasetAPITest(object):
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19675_1,gs://readviz/batch_10.dcr.bed.gz,NA19675\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
-        self.assertDictEqual(response.json(), {
-            'uploadedFileId': mock.ANY,
-            'errors': [],
-            'info': ['Parsed 2 rows from samples.csv', 'No change detected for 1 individuals'],
-            'updatesByIndividualGuid': {
-                'I000003_na19679': 'gs://readviz/NA19679.bam',
-            },
-        })
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'info', 'updates'})
+        self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(
+            response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
+        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
+            {'individualGuid': 'I000001_na19675', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
+        ])
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
@@ -299,7 +300,9 @@ class DatasetAPITest(object):
             'filePath': 'invalid_path.txt',
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension')
+        self.assertEqual(
+            response.reason_phrase,
+            'Invalid file extension for "invalid_path.txt" - valid extensions are bam, cram, bigWig, junctions.bed.gz, dcr.bed.gz')
 
         mock_local_file_exists.return_value = False
         mock_subprocess.return_value.wait.return_value = 1
@@ -324,12 +327,11 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675_new.cram'}}})
+            'filePath': '/readviz/NA19675_new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
         mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
 
-        new_sample_url = reverse(update_individual_igv_sample, args=['I000003_na19679'])
-        response = self.client.post(new_sample_url, content_type='application/json', data=json.dumps({
-            'filePath': 'gs://readviz/NA19679.bam',
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675',
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -338,14 +340,14 @@ class DatasetAPITest(object):
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         sample_guid = next(iter(response_json['igvSamplesByGuid']))
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
-            'projectGuid': PROJECT_GUID, 'individualGuid': 'I000003_na19679', 'sampleGuid': sample_guid,
-            'filePath': 'gs://readviz/NA19679.bam'})
-        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000003_na19679'])
+            'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': sample_guid,
+            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(
-            set(response_json['individualsByGuid']['I000003_na19679']['igvSampleGuids']),
-            {sample_guid}
+            set(response_json['individualsByGuid']['I000001_na19675']['igvSampleGuids']),
+            {'S000145_na19675', sample_guid}
         )
-        mock_subprocess.assert_called_with('gsutil ls gs://readviz/NA19679.bam', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
 
 # Tests for AnVIL access disabled
