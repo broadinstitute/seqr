@@ -144,18 +144,17 @@ class UploaderFieldComponent extends React.PureComponent {
 
   render() {
     const { input, uploaderProps } = this.props
-    const { uploaderStyle, url = '/api/upload_temp_file', returnParsedData, ...uploaderComponentProps } = uploaderProps
+    const { url = '/api/upload_temp_file', returnParsedData, ...uploaderComponentProps } = uploaderProps
     const path = returnParsedData ? '?parsedData=true' : ''
     return ([
-      <div key="uploader" style={uploaderStyle}>
-        <XHRUploaderWithEvents
-          onUploadFinished={this.onFinished}
-          initialState={input.value ? input.value.uploaderState : null}
-          url={`${url}${path}`}
-          {...uploaderComponentProps}
-          maxFiles={1}
-        />
-      </div>,
+      <XHRUploaderWithEvents
+        key="uploader"
+        onUploadFinished={this.onFinished}
+        initialState={input.value ? input.value.uploaderState : null}
+        url={`${url}${path}`}
+        {...uploaderComponentProps}
+        maxFiles={1}
+      />,
       (input.value && input.value.info) ? <MessagePanel key="info" info visible list={input.value.info} /> : null,
     ])
   }
