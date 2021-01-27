@@ -1,0 +1,22 @@
+name: dsp-appsec-trivy
+on:
+  schedule:
+    - cron:  '0 14 * * 1' # each Monday at 9am EST
+
+jobs:
+  appsec-trivy:
+    # Parse Dockerfile and build, scan image if a "blessed" base image is not used
+    name: DSP AppSec Trivy check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: broadinstitute/dsp-appsec-trivy-action@v1
+        with:
+          context: deploy/docker/seqr
+          sarif: trivy-results.sarif
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: trivy-results.sarif
