@@ -275,15 +275,15 @@ class DatasetAPITest(object):
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
-        self.assertDictEqual(response.json(), {
-            'uploadedFileId': mock.ANY,
-            'errors': [],
-            'info': ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'],
-            'updates':  [
-                {'individualGuid': 'I000001_na19675', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
-                {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
-            ],
-        })
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'info', 'updates'})
+        self.assertListEqual(response_json['errors'], [])
+        self.assertListEqual(
+            response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
+        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
+            {'individualGuid': 'I000001_na19675', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
+            {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
+        ])
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
