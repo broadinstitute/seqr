@@ -3,7 +3,6 @@
 import logging
 from django.contrib.auth.decorators import login_required
 
-from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -18,7 +17,6 @@ def anvil_workspace_page(request, namespace, name):
         request (object): Django request object
         namespace: The namespace (or the billing account) of the workspace
         name: The name of the workspace. It also be used as the project name
-
     Return:
         Error page if the workspace doesn't exist or the user doesn't have a WRITER permission.
 
@@ -35,6 +33,16 @@ def anvil_workspace_page(request, namespace, name):
 def create_project_from_workspace(request, namespace, name):
     """Implemented features are listed below.
 
+    Args:
+        request (object): Django request object
+        namespace: The namespace (or the billing account) of the workspace
+        name: The name of the workspace. It also be used as the project name
+    Return:
+        The projectsByGuid with the new project json
+
+    """
+    """
+    Todo:
     1) Validate that the current user has logged in through google and has one of the valid can_edit levels of
      access on the specified workspace;
     2) Validate all the user input from the post body;
@@ -45,14 +53,5 @@ def create_project_from_workspace(request, namespace, name):
     5) Add families/individuals based on the uploaded pedigree file;
     6) Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
      project guid, the workspace name, and attach a txt file with a list of the individual IDs that were created.
-
-    Args:
-        request (object): Django request object
-        namespace: The namespace (or the billing account) of the workspace
-        name: The name of the workspace. It also be used as the project name
-    Return:
-        The projectsByGuid with the new project json
-
     """
-    # To be implemented
     return create_json_response({})

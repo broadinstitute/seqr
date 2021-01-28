@@ -119,7 +119,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, receive_workspace_table_handler, create_project_from_workspace
+from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 

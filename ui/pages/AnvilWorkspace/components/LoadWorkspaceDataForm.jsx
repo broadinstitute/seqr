@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import styled from 'styled-components'
 import { Header, Segment } from 'semantic-ui-react'
 
 import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
