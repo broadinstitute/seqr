@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
-import styled from 'styled-components'
 
 import { getCurrentProject } from 'redux/selectors'
 import { FileLink } from 'shared/components/buttons/ExportTableButton'
@@ -17,19 +16,6 @@ import {
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
-
-const BoldText = styled.span`
-  font-weight: 600
-`
-
-const StyledForm = styled.div`
-  margin: 10px;
-`
-
-const TableHeaderCell = styled(Table.HeaderCell)`
-  width: 20%;
-  text-indent: 15px;
-`
 
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 export const BASE_UPLOAD_FORMATS = [
@@ -50,8 +36,8 @@ FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_
 
 
 export const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
-  <StyledForm>
-    <NoBorderTable basic="very" compact="very">
+  <div>
+    <NoBorderTable compact>
       <Table.Body>
         <Table.Row>
           <Table.Cell colSpan={2}>
@@ -61,11 +47,11 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
         <Table.Row><Table.Cell /></Table.Row>
         {uploadFormats.map(({ title, ext, formatLinks }) =>
           <Table.Row key={title}>
-            <TableHeaderCell>
+            <Table.HeaderCell collapsing>
               {title} ({formatLinks ? formatLinks.map(
                 ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
                 : `.${ext}`})
-            </TableHeaderCell>
+            </Table.HeaderCell>
             <Table.Cell>
               {ext &&
                 <span>
@@ -77,7 +63,7 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
                   }
                   {exportConfig &&
                   <span>
-                    or <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                    {blankExportConfig && 'or'} <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
                   </span>
                   }
                 </span>
@@ -92,25 +78,25 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
           </Table.Cell>
         </Table.Row>
         <Table.Row>
-          <Table.Cell colSpan={2}>
-            <BoldText>Required Columns:</BoldText>
-          </Table.Cell>
+          <Table.HeaderCell colSpan={2}>
+            Required Columns:
+          </Table.HeaderCell>
         </Table.Row>
         {requiredFields.map(field =>
           <Table.Row key={field.header}>
-            <TableHeaderCell>{field.header}</TableHeaderCell>
+            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
             <Table.Cell>{field.description}</Table.Cell>
           </Table.Row>,
         )}
         <Table.Row><Table.Cell /></Table.Row>
         <Table.Row>
-          <Table.Cell colSpan={2}>
-            <BoldText>Optional Columns:</BoldText>
-          </Table.Cell>
+          <Table.HeaderCell colSpan={2}>
+            Optional Columns:
+          </Table.HeaderCell>
         </Table.Row>
         {optionalFields.map(field =>
           <Table.Row key={field.header}>
-            <TableHeaderCell>{field.header}</TableHeaderCell>
+            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
             <Table.Cell>{field.description}</Table.Cell>
           </Table.Row>,
         )}
@@ -131,7 +117,7 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
       name={FILE_FIELD_NAME}
       uploaderStyle={UPLOADER_STYLE}
     />
-  </StyledForm>,
+  </div>,
 )
 
 BaseBulkContent.propTypes = {

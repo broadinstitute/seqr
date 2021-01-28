@@ -43,11 +43,11 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 export const FILE_FIELD_NAME = 'uploadedFile'
 
-export const PROJECT_DESC_FIELDS = { name: 'description', label: 'Project Description', placeholder: 'Description' }
+export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
 
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  PROJECT_DESC_FIELDS,
+  PROJECT_DESC_FIELD,
 ]
 
 export const PROJECT_FIELDS = [

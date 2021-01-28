@@ -1,6 +1,4 @@
-"""
-APIs for management of projects related to AnVIL workspaces.
-"""
+"""APIs for management of projects related to AnVIL workspaces."""
 
 import logging
 from django.contrib.auth.decorators import login_required
@@ -29,39 +27,8 @@ def anvil_workspace_page(request, namespace, name):
         Redirect to '/project/:projectGuid if project exists
 
     """
-
     # To be implemented
     return create_json_response({})
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def receive_workspace_table_handler(request):
-    """Handler for the initial upload of an Excel or .tsv table of individuals.
-
-    This handler parses the records, but doesn't save them in the database. Instead, it saves them to a temporary
-    file and sends a 'uploadedFileId' representing this file back to the client. If/when the client then wants to
-    'apply' this table, it can send the uploadedFileId to the save_individuals_table(..) handler to actually save
-    the data in the database.
-
-    Args:
-        request (object): Django request object
-    Return:
-        Information of the uploading
-
-    """
-
-    uploaded_file_id, filename, json_records = save_uploaded_file(request)
-
-    # Todo: exception handling
-
-    response = {
-        'uploadedFileId': uploaded_file_id,
-        'errors': [],
-        'warnings': [],
-        'info': ['File {} uploaded.'.format(filename)],
-    }
-    logger.info(response)
-    return create_json_response(response)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -87,6 +54,5 @@ def create_project_from_workspace(request, namespace, name):
         The projectsByGuid with the new project json
 
     """
-
     # To be implemented
     return create_json_response({})
