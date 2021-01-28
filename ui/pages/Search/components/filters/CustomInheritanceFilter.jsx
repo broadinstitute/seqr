@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Table, Header } from 'semantic-ui-react'
+import { Table, Header, Popup } from 'semantic-ui-react'
 
 import { getIndividualsByGuid } from 'redux/selectors'
 import { Select } from 'shared/components/form/Inputs'
@@ -54,29 +54,38 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
   return (
     <Table basic="very" compact>
       <Table.Body>
-        {individuals.map((individual, i) =>
-          <Table.Row key={individual.individualGuid}>
-            <Table.Cell collapsing key={`${individual.individualGuid}-pedigree`}>
-              <PedigreeIcon sex={individual.sex} affected={individual.affected} />
-              &nbsp;
-              {individual.displayName || individual.individualId}
-              {individual.displayName && individual.displayName !== individual.individualId ? `(${individual.individualId})` : null}
-            </Table.Cell>
-            {CUSTOM_FILTERS.map(({ filterField, ...fieldProps }) => (
-              <Table.Cell key={filterField}>
-                <Select
-                  {...fieldProps}
-                  value={individualFilters[individual.individualGuid][filterField]}
-                  onChange={handleChange(individual, filterField)}
-                />
+        {individuals.map((individual, i) => {
+          const row = (
+            <Table.Row key={individual.individualGuid}>
+              <Table.Cell collapsing key={`${individual.individualGuid}-pedigree`}>
+                <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+                &nbsp;
+                {individual.displayName || individual.individualId}
+                {individual.displayName && individual.displayName !== individual.individualId ? `(${individual.individualId})` : null}
               </Table.Cell>
-            ))}
-            {i === 0 ?
-              <Table.Cell collapsing rowSpan={individuals.length}>
-                <PedigreeImagePanel key="pedigree" family={family} />
-              </Table.Cell> : <Table.Cell collapsing />
-            }
-          </Table.Row>,
+              {CUSTOM_FILTERS.map(({ filterField, ...fieldProps }) => (
+                <Table.Cell key={filterField}>
+                  <Select
+                    {...fieldProps}
+                    disabled={!individual.sampleGuids.length}
+                    value={individualFilters[individual.individualGuid][filterField]}
+                    onChange={handleChange(individual, filterField)}
+                  />
+                </Table.Cell>
+              ))}
+              {i === 0 ?
+                <Table.Cell collapsing rowSpan={individuals.length}>
+                  <PedigreeImagePanel key="pedigree" family={family} />
+                </Table.Cell> : <Table.Cell collapsing />
+              }
+            </Table.Row>
+          )
+          return individual.sampleGuids.length ? row : <Popup
+            key={individual.individualGuid}
+            trigger={row}
+            content="Inheritance search is disabled for individuals with no loaded data"
+          />
+        },
       )}
       </Table.Body>
     </Table>
