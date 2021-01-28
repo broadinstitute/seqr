@@ -11,7 +11,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants_with_tags, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
     get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
+from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_projects_user_can_view
 from seqr.views.utils.variant_utils import saved_variant_genes
 from settings import ANALYST_PROJECT_CATEGORY, API_LOGIN_REQUIRED_URL
 
@@ -22,11 +22,8 @@ MAX_SAVED_VARIANTS = 10000
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def mme_details(request):
-    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
-    if user_is_analyst(request.user):
-        submissions = submissions.filter(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
-    else:
-        submissions = submissions.filter(individual__family__project__can_view_group__user=request.user)
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(
+        individual__family__project__in=get_projects_user_can_view(request.user))
 
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_submissions(submissions)
 
@@ -84,10 +81,7 @@ def saved_variants_page(request, tag):
         tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
         saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
 
-    if user_is_analyst(request.user):
-        saved_variant_models = saved_variant_models.filter(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
-    else:
-        saved_variant_models = saved_variant_models.filter(family__project__can_view_group__user=request.user)
+    saved_variant_models = saved_variant_models.filter(family__project__in=get_projects_user_can_view(request.user))
 
     if gene:
         saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)

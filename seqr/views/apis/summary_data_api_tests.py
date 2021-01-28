@@ -3,7 +3,7 @@ from django.urls.base import reverse
 import mock
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -25,10 +25,8 @@ SAVED_VARIANT_RESPONSE_KEYS = {
     'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid',
 }
 
-MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
-class SummaryDataAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class SummaryDataAPITest(object):
 
     @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
@@ -50,7 +48,7 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['genesById']), 4)
         self.assertSetEqual(set(response_json['genesById'].keys()),
                             {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
-        self.assertEqual(len(response_json['submissions']), 4)
+        self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
 
         # Test analyst behavior
         self.login_analyst_user()
@@ -118,8 +116,9 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids = {
             'SV0000001_2103343353_r0390_100', 'SV0000007_prefix_19107_DEL_r00', 'SV0000006_1248367227_r0003_tes',
-            MANAGER_VARIANT_GUID,
         }
+        if self.MANAGER_VARIANT_GUID:
+            expected_variant_guids.add(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         # Test analyst behavior
@@ -128,7 +127,7 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
-        expected_variant_guids.remove(MANAGER_VARIANT_GUID)
+        expected_variant_guids.discard(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
@@ -136,3 +135,57 @@ class SummaryDataAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
+
+# Tests for AnVIL access disabled
+class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+    NUM_MANAGER_SUBMISSIONS = 4
+    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
+
+
+def assert_has_expected_calls(self, users, access_level_call=False):
+    calls = [mock.call(user) for user in users]
+    self.mock_list_workspaces.assert_has_calls(calls)
+    self.mock_get_ws_acl.assert_not_called()
+    if access_level_call:
+        self.mock_get_ws_access_level.assert_has_calls([
+            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
+            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+        ], any_order=True)
+    else:
+        self.mock_get_ws_access_level.assert_not_called()
+
+# Test for permissions from AnVIL only
+class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    NUM_MANAGER_SUBMISSIONS = 3
+    MANAGER_VARIANT_GUID = None
+
+    def test_mme_details(self):
+        super(AnvilSummaryDataAPITest, self).test_mme_details()
+        assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
+
+    def test_saved_variants_page(self):
+        super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
+        assert_has_expected_calls(self, [
+            self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
+        ], access_level_call=True)
+
+
+# Test for permissions from AnVIL and local
+class MixSummaryDataAPITest(MixAuthenticationTestCase, SummaryDataAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    NUM_MANAGER_SUBMISSIONS = 4
+    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
+
+    def test_mme_details(self):
+        super(MixSummaryDataAPITest, self).test_mme_details()
+        assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
+
+    def test_saved_variants_page(self):
+        super(MixSummaryDataAPITest, self).test_saved_variants_page()
+        assert_has_expected_calls(self, [
+            self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user])
+
