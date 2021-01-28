@@ -394,14 +394,15 @@ export const getSavedVariantExportConfig = createSelector(
         rawData: familyVariants,
         headers: [
           ...VARIANT_EXPORT_DATA.map(config => config.header),
-          ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
+          ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
+            [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
         ],
         processRow: variant => ([
           ...VARIANT_EXPORT_DATA.map(config => (
             config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
           ),
-          ...Object.values(variant.genotypes).map(
-            ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
+          ...Object.values(variant.genotypes).reduce(
+            (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
         ]),
       },
     }]
