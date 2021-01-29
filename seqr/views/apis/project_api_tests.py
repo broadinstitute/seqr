@@ -7,6 +7,7 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data
+from seqr.views.utils.terra_api_utils import TerraAPIException
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
@@ -173,6 +174,12 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()['error'], 'Project matching query does not exist.')
 
+        if hasattr(self, 'mock_get_ws_acl'):
+            self.mock_get_ws_acl.side_effect = TerraAPIException('AnVIL Error', 400)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'AnVIL Error')
+
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -242,7 +249,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_ws_access_level.assert_any_call(self.collaborator_user,
@@ -275,7 +282,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.analyst_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_any_call(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_ws_access_level.assert_called_with(self.analyst_user,
