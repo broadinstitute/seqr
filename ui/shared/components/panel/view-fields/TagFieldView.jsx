@@ -70,7 +70,7 @@ TagFieldDisplay.propTypes = {
   displayAnnotationFirst: PropTypes.bool,
 }
 
-const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
+const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, validate, ...props }) => {
   const fieldValues = (initialValues || {})[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -97,6 +97,10 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
       normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
       format: options => options.map(tag => tag.name),
     }
+
+  if (validate) {
+    formFieldProps.validate = validate
+  }
 
   const additionalFields = editMetadata ? [{
     name: field,
@@ -130,6 +134,7 @@ TagFieldView.propTypes = {
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   simplifiedValue: PropTypes.bool,
+  validate: PropTypes.func,
 }
 
 export default TagFieldView
