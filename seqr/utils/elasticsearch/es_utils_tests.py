@@ -1072,7 +1072,7 @@ class EsUtilsTest(TestCase):
         with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
         self.assertEqual(
-            str(cm.exception), 'Inheritance based search is disabled in families with no affected individuals',
+            str(cm.exception), 'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
 
         search_model.search['annotations'] = {'structural': ['DEL']}
