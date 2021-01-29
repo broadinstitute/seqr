@@ -23,16 +23,19 @@ const BLANK_EXPORT = {
 }
 
 const UploadPedigreeField = React.memo(() =>
-  <Segment>
-    <BaseBulkContent
-      blankExportConfig={BLANK_EXPORT}
-      requiredFields={REQUIRED_FIELDS}
-      optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
-      uploadFormats={BASE_UPLOAD_FORMATS}
-      actionDescription="load individual data from an AnVIL workspace to a new seqr project"
-      url="/api/upload_temp_file"
-    />
-  </Segment>,
+  <div>
+    <label htmlFor="UploadPedigreeSegment">Upload Pedigree Data</label>
+    <Segment id="UploadPedigreeSegment">
+      <BaseBulkContent
+        blankExportConfig={BLANK_EXPORT}
+        requiredFields={REQUIRED_FIELDS}
+        optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
+        uploadFormats={BASE_UPLOAD_FORMATS}
+        actionDescription="load individual data from an AnVIL workspace to a new seqr project"
+        url="/api/upload_temp_file"
+      />
+    </Segment>
+  </div>,
 )
 
 const UPLOAD_PEDIGREE_FIELD = {
