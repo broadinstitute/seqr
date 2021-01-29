@@ -25,13 +25,13 @@ GenePage.propTypes = {
 const SUMMARY_DATA_PAGES = [
   { path: 'gene_info', params: '/:geneId?', component: GenePage },
   { path: 'gene_lists', component: LocusLists },
+  { path: 'saved_variants', component: SavedVariants },
+  { path: 'matchmaker', component: Matchmaker },
 ]
 
 const ANALYST_SUMMARY_DATA_PAGES = [
   ...SUMMARY_DATA_PAGES,
-  { path: 'saved_variants', component: SavedVariants },
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
-  { path: 'matchmaker', component: Matchmaker },
 ]
 
 const BaseSummaryDataPageHeader = ({ user }) =>
