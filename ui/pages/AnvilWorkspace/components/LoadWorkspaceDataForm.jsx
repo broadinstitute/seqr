@@ -24,8 +24,9 @@ const BLANK_EXPORT = {
 
 const UploadPedigreeField = React.memo(() =>
   <div>
-    <label htmlFor="UploadPedigreeSegment">Upload Pedigree Data</label>
-    <Segment id="UploadPedigreeSegment">
+    {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+    <label>Upload Pedigree Data</label>
+    <Segment>
       <BaseBulkContent
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}

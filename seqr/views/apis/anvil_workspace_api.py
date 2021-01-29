@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
-    """
-    Redirect to the loading data from workspace page or redirect to the project if the project exists.
+    """Redirect to the loading data from workspace page or redirect to the project if the project exists.
 
     Args:
         request (object): Django request object
@@ -32,8 +31,7 @@ def anvil_workspace_page(request, namespace, name):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def create_project_from_workspace(request, namespace, name):
-    """
-    Implemented features are listed below.
+    """Create a project when a cooperator requesting to load data from an AnVIL workspace.
 
     Args:
         request (object): Django request object
