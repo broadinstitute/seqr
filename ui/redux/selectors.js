@@ -55,7 +55,6 @@ export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAnnotationSecondary = (state) => {
   try {
@@ -273,10 +272,12 @@ export const getVisibleSortedSavedVariants = createSelector(
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user) => {
+  getVariantTagsByGuid,
+  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sort](Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user) ||
+      return VARIANT_SORT_LOOKUP[sort](
+        Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user, variantTagsByGuid) ||
         (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos
     })
     return pairedFilteredSavedVariants.slice(...visibleIndices)
@@ -395,14 +396,15 @@ export const getSavedVariantExportConfig = createSelector(
         rawData: familyVariants,
         headers: [
           ...VARIANT_EXPORT_DATA.map(config => config.header),
-          ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
+          ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
+            [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
         ],
         processRow: variant => ([
           ...VARIANT_EXPORT_DATA.map(config => (
             config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
           ),
-          ...Object.values(variant.genotypes).map(
-            ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
+          ...Object.values(variant.genotypes).reduce(
+            (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
         ]),
       },
     }]

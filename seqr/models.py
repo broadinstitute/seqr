@@ -578,9 +578,21 @@ class IgvSample(ModelWithGUID):
     """This model represents a single data type that can be displayed in IGV (eg. Read Alignments) that's generated from
     a single biological sample (eg. WES, WGS, RNA, Array).
     """
+    SAMPLE_TYPE_ALIGNMENT = 'alignment'
+    SAMPLE_TYPE_COVERAGE = 'wig'
+    SAMPLE_TYPE_JUNCTION = 'spliceJunctions'
+    SAMPLE_TYPE_GCNV = 'gcnv'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_ALIGNMENT, 'Bam/Cram'),
+        (SAMPLE_TYPE_COVERAGE, 'RNAseq Coverage'),
+        (SAMPLE_TYPE_JUNCTION, 'RNAseq Junction'),
+        (SAMPLE_TYPE_GCNV, 'gCNV'),
+    )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    sample_type = models.CharField(max_length=15, choices=SAMPLE_TYPE_CHOICES)
     file_path = models.TextField()
+    sample_id = models.TextField(null=True)
 
     def __unicode__(self):
         return self.file_path.split('/')[-1].split('.')[0].strip()
@@ -589,7 +601,9 @@ class IgvSample(ModelWithGUID):
         return 'S%010d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-       json_fields = ['guid', 'file_path',]
+        unique_together = ('individual', 'sample_type')
+
+        json_fields = ['guid', 'file_path', 'sample_type', 'sample_id']
 
 
 class AliasField(models.Field):

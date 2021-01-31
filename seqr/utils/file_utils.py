@@ -52,7 +52,7 @@ def file_iter(file_path, byte_range=None, raw_content=False):
 def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False):
     """Iterate over lines in the given file"""
     range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
-    process = _run_gsutil_command('cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz"))
+    process = _run_gsutil_command('cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content)
     for line in process.stdout:
         if not raw_content:
             line = line.decode('utf-8')

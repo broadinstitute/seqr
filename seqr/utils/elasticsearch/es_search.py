@@ -63,7 +63,7 @@ class EsSearch(object):
                     del self.samples_by_family_index[index]
 
             if len(self.samples_by_family_index) < 1:
-                raise InvalidSearchException('Inheritance based search is disabled in families with no affected individuals')
+                raise InvalidSearchException('Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
@@ -812,7 +812,8 @@ class EsSearch(object):
                     continue
 
                 if self._allowed_consequences and self._allowed_consequences_secondary:
-                    consequences = variant_1['gene_consequences'].get(gene_id, [])
+                    # Make a copy of lists to prevent blowing up memory usage
+                    consequences = [] + variant_1['gene_consequences'].get(gene_id, [])
                     consequences += variant_2['gene_consequences'].get(gene_id, [])
                     if all(consequence not in self._allowed_consequences for consequence in consequences) or all(
                             consequence not in self._allowed_consequences_secondary for consequence in consequences):

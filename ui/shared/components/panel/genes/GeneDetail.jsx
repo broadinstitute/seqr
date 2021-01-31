@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Grid, Popup } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
-import { getGenesIsLoading, getGenesById } from 'redux/selectors'
+import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
 import Gtex from '../../graph/Gtex'
 import { SectionHeader } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
@@ -77,7 +77,7 @@ const textWithLinks = (text) => {
 export const getOtherGeneNames = gene =>
   (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
 
-const GeneDetailContent = React.memo(({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
   }
@@ -174,6 +174,8 @@ const GeneDetailContent = React.memo(({ gene, updateGeneNote: dispatchUpdateGene
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=${gene.geneId}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
+    { title: 'ClinVar', link: `https://www.ncbi.nlm.nih.gov/clinvar?term=${gene.geneSymbol}[gene]`, description: 'Aggregated information about human genomic variation' },
+    user.isAnalyst ? { title: 'HGMD', link: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/gene.php?gene=${gene.geneSymbol}`, description: 'Human Gene Mutation Database ' } : null,
   ]
   return (
     <div>
@@ -227,12 +229,13 @@ const GeneDetailContent = React.memo(({ gene, updateGeneNote: dispatchUpdateGene
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
   updateGeneNote: PropTypes.func.isRequired,
+  user: PropTypes.object,
 }
 
-const GeneDetail = React.memo(({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
+const GeneDetail = React.memo(({ geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
-      <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
+      <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
     <Gtex geneId={geneId} />
@@ -245,6 +248,7 @@ GeneDetail.propTypes = {
   loading: PropTypes.bool.isRequired,
   loadGene: PropTypes.func.isRequired,
   updateGeneNote: PropTypes.func.isRequired,
+  user: PropTypes.object,
 }
 
 const mapDispatchToProps = {
@@ -254,6 +258,7 @@ const mapDispatchToProps = {
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
   loading: getGenesIsLoading(state),
+  user: getUser(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(GeneDetail)
