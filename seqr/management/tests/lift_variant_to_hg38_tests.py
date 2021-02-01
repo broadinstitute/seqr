@@ -37,4 +37,4 @@ class LiftVariantToHg38Test(TestCase):
 
         self.assertListEqual(
             [PARSED_VARIANTS[0]['xpos'], PARSED_VARIANTS[0]['ref'], PARSED_VARIANTS[0]['alt'], PARSED_VARIANTS[0]],
-            [saved_variant.xpos_start, saved_variant.ref, saved_variant.alt, saved_variant.saved_variant_json])
+            [saved_variant.xpos, saved_variant.ref, saved_variant.alt, saved_variant.saved_variant_json])
