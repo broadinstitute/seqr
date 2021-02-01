@@ -107,7 +107,7 @@ class TerraApiUtilsCase(TestCase):
         mock_logger.reset_mock()
         mock_redis.return_value.get.return_value = None
         responses.add(responses.GET, url, status = 401)
-        with self.assertRaises(Exception) as ec:
+        with self.assertRaises(TerraAPIException) as ec:
             _ = list_anvil_workspaces(user)
         self.assertEqual(str(ec.exception),
             'Error: called Terra API: GET /api/workspaces?fields=public,workspace.name,workspace.namespace got status: 401 with a reason: Unauthorized')
@@ -122,6 +122,7 @@ class TerraApiUtilsCase(TestCase):
             _ = list_anvil_workspaces(user)
         self.assertEqual(str(te.exception),
             'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
+        self.assertEqual(te.exception.status_code, 401)
         mock_logger.warning.assert_called_with('Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
         self.assertEqual(len(mock_logger.method_calls), 1)
 
@@ -147,6 +148,7 @@ class TerraApiUtilsCase(TestCase):
             _ = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertEqual(str(ec.exception),
             'Error: called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status: 401 with a reason: Unauthorized')
+        self.assertEqual(ec.exception.status_code, 401)
         mock_logger.error.assert_called_with(
             'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 401 0 test_user')
         self.assertEqual(len(mock_logger.method_calls), 1)
