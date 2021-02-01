@@ -2,7 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment } from 'semantic-ui-react'
 import styled from 'styled-components'
+import { SubmissionError } from 'redux-form'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
 import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
@@ -55,12 +57,31 @@ const UPLOAD_PEDIGREE_FIELD = {
 }
 
 const AGREE_CHECKBOX = {
-  name: 'agreeCheckbox',
+  name: 'agreeSeqrAccess',
   component: BooleanCheckbox,
   label: 'By submitting this form I agree to grant seqr access to the data in the associated workspace',
 }
 
 const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
+
+const createProjectFromWorkspace = (values, namespace, name) => {
+  if (values[FILE_FIELD_NAME]) {
+    values.uploadedFileId = values[FILE_FIELD_NAME].uploadedFileId
+    delete values[FILE_FIELD_NAME]
+  }
+  return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
+    (responseJson) => {
+      console.log(responseJson)
+    },
+    (e) => {
+      if (e.body && e.body.errors) {
+        throw new SubmissionError({ _error: e.body.errors })
+      } else {
+        throw new SubmissionError({ _error: [e.message] })
+      }
+    },
+  ).post(values)
+}
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
   <div>
@@ -68,7 +89,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
-      onSubmit={values => console.log(values, namespace, name)}
+      onSubmit={values => createProjectFromWorkspace(values, namespace, name)}
       confirmCloseIfNotSaved
       closeOnSuccess
       showErrorPanel
