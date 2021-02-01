@@ -11,18 +11,18 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
-    """Redirect to the loading data from workspace page or redirect to the project if the project exists.
+    """
+    Redirect to the loading data from workspace page or redirect to the project if the project exists.
 
     Args:
         request (object): Django request object
         namespace: The namespace (or the billing account) of the workspace
         name: The name of the workspace. It also be used as the project name
     Return:
-        Error page if the workspace doesn't exist or the user doesn't have a WRITER permission.
-
-        Redirect to '/create_project_from_workspace/:workspace_name' if project doesn't exist
-
-        Redirect to '/project/:projectGuid if project exists
+        Redirect to a page depending on if the workspace permissions and project existance.
+         Error page if the workspace doesn't exist or the user doesn't have a WRITER permission.
+         Redirect to '/create_project_from_workspace/:workspace_name' if project doesn't exist.
+         Redirect to '/project/:projectGuid'
 
     """
     # To be implemented
@@ -31,7 +31,8 @@ def anvil_workspace_page(request, namespace, name):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def create_project_from_workspace(request, namespace, name):
-    """Create a project when a cooperator requesting to load data from an AnVIL workspace.
+    """
+    Create a project when a cooperator requesting to load data from an AnVIL workspace.
 
     Args:
         request (object): Django request object

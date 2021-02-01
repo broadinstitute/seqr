@@ -1,12 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
 import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
+
+const StyledLabel = styled.label`
+  color: rgba(0,0,0,.87);
+  font-size: .92857143em;
+  font-weight: 700;
+`
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
@@ -25,7 +32,7 @@ const BLANK_EXPORT = {
 const UploadPedigreeField = React.memo(() =>
   <div>
     {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-    <label>Upload Pedigree Data</label>
+    <StyledLabel>Upload Pedigree Data</StyledLabel>
     <Segment>
       <BaseBulkContent
         blankExportConfig={BLANK_EXPORT}
@@ -35,7 +42,7 @@ const UploadPedigreeField = React.memo(() =>
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
-    </Segment>
+    </Segment> &nbsp;
   </div>,
 )
 
