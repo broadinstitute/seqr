@@ -2490,7 +2490,6 @@ class EsUtilsTest(TestCase):
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
-        _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5})) # TODO
         gene_counts = get_es_variant_gene_counts(results_model)
 
         self.assertDictEqual(gene_counts, {
@@ -2517,7 +2516,7 @@ class EsUtilsTest(TestCase):
             }
         )
 
-        self.assertCachedResults(results_model, {'gene_aggs': gene_counts, 'total_results': 5})
+        self.assertCachedResults(results_model, {'gene_aggs': gene_counts})
 
     def test_cached_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={})
