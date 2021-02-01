@@ -4,12 +4,17 @@ import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getCurrentProject } from 'redux/selectors'
+import { getCurrentProject, getUser } from 'redux/selectors'
 import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'
-import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_BULK_UPDATE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
+import {
+  INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_CORE_EXPORT_DATA,
+  INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
+  FAMILY_BULK_EDIT_EXPORT_DATA,
+} from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
   getEntityExportConfig,
@@ -214,7 +219,7 @@ const mapFamiliesDispatchToProps = {
 
 export const EditFamiliesBulkForm = connect(mapFamiliesStateToProps, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
-const IndividualsBulkForm = React.memo(props =>
+const IndividualsBulkForm = React.memo(({ user, ...props }) =>
   <EditBulkForm
     name="individuals"
     actionDescription="bulk-add or edit individuals"
@@ -226,18 +231,26 @@ const IndividualsBulkForm = React.memo(props =>
       </div>
     }
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
-    optionalFields={INDIVIDUAL_BULK_UPDATE_EXPORT_DATA}
+    optionalFields={user.isAnalyst ? INDIVIDUAL_BULK_UPDATE_EXPORT_DATA : INDIVIDUAL_CORE_EXPORT_DATA}
     uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
     {...props}
   />,
 )
 
+IndividualsBulkForm.propTypes = {
+  user: PropTypes.object,
+}
+
+const mapIndividualsStateToProps = state => ({
+  user: getUser(state),
+})
+
 const mapIndividualsDispatchToProps = {
   onSubmit: updateIndividuals,
 }
 
-export const EditIndividualsBulkForm = connect(null, mapIndividualsDispatchToProps)(IndividualsBulkForm)
+export const EditIndividualsBulkForm = connect(mapIndividualsStateToProps, mapIndividualsDispatchToProps)(IndividualsBulkForm)
 
 
 const HPOBulkForm = React.memo(props =>
