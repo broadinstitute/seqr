@@ -316,7 +316,7 @@ class VariantGenes extends React.PureComponent {
               compact
             />,
           )}
-          {!mainGeneId &&
+          {!mainGeneId && geneIds.length > 0 &&
             <SearchResultsLink geneId={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
           }
         </div>
