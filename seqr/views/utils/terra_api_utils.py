@@ -22,12 +22,23 @@ logger = logging.getLogger(__name__)
 
 class TerraAPIException(Exception):
     def __init__(self, message, status_code):
+        """
+        Custom Exception to capture Terra API call failures
+
+        :param message: error message
+        :param status_code: the status code associated with the failed request
+        """
         super(TerraAPIException, self).__init__(message)
         self.status_code = status_code
 
 
 class TerraNotFoundException(TerraAPIException):
     def __init__(self, message):
+        """
+        Custom Exception to capture Terra API calls that fail with 404 Not Found
+
+        :param message: error message
+        """
         super(TerraNotFoundException, self).__init__(message, 404)
 
 
