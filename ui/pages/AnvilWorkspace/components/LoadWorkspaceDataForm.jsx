@@ -8,6 +8,7 @@ import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/e
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
+import { VerticalSpacer } from 'shared/components/Spacers'
 
 const StyledLabel = styled.label`
   color: rgba(0,0,0,.87);
@@ -42,7 +43,8 @@ const UploadPedigreeField = React.memo(() =>
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
-    </Segment> &nbsp;
+    </Segment>
+    <VerticalSpacer height={1} />
   </div>,
 )
 
