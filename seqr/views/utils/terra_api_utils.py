@@ -21,11 +21,25 @@ logger = logging.getLogger(__name__)
 
 
 class TerraAPIException(Exception):
-    pass
+    def __init__(self, message, status_code):
+        """
+        Custom Exception to capture Terra API call failures
+
+        :param message: error message
+        :param status_code: the status code associated with the failed request
+        """
+        super(TerraAPIException, self).__init__(message)
+        self.status_code = status_code
 
 
 class TerraNotFoundException(TerraAPIException):
-    pass
+    def __init__(self, message):
+        """
+        Custom Exception to capture Terra API calls that fail with 404 Not Found
+
+        :param message: error message
+        """
+        super(TerraNotFoundException, self).__init__(message, 404)
 
 
 def google_auth_enabled():
@@ -69,7 +83,7 @@ def _get_social_access_token(user):
             social.refresh_token(strategy)
         except Exception as ee:
             logger.warning('Refresh token failed. {}'.format(str(ee)))
-            raise TerraAPIException('Refresh token failed. {}'.format(str(ee)))
+            raise TerraAPIException('Refresh token failed. {}'.format(str(ee)), 401)
     return social.extra_data['access_token']
 
 
@@ -89,7 +103,7 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     if r.status_code != 200:
         logger.error('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
         raise TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
-            path, r.status_code, r.reason))
+            path, r.status_code, r.reason), r.status_code)
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
 
