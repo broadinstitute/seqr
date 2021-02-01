@@ -173,11 +173,11 @@ export const addIGVDataset = ({ mappingFile, ...values }) => {
   return (dispatch, getState) => {
     const errors = []
 
-    return Promise.all(Object.entries(mappingFile.updatesByIndividualGuid).map(([individualGuid, filePath]) =>
+    return Promise.all(mappingFile.updates.map(({ individualGuid, ...update }) =>
       new HttpRequestHelper(`/api/individual/${individualGuid}/update_igv_sample`,
         responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
         e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.body && e.body.error ? e.body.error : e.message}`),
-      ).post({ filePath, ...values }),
+      ).post({ ...update, ...values }),
     )).then(() => {
       if (errors.length) {
         throw new SubmissionError({ _error: errors })

@@ -114,9 +114,11 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
+ARG SEQR_REPO=https://github.com/broadinstitute/seqr
+ARG SEQR_GIT_BRANCH=master
 
 # update seqr repo
-RUN git clone -q https://github.com/broadinstitute/seqr
+RUN git clone -q $SEQR_REPO --single-branch --branch $SEQR_GIT_BRANCH
 
 WORKDIR /seqr
 

@@ -5,11 +5,12 @@ import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { ButtonLink } from '../StyledComponents'
 
-const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults }) =>
-  <ButtonLink content={buttonText} onClick={openSearchResults} />
+const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults, padding }) =>
+  <ButtonLink content={buttonText} onClick={openSearchResults} padding={padding} />
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
+  padding: PropTypes.string,
   openSearchResults: PropTypes.func,
 }
 

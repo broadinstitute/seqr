@@ -28,7 +28,6 @@ export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
 export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
@@ -380,8 +379,6 @@ export const updateLocusList = (values) => {
   }
 }
 
-export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
-
 // root reducer
 const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
@@ -419,7 +416,6 @@ const rootReducer = combineReducers(Object.assign({
   userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
   form: formReducer,
-  igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

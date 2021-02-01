@@ -736,6 +736,7 @@ const SORT_BY_SPLICE_AI = 'SPLICE_AI'
 const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
+const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 
 
 const clinsigSeverity = (variant, user) => {
@@ -811,6 +812,15 @@ const VARIANT_SORT_OPTONS = [
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0) -
       Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0),
+  },
+  {
+    value: SORT_BY_TAGGED_DATE,
+    text: 'Last Tagged',
+    comparator: (a, b, genesById, user, tagsByGuid) =>
+      (b.tagGuids.map(
+        tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || '').localeCompare(
+        a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
+      ),
   },
 ]
 const VARIANT_SORT_OPTONS_NO_FAMILY_SORT = VARIANT_SORT_OPTONS.slice(1)

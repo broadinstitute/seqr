@@ -379,7 +379,7 @@ SAMPLE_FIELDS = {
 }
 
 IGV_SAMPLE_FIELDS = {
-    'projectGuid', 'individualGuid', 'sampleGuid', 'filePath',
+    'projectGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { Header, Table } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import DataTable from 'shared/components/table/DataTable'
@@ -49,10 +50,10 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = React.memo(({ metrics, submissions, error, loading, load }) =>
+const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, user }) =>
   <div>
-    <Header size="medium" content="Matchmaker Metrics:" />
-    <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error}>
+    {user.isAnalyst && <Header size="medium" content="Matchmaker Metrics:" /> }
+    <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error} hideError={!user.isAnalyst}>
       <Table collapsing basic="very">
         {METRICS_FIELDS.map(({ field, title, round }) =>
           <Table.Row key={field}>
@@ -83,6 +84,7 @@ Matchmaker.propTypes = {
   error: PropTypes.string,
   load: PropTypes.func,
   submissions: PropTypes.array,
+  user: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
@@ -90,6 +92,7 @@ const mapStateToProps = state => ({
   loading: getMmeLoading(state),
   error: getMmeLoadingError(state),
   submissions: getMmeSubmissions(state),
+  user: getUser(state),
 })
 
 const mapDispatchToProps = {

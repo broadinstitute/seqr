@@ -17,7 +17,7 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
+const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
 export const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
@@ -115,7 +115,7 @@ export const BaseBulkContent = React.memo(({ url, actionDescription, details, pr
       auto
       required
       name={FILE_FIELD_NAME}
-      uploaderStyle={UPLOADER_STYLE}
+      styles={UPLOADER_STYLES}
     />
   </div>,
 )

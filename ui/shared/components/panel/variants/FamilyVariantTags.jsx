@@ -133,6 +133,10 @@ ShortcutTags.propTypes = {
 }
 
 
+const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
+  'Only 1 Discovery Tag can be added' : undefined
+)
+
 const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) =>
   <TagFieldView
     idField="variantGuids"
@@ -149,6 +153,7 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
     compact
     isEditable
     popup={taggedByPopup}
+    validate={validateTags}
     {...props}
   />,
 )

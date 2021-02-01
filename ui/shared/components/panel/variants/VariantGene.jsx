@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getCurrentProject, getUser } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD } from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ButtonLink } from '../../StyledComponents'
@@ -203,7 +203,7 @@ GeneDetails.propTypes = {
   containerStyle: PropTypes.object,
 }
 
-const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, compact, showInlineDetails, areCompoundHets }) => {
+const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInlineDetails, areCompoundHets }) => {
 
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -232,11 +232,10 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
     summaryDetail = (
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
-        {/* TODO should be available to all users (https://github.com/broadinstitute/seqr-private/issues/891) */}
-        {user.isAnalyst && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
-        {user.isAnalyst && <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
-        {project && <span><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>}
-        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />
       </GeneLinks>
     )
   }
@@ -268,8 +267,6 @@ const BaseVariantGene = React.memo(({ geneId, gene, project, user, variant, comp
 
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
-  project: PropTypes.object,
-  user: PropTypes.object,
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
@@ -278,8 +275,6 @@ BaseVariantGene.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getCurrentProject(state),
-  user: getUser(state),
   gene: getGenesById(state)[ownProps.geneId],
 })
 
@@ -291,7 +286,6 @@ class VariantGenes extends React.PureComponent {
   static propTypes = {
     variant: PropTypes.object,
     mainGeneId: PropTypes.string,
-    project: PropTypes.object,
     genesById: PropTypes.object,
   }
 
@@ -306,22 +300,30 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const geneIds = Object.keys(this.props.variant.transcripts || {})
+    const { variant, genesById, mainGeneId } = this.props
+    const geneIds = Object.keys(variant.transcripts || {})
+
     if (this.state.showAll) {
-      return geneIds.filter(geneId => geneId !== this.props.mainGeneId).map(geneId =>
-        <BaseVariantGene
-          key={geneId}
-          geneId={geneId}
-          gene={this.props.genesById[geneId]}
-          variant={this.props.variant}
-          project={this.props.project}
-          showInlineDetails={!this.props.mainGeneId}
-          compact
-        />,
+      return (
+        <div>
+          {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId =>
+            <BaseVariantGene
+              key={geneId}
+              geneId={geneId}
+              gene={genesById[geneId]}
+              variant={variant}
+              showInlineDetails={!mainGeneId}
+              compact
+            />,
+          )}
+          {!mainGeneId &&
+            <SearchResultsLink geneId={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+          }
+        </div>
       )
     }
 
-    const genes = geneIds.map(geneId => this.props.genesById[geneId]).filter(gene => gene)
+    const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
 
     return (
       <div>
@@ -351,7 +353,6 @@ class VariantGenes extends React.PureComponent {
 }
 
 const mapAllGenesStateToProps = state => ({
-  project: getCurrentProject(state),
   genesById: getGenesById(state),
 })
 

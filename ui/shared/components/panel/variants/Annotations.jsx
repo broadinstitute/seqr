@@ -87,6 +87,12 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
+const addDividedLink = (links, name, href) =>
+  links.push(
+    <span key={`divider-${name}`}><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+    <a key={name} href={href} target="_blank">{name}</a>,
+  )
+
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
   const mainGene = genesById[mainTranscript.geneId]
@@ -98,8 +104,6 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
     if (variant.ref) {
       variations.unshift(
-        `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
-        `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
         `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
         `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
         `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
@@ -109,22 +113,18 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
       variations.unshift(
-        ...geneNames.map(geneName => `${geneName}:p.${hgvsp}`), //TTN:p.Ile26225Thr
-        ...geneNames.map(geneName => `${geneName}:${hgvsp}`), //TTN:Ile26225Thr
+        `p.${hgvsp}`,
+        hgvsp,
       )
     }
 
     if (mainTranscript.hgvsc) {
       const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
-        ...geneNames.map(geneName => `${geneName}:c.${hgvsc}`), //TTN:c.78674T>C
         `c.${hgvsc}`, //c.1282C>T
         hgvsc, //1282C>T
-        hgvsc.replace('>', '->'), //1282C->T
-        hgvsc.replace('>', '-->'), //1282C-->T
         (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
         hgvsc.replace('>', '/'), //1282C/T
-        ...geneNames.map(geneName => `${geneName}:${hgvsc}`), //TTN:78674T>C
       )
     }
   } else {
@@ -141,20 +141,20 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     let pubmedSearch = `(${geneNames.join(' OR ')})`
     if (variations.length) {
       pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
-      links.push(
-        <span key="dividerGoogle"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-        <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
-          google
-        </a>,
-      )
+      addDividedLink(links, 'google', `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}`)
     }
 
-    links.push(
-      <span key="dividerPubmed"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`} target="_blank">
-        pubmed
-      </a>,
-    )
+    addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
+  }
+
+  if (variant.svType) {
+    const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
+    if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
+      const endOffset = variant.end - variant.pos
+      const start = useLiftover ? variant.liftedOverPos : variant.pos
+      const region = `${variant.chrom}-${start}-${start + endOffset}`
+      addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
+    }
   }
 
   return links

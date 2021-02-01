@@ -28,7 +28,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
-            'gsutil -u anvil-datastorage cat gs://fc-secure-project_A/sample_1.cram.gz | gunzip -c -q - ',
+            'gsutil -u anvil-datastorage cat gs://fc-secure-project_A/sample_1.cram.gz',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
     @mock.patch('seqr.utils.file_utils.open')

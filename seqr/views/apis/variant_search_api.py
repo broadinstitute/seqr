@@ -235,6 +235,13 @@ VARIANT_FAMILY_EXPORT_DATA = [
     ])},
 ]
 
+VARIANT_SAMPLE_DATA = [
+    {'header': 'sample', 'value_path': 'sampleId'},
+    {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
+    {'header': 'gq'},
+    {'header': 'ab'},
+]
+
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_variant_gene_breakdown(request, search_hash):
@@ -279,16 +286,15 @@ def export_variants_handler(request, search_hash):
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = list(variant['genotypes'].values())
         for i in range(max_samples_per_variant):
-            if i < len(genotypes):
-                row.append('{sampleId}:{numAlt}:{gq}:{ab}'.format(**genotypes[i]))
-            else:
-                row.append('')
+            genotype = genotypes[i] if i < len(genotypes) else {}
+            row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         rows.append(row)
 
     header = [config['header'] for config in VARIANT_EXPORT_DATA]
     for i in range(max_families_per_variant):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
-    header += ['sample_{}:num_alt_alleles:gq:ab'.format(i+1) for i in range(max_samples_per_variant)]
+    for i in range(max_samples_per_variant):
+        header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_SAMPLE_DATA]
 
     file_format = request.GET.get('file_format', 'tsv')
 
