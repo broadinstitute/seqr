@@ -13,7 +13,7 @@ import {
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
 } from 'redux/selectors'
-import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
+import { VARIANT_SEARCH_SORT_FIELD, VARIANT_PAGINATION_FIELD } from '../../../utils/constants'
 import DataLoader from '../../DataLoader'
 import { QueryParamsEditor } from '../../QueryParamEditor'
 import { HorizontalSpacer } from '../../Spacers'
@@ -33,7 +33,7 @@ const LargeRow = styled(Grid.Row)`
 const scrollToTop = () => window.scrollTo(0, 0)
 
 const FIELDS = [
-  VARIANT_SORT_FIELD_NO_FAMILY_SORT,
+  VARIANT_SEARCH_SORT_FIELD,
 ]
 
 export const DisplayVariants = React.memo(({ displayVariants }) =>
