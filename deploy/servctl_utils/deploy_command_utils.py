@@ -31,6 +31,7 @@ DEPLOYMENT_TARGETS = [
     "redis",
     "seqr",
     "kube-scan",
+    "es-snapshot-serviceaccount",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -180,6 +181,24 @@ def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+
+
+def deploy_es_snapshot_serviceaccount(settings):
+    print_separator("es-snapshot service account")
+
+    if settings["ES_CONFIGURE_SNAPSHOTS"]:
+        # check if the serviceaccount exists
+        try:
+            run("gcloud iam service-accounts describe %(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com" % settings)
+        except RuntimeError:
+            # service account does not exist, create it now
+            run("gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s --display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s" % settings)
+        
+        # grant storage admin permissions on the snapshot bucket
+        run(" ".join([
+            "gsutil iam ch",
+            "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
+            "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
 
 
 def deploy_linkerd(settings):
