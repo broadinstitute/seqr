@@ -6,8 +6,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
 from seqr.models import Project
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
+from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_access_level
+from seqr.views.utils.file_utils import load_uploaded_file
+from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_access_level, add_service_account
+from seqr.views.apis.individual_api import _add_or_update_individuals_and_families
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -65,26 +69,45 @@ def create_project_from_workspace(request, namespace, name):
             'projectsByGuid': {},
         })
 
-    # Validate all the user input from the post body
+    # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
-    print(request_json)
-    error = ''
-    if not request_json.get('genomeVersion'):
-        error = 'Must choose or genome version.'
-    elif not request_json.get('agreeSeqrAccess'):
+
+    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId'] if not request_json.get(field)]
+    if missing_fields:
+        error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    if not request_json.get('agreeSeqrAccess'):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
-    elif not request_json.get('uploadedFileId'):
-        error = 'An individual pedigree file must be uploaded.'
+        return create_json_response({'error': error}, status = 400, reason = error)
 
-    if error:
-        return create_json_response({'Errors': error}, status=403, reason=error)
+    # Add the seqr service account to the corresponding AnVIL workspace
+    if add_service_account(request.user, namespace, name):
+        # Create a new Project in seqr
+        project_args = {
+            'name': name,
+            'genome_version': request_json['genomeVersion'],
+            'description': request_json.get('description', ''),
+            'workspace_namespace': namespace,
+            'workspace_name': name,
+        }
 
-    # 3) Add the seqr service account to the corresponding AnVIL workspace, so that our team will have access to the
-    # project for data loading;
-    # 4) Create a new Project in seqr. This project should NOT be added to the analyst group. The project name should
-    #  just be the workspace name. Make sure to set workspace_namespace and workspace_name correctly;
-    # 5) Add families/individuals based on the uploaded pedigree file;
-    # 6) Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
-    #  project guid, the workspace name, and attach a txt file with a list of the individual IDs that were created.
+        project = create_model_from_json(Project, project_args, user = request.user)
 
-    return create_json_response(response_json)
+        # Add families/individuals based on the uploaded pedigree file
+        json_records = load_uploaded_file(request_json['uploadedFileId'])
+
+        updated_families, updated_individuals = _add_or_update_individuals_and_families(
+            project, individual_records = json_records, user = request.user
+        )
+        # todo:
+        # Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
+        # project guid, the workspace name, and attach a txt file with a list of the individual IDs that were created.
+        return create_json_response({
+            'projectsByGuid': {
+                project.guid: _get_json_for_project(project, request.user)
+            }
+        })
+
+    error = 'Failed to grant seqr service account access to the workspace'
+    return create_json_response({'error': error}, status = 400, reason = error)

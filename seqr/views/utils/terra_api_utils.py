@@ -13,7 +13,7 @@ from social_django.utils import load_strategy
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SERVICE_ACCOUNT_FOR_ANVIL
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
 
@@ -87,11 +87,11 @@ def _get_social_access_token(user):
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, user=None, headers=None, root_url=None):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-    r = request_func(url, headers=headers)
+    r = request_func(url, headers=headers, data=data)
 
     if r.status_code == 404:
         raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
@@ -110,9 +110,9 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     return json.loads(r.text)
 
 
-def _user_anvil_call(method, path, user):
+def _user_anvil_call(method, path, user, data=None):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, user=user)
+    return anvil_call(method, path, access_token, user=user, data=data)
 
 
 def list_anvil_workspaces(user):
@@ -123,6 +123,7 @@ def list_anvil_workspaces(user):
     :return
     A list of workspaces that the user has access (OWNER, WRITER, or READER). Each of the workspace has
     its name and namespace.
+
     """
     path = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
     cache_key = 'terra_req__{}__{}'.format(user, path)
@@ -152,6 +153,7 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
 
     try:
         r = _user_anvil_call('get', path, user)
+    # TerraNotFoundException is handled to allow seqr continue working when Terra is not available
     except TerraNotFoundException as et:
         logger.warning(str(et))
         return {}
@@ -192,10 +194,57 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
               "canCompute": true
             }
           }
+
     """
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     try:
         return _user_anvil_call('get', path, user).get('acl', {})
+    # Exceptions are handled to avoid error when a non-anvil user trying to validate permissions on AnVIL
     except (TerraNotFoundException, PermissionDenied) as et:
         logger.warning(str(et))
         return {}
+
+
+def update_workspace_acl(user, workspace_namespace, workspace_name, acl):
+    """
+    Update workspace acl.
+
+    The user must have the "can share" privilege for the workspace.
+
+    :param user: the seqr user object
+    :param workspace_namespace: namespace or billing project name of the workspace
+    :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
+    :param acl: the list of acl to be updated
+    :return: an object about the operation. See details at https://api.firecloud.org/#/Workspaces/updateWorkspaceACL
+
+    """
+    path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+    return _user_anvil_call('patch', path, user, data=acl)
+
+
+def add_service_account(user, workspace_namespace, workspace_name):
+    """
+    Add the seqr service account to the workspace on AnVIL.
+
+    The user must have the "can share" privilege for the workspace.
+
+    :param user: the seqr user object
+    :param workspace_namespace: namespace or billing project name of the workspace
+    :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
+    :return: Success: True, Fail: False
+
+    """
+    old_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
+    service_account = old_acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
+    if service_account and not service_account['pending']:
+        return True
+    acl = [
+             {
+               "email": SERVICE_ACCOUNT_FOR_ANVIL,
+               "accessLevel": "READER",
+               "canShare": False,
+               "canCompute": False
+             }
+          ]
+    users_updated = update_workspace_acl(user, workspace_namespace, workspace_name, acl)['usersUpdated']
+    return users_updated and users_updated[0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL
