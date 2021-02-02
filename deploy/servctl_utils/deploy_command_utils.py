@@ -31,7 +31,7 @@ DEPLOYMENT_TARGETS = [
     "redis",
     "seqr",
     "kube-scan",
-    "es-snapshot-serviceaccount",
+    "elasticsearch-snapshot-serviceaccount",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -41,6 +41,7 @@ GCLOUD_CLIENT = 'gcloud-client'
 
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
+    'es-snapshot-gcs': ['{deploy_to}/gcs.client.default.credentials_file'],
     GCLOUD_CLIENT: ['service-account-key.json'],
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
@@ -183,7 +184,7 @@ def _set_elasticsearch_kubernetes_resources():
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 
-def deploy_es_snapshot_serviceaccount(settings):
+def deploy_elasticsearch_snapshot_serviceaccount(settings):
     print_separator("es-snapshot service account")
 
     if settings["ES_CONFIGURE_SNAPSHOTS"]:

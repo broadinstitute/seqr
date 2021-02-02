@@ -18,6 +18,8 @@ spec:
     tls:
       selfSignedCertificate:
         disabled: true
+  secureSettings:
+    - secretName: es-snapshot-gcs-secrets
   nodeSets:
   - name: master-node
     count: {{ ES_MASTER_NUM_PODS }}
