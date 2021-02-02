@@ -823,7 +823,7 @@ const VARIANT_SORT_OPTONS = [
       ),
   },
 ]
-const VARIANT_SORT_OPTONS_NO_FAMILY_SORT = VARIANT_SORT_OPTONS.slice(1)
+const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 1)
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({
@@ -841,7 +841,7 @@ const BASE_VARIANT_SORT_FIELD = {
   label: 'Sort By:',
 }
 export const VARIANT_SORT_FIELD = { ...BASE_VARIANT_SORT_FIELD, options: VARIANT_SORT_OPTONS }
-export const VARIANT_SORT_FIELD_NO_FAMILY_SORT = { ...BASE_VARIANT_SORT_FIELD, options: VARIANT_SORT_OPTONS_NO_FAMILY_SORT }
+export const VARIANT_SEARCH_SORT_FIELD = { ...BASE_VARIANT_SORT_FIELD, options: VARIANT_SEARCH_SORT_OPTONS }
 export const VARIANT_HIDE_EXCLUDED_FIELD = {
   name: 'hideExcluded',
   component: InlineToggle,
