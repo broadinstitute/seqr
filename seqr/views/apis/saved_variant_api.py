@@ -98,7 +98,6 @@ def _get_parsed_variant_args(variant_json, family):
     var_length = variant_json['end'] - variant_json['pos'] if 'end' in variant_json else len(ref) - 1
     return {
         'xpos': xpos,
-        'xpos_start':  xpos,
         'xpos_end':  xpos + var_length,
         'ref':  ref,
         'alt':  alt,
