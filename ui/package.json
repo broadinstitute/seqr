@@ -65,7 +65,7 @@
     "draftjs-md-converter": "^0.1.6",
     "extend": "^3.0.2",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
-    "igv": "^2.2.2",
+    "igv": "2.5.4",
     "js-cookie": "^2.2.1",
     "jsoneditor": "^9.0.2",
     "jsoneditor-react": "^3.0.0",
