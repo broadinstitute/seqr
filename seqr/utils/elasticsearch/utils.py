@@ -143,7 +143,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
 
     safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
-    return variant_results, es_search.previous_search_results['total_results']
+    return variant_results, es_search.previous_search_results.get('total_results')
 
 
 def get_es_variant_gene_counts(search_model):

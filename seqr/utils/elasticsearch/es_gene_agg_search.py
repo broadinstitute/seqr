@@ -20,7 +20,7 @@ class EsGeneAggSearch(EsSearch):
             agg = search.aggs.bucket(
                 'genes', 'terms', field='mainTranscript_gene_id', size=MAX_COMPOUND_HET_GENES+1
             )
-            if self._no_sample_filters:
+            if self._no_sample_filters or self._any_affected_sample_filters:
                 for key in HAS_ALT_FIELD_KEYS:
                     agg.bucket(key, 'terms', field=key, size=10000)
             else:
@@ -79,8 +79,14 @@ class EsGeneAggSearch(EsSearch):
 
                 for key in HAS_ALT_FIELD_KEYS:
                     for sample_agg in gene_agg[key]['buckets']:
-                        family_guid = families_by_sample[sample_agg['key']]
-                        gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+                        family_guid = families_by_sample.get(sample_agg['key'])
+                        if family_guid:
+                            gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+                            gene_counts[gene_id]['sample_ids'].add(sample_agg['key'])
+                        else:
+                            # samples may be returned that are not part of the searched families if they have no
+                            # affected individuals and were removed from the "any affected" search.
+                            gene_counts[gene_id]['total'] -= sample_agg['doc_count']
 
         return gene_counts
 

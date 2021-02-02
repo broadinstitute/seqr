@@ -880,12 +880,15 @@ def create_mock_response(search, index=INDEX_NAME):
                     }}
         else:
             for bucket in buckets:
+                doc_count = 0
                 for sample_field in ['samples', 'samples_num_alt_1', 'samples_num_alt_2']:
                     gene_samples = defaultdict(int)
                     for var in index_vars.get(bucket['key'], ES_VARIANTS):
                         for sample in var['_source'].get(sample_field, []):
                             gene_samples[sample] += 1
                     bucket[sample_field] = {'buckets': [{'key': k, 'doc_count': v} for k, v in gene_samples.items()]}
+                    doc_count += sum(gene_samples.values())
+                bucket['doc_count'] = doc_count
 
         response_dict['aggregations'] = {'genes': {'buckets': buckets}}
 
@@ -2463,7 +2466,7 @@ class EsUtilsTest(TestCase):
 
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 1, 'F000002_2': 1, 'F000011_11': 1}},
-            'ENSG00000228198': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}}
+            'ENSG00000228198': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}}
         })
 
         self.assertExecutedSearch(
@@ -2478,6 +2481,42 @@ class EsUtilsTest(TestCase):
         )
 
         self.assertCachedResults(results_model, {'gene_aggs': gene_counts, 'total_results': 5})
+
+    @urllib3_responses.activate
+    def test_all_samples_any_affected_get_es_variant_gene_counts(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'any_affected'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
+        gene_counts = get_es_variant_gene_counts(results_model)
+
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 3, 'F000002_2': 2}},
+            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 3, 'F000002_2': 2}}
+        })
+
+        self.assertExecutedSearch(
+            filters=[
+                ANNOTATION_QUERY,
+                {'bool': {
+                    'should': [
+                        {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                        {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
+                        {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
+                    ]
+                }}
+            ],
+            size=1,
+            gene_count_aggs={
+                'samples': {'terms': {'field': 'samples', 'size': 10000}},
+                'samples_num_alt_1': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}},
+                'samples_num_alt_2': {'terms': {'field': 'samples_num_alt_2', 'size': 10000}}
+            }
+        )
+
+        self.assertCachedResults(results_model, {'gene_aggs': gene_counts})
 
     def test_cached_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={})
