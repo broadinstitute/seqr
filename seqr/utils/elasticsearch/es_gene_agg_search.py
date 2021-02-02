@@ -79,7 +79,6 @@ class EsGeneAggSearch(EsSearch):
 
                 for key in HAS_ALT_FIELD_KEYS:
                     for sample_agg in gene_agg[key]['buckets']:
-
                         family_guid = families_by_sample.get(sample_agg['key'])
                         if family_guid:
                             gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
