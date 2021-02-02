@@ -31,7 +31,7 @@ DEPLOYMENT_TARGETS = [
     "redis",
     "seqr",
     "kube-scan",
-    "elasticsearch-snapshot-serviceaccount",
+    "elasticsearch-snapshot-infra",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -184,10 +184,14 @@ def _set_elasticsearch_kubernetes_resources():
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 
-def deploy_elasticsearch_snapshot_serviceaccount(settings):
-    print_separator("es-snapshot service account")
+def deploy_elasticsearch_snapshot_infra(settings):
+    print_separator("elasticsearch snapshot infra")
 
     if settings["ES_CONFIGURE_SNAPSHOTS"]:
+
+        # create the bucket
+        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings, errors_to_ignore=["already exists"])
+
         # check if the serviceaccount exists
         try:
             run("gcloud iam service-accounts describe %(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com" % settings)
