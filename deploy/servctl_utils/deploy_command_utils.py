@@ -198,7 +198,6 @@ def deploy_elasticsearch_snapshot_infra(settings):
         except RuntimeError:
             # service account does not exist, create it now
             run("gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s --display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s" % settings)
-        
         # grant storage admin permissions on the snapshot bucket
         run(" ".join([
             "gsutil iam ch",
