@@ -63,6 +63,11 @@ def create_project_from_workspace(request, namespace, name):
     response_json = {}  # to be done
     # Validate that the current user has logged in through google and has one of the valid can_edit levels of
     #  access on the specified workspace
+    project = Project.objects.filter(name = name)
+    if project:
+        error = 'Project {} exists.'.format(name)
+        return create_json_response({'error': error}, status=400, reason=error)
+
     if not _workspace_can_edit(request.user, namespace, name):
         return create_json_response({
             'projectsByGuid': {},
@@ -94,19 +99,20 @@ def create_project_from_workspace(request, namespace, name):
         project = create_model_from_json(Project, project_args, user = request.user)
 
         # Add families/individuals based on the uploaded pedigree file
-        json_records = load_uploaded_file(request_json['uploadedFileId'])
+        try:
+            json_records = load_uploaded_file(request_json['uploadedFileId'])
+        except Exception as ee:
+            error = "Uploaded pedigree file is missing or other exception: {}".format(str(ee))
+            return create_json_response({'error': error}, status = 400, reason = error)
 
-        updated_families, updated_individuals = _add_or_update_individuals_and_families(
-            project, individual_records = json_records, user = request.user
-        )
-        # todo:
-        # Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
+        # todo: update families and individuals according to the uploaded individual records
+        #updated_families, updated_individuals = _add_or_update_individuals_and_families(
+        #    project, individual_records = json_records, user = request.user
+        #)
+
+        # todo: Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
         # project guid, the workspace name, and attach a txt file with a list of the individual IDs that were created.
-        return create_json_response({
-            'projectsByGuid': {
-                project.guid: _get_json_for_project(project, request.user)
-            }
-        })
+        return create_json_response({'projectGuid':  project.guid})
 
     error = 'Failed to grant seqr service account access to the workspace'
     return create_json_response({'error': error}, status = 400, reason = error)

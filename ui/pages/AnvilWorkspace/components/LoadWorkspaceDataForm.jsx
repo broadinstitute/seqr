@@ -71,7 +71,7 @@ const createProjectFromWorkspace = (values, namespace, name) => {
   }
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
     (responseJson) => {
-      console.log(responseJson)
+      window.location.href = `/project/${responseJson.projectGuid}/project_page`
     },
     (e) => {
       if (e.body && e.body.errors) {
