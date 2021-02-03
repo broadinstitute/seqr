@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 curl -u "kibana:$KIBANA_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
 {
    "type": "gcs",
