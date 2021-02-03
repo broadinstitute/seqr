@@ -109,7 +109,7 @@ def deploy_settings(settings):
     run("kubectl get configmaps all-settings -o yaml")
 
 
-def deploy_secrets(settings):
+def deploy_secrets(settings, components=None):
     """Deploys or updates k8s secrets."""
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -119,11 +119,18 @@ def deploy_secrets(settings):
 
     create_namespace(settings)
 
+    if not components:
+        components = SECRETS.keys()
+
     # deploy secrets
-    for secret_label in SECRETS.keys():
+    for secret_label in components:
         run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    for secret_label, secret_files in SECRETS.items():
+    for secret_label in components:
+        secret_files = SECRETS.get(secret_label)
+        if not secret_files:
+            raise Exception('Invalid secret component {}'.format(secret_label))
+
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
         secret_command += [
             '--from-file deploy/secrets/gcloud/{secret_label}/{file}'.format(secret_label=secret_label, file=file)
@@ -392,6 +399,10 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     # make sure namespace exists
     if "init-cluster" not in components and not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
+
+    if components[0] == 'secrets':
+        deploy_secrets(settings, components=components[1:])
+        return
 
     # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
     for component in DEPLOYABLE_COMPONENTS:
