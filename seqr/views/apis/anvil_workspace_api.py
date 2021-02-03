@@ -7,7 +7,6 @@ from django.shortcuts import redirect
 
 from seqr.models import Project
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import is_google_authenticated, user_get_workspace_access_level, add_service_account
@@ -30,6 +29,8 @@ def _workspace_can_edit(user, namespace, name):
 def anvil_workspace_page(request, namespace, name):
     """
     Redirect to the loading data from workspace page or redirect to the project if the project exists.
+
+    Validate the workspace and project before loading data.
 
     :param request: Django request object
     :param namespace: The namespace (or the billing account) of the workspace
@@ -60,7 +61,6 @@ def create_project_from_workspace(request, namespace, name):
     :param name: The name of the workspace. It also be used as the project name
     :return the projectsByGuid with the new project json
     """
-    response_json = {}  # to be done
     # Validate that the current user has logged in through google and has one of the valid can_edit levels of
     #  access on the specified workspace
     project = Project.objects.filter(name = name)
@@ -106,9 +106,9 @@ def create_project_from_workspace(request, namespace, name):
             return create_json_response({'error': error}, status = 400, reason = error)
 
         # todo: update families and individuals according to the uploaded individual records
-        #updated_families, updated_individuals = _add_or_update_individuals_and_families(
-        #    project, individual_records = json_records, user = request.user
-        #)
+        updated_families, updated_individuals = _add_or_update_individuals_and_families(
+            project, individual_records = json_records, user = request.user
+        )
 
         # todo: Send an email to all seqr data managers saying a new AnVIL project is ready for loading. Include the seqr
         # project guid, the workspace name, and attach a txt file with a list of the individual IDs that were created.
