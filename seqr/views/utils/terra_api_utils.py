@@ -67,7 +67,7 @@ def is_anvil_authenticated(user):
 def _get_call_args(path, headers=None, root_url=None):
     if headers is None:
         headers = {"User-Agent": SEQR_USER_AGENT}
-    headers.update({"accept": "application/json"})
+    headers.update({"accept": "application/json", "Content-Type": "application/json"})
     if root_url is None:
         root_url = TERRA_API_ROOT_URL
     url = urljoin(root_url, path)
@@ -91,7 +91,7 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-    r = request_func(url, headers=headers, data=data)
+    r = request_func(url, data=data, headers=headers)
 
     if r.status_code == 404:
         raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
@@ -216,7 +216,6 @@ def update_workspace_acl(user, workspace_namespace, workspace_name, acl):
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
     :param acl: the list of acl to be updated
     :return: an object about the operation. See details at https://api.firecloud.org/#/Workspaces/updateWorkspaceACL
-
     """
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     return _user_anvil_call('patch', path, user, data=acl)
@@ -232,7 +231,6 @@ def add_service_account(user, workspace_namespace, workspace_name):
     :param workspace_namespace: namespace or billing project name of the workspace
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
     :return: Success: True, Fail: False
-
     """
     old_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
     service_account = old_acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
@@ -246,5 +244,5 @@ def add_service_account(user, workspace_namespace, workspace_name):
                "canCompute": False
              }
           ]
-    users_updated = update_workspace_acl(user, workspace_namespace, workspace_name, acl)['usersUpdated']
+    users_updated = update_workspace_acl(user, workspace_namespace, workspace_name, json.dumps(acl))['usersUpdated']
     return users_updated and users_updated[0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL

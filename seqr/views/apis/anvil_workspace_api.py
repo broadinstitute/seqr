@@ -29,7 +29,7 @@ def _workspace_can_edit(user, namespace, name):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
     """
-    Redirect to the loading data from workspace page or redirect to the project if the project exists
+    Redirect to the loading data from workspace page or redirect to the project if the project exists.
 
     :param request: Django request object
     :param namespace: The namespace (or the billing account) of the workspace
@@ -53,13 +53,12 @@ def anvil_workspace_page(request, namespace, name):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def create_project_from_workspace(request, namespace, name):
     """
-    Create a project when a cooperator requesting to load data from an AnVIL workspace
+    Create a project when a cooperator requests to load data from an AnVIL workspace.
 
     :param request: Django request object
     :param namespace: The namespace (or the billing account) of the workspace
     :param name: The name of the workspace. It also be used as the project name
     :return the projectsByGuid with the new project json
-
     """
     response_json = {}  # to be done
     # Validate that the current user has logged in through google and has one of the valid can_edit levels of
