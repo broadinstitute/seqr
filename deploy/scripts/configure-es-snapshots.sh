@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-curl -u "elastic:$SEQR_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
+curl -u "kibana:$KIBANA_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
 {
    "type": "gcs",
    "settings": {
@@ -12,15 +12,15 @@ curl -u "elastic:$SEQR_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:92
 EOF
 
 
-curl -u "elastic:$SEQR_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_slm/policy/monthly-snapshots?pretty" -H 'Content-Type: application/json' -d'
+curl -u "kibana:$KIBANA_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_slm/policy/monthly-snapshots?pretty" -H 'Content-Type: application/json' -d'
 {
-  "schedule": "0 0 0 1 * ?", 
-  "name": "<monthly-snap-{yyyy.MM.dd}>", 
-  "repository": "snapshot_storage", 
-  "retention": { 
-    "expire_after": "90d", 
-    "min_count": 2, 
-    "max_count": 5 
+  "schedule": "0 0 0 1 * ?",
+  "name": "<monthly-snap-{now/d}>",
+  "repository": "snapshot_storage",
+  "retention": {
+    "expire_after": "90d",
+    "min_count": 2,
+    "max_count": 5
   }
 }
 '

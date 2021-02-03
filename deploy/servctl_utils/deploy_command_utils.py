@@ -205,7 +205,7 @@ def deploy_elasticsearch_snapshot_infra(settings):
             "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
             "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
         copy_files_to_or_from_pod("seqr", settings["DEPLOY_TO"], 'deploy/scripts/configure-es-snapshots.sh', '/seqr/configure-es-snapshots.sh', 1)
-        run_in_pod("seqr", "/seqr/configure/es-snapshots.sh", settings["DEPLOY_TO"])
+        run_in_pod("seqr", "/seqr/configure-es-snapshots.sh", settings["DEPLOY_TO"])
 
 
 def deploy_linkerd(settings):
