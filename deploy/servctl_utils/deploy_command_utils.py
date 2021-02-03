@@ -5,7 +5,8 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names, \
+    copy_files_to_or_from_pod
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
@@ -203,6 +204,8 @@ def deploy_elasticsearch_snapshot_infra(settings):
             "gsutil iam ch",
             "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
             "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
+        
+        copy_files_to_or_from_pod("seqr", settings["DEPLOY_TO"], 'deploy/scripts/configure-es-snapshots.sh', '/tmp/configure-es-snapshots.sh', 1)
 
 
 def deploy_linkerd(settings):

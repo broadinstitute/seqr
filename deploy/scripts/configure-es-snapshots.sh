@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 
-ELASTICSEARCH_SNAPSHOTS_BUCKET=$1
-
-kubectl port-forward elasticsearch-es-http 9200
-
-curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
+curl -u "elastic:$SEQR_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
 {
    "type": "gcs",
    "settings": {
-     "bucket": "${ELASTICSEARCH_SNAPSHOTS_BUCKET}",
+     "bucket": "${ES_SNAPSHOTS_BUCKET}",
      "client": "default",
      "compress": true
    }
@@ -16,7 +12,7 @@ curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_snapshot/snaps
 EOF
 
 
-curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_slm/policy/monthly-snapshots?pretty" -H 'Content-Type: application/json' -d'
+curl -u "elastic:$SEQR_ES_PASSWORD" -X PUT "${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_slm/policy/monthly-snapshots?pretty" -H 'Content-Type: application/json' -d'
 {
   "schedule": "0 0 0 1 * ?", 
   "name": "<monthly-snap-{yyyy.MM.dd}>", 
