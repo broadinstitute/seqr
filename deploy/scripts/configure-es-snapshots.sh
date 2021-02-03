@@ -4,16 +4,17 @@ ELASTICSEARCH_SNAPSHOTS_BUCKET=$1
 
 kubectl port-forward elasticsearch-es-http 9200
 
-curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' -d'
+curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_snapshot/snapshot_storage?pretty" -H 'Content-Type: application/json' --data @- <<EOF
 {
-  "type": "fs",
-  "settings": {
-    "bucket": "${ELASTICSEARCH_SNAPSHOTS_BUCKET}",
-    "client": "default",
-    "compress": true
-  }
+   "type": "gcs",
+   "settings": {
+     "bucket": "${ELASTICSEARCH_SNAPSHOTS_BUCKET}",
+     "client": "default",
+     "compress": true
+   }
 }
-'
+EOF
+
 
 curl -u "elastic:$ELASTICSEARCH_PASSWORD" -X PUT "localhost:9200/_slm/policy/monthly-snapshots?pretty" -H 'Content-Type: application/json' -d'
 {
