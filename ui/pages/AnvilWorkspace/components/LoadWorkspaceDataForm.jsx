@@ -10,13 +10,6 @@ import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/e
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
-import { VerticalSpacer } from 'shared/components/Spacers'
-
-const StyledLabel = styled.label`
-  color: rgba(0,0,0,.87);
-  font-size: .92857143em;
-  font-weight: 700;
-`
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
@@ -33,10 +26,10 @@ const BLANK_EXPORT = {
 }
 
 const UploadPedigreeField = React.memo(() =>
-  <div>
-    {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-    <StyledLabel>Upload Pedigree Data</StyledLabel>
-    <Segment>
+  [
+    // eslint-disable-next-line jsx-a11y/label-has-for
+    <label key="uploadLabel">Upload Pedigree Data</label>,
+    <Segment key="uploadForm">
       <BaseBulkContent
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
@@ -45,9 +38,8 @@ const UploadPedigreeField = React.memo(() =>
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
-    </Segment>
-    <VerticalSpacer height={1} />
-  </div>,
+    </Segment>,
+  ],
 )
 
 const UPLOAD_PEDIGREE_FIELD = {
