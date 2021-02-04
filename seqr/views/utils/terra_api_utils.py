@@ -13,9 +13,15 @@ from social_django.utils import load_strategy
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SERVICE_ACCOUNT_FOR_ANVIL
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
+OWNER_ACCESS_LEVEL = 'OWNER'
+WRITER_ACCESS_LEVEL = 'WRITER'
+READER_ACCESS_LEVEL = 'READER'
+PROJECT_OWNER_ACCESS_LEVEL = 'PROJECT_OWNER'
+CAN_SHARE_PERM = 'canShare'
+CAN_COMPUTE_PERM = 'canCompute'
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +59,23 @@ def anvil_enabled():
 def is_google_authenticated(user):
     if not google_auth_enabled():
         return False
+
     try:
-        _ = user.social_auth.get(provider = 'google-oauth2')
+        social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
     except UserSocialAuth.DoesNotExist:  # Exception happen when the user has never logged-in with Google
         return False
-    return True
+
+    if social and social.extra_data:
+        return social.extra_data.get('access_token', '') != ''
+
+    return False
+
+
+def remove_token(user):
+    social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
+    if social and social.extra_data:
+        social.extra_data['access_token'] = ''
+        social.save()
 
 
 def is_anvil_authenticated(user):
@@ -75,7 +93,7 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 def _get_social_access_token(user):
-    social = user.social_auth.get(provider = 'google-oauth2')
+    social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
@@ -205,22 +223,6 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
         return {}
 
 
-def update_workspace_acl(user, workspace_namespace, workspace_name, acl):
-    """
-    Update workspace acl.
-
-    The user must have the "can share" privilege for the workspace.
-
-    :param user: the seqr user object
-    :param workspace_namespace: namespace or billing project name of the workspace
-    :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
-    :param acl: the list of acl to be updated
-    :return: an object about the operation. See details at https://api.firecloud.org/#/Workspaces/updateWorkspaceACL
-    """
-    path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-    return _user_anvil_call('patch', path, user, data=acl)
-
-
 def add_service_account(user, workspace_namespace, workspace_name):
     """
     Add the seqr service account to the workspace on AnVIL.
@@ -244,5 +246,6 @@ def add_service_account(user, workspace_namespace, workspace_name):
                "canCompute": False
              }
           ]
-    users_updated = update_workspace_acl(user, workspace_namespace, workspace_name, json.dumps(acl))['usersUpdated']
-    return users_updated and users_updated[0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL
+    path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
+    r = _user_anvil_call('patch', path, user, data=json.dumps(acl))
+    return r['usersUpdated'] and r['usersUpdated'][0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL
