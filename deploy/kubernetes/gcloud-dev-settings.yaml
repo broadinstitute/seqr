@@ -17,6 +17,8 @@ REDIS_POD_MEMORY_LIMIT: 8Gi
 
 TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
+SERVICE_ACCOUNT_FOR_ANVIL: 'seqr-anvil-dev@seqr-project.iam.gserviceaccount.com'
+
 ####  Elasticsearch settings ####
 
 ES_DATA_NUM_PODS: 1

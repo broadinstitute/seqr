@@ -161,7 +161,7 @@ def list_anvil_workspaces(user):
 
 
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
-    path = "api/workspaces/{0}/{1}?fields=accessLevel".format(workspace_namespace, workspace_name)
+    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare,canCompute".format(workspace_namespace, workspace_name)
 
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
@@ -171,7 +171,8 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
 
     try:
         r = _user_anvil_call('get', path, user)
-    # TerraNotFoundException is handled to allow seqr continue working when Terra is not available
+    # Handling TerraNotFoundException here is required to allow seqr continue working when Terra is not available
+    # It should be taken out when local access is deprecated.
     except TerraNotFoundException as et:
         logger.warning(str(et))
         return {}
@@ -217,7 +218,7 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     try:
         return _user_anvil_call('get', path, user).get('acl', {})
-    # Exceptions are handled to avoid error when a non-anvil user trying to validate permissions on AnVIL
+    # Exceptions are handled to return an empty result for the users who have no permission to access the acl
     except (TerraNotFoundException, PermissionDenied) as et:
         logger.warning(str(et))
         return {}
@@ -248,4 +249,7 @@ def add_service_account(user, workspace_namespace, workspace_name):
           ]
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
     r = _user_anvil_call('patch', path, user, data=json.dumps(acl))
-    return r['usersUpdated'] and r['usersUpdated'][0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL
+    if not (r['usersUpdated'] and r['usersUpdated'][0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL):
+        message = 'Failed to grant seqr service account access to the workspace {}/{}'.format(workspace_namespace, workspace_name)
+        logger.warning(message)
+        raise TerraAPIException(message, 400)

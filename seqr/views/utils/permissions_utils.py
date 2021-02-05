@@ -80,8 +80,8 @@ def workspace_has_perm(user, permission_level, namespace, name, can_share=False,
     workspace_permission = user_get_workspace_access_level(user, namespace, name)
     if not workspace_permission:
         return False
-    perm = workspace_permission[CAN_SHARE_PERM] if can_share else True
-    perm = perm and workspace_permission[CAN_COMPUTE_PERM] if can_compute else True
+    perm = workspace_permission.get(CAN_SHARE_PERM, False) if can_share else True
+    perm = perm and workspace_permission.get(CAN_COMPUTE_PERM, False) if can_compute else True
     permission = _map_anvil_seqr_permission(workspace_permission)
     return perm if permission == CAN_EDIT else permission == permission_level
 
