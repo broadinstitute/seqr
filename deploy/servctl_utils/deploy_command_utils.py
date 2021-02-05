@@ -33,6 +33,8 @@ DEPLOYMENT_TARGETS = [
     "seqr",
     "kube-scan",
     "elasticsearch-snapshot-infra",
+    "elasticsearch-snapshot-config",
+    "curl",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -186,26 +188,43 @@ def _set_elasticsearch_kubernetes_resources():
 
 
 def deploy_elasticsearch_snapshot_infra(settings):
-    print_separator("elasticsearch snapshot infra")
+    print_separator('elasticsearch snapshot infra')
 
-    if settings["ES_CONFIGURE_SNAPSHOTS"]:
-
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
         # create the bucket
-        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings, errors_to_ignore=["already exists"])
-
-        # check if the serviceaccount exists
-        try:
-            run("gcloud iam service-accounts describe %(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com" % settings)
-        except RuntimeError:
-            # service account does not exist, create it now
-            run("gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s --display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s" % settings)
+        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
+            errors_to_ignore=["already exists"])
+        # create the IAM user
+        run(" ".join([
+            "gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s",
+            "--display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s"]) % settings,
+            errors_to_ignore="already exists within project projects/seqr-project")
         # grant storage admin permissions on the snapshot bucket
         run(" ".join([
             "gsutil iam ch",
             "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
             "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
-        copy_files_to_or_from_pod("seqr", settings["DEPLOY_TO"], 'deploy/scripts/configure-es-snapshots.sh', '/seqr/configure-es-snapshots.sh', 1)
-        run_in_pod("seqr", "/seqr/configure-es-snapshots.sh", settings["DEPLOY_TO"])
+
+
+def deploy_elasticsearch_snapshot_config(settings):
+    print_separator('elasticsearch snapshot configuration')
+
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
+        # run the k8s job to set up the repo
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        wait_for_resource(
+            'configure-es-snapshot-repo', resource_type='job', json_path='{.items[0].status.conditions[0].type}',
+            expected_status='Complete')
+        # clean up the job after completion
+        run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        # Set up the monthly cron job
+        #run('kubectl apply -f deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml')
+
+
+def deploy_curl(settings):
+    """Docker image used for snapshot cronjobs"""
+    print_separator('build curl image')
+    docker_build("curl", settings)
 
 
 def deploy_linkerd(settings):

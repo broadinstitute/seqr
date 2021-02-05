@@ -184,8 +184,6 @@ spec:
           value: "{{ ANALYST_USER_GROUP }}"
         - name: PM_USER_GROUP
           value: "{{ PM_USER_GROUP }}"
-        - name: ES_SNAPSHOTS_BUCKET
-          value: "{{ ES_SNAPSHOTS_BUCKET }}"
         readinessProbe:
           exec:
             command:
