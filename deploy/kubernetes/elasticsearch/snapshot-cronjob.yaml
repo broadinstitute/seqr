@@ -1,7 +1,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: es-monthy-snapshotter
+  name: es-monthly-snapshotter
   labels:
     name: es-monthly-snapshotter
 spec:
@@ -11,7 +11,7 @@ spec:
       template:
         spec:
           containers:
-          - name: es-monthy-snapshotter
+          - name: es-monthly-snapshotter
             image: {{ DOCKER_IMAGE_PREFIX }}/curl{{ DOCKER_IMAGE_TAG }}
             imagePullPolicy: {{ IMAGE_PULL_POLICY }}
             env:
