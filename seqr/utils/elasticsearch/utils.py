@@ -130,11 +130,10 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     if search.get('freqs'):
         es_search.filter_by_frequency(search['freqs'])
 
-    if not skip_genotype_filter:
-        es_search.filter_by_annotation_and_genotype(
-            search.get('inheritance'), quality_filter=search.get('qualityFilter'),
-            annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-            pathogenicity=search.get('pathogenicity'))
+    es_search.filter_by_annotation_and_genotype(
+        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+        annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
+        pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter)
 
     if hasattr(es_search, 'aggregate_by_gene'):
         es_search.aggregate_by_gene()

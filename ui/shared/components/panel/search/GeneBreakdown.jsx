@@ -34,7 +34,7 @@ const COLUMNS = [
     noFormatExport: true,
     format: row =>
       <SearchResultsLink
-        geneId={row.geneId}
+        location={row.geneId}
         projectFamilies={Object.entries(row.families.reduce((acc, { family }) => {
           if (!acc[family.projectGuid]) {
             acc[family.projectGuid] = []
