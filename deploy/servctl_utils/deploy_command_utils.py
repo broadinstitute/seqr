@@ -218,7 +218,7 @@ def deploy_elasticsearch_snapshot_config(settings):
         # clean up the job after completion
         run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
         # Set up the monthly cron job
-        #run('kubectl apply -f deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml')
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
 
 
 def deploy_curl(settings):
