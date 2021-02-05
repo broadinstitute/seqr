@@ -5,7 +5,7 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names,
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
