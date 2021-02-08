@@ -74,7 +74,8 @@ def is_google_authenticated(user):
 def remove_token(user):
     social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
     if social and social.extra_data:
-        social.extra_data['access_token'] = ''
+        social.extra_data.pop('access_token', None)
+        social.extra_data['expires'] = 0
         social.save()
 
 

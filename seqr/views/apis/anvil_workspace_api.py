@@ -20,7 +20,7 @@ from settings import API_LOGIN_REQUIRED_URL
 logger = logging.getLogger(__name__)
 
 
-def get_project_name(namespace, name):
+def _get_project_name(namespace, name):
     return '{} - {}'.format(namespace, name)
 
 
@@ -29,17 +29,18 @@ def anvil_workspace_page(request, namespace, name):
     """
     Validate the workspace and project before loading data.
 
-    :param request: Django request object
-    :param namespace: The namespace (or the billing account) of the workspace
-    :param name: The name of the workspace. It also be used as the project name
-    :return Redirect to a page depending on if the workspace permissions or project exists
+    :param request: Django request object.
+    :param namespace: The namespace (or the billing account) of the workspace.
+    :param name: The name of the workspace. It also be used as the project name.
+    :return Redirect to a page depending on if the workspace permissions or project exists.
+
     """
     if not workspace_has_perm(request.user, CAN_EDIT, namespace, name, can_share=True):
         message = "Missing required permissions for loading data from workspace {}/{}".format(namespace, name)
         logger.warning(message)
         return create_json_response({'error': message}, status=400, reason=message)
 
-    project_name = get_project_name(namespace, name)
+    project_name = _get_project_name(namespace, name)
     project = Project.objects.filter(name=project_name)
     if project:
         return redirect('/project/{}/project_page'.format(project.first().guid))
@@ -56,8 +57,9 @@ def create_project_from_workspace(request, namespace, name):
     :param namespace: The namespace (or the billing account) of the workspace
     :param name: The name of the workspace. It also be used as the project name
     :return the projectsByGuid with the new project json
+
     """
-    project_name = get_project_name(namespace, name)
+    project_name = _get_project_name(namespace, name)
     project = Project.objects.filter(name = project_name)
     if project:
         error = 'Project {} exists.'.format(project_name)
@@ -94,7 +96,7 @@ def create_project_from_workspace(request, namespace, name):
 
     pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'ped_file', user=request.user, project=project)
     if errors:
-        error = "Parse pedigree data failed."
+        error = "Parse pedigree data failed. {}".format(errors)
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Create a new Project in seqr
@@ -114,8 +116,8 @@ def create_project_from_workspace(request, namespace, name):
     )
 
     # Send an email to all seqr data managers
-    info = ['{} families and {} individuals have been added to the new project'
-                .format(len(updated_families), len(updated_families))]
+    info = ['{} families and {} individuals have been added to the new project'.format(len(updated_families),
+                                                                                       len(updated_individuals))]
     individual_ids = [individual['individualId'] for individual in pedigree_records]
     try:
         send_load_data_email(request.user, project.guid, namespace, name, individual_ids)
@@ -127,4 +129,5 @@ def create_project_from_workspace(request, namespace, name):
     return create_json_response({
         'projectGuid':  project.guid,
         'info': info,
+        'warnings': ped_warnings,
     })
