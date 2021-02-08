@@ -33,7 +33,6 @@ DEPLOYMENT_TARGETS = [
     "kube-scan",
     "elasticsearch-snapshot-infra",
     "elasticsearch-snapshot-config",
-    "curl",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -208,6 +207,11 @@ def deploy_elasticsearch_snapshot_infra(settings):
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
 
+    docker_build("curl", settings)
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     if settings['ES_CONFIGURE_SNAPSHOTS']:
         # run the k8s job to set up the repo
         run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
@@ -218,12 +222,6 @@ def deploy_elasticsearch_snapshot_config(settings):
         run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
         # Set up the monthly cron job
         run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
-
-
-def deploy_curl(settings):
-    """Docker image used for snapshot cronjobs."""
-    print_separator('build curl image')
-    docker_build("curl", settings)
 
 
 def deploy_linkerd(settings):
