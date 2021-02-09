@@ -1,6 +1,6 @@
 import logging
 from slacker import Slacker
-from settings import SLACK_TOKEN, BASE_URL, DEFAULT_FROM_EMAIL
+from settings import SLACK_TOKEN, BASE_URL
 from django.core.mail import EmailMessage
 from django.contrib.auth.models import User
 

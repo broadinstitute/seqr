@@ -6,7 +6,7 @@ from django.db.models import Value
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, is_google_authenticated, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
-    PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM, CAN_COMPUTE_PERM
+    PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
     GOOGLE_LOGIN_REQUIRED_URL
 

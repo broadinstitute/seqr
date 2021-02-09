@@ -175,8 +175,6 @@ spec:
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
           value: "{{ TERRA_API_ROOT_URL }}"
-        - name: SERVICE_ACCOUNT_FOR_ANVIL
-          value: "{{ SERVICE_ACCOUNT_FOR_ANVIL }}"
         - name: ELASTICSEARCH_PROTOCOL
           value: "{{ ELASTICSEARCH_PROTOCOL }}"
         # - name: ELASTICSEARCH_CA_PATH

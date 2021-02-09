@@ -44,6 +44,7 @@ const UploadPedigreeField = React.memo(() =>
 
 const UPLOAD_PEDIGREE_FIELD = {
   name: FILE_FIELD_NAME,
+  label: 'Upload Pedigree Data',
   component: UploadPedigreeField,
 }
 
@@ -56,11 +57,7 @@ const AGREE_CHECKBOX = {
 
 const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
 
-const createProjectFromWorkspace = (values, namespace, name) => {
-  if (values[FILE_FIELD_NAME]) {
-    values.uploadedFileId = values[FILE_FIELD_NAME].uploadedFileId
-    delete values[FILE_FIELD_NAME]
-  }
+const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
     (responseJson) => {
       window.location.href = `/project/${responseJson.projectGuid}/project_page`
@@ -72,7 +69,7 @@ const createProjectFromWorkspace = (values, namespace, name) => {
         throw new SubmissionError({ _error: [e.message] })
       }
     },
-  ).post(values)
+  ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 }
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>

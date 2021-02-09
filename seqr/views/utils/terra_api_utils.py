@@ -1,4 +1,4 @@
-"""This module provides python bindings for the AnVIL Terra API."""
+"""Provide python bindings for the AnVIL Terra API."""
 
 import json
 import logging
@@ -21,7 +21,6 @@ WRITER_ACCESS_LEVEL = 'WRITER'
 READER_ACCESS_LEVEL = 'READER'
 PROJECT_OWNER_ACCESS_LEVEL = 'PROJECT_OWNER'
 CAN_SHARE_PERM = 'canShare'
-CAN_COMPUTE_PERM = 'canCompute'
 
 logger = logging.getLogger(__name__)
 
