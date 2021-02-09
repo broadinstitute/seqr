@@ -86,7 +86,7 @@ const IGVContainer = styled.div`
 class IGV extends React.PureComponent {
 
   static propTypes = {
-    igvOptions: PropTypes.object.isRequired,
+    tracks: PropTypes.array,
   }
 
   constructor(props) {
@@ -105,16 +105,16 @@ class IGV extends React.PureComponent {
 
   componentDidMount() {
     if (this.container) {
-      igv.createBrowser(this.container, this.props.igvOptions).then((browser) => {
+      igv.createBrowser(this.container, this.props).then((browser) => {
         this.browser = browser
       })
     }
   }
 
   componentDidUpdate(prevProps) {
-    if (this.browser && prevProps.igvOptions.tracks !== this.props.igvOptions.tracks) {
+    if (this.browser && prevProps.tracks !== this.props.tracks) {
       this.browser.removeAllTracks()
-      this.props.igvOptions.tracks.forEach((track) => {
+      this.props.tracks.forEach((track) => {
         this.browser.loadTrack(track)
       })
 

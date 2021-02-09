@@ -10,7 +10,7 @@ import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
-import { AFFECTED } from '../../utils/constants'
+import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP, GENOME_VERSION_37, GENOME_VERSION_38 } from '../../utils/constants'
 
 const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'
@@ -67,6 +67,16 @@ const TRACK_OPTIONS = {
   [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
 }
 
+const IGV_OPTIONS = {
+  showKaryo: false,
+  showIdeogram: true,
+  showNavigation: true,
+  showRuler: true,
+  showCenterGuide: true,
+  showCursorTrackingGuide: true,
+  showCommandBar: true,
+}
+
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
     <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
@@ -77,7 +87,7 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
-const getIgvOptions = (variant, igvSampleIndividuals, individualsByGuid) => {
+const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -87,7 +97,7 @@ const getIgvOptions = (variant, igvSampleIndividuals, individualsByGuid) => {
       return acc
     }, {})
 
-  const igvTracks = Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => ([
+  return Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => ([
     ...acc,
     ...Object.entries(samplesByIndividual).map(([individualGuid, sample]) => {
       const individual = individualsByGuid[individualGuid]
@@ -141,34 +151,6 @@ const getIgvOptions = (variant, igvSampleIndividuals, individualsByGuid) => {
       return track
     }),
   ]), []).filter(track => track)
-
-  // TODO use project genome version
-  const isBuild38 = igvSampleIndividuals[ALIGNMENT_TYPE] ?
-    Object.values(igvSampleIndividuals[ALIGNMENT_TYPE]).some(sample => sample.filePath.endsWith('.cram')) : true
-  const genome = isBuild38 ? 'hg38' : 'hg19'
-
-  const locus = variant && getLocus(
-    variant.chrom, (!isBuild38 && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos, 100,
-  )
-
-  igvTracks.push({
-    url: `https://storage.googleapis.com/seqr-reference-data/${isBuild38 ? 'GRCh38' : 'GRCh37'}/gencode/gencode.v27${isBuild38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
-    name: `gencode ${genome}v27`,
-    displayMode: 'SQUISHED',
-  })
-
-  return {
-    locus,
-    tracks: igvTracks,
-    genome,
-    showKaryo: false,
-    showIdeogram: true,
-    showNavigation: true,
-    showRuler: true,
-    showCenterGuide: true,
-    showCursorTrackingGuide: true,
-    showCommandBar: true,
-  }
 }
 
 const ReadIconButton = props => <ButtonLink icon="options" content="SHOW READS" {...props} />
@@ -211,12 +193,31 @@ ReadButtons.propTypes = {
 }
 
 const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, hideReads }) => {
-  const igvOptions = getIgvOptions(variant, igvSampleIndividuals, individualsByGuid)
+  // TODO use project genome version
+  const genomeVersion = (igvSampleIndividuals[ALIGNMENT_TYPE] && Object.values(
+    igvSampleIndividuals[ALIGNMENT_TYPE]).some(sample => sample.filePath.endsWith('.cram'))
+  ) ? GENOME_VERSION_38 : GENOME_VERSION_37
+  const genomeBuild = GENOME_VERSION_LOOKUP[genomeVersion]
+  const genomeDisplay = GENOME_VERSION_DISPLAY_LOOKUP[genomeBuild]
+
+  const locus = variant && getLocus(
+    variant.chrom,
+    (variant.genomeVersion !== genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
+    100,
+  )
+
+  const tracks = getIgvTracks(variant, igvSampleIndividuals, individualsByGuid)
+  tracks.push({
+    url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
+    name: `gencode ${genomeDisplay}v27`,
+    displayMode: 'SQUISHED',
+  })
+
   return (
     <Segment>
       <ButtonLink onClick={hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
       <VerticalSpacer height={20} />
-      <IGV igvOptions={igvOptions} />
+      <IGV tracks={tracks} genome={genomeDisplay} locus={locus} {...IGV_OPTIONS} />
     </Segment>
   )
 })
