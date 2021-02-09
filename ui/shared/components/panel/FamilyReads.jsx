@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid, getIGVSamplesByFamily, getFamiliesByGuid } from 'redux/selectors'
+import { getIndividualsByGuid, getIGVSamplesByFamilySampleIndividual, getFamiliesByGuid } from 'redux/selectors'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
@@ -67,68 +67,51 @@ const TRACK_OPTIONS = {
   [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
 }
 
-const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
-  const igvTracksBySampleIndividual = igvSamples.reduce((acc, sample) => {
-    const type = sample.sampleType
+const getTrackOptions = (type, sample, individual) => {
+  const name = ReactDOMServer.renderToString(
+    <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
+  )
 
-    const individual = individualsByGuid[sample.individualGuid]
-    const trackName = ReactDOMServer.renderToString(
-      <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
-    )
+  const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
 
-    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
+  return { url, name, type, ...TRACK_OPTIONS[type] }
+}
 
-    const trackOptions = { type, ...TRACK_OPTIONS[type] }
-
-    if (type === ALIGNMENT_TYPE) {
-      if (sample.filePath.endsWith('.cram')) {
-        if (sample.filePath.startsWith('gs://')) {
-          Object.assign(trackOptions, {
-            format: 'cram',
-            indexURL: `${url}.crai`,
-          })
-        } else {
-          Object.assign(trackOptions, CRAM_PROXY_TRACK_OPTIONS)
-        }
-      } else {
-        Object.assign(trackOptions, BAM_TRACK_OPTIONS)
+const getIgvOptions = (variant, igvSampleIndividuals, individualsByGuid) => {
+  const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
+    (acc, [individualGuid, { filePath, sampleId }]) => {
+      if (!acc[filePath]) {
+        acc[filePath] = {}
       }
-    } else if (type === JUNCTION_TYPE) {
-      trackOptions.indexURL = `${url}.tbi`
-    } else if (type === GCNV_TYPE) {
-      const sampleId = sample.sampleId || individual.individualId
-      trackOptions.highlightSamples = { [sampleId]: individual.affected === AFFECTED ? 'red' : 'blue' }
-      trackOptions.indexURL = `${url}.tbi`
-    }
-
-    if (!acc[type]) {
-      acc[type] = {}
-    }
-    acc[type][sample.individualGuid] = {
-      url,
-      name: trackName,
-      ...trackOptions,
-    }
-    return acc
-  }, {})
-
-  const gcnvSamplesByBatch = Object.entries(igvTracksBySampleIndividual[GCNV_TYPE] || {}).reduce(
-    (acc, [individualGuid, { url, highlightSamples }]) => {
-      if (!acc[url]) {
-        acc[url] = { individualGuids: [individualGuid], highlightSamples }
-      } else {
-        acc[url].highlightSamples = { ...acc[url].highlightSamples, ...highlightSamples }
-        acc[url].individualGuids.push(individualGuid)
-      }
+      acc[filePath][individualGuid] = sampleId
       return acc
     }, {})
 
-  const igvTracks = Object.values(igvTracksBySampleIndividual).reduce((acc, tracksByIndividual) => ([
+  const igvTracks = Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => ([
     ...acc,
-    ...Object.entries(tracksByIndividual).map(([individualGuid, track]) => {
-      if (track.type === JUNCTION_TYPE) {
-        const coverageTrack = (igvTracksBySampleIndividual[COVERAGE_TYPE] || {})[individualGuid]
-        if (coverageTrack) {
+    ...Object.entries(samplesByIndividual).map(([individualGuid, sample]) => {
+      const individual = individualsByGuid[individualGuid]
+      const track = getTrackOptions(type, sample, individual)
+
+      if (type === ALIGNMENT_TYPE) {
+        if (sample.filePath.endsWith('.cram')) {
+          if (sample.filePath.startsWith('gs://')) {
+            Object.assign(track, {
+              format: 'cram',
+              indexURL: `${track.url}.crai`,
+            })
+          } else {
+            Object.assign(track, CRAM_PROXY_TRACK_OPTIONS)
+          }
+        } else {
+          Object.assign(track, BAM_TRACK_OPTIONS)
+        }
+      } else if (type === JUNCTION_TYPE) {
+        track.indexURL = `${track.url}.tbi`
+
+        const coverageSample = (igvSampleIndividuals[COVERAGE_TYPE] || {})[individualGuid]
+        if (coverageSample) {
+          const coverageTrack = getTrackOptions(COVERAGE_TYPE, coverageSample, individual)
           return {
             type: 'merged',
             name: track.name,
@@ -136,14 +119,21 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
             tracks: [coverageTrack, track],
           }
         }
-      } else if (track.type === COVERAGE_TYPE && (igvTracksBySampleIndividual[JUNCTION_TYPE] || {})[individualGuid]) {
+      } else if (type === COVERAGE_TYPE && (igvSampleIndividuals[JUNCTION_TYPE] || {})[individualGuid]) {
         return null
-      } else if (track.type === GCNV_TYPE) {
-        const batch = gcnvSamplesByBatch[track.url]
-        return batch.individualGuids[0] === individualGuid ? {
+      } else if (type === GCNV_TYPE) {
+        const batch = gcnvSamplesByBatch[sample.filePath]
+        const individualGuids = Object.keys(batch).sort()
+
+        return individualGuids[0] === individualGuid ? {
           ...track,
-          highlightSamples: batch.highlightSamples,
-          name: batch.individualGuids.length === 1 ? track.name : batch.individualGuids.map(
+          indexURL: `${track.url}.tbi`,
+          highlightSamples: Object.entries(batch).reduce((higlightAcc, [iGuid, sampleId]) => ({
+            [sampleId || individualsByGuid[iGuid].individualId]:
+              individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
+            ...higlightAcc,
+          }), {}),
+          name: individualGuids.length === 1 ? track.name : individualGuids.map(
             iGuid => individualsByGuid[iGuid].displayName).join(', '),
         } : null
       }
@@ -152,8 +142,9 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
     }),
   ]), []).filter(track => track)
 
-  // TODO better determiner of genome version?
-  const isBuild38 = igvSamples.some(sample => sample.filePath.endsWith('.cram'))
+  // TODO use project genome version
+  const isBuild38 = igvSampleIndividuals[ALIGNMENT_TYPE] ?
+    Object.values(igvSampleIndividuals[ALIGNMENT_TYPE]).some(sample => sample.filePath.endsWith('.cram')) : true
   const genome = isBuild38 ? 'hg38' : 'hg19'
 
   const locus = variant && getLocus(
@@ -182,13 +173,21 @@ const getIgvOptions = (variant, igvSamples, individualsByGuid) => {
 
 const ReadIconButton = props => <ButtonLink icon="options" content="SHOW READS" {...props} />
 
-const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamily, familiesByGuid, buttonProps, showReads }) => {
+const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
   const familyGuids = variant ? variant.familyGuids : [familyGuid]
 
-  const familiesWithReads = familyGuids.filter(fGuid => (igvSamplesByFamily[fGuid] || []).length > 0)
+  const familySampleTypes = familyGuids.reduce(
+    (acc, fGuid) => {
+      const sampleTypes = Object.keys(igvSamplesByFamilySampleIndividual[fGuid] || {})
+      return sampleTypes.length ? { [fGuid]: sampleTypes, ...acc } : acc
+    }, {})
+
+  const familiesWithReads = Object.keys(familySampleTypes)
   if (!familiesWithReads.length) {
     return null
   }
+
+  // TODO sampleType specific buttuons
 
   if (familiesWithReads.length === 1) {
     return <ReadIconButton onClick={showReads(familiesWithReads[0])} {...buttonProps} />
@@ -207,12 +206,12 @@ ReadButtons.propTypes = {
   familyGuid: PropTypes.string,
   buttonProps: PropTypes.object,
   familiesByGuid: PropTypes.object,
-  igvSamplesByFamily: PropTypes.object,
+  igvSamplesByFamilySampleIndividual: PropTypes.object,
   showReads: PropTypes.func,
 }
 
-const IgvPanel = React.memo(({ variant, igvSamples, individualsByGuid, hideReads }) => {
-  const igvOptions = getIgvOptions(variant, igvSamples, individualsByGuid)
+const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, hideReads }) => {
+  const igvOptions = getIgvOptions(variant, igvSampleIndividuals, individualsByGuid)
   return (
     <Segment>
       <ButtonLink onClick={hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
@@ -225,7 +224,7 @@ const IgvPanel = React.memo(({ variant, igvSamples, individualsByGuid, hideReads
 IgvPanel.propTypes = {
   variant: PropTypes.object,
   individualsByGuid: PropTypes.object,
-  igvSamples: PropTypes.array,
+  igvSampleIndividuals: PropTypes.object,
   hideReads: PropTypes.func,
 }
 
@@ -238,7 +237,7 @@ class FamilyReads extends React.PureComponent {
     buttonProps: PropTypes.object,
     familiesByGuid: PropTypes.object,
     individualsByGuid: PropTypes.object,
-    igvSamplesByFamily: PropTypes.object,
+    igvSamplesByFamilySampleIndividual: PropTypes.object,
   }
 
   constructor(props) {
@@ -262,23 +261,24 @@ class FamilyReads extends React.PureComponent {
 
   render() {
     const {
-      variant, familyGuid, buttonProps, layout, igvSamplesByFamily, individualsByGuid, familiesByGuid, ...props
+      variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
+      ...props
     } = this.props
 
     const showReads = <ReadButtons
       variant={variant}
       familyGuid={familyGuid}
       buttonProps={buttonProps}
-      igvSamplesByFamily={igvSamplesByFamily}
+      igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
       familiesByGuid={familiesByGuid}
       showReads={this.showReads}
     />
 
-    const igvSamples = this.state.openFamily && igvSamplesByFamily[this.state.openFamily]
-    const reads = (igvSamples && igvSamples.length) ?
+    const igvSampleIndividuals = this.state.openFamily && igvSamplesByFamilySampleIndividual[this.state.openFamily]
+    const reads = (igvSampleIndividuals && Object.keys(igvSampleIndividuals).length) ?
       <IgvPanel
         variant={variant}
-        igvSamples={igvSamples}
+        igvSampleIndividuals={igvSampleIndividuals}
         individualsByGuid={individualsByGuid}
         hideReads={this.hideReads}
       /> : null
@@ -288,7 +288,7 @@ class FamilyReads extends React.PureComponent {
 }
 
 const mapStateToProps = state => ({
-  igvSamplesByFamily: getIGVSamplesByFamily(state),
+  igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
   individualsByGuid: getIndividualsByGuid(state),
   familiesByGuid: getFamiliesByGuid(state),
 })
