@@ -1,4 +1,4 @@
-# This module provides python bindings for the AnVIL Terra API.
+"""This module provides python bindings for the AnVIL Terra API."""
 
 import json
 import logging
@@ -61,7 +61,7 @@ def is_google_authenticated(user):
         return False
 
     try:
-        social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
+        social = user.social_auth.get(provider=SOCIAL_AUTH_PROVIDER) if hasattr(user, 'social_auth') else None
     except UserSocialAuth.DoesNotExist:  # Exception happen when the user has never logged-in with Google
         return False
 
@@ -72,7 +72,7 @@ def is_google_authenticated(user):
 
 
 def remove_token(user):
-    social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
+    social = user.social_auth.get(provider=SOCIAL_AUTH_PROVIDER)
     if social and social.extra_data:
         social.extra_data.pop('access_token', None)
         social.extra_data['expires'] = 0
@@ -120,7 +120,6 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
                                .format(user, method.upper(), path, r.reason))
 
     if r.status_code != 200:
-        logger.error('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
         raise TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
             path, r.status_code, r.reason), r.status_code)
 
@@ -162,7 +161,7 @@ def list_anvil_workspaces(user):
 
 
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
-    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare,canCompute".format(workspace_namespace, workspace_name)
+    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare".format(workspace_namespace, workspace_name)
 
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
@@ -172,7 +171,7 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
 
     try:
         r = _user_anvil_call('get', path, user)
-    # Handling TerraNotFoundException here is required to allow seqr continue working when Terra is not available
+    # TerraNotFoundException is handled to return empty perms to allow users to work with local projects when Terra is not available
     # It should be taken out when local access is deprecated.
     except TerraNotFoundException as et:
         logger.warning(str(et))
@@ -252,5 +251,4 @@ def add_service_account(user, workspace_namespace, workspace_name):
     r = _user_anvil_call('patch', path, user, data=json.dumps(acl))
     if not (r['usersUpdated'] and r['usersUpdated'][0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL):
         message = 'Failed to grant seqr service account access to the workspace {}/{}'.format(workspace_namespace, workspace_name)
-        logger.warning(message)
         raise TerraAPIException(message, 400)

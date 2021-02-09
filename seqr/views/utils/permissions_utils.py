@@ -8,7 +8,7 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     anvil_enabled, user_get_workspace_access_level, is_google_authenticated, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM, CAN_COMPUTE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
-    GOOGLE_LOGIN_RQUIRED_URL
+    GOOGLE_LOGIN_REQUIRED_URL
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
@@ -26,7 +26,7 @@ def google_login_required(user):
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
 data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
 pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
-google_auth_required = user_passes_test(google_login_required, login_url=GOOGLE_LOGIN_RQUIRED_URL)
+google_auth_required = user_passes_test(google_login_required, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
@@ -73,17 +73,25 @@ def _map_anvil_seqr_permission(anvil_permission):
 def anvil_has_perm(user, permission_level, project):
     if not project_has_anvil(project):
         return False
-    return workspace_has_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+    return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
 
 
-def workspace_has_perm(user, permission_level, namespace, name, can_share=False, can_compute=False):
+def has_workspace_perm(user, permission_level, namespace, name, can_share=False):
     workspace_permission = user_get_workspace_access_level(user, namespace, name)
     if not workspace_permission:
         return False
-    perm = workspace_permission.get(CAN_SHARE_PERM, False) if can_share else True
-    perm = perm and workspace_permission.get(CAN_COMPUTE_PERM, False) if can_compute else True
+    if can_share and not workspace_permission.get(CAN_SHARE_PERM):
+        return False
     permission = _map_anvil_seqr_permission(workspace_permission)
-    return perm if permission == CAN_EDIT else permission == permission_level
+    return True if permission == CAN_EDIT else permission == permission_level
+
+
+def check_workspace_perm(user, permission_level, namespace, name, can_share=False):
+    if has_workspace_perm(user, permission_level, namespace, name, can_share):
+        return True
+
+    raise PermissionDenied("{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
+        user=user, namespace=namespace, name=name))
 
 
 def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):

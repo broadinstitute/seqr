@@ -127,6 +127,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: google_client_secret
+        - name: SERVICE_ACCOUNT_FOR_ANVIL
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: service_account_id
         - name: KIBANA_ES_PASSWORD
           valueFrom:
             secretKeyRef:

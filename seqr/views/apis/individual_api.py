@@ -364,6 +364,17 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
+def add_individuals_and_families(project, individual_records, user):
+    _, updated_individuals = _add_or_update_individuals_and_families(
+        project, individual_records=individual_records, user=user
+    )
+
+    ids_tsv_data = 'Individual ID\n'
+    for individual in updated_individuals:
+        ids_tsv_data += individual.individual_id + '\n'
+    return ids_tsv_data
+
+
 def _add_or_update_individuals_and_families(project, individual_records, user):
     """Add or update individual and family records in the given project.
 

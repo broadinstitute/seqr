@@ -45,26 +45,21 @@ def send_welcome_email(user, referrer):
     user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
-def send_load_data_email(user, guid, namespace, name, individual_ids):
-    for data_manager in User.objects.filter(is_staff = True):
-        email_content = """
-        Hi there {full_name}--
-    
-        Collaborator project manager {user_name}/email{email} has created a new project with a GUID:
-          {guid}
-        from an AnVIL workspace {namespace}/{name}.
+def send_load_data_email(project, base_url, data):
+    email_content = """
+    Data from AnVIL workspace {namespace}/{name} needs to be loaded to seqr project <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
 
-        The new project is ready for loading. The created individual IDs are in attached file.
-    
-        Thanks!
-        """.format(
-            full_name = data_manager.get_full_name(),
-            user_name = user.get_full_name(),
-            email = user.email,
-            guid = guid,
-            namespace = namespace,
-            name = name,
-        )
-        mail = EmailMessage('Requesting loading AnVIL workspace data', email_content, DEFAULT_FROM_EMAIL, [data_manager.email])
-        mail.attach('individual IDs', str(individual_ids), 'text/plain')
-        mail.send()
+    The sample IDs to load are attached.    
+    """.format(
+        namespace=project.workspace_namespace,
+        name=project.workspace_name,
+        base_url=base_url,
+        guid=project.guid,
+        project_name=project.name,
+    )
+    mail = EmailMessage(
+        subject='AnVIL data loading request',
+        body=email_content,
+        to=[dm.email for dm in User.objects.filter(is_staff=True)])
+    mail.attach('{}_sample_ids.tsv'.format(project.guid), data)
+    mail.send()

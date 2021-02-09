@@ -5,6 +5,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
+from django.contrib.sites.shortcuts import get_current_site
 
 from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -12,9 +13,9 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.apis.individual_api import _add_or_update_individuals_and_families
+from seqr.views.apis.individual_api import add_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
-from seqr.views.utils.permissions_utils import google_auth_required, workspace_has_perm
+from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
 from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -35,10 +36,7 @@ def anvil_workspace_page(request, namespace, name):
     :return Redirect to a page depending on if the workspace permissions or project exists.
 
     """
-    if not workspace_has_perm(request.user, CAN_EDIT, namespace, name, can_share=True):
-        message = "Missing required permissions for loading data from workspace {}/{}".format(namespace, name)
-        logger.warning(message)
-        return create_json_response({'error': message}, status=400, reason=message)
+    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
 
     project_name = _get_project_name(namespace, name)
     project = Project.objects.filter(name=project_name)
@@ -60,17 +58,13 @@ def create_project_from_workspace(request, namespace, name):
 
     """
     project_name = _get_project_name(namespace, name)
-    project = Project.objects.filter(name = project_name)
+    project = Project.objects.filter(name=project_name)
     if project:
         error = 'Project {} exists.'.format(project_name)
-        logger.warning(error)
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate that the current user has logged in through google and has sufficient permissions
-    if not workspace_has_perm(request.user, CAN_EDIT, namespace, name, can_share=True):
-        error = "Missing required permissions for loading data from workspace {}/{}".format(namespace, name)
-        logger.warning(error)
-        return create_json_response({'error': error}, status=400, reason=error)
+    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
 
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
@@ -91,13 +85,13 @@ def create_project_from_workspace(request, namespace, name):
     try:
         json_records = load_uploaded_file(request_json['uploadedFileId'])
     except Exception as ee:
-        error = "Uploaded pedigree file is missing or other exception: {}".format(str(ee))
+        error = "Error with uploaded pedigree file. Try to re-upload it. Error information: {}".format(str(ee))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'ped_file', user=request.user, project=project)
+    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, project=project)
+    errors += ped_warnings
     if errors:
-        error = "Parse pedigree data failed. {}".format(errors)
-        return create_json_response({'error': error}, status=400, reason=error)
+        return create_json_response({'errors': errors}, status=400)
 
     # Create a new Project in seqr
     project_args = {
@@ -108,26 +102,18 @@ def create_project_from_workspace(request, namespace, name):
         'workspace_name': name,
     }
 
-    project = create_model_from_json(Project, project_args, user = request.user)
+    project = create_model_from_json(Project, project_args, user=request.user)
 
-    # update families and individuals according to the uploaded individual records
-    updated_families, updated_individuals = _add_or_update_individuals_and_families(
-        project, individual_records = pedigree_records, user = request.user
-    )
+    # add families and individuals according to the uploaded individual records
+    individual_ids_tsv = add_individuals_and_families(project, individual_records=pedigree_records, user=request.user)
 
     # Send an email to all seqr data managers
-    info = ['{} families and {} individuals have been added to the new project'.format(len(updated_families),
-                                                                                       len(updated_individuals))]
-    individual_ids = [individual['individualId'] for individual in pedigree_records]
     try:
-        send_load_data_email(request.user, project.guid, namespace, name, individual_ids)
+        send_load_data_email(project, request.scheme+'://'+get_current_site(request).domain, individual_ids_tsv)
     except Exception as ee:
         message = 'Exception while sending email to user {}. {}'.format(request.user, (ee))
         logger.error(message)
-        info.append(message)
 
     return create_json_response({
         'projectGuid':  project.guid,
-        'info': info,
-        'warnings': ped_warnings,
     })
