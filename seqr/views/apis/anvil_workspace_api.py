@@ -114,6 +114,4 @@ def create_project_from_workspace(request, namespace, name):
         message = 'Exception while sending email to user {}. {}'.format(request.user, (ee))
         logger.error(message)
 
-    return create_json_response({
-        'projectGuid':  project.guid,
-    })
+    return create_json_response({'projectGuid':  project.guid})
