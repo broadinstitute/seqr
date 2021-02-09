@@ -209,7 +209,7 @@ class EsSearch(object):
             self._filtered_variant_ids = variant_id_genome_versions
         return self
 
-    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None):
+    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, skip_genotype_filter=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -237,6 +237,9 @@ class EsSearch(object):
 
         if secondary_dataset_type:
             self.update_dataset_type(secondary_dataset_type, keep_previous=True)
+
+        if skip_genotype_filter:
+            return
 
         if inheritance_filter or inheritance_mode:
             for index in self._indices:
