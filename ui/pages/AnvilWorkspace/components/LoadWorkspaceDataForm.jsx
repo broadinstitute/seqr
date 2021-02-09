@@ -8,7 +8,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
 import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
 import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const FIELD_DESCRIPTIONS = {
@@ -26,9 +26,9 @@ const BLANK_EXPORT = {
 }
 
 const UploadPedigreeField = React.memo(() =>
-  [
-    // eslint-disable-next-line jsx-a11y/label-has-for
-    <label key="uploadLabel">Upload Pedigree Data</label>,
+  <div className="field">
+    {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+    <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm">
       <BaseBulkContent
         blankExportConfig={BLANK_EXPORT}
@@ -38,8 +38,8 @@ const UploadPedigreeField = React.memo(() =>
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
-    </Segment>,
-  ],
+    </Segment>
+  </div>,
 )
 
 const UPLOAD_PEDIGREE_FIELD = {
@@ -52,6 +52,7 @@ const AGREE_CHECKBOX = {
   name: 'agreeSeqrAccess',
   component: BooleanCheckbox,
   label: 'By submitting this form I agree to grant seqr access to the data in the associated workspace',
+  validate: validators.required,
 }
 
 const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
@@ -77,7 +78,7 @@ const createProjectFromWorkspace = (values, namespace, name) => {
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
   <div>
-    <Header className="large center aligned">Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;</Header>
+    <Header size="large" textAlign="center">Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;</Header>
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
