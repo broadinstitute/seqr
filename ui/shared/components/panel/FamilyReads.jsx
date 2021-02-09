@@ -4,13 +4,18 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid, getIGVSamplesByFamilySampleIndividual, getFamiliesByGuid } from 'redux/selectors'
+import {
+  getIndividualsByGuid,
+  getIGVSamplesByFamilySampleIndividual,
+  getFamiliesByGuid,
+  getProjectsByGuid,
+} from 'redux/selectors'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
-import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP, GENOME_VERSION_37, GENOME_VERSION_38 } from '../../utils/constants'
+import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP, GENOME_VERSION_38 } from '../../utils/constants'
 
 const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'
@@ -155,7 +160,7 @@ const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid) => {
 
 const ReadIconButton = props => <ButtonLink icon="options" content="SHOW READS" {...props} />
 
-const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
+const BaseReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
   const familyGuids = variant ? variant.familyGuids : [familyGuid]
 
   const familySampleTypes = familyGuids.reduce(
@@ -183,7 +188,7 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
   ]
 })
 
-ReadButtons.propTypes = {
+BaseReadButtons.propTypes = {
   variant: PropTypes.object,
   familyGuid: PropTypes.string,
   buttonProps: PropTypes.object,
@@ -192,23 +197,27 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, hideReads }) => {
-  // TODO use project genome version
-  const genomeVersion = (igvSampleIndividuals[ALIGNMENT_TYPE] && Object.values(
-    igvSampleIndividuals[ALIGNMENT_TYPE]).some(sample => sample.filePath.endsWith('.cram'))
-  ) ? GENOME_VERSION_38 : GENOME_VERSION_37
-  const genomeBuild = GENOME_VERSION_LOOKUP[genomeVersion]
+const mapButtonStateToProps = state => ({
+  igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
+  familiesByGuid: getFamiliesByGuid(state),
+})
+
+const ReadButtons = connect(mapButtonStateToProps)(BaseReadButtons)
+
+
+const BaseIgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, hideReads }) => {
+  const genomeBuild = GENOME_VERSION_LOOKUP[project.genomeVersion]
   const genomeDisplay = GENOME_VERSION_DISPLAY_LOOKUP[genomeBuild]
 
   const locus = variant && getLocus(
     variant.chrom,
-    (variant.genomeVersion !== genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
+    (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
     100,
   )
 
   const tracks = getIgvTracks(variant, igvSampleIndividuals, individualsByGuid)
   tracks.push({
-    url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
+    url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${project.genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
     name: `gencode ${genomeDisplay}v27`,
     displayMode: 'SQUISHED',
   })
@@ -222,12 +231,21 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
   )
 })
 
-IgvPanel.propTypes = {
+BaseIgvPanel.propTypes = {
   variant: PropTypes.object,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
+  project: PropTypes.object,
   hideReads: PropTypes.func,
 }
+
+const mapPanelStateToProps = (state, ownProps) => ({
+  igvSampleIndividuals: getIGVSamplesByFamilySampleIndividual(state)[ownProps.familyGuid],
+  individualsByGuid: getIndividualsByGuid(state),
+  project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.familyGuid].projectGuid],
+})
+
+const IgvPanel = connect(mapPanelStateToProps)(BaseIgvPanel)
 
 class FamilyReads extends React.PureComponent {
 
@@ -261,37 +279,20 @@ class FamilyReads extends React.PureComponent {
   }
 
   render() {
-    const {
-      variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
-      ...props
-    } = this.props
+    const { variant, familyGuid, buttonProps, layout, ...props } = this.props
 
     const showReads = <ReadButtons
       variant={variant}
       familyGuid={familyGuid}
       buttonProps={buttonProps}
-      igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
-      familiesByGuid={familiesByGuid}
       showReads={this.showReads}
     />
 
-    const igvSampleIndividuals = this.state.openFamily && igvSamplesByFamilySampleIndividual[this.state.openFamily]
-    const reads = (igvSampleIndividuals && Object.keys(igvSampleIndividuals).length) ?
-      <IgvPanel
-        variant={variant}
-        igvSampleIndividuals={igvSampleIndividuals}
-        individualsByGuid={individualsByGuid}
-        hideReads={this.hideReads}
-      /> : null
+    const reads = this.state.openFamily ?
+      <IgvPanel variant={variant} familyGuid={this.state.openFamily} hideReads={this.hideReads} /> : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
 }
 
-const mapStateToProps = state => ({
-  igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
-  individualsByGuid: getIndividualsByGuid(state),
-  familiesByGuid: getFamiliesByGuid(state),
-})
-
-export default connect(mapStateToProps)(FamilyReads)
+export default FamilyReads
