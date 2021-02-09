@@ -44,7 +44,6 @@ const UploadPedigreeField = React.memo(() =>
 
 const UPLOAD_PEDIGREE_FIELD = {
   name: FILE_FIELD_NAME,
-  label: 'Upload Pedigree Data',
   component: UploadPedigreeField,
 }
 
