@@ -251,3 +251,4 @@ def add_service_account(user, workspace_namespace, workspace_name):
     if not (r['usersUpdated'] and r['usersUpdated'][0]['email'] == SERVICE_ACCOUNT_FOR_ANVIL):
         message = 'Failed to grant seqr service account access to the workspace {}/{}'.format(workspace_namespace, workspace_name)
         raise TerraAPIException(message, 400)
+    return True

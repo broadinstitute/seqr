@@ -799,3 +799,5 @@ GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
+
+TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
