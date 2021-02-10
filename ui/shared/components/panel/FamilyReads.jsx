@@ -75,7 +75,7 @@ const TRACK_OPTIONS = {
 
 const BUTTON_PROPS = {
   [ALIGNMENT_TYPE]: { icon: 'options', content: 'SHOW READS' },
-  [JUNCTION_TYPE]: { icon: 'dna rotated', content: 'SHOW RNASeq' },
+  [JUNCTION_TYPE]: { icon: { name: 'dna', rotated: 'clockwise' }, content: 'SHOW RNASeq' },
   [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
 }
 
