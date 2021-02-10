@@ -113,6 +113,7 @@ class IGV extends React.PureComponent {
 
   componentDidUpdate(prevProps) {
     if (this.browser && prevProps.tracks !== this.props.tracks) {
+      // TODO
       this.browser.removeAllTracks()
       this.props.tracks.forEach((track) => {
         this.browser.loadTrack(track)

@@ -11,6 +11,7 @@ import {
   getProjectsByGuid,
 } from 'redux/selectors'
 import PedigreeIcon from '../icons/PedigreeIcon'
+import { CheckboxGroup } from '../form/Inputs'
 import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
@@ -78,6 +79,13 @@ const BUTTON_PROPS = {
   [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
 }
 
+const TRACK_TYPE_OPTIONS = [
+  { value: ALIGNMENT_TYPE, text: 'Alignment', description: 'BAMs/CRAMs' },
+  { value: GCNV_TYPE, text: 'gCNV' },
+  { value: JUNCTION_TYPE, text: 'Splice Junctions' },
+  { value: COVERAGE_TYPE, text: 'Coverage', description: 'RNASeq coverage' },
+]
+
 const IGV_OPTIONS = {
   showKaryo: false,
   showIdeogram: true,
@@ -108,6 +116,9 @@ const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid, sampleTy
       return acc
     }, {})
 
+  const getIndivSampleType = (type, individualGuid) =>
+    sampleTypes.includes(type) && (igvSampleIndividuals[type] || {})[individualGuid]
+
   return Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => (
     sampleTypes.includes(type) ? [
       ...acc,
@@ -131,7 +142,7 @@ const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid, sampleTy
         } else if (type === JUNCTION_TYPE) {
           track.indexURL = `${track.url}.tbi`
 
-          const coverageSample = (igvSampleIndividuals[COVERAGE_TYPE] || {})[individualGuid]
+          const coverageSample = getIndivSampleType(COVERAGE_TYPE, individualGuid)
           if (coverageSample) {
             const coverageTrack = getTrackOptions(COVERAGE_TYPE, coverageSample, individual)
             return {
@@ -141,7 +152,7 @@ const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid, sampleTy
               tracks: [coverageTrack, track],
             }
           }
-        } else if (type === COVERAGE_TYPE && (igvSampleIndividuals[JUNCTION_TYPE] || {})[individualGuid]) {
+        } else if (type === COVERAGE_TYPE && getIndivSampleType(JUNCTION_TYPE, individualGuid)) {
           return null
         } else if (type === GCNV_TYPE) {
           const batch = gcnvSamplesByBatch[sample.filePath]
@@ -280,7 +291,7 @@ class FamilyReads extends React.PureComponent {
     super(props)
     this.state = {
       openFamily: null,
-      sampleTypes: null,
+      sampleTypes: [],
     }
   }
 
@@ -294,7 +305,13 @@ class FamilyReads extends React.PureComponent {
   hideReads = () => {
     this.setState({
       openFamily: null,
-      sampleTypes: null,
+      sampleTypes: [],
+    })
+  }
+
+  updateSampleTypes = (sampleTypes) => {
+    this.setState({
+      sampleTypes,
     })
   }
 
@@ -313,18 +330,31 @@ class FamilyReads extends React.PureComponent {
       igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
     />
 
-    const reads = this.state.openFamily ?
-      <Segment>
-        <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
-        <VerticalSpacer height={20} />
-        <IgvPanel
-          variant={variant}
-          sampleTypes={this.state.sampleTypes}
-          individualsByGuid={individualsByGuid}
-          igvSampleIndividuals={igvSamplesByFamilySampleIndividual[this.state.openFamily]}
-          project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
-        />
-      </Segment> : null
+    const igvSampleIndividuals = this.state.openFamily && igvSamplesByFamilySampleIndividual[this.state.openFamily]
+    const reads = igvSampleIndividuals ?
+      <Segment.Group horizontal>
+        {Object.keys(igvSampleIndividuals).length > 1 &&
+          <Segment>
+            <CheckboxGroup
+              groupLabel="Track Types"
+              value={this.state.sampleTypes}
+              options={TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])}
+              onChange={this.updateSampleTypes}
+            />
+          </Segment>
+        }
+        <Segment>
+          <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
+          <VerticalSpacer height={20} />
+          <IgvPanel
+            variant={variant}
+            sampleTypes={this.state.sampleTypes}
+            individualsByGuid={individualsByGuid}
+            igvSampleIndividuals={igvSampleIndividuals}
+            project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
+          />
+        </Segment>
+      </Segment.Group> : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
