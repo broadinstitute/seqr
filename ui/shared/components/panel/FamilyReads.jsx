@@ -98,7 +98,9 @@ const IGV_OPTIONS = {
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
-    <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
+    <span id={`${individual.displayName}-${type}`}>
+      <PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}
+    </span>,
   )
 
   const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
