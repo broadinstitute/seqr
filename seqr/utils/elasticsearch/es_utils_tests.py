@@ -2191,6 +2191,7 @@ class EsUtilsTest(TestCase):
     def test_skip_genotype_filter(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
             'locus': {'rawItems': 'ENSG00000223972'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -2198,10 +2199,10 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
         self.assertExecutedSearch(
-            index='{},{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME),
-            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}],
+            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
             sort=['xpos'],
-            size=6,
+            size=4,
         )
 
     @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)

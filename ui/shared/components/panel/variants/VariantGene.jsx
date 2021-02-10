@@ -235,7 +235,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
         <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />
+        <SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} />
       </GeneLinks>
     )
   }
@@ -317,7 +317,7 @@ class VariantGenes extends React.PureComponent {
             />,
           )}
           {!mainGeneId && geneIds.length > 0 &&
-            <SearchResultsLink geneId={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+            <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
           }
         </div>
       )
