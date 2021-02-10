@@ -319,17 +319,17 @@ class FamilyReads extends React.PureComponent {
 
   render() {
     const {
-      variant, familyGuid, buttonProps, layout, projectsByGuid, familiesByGuid, individualsByGuid,
-      igvSamplesByFamilySampleIndividual, ...props
+      variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
+      projectsByGuid, ...props
     } = this.props
 
     const showReads = <ReadButtons
       variant={variant}
       familyGuid={familyGuid}
       buttonProps={buttonProps}
-      showReads={this.showReads}
-      familiesByGuid={familiesByGuid}
       igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
+      familiesByGuid={familiesByGuid}
+      showReads={this.showReads}
     />
 
     const igvSampleIndividuals = this.state.openFamily && igvSamplesByFamilySampleIndividual[this.state.openFamily]
@@ -350,9 +350,9 @@ class FamilyReads extends React.PureComponent {
           <VerticalSpacer height={20} />
           <IgvPanel
             variant={variant}
+            igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={this.state.sampleTypes}
             individualsByGuid={individualsByGuid}
-            igvSampleIndividuals={igvSampleIndividuals}
             project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
           />
         </Segment>
@@ -364,8 +364,8 @@ class FamilyReads extends React.PureComponent {
 
 const mapStateToProps = state => ({
   igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
-  familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
+  familiesByGuid: getFamiliesByGuid(state),
   projectsByGuid: getProjectsByGuid(state),
 })
 
