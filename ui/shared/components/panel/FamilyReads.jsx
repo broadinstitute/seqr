@@ -181,7 +181,7 @@ ShowIgvButton.propTypes = {
   showReads: PropTypes.func,
 }
 
-const BaseReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
+const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
   const familyGuids = variant ? variant.familyGuids : [familyGuid]
 
   const sampleTypeFamilies = familyGuids.reduce(
@@ -222,7 +222,7 @@ const BaseReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySam
 
 })
 
-BaseReadButtons.propTypes = {
+ReadButtons.propTypes = {
   variant: PropTypes.object,
   familyGuid: PropTypes.string,
   buttonProps: PropTypes.object,
@@ -231,15 +231,8 @@ BaseReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
-const mapButtonStateToProps = state => ({
-  igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
-  familiesByGuid: getFamiliesByGuid(state),
-})
 
-const ReadButtons = connect(mapButtonStateToProps)(BaseReadButtons)
-
-
-const BaseIgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, hideReads, sampleTypes }) => {
+const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes }) => {
   const genomeBuild = GENOME_VERSION_LOOKUP[project.genomeVersion]
   const genomeDisplay = GENOME_VERSION_DISPLAY_LOOKUP[genomeBuild]
 
@@ -257,30 +250,18 @@ const BaseIgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByG
   })
 
   return (
-    <Segment>
-      <ButtonLink onClick={hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
-      <VerticalSpacer height={20} />
-      <IGV tracks={tracks} genome={genomeDisplay} locus={locus} {...IGV_OPTIONS} />
-    </Segment>
+    <IGV tracks={tracks} genome={genomeDisplay} locus={locus} {...IGV_OPTIONS} />
   )
 })
 
-BaseIgvPanel.propTypes = {
+IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.array,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
-  hideReads: PropTypes.func,
 }
 
-const mapPanelStateToProps = (state, ownProps) => ({
-  igvSampleIndividuals: getIGVSamplesByFamilySampleIndividual(state)[ownProps.openFamily],
-  individualsByGuid: getIndividualsByGuid(state),
-  project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.openFamily].projectGuid],
-})
-
-const IgvPanel = connect(mapPanelStateToProps)(BaseIgvPanel)
 
 class FamilyReads extends React.PureComponent {
 
@@ -289,6 +270,7 @@ class FamilyReads extends React.PureComponent {
     layout: PropTypes.any,
     familyGuid: PropTypes.string,
     buttonProps: PropTypes.object,
+    projectsByGuid: PropTypes.object,
     familiesByGuid: PropTypes.object,
     individualsByGuid: PropTypes.object,
     igvSamplesByFamilySampleIndividual: PropTypes.object,
@@ -317,20 +299,42 @@ class FamilyReads extends React.PureComponent {
   }
 
   render() {
-    const { variant, familyGuid, buttonProps, layout, ...props } = this.props
+    const {
+      variant, familyGuid, buttonProps, layout, projectsByGuid, familiesByGuid, individualsByGuid,
+      igvSamplesByFamilySampleIndividual, ...props
+    } = this.props
 
     const showReads = <ReadButtons
       variant={variant}
       familyGuid={familyGuid}
       buttonProps={buttonProps}
       showReads={this.showReads}
+      familiesByGuid={familiesByGuid}
+      igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
     />
 
     const reads = this.state.openFamily ?
-      <IgvPanel variant={variant} hideReads={this.hideReads} {...this.state} /> : null
+      <Segment>
+        <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
+        <VerticalSpacer height={20} />
+        <IgvPanel
+          variant={variant}
+          sampleTypes={this.state.sampleTypes}
+          individualsByGuid={individualsByGuid}
+          igvSampleIndividuals={igvSamplesByFamilySampleIndividual[this.state.openFamily]}
+          project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
+        />
+      </Segment> : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
 }
 
-export default FamilyReads
+const mapStateToProps = state => ({
+  igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
+  familiesByGuid: getFamiliesByGuid(state),
+  individualsByGuid: getIndividualsByGuid(state),
+  projectsByGuid: getProjectsByGuid(state),
+})
+
+export default connect(mapStateToProps)(FamilyReads)
