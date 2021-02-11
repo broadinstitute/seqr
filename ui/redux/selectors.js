@@ -139,14 +139,23 @@ export const getHasActiveVariantSampleByFamily = createSelector(
   },
 )
 
-export const getIGVSamplesByFamily = createSelector(
+export const getIGVSamplesByFamilySampleIndividual = createSelector(
   getSortedIndividualsByFamily,
   getIgvSamplesByGuid,
   (individualsByFamily, igvSamplesByGuid) => {
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSampleGuids || [])], []).map(
-        sampleGuid => igvSamplesByGuid[sampleGuid]),
+      [familyGuid]: individuals.reduce((familyAcc, { individualGuid, igvSampleGuids }) => {
+        (igvSampleGuids || []).forEach((sampleGuid) => {
+          const sample = igvSamplesByGuid[sampleGuid]
+          const type = sample.sampleType
+          if (!familyAcc[type]) {
+            familyAcc[type] = {}
+          }
+          familyAcc[type][individualGuid] = sample
+        })
+        return familyAcc
+      }, {}),
     }), {})
   },
 )
