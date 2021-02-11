@@ -6,9 +6,13 @@ metadata:
     name: es-monthly-snapshotter
 spec:
   schedule: "@monthly"
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            app: es-monthly-snapshotter
         spec:
           containers:
           - name: es-monthly-snapshotter
