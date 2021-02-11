@@ -131,7 +131,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: seqr-secrets
-              key: service_account_id
+              key: anvil_service_account_id
         - name: KIBANA_ES_PASSWORD
           valueFrom:
             secretKeyRef:

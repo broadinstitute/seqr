@@ -47,7 +47,7 @@ def send_welcome_email(user, referrer):
 
 def send_load_data_email(project, base_url, data):
     email_content = """
-    Data from AnVIL workspace {namespace}/{name} needs to be loaded to seqr project <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
+    Data from AnVIL workspace "{namespace}/{name}" needs to be loaded to seqr project <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
 
     The sample IDs to load are attached.    
     """.format(
@@ -60,6 +60,6 @@ def send_load_data_email(project, base_url, data):
     mail = EmailMessage(
         subject='AnVIL data loading request',
         body=email_content,
-        to=[dm.email for dm in User.objects.filter(is_staff=True)])
-    mail.attach('{}_sample_ids.tsv'.format(project.guid), data)
+        to=[dm.email for dm in User.objects.filter(is_staff=True)],
+        attachments=[('{}_sample_ids.tsv'.format(project.guid), data)])
     mail.send()

@@ -156,7 +156,7 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    updated_families, updated_individuals = _add_or_update_individuals_and_families(
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
         project, modified_individuals_list, user=request.user
     )
 
@@ -346,7 +346,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 
     json_records = load_uploaded_file(upload_file_id)
 
-    updated_families, updated_individuals = _add_or_update_individuals_and_families(
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
         project, individual_records=json_records, user=request.user
     )
 
@@ -364,18 +364,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def add_individuals_and_families(project, individual_records, user):
-    _, updated_individuals = _add_or_update_individuals_and_families(
-        project, individual_records=individual_records, user=user
-    )
-
-    ids_tsv_data = 'Individual ID\n'
-    for individual in updated_individuals:
-        ids_tsv_data += individual.individual_id + '\n'
-    return ids_tsv_data
-
-
-def _add_or_update_individuals_and_families(project, individual_records, user):
+def add_or_update_individuals_and_families(project, individual_records, user):
     """Add or update individual and family records in the given project.
 
     Args:

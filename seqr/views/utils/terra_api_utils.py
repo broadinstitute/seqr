@@ -56,14 +56,7 @@ def anvil_enabled():
 
 
 def is_google_authenticated(user):
-    if not google_auth_enabled():
-        return False
-
-    try:
-        social = user.social_auth.get(provider=SOCIAL_AUTH_PROVIDER) if hasattr(user, 'social_auth') else None
-    except UserSocialAuth.DoesNotExist:  # Exception happen when the user has never logged-in with Google
-        return False
-
+    social = _safe_get_social(user)
     if social and social.extra_data:
         return social.extra_data.get('access_token', '') != ''
 
@@ -71,7 +64,7 @@ def is_google_authenticated(user):
 
 
 def remove_token(user):
-    social = user.social_auth.get(provider=SOCIAL_AUTH_PROVIDER)
+    social = _safe_get_social(user)
     if social and social.extra_data:
         social.extra_data.pop('access_token', None)
         social.extra_data['expires'] = 0
@@ -92,8 +85,16 @@ def _get_call_args(path, headers=None, root_url=None):
     return url, headers
 
 
+def _safe_get_social(user):
+    if not google_auth_enabled():
+        return None
+
+    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER) if hasattr(user, 'social_auth') else []
+    return social.first() if social else None
+
+
 def _get_social_access_token(user):
-    social = user.social_auth.get(provider = SOCIAL_AUTH_PROVIDER)
+    social = _safe_get_social(user)
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()

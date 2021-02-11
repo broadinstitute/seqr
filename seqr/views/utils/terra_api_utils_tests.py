@@ -4,12 +4,11 @@ import responses
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL
+from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT,\
+    GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_KEY
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
     anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated, \
     is_google_authenticated, remove_token, add_service_account
-from seqr.views.utils.test_utils import GOOGLE_API_TOKEN_URL, GOOGLE_TOKEN_RESULT, GOOGLE_ACCESS_TOKEN_URL,\
-    TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT
 
 GET_WORKSPACE_PATH = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
@@ -19,6 +18,7 @@ LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "w
 
 
 @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL', TEST_TERRA_API_ROOT_URL)
+@mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
 class TerraApiUtilsCase(TestCase):
     fixtures = ['users', 'social_auth']
 
@@ -223,6 +223,7 @@ class TerraApiUtilsCase(TestCase):
         r = add_service_account(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertTrue(r)
         self.assertEqual(responses.calls[1].request.url, url)
+        self.assertEqual(responses.calls[1].request.method, responses.GET)
         self.assertEqual(responses.calls[2].request.url, url)
         self.assertEqual(responses.calls[2].request.method, responses.PATCH)
 

@@ -13,16 +13,19 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.apis.individual_api import add_individuals_and_families
+from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
 from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
-from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
 
-def _get_project_name(namespace, name):
-    return '{} - {}'.format(namespace, name)
+def add_individuals_and_families(project, individual_records, user):
+    _, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=individual_records, user=user
+    )
+
+    return '\n'.join(['Individual ID'] + [individual.individual_id for individual in updated_individuals])
 
 
 @google_auth_required
@@ -38,15 +41,14 @@ def anvil_workspace_page(request, namespace, name):
     """
     check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
 
-    project_name = _get_project_name(namespace, name)
-    project = Project.objects.filter(name=project_name)
+    project = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if project:
         return redirect('/project/{}/project_page'.format(project.first().guid))
     else:
         return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@google_auth_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
@@ -57,14 +59,13 @@ def create_project_from_workspace(request, namespace, name):
     :return the projectsByGuid with the new project json
 
     """
-    project_name = _get_project_name(namespace, name)
-    project = Project.objects.filter(name=project_name)
-    if project:
-        error = 'Project {} exists.'.format(project_name)
-        return create_json_response({'error': error}, status=400, reason=error)
-
     # Validate that the current user has logged in through google and has sufficient permissions
     check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
+
+    projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
+    if projects:
+        error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
+        return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
@@ -78,24 +79,19 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # Add the seqr service account to the corresponding AnVIL workspace
-    add_service_account(request.user, namespace, name)
-
     # Parse families/individuals in the uploaded pedigree file
-    try:
-        json_records = load_uploaded_file(request_json['uploadedFileId'])
-    except Exception as ee:
-        error = "Error with uploaded pedigree file. Try to re-upload it. Error information: {}".format(str(ee))
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, project=project)
+    json_records = load_uploaded_file(request_json['uploadedFileId'])
+    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user)
     errors += ped_warnings
     if errors:
         return create_json_response({'errors': errors}, status=400)
 
+    # Add the seqr service account to the corresponding AnVIL workspace
+    add_service_account(request.user, namespace, name)
+
     # Create a new Project in seqr
     project_args = {
-        'name': project_name,
+        'name': name,
         'genome_version': request_json['genomeVersion'],
         'description': request_json.get('description', ''),
         'workspace_namespace': namespace,
