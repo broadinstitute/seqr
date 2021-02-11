@@ -28,15 +28,16 @@ REQUEST_BODY = {
             'agreeSeqrAccess': True,
         }
 
-@mock.patch('seqr.utils.middleware.logger')
+
+@mock.patch('seqr.views.apis.anvil_workspace_api.logger')
 @mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_anvil_workspace_page(self, mock_get_access_level, mock_logger):
+    def test_anvil_workspace_page(self, mock_get_access_level, mock_local_logger):
         # Requesting to load data for a non-existing project
         url = reverse(anvil_workspace_page, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "WRITER"}
         response = self.client.post(url)
@@ -52,18 +53,17 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url, '/project/R0003_test/project_page')
 
         # Test lack of permissions
-        mock_logger.reset_mock()
         mock_get_access_level.return_value = {"pending": False, "canShare": False, "accessLevel": "WRITER"}
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
-        mock_logger.warning.assert_called_with('', extra=mock.ANY)
+        mock_local_logger.warning.assert_called_with('test_user_no_access does not have sufficient permissions for workspace my-seqr-billing/anvil-project 1000 Genomes Demo')
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMessage')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
-    def test_create_project_from_workspace(self, mock_local_logger, mock_email, mock_add_service_account,
-                                           mock_load_file, mock_get_access_level, mock_logger):
+    @mock.patch('seqr.utils.middleware.logger')
+    def test_create_project_from_workspace(self, mock_logger, mock_email, mock_add_service_account,
+                                           mock_load_file, mock_get_access_level, mock_local_logger):
         # Requesting to load data for a non-existing project
         url = reverse(create_project_from_workspace, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
         self.check_collaborator_login(url)
@@ -73,8 +73,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "READER"}
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
-        mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace my-seqr-billing/anvil project name',
-            extra=mock.ANY)
+        mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace my-seqr-billing/anvil project name', extra=mock.ANY)
 
         # Test missing required fields in the request body
         mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "OWNER"}

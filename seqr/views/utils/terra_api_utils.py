@@ -8,7 +8,6 @@ import requests
 from urllib.parse import urljoin
 
 from django.core.exceptions import PermissionDenied
-from social_django.models import UserSocialAuth
 from social_django.utils import load_strategy
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
