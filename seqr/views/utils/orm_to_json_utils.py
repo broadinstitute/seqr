@@ -17,12 +17,12 @@ from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP
+from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP
 
 logger = logging.getLogger(__name__)
 
 
-def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None):
+def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None, process_result=None, guid_key=None, additional_model_fields=None):
     """Returns an array JSON representations of the given models.
 
     Args:
@@ -40,7 +40,9 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
     model_class = type(models[0])
     fields = copy(model_class._meta.json_fields)
-    if user and user_is_analyst(user):
+    if is_analyst is None:
+        is_analyst = user and user_is_analyst(user)
+    if is_analyst:
         fields += getattr(model_class._meta, 'internal_json_fields', [])
     if additional_model_fields:
         fields += additional_model_fields
@@ -98,18 +100,18 @@ BOOL_USER_FIELDS = {
 }
 MODEL_USER_FIELDS = MAIN_USER_FIELDS + list(BOOL_USER_FIELDS.keys())
 COMPUTED_USER_FIELDS = {
-    'is_anvil': lambda user, is_anvil=None: is_anvil_authenticated(user) if is_anvil is None else is_anvil,
+    'is_anvil': lambda user, is_anvil=None, **kwargs: is_anvil_authenticated(user) if is_anvil is None else is_anvil,
     'display_name': lambda user, **kwargs: user.get_full_name(),
-    'is_analyst': lambda user, **kwargs: user_is_analyst(user),
+    'is_analyst': lambda user, analyst_users=None, **kwargs: user in analyst_users if analyst_users is not None else user_is_analyst(user),
     'is_data_manager': lambda user, **kwargs: user_is_data_manager(user),
-    'is_pm': lambda user, **kwargs: user_is_pm(user),
+    'is_pm': lambda user, pm_users=None, **kwargs: user in pm_users if pm_users is not None else user_is_pm(user),
 }
 
 DEFAULT_USER = {_to_camel_case(field): '' for field in MAIN_USER_FIELDS}
 DEFAULT_USER.update({_to_camel_case(field): val for field, val in BOOL_USER_FIELDS.items()})
 DEFAULT_USER.update({_to_camel_case(field): False for field in COMPUTED_USER_FIELDS.keys()})
 
-def _get_json_for_user(user, is_anvil=None, fields=None):
+def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_users=None):
     """Returns JSON representation of the given User object
 
     Args:
@@ -129,12 +131,13 @@ def _get_json_for_user(user, is_anvil=None, fields=None):
         _to_camel_case(field): getattr(user, field) for field in model_fields
     }
     user_json.update({
-        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user, is_anvil=is_anvil) for field in computed_fields
+        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users)
+        for field in computed_fields
     })
     return user_json
 
 
-def get_json_for_projects(projects, user=None, add_project_category_guids_field=True):
+def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True):
     """Returns JSON representation of the given Projects.
 
     Args:
@@ -154,7 +157,7 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
     if add_project_category_guids_field:
         prefetch_related_objects(projects, 'projectcategory_set')
 
-    return _get_json_for_models(projects, user=user, process_result=_process_result)
+    return _get_json_for_models(projects, user=user, is_analyst=is_analyst, process_result=_process_result)
 
 
 def _get_json_for_project(project, user, **kwargs):
@@ -169,13 +172,13 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
-def _get_case_review_fields(model, project, user):
-    if not (user and has_case_review_permissions(project, user)):
+def _get_case_review_fields(model, has_case_review_perm):
+    if not has_case_review_perm:
         return []
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -222,13 +225,15 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
-    kwargs = {'additional_model_fields': _get_case_review_fields(families[0], families[0].project, user)}
+    if has_case_review_perm is None:
+        has_case_review_perm = user and has_case_review_permissions(families[0].project, user)
+    kwargs = {'additional_model_fields': _get_case_review_fields(families[0], has_case_review_perm)}
     if project_guid or not skip_nested:
         kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
     else:
         kwargs['additional_model_fields'].append('project_id')
 
-    return _get_json_for_models(families, user=user, process_result=_process_result, **kwargs)
+    return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
 
 def _get_json_for_family(family, user=None, **kwargs):
@@ -246,7 +251,7 @@ def _get_json_for_family(family, user=None, **kwargs):
 
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, skip_nested=False, add_hpo_details=False):
+                              family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -282,8 +287,10 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
             result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
+    if has_case_review_perm is None:
+        has_case_review_perm = user and has_case_review_permissions(individuals[0].family.project, user)
     kwargs = {
-        'additional_model_fields': _get_case_review_fields(individuals[0], individuals[0].family.project, user)
+        'additional_model_fields': _get_case_review_fields(individuals[0], has_case_review_perm)
     }
     if project_guid or not skip_nested:
         nested_fields = [
@@ -309,7 +316,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')
 
-    parsed_individuals = _get_json_for_models(individuals, user=user, process_result=_process_result, **kwargs)
+    parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
     if add_hpo_details:
         all_hpo_ids = set()
         for i in parsed_individuals:
@@ -691,7 +698,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_project_count=False):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_project_count=False, is_analyst=None):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -721,7 +728,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pro
     prefetch_related_objects(locus_lists, 'locuslistgene_set')
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
 
-    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
 
 
 def get_json_for_locus_list(locus_list, user):
@@ -746,15 +753,17 @@ def get_json_for_project_collaborator_list(user, project):
 def get_project_collaborators_by_username(user, project, include_permissions=True):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
+    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
+    pm_users = set(User.objects.filter(groups__name=PM_USER_GROUP) if PM_USER_GROUP else User.objects.filter(is_superuser=True))
 
     for collaborator in project.get_collaborators(permissions=[CAN_VIEW]):
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False
+            collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users
         )
 
     for collaborator in project.get_collaborators(permissions=[CAN_EDIT]):
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True
+            collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users
         )
 
     if project_has_anvil(project):
@@ -764,7 +773,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
             collaborator = users_by_email.get(email)
             if collaborator:
                 collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                    can_edit=permission==CAN_EDIT, is_anvil=True)})
+                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users)})
             else:
                 collaborators[email] = deepcopy(DEFAULT_USER)
                 collaborators[email].update({
@@ -778,8 +787,8 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False):
-    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False, analyst_users=None, pm_users=None):
+    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,
