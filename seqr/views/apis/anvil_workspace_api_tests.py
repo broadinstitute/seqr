@@ -2,7 +2,6 @@ import json
 import mock
 
 from django.urls.base import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 from seqr.models import Project
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
