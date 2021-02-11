@@ -17,7 +17,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP
 
 logger = logging.getLogger(__name__)
 
@@ -197,9 +197,10 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
+    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP) if ANALYST_USER_GROUP else [])
     def _process_result(result, family):
         result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': user_is_analyst(ab.created_by)},
+            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': ab.created_by in analyst_users},
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
@@ -439,9 +440,7 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_saved_variants_with_tags(
-        saved_variants, include_missing_variants=False, discovery_tags_query=None, **kwargs):
-
+def get_json_for_saved_variants_with_tags(saved_variants, include_missing_variants=False, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
         for variant in get_json_for_saved_variants(saved_variants, **kwargs)
@@ -521,37 +520,57 @@ def get_json_for_saved_variants_with_tags(
         'savedVariantsByGuid': variants_by_guid,
     }
 
-    if discovery_tags_query:
-        from seqr.views.utils.variant_utils import get_variant_key
-
-        discovery_saved_variant_by_guid = {
-            var.guid: var for var in SavedVariant.objects.filter(discovery_tags_query).prefetch_related('family', 'family__project')}
-        discovery_tags = get_json_for_variant_tags(VariantTag.objects.filter(
-            variant_tag_type__category='CMG Discovery Tags',
-            saved_variants__in=discovery_saved_variant_by_guid.values()
-        ))
-        if discovery_tags:
-            families = set()
-            response['discoveryTags'] = defaultdict(list)
-            for tag in discovery_tags:
-                for variant_guid in tag.pop('variantGuids'):
-                    variant = discovery_saved_variant_by_guid.get(variant_guid)
-                    if variant:
-                        families.add(variant.family)
-                        tag_json = {'savedVariant': {
-                            'variantGuid': variant.guid,
-                            'familyGuid': variant.family.guid,
-                            'projectGuid': variant.family.project.guid,
-                        }}
-                        tag_json.update(tag)
-                        variant_key = get_variant_key(
-                            genomeVersion=variant.family.project.genome_version,
-                            xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-                        )
-                        response['discoveryTags'][variant_key].append(tag_json)
-            response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
-
     return response
+
+
+def get_json_for_discovery_tags(variants):
+    from seqr.views.utils.variant_utils import get_variant_key
+    response = {}
+    discovery_tags = defaultdict(list)
+
+    tag_models = VariantTag.objects.filter(
+        variant_tag_type__category='CMG Discovery Tags',
+        saved_variants__variant_id__in={variant['variantId'] for variant in variants},
+        saved_variants__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+    )
+    if tag_models:
+        discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)
+
+        tag_id_map = {tag.guid: tag.id for tag in tag_models}
+        variant_tag_id_map = defaultdict(list)
+        variant_ids = set()
+        for tag_mapping in VariantTag.saved_variants.through.objects.filter(
+                varianttag_id__in=tag_id_map.values()):
+            variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
+            variant_ids.add(tag_mapping.savedvariant_id)
+        saved_variants_by_id = {var.id: var for var in SavedVariant.objects.filter(id__in=variant_ids).only(
+            'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
+        }
+
+        existing_families = set()
+        for variant in variants:
+            existing_families.update(variant['familyGuids'])
+
+        families = set()
+        for tag in discovery_tag_json:
+            for variant_id in variant_tag_id_map[tag_id_map[tag['tagGuid']]]:
+                variant = saved_variants_by_id[variant_id]
+                if variant.family.guid not in existing_families:
+                    families.add(variant.family)
+                tag_json = {'savedVariant': {
+                    'variantGuid': variant.guid,
+                    'familyGuid': variant.family.guid,
+                    'projectGuid': variant.family.project.guid,
+                }}
+                tag_json.update(tag)
+                variant_key = get_variant_key(
+                    genomeVersion=variant.family.project.genome_version,
+                    xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
+                )
+                discovery_tags[variant_key].append(tag_json)
+
+        response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
+    return discovery_tags, response
 
 
 def get_json_for_variant_tags(tags, add_variant_guids=True):
@@ -839,9 +858,10 @@ def get_json_for_gene(gene, **kwargs):
 
 
 def get_json_for_saved_searches(searches, user):
+    is_analyst = user_is_analyst(user)
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-analyst users
-        if not search.created_by and not user_is_analyst(user) and result['search'].get('pathogenicity', {}).get('hgmd'):
+        if not search.created_by and not is_analyst and result['search'].get('pathogenicity', {}).get('hgmd'):
             result['search']['pathogenicity'] = {
                 k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
             }

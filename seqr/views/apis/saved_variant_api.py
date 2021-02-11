@@ -12,7 +12,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    _get_json_for_models
+    _get_json_for_models, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     user_is_analyst
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
@@ -38,19 +38,17 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
-    discovery_tags_query = None
-    if user_is_analyst(request.user):
-        discovery_tags_query = Q()
-        for variant in variant_query:
-            discovery_tags_query |= Q(Q(variant_id=variant.variant_id) & ~Q(family_id=variant.family_id))
-        discovery_tags_query &= Q(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY)
+    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
 
-    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True, discovery_tags_query=discovery_tags_query)
+    discovery_tags = None
+    if user_is_analyst(request.user):
+        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
+        response.update(discovery_response)
 
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
     response['locusListsByGuid'] = _add_locus_lists([project], genes)
-    discovery_tags = response.pop('discoveryTags', None)
+
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
@@ -353,4 +351,4 @@ def _add_discovery_tags(variants, discovery_tags):
         if tags:
             if not variant.get('discoveryTags'):
                 variant['discoveryTags'] = []
-            variant['discoveryTags'] += tags
+            variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]
