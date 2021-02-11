@@ -67,14 +67,14 @@ CSRF_COOKIE_HTTPONLY = False
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = False
+ENABLE_DJANGO_DEBUG_TOOLBAR = True
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
     INTERNAL_IPS = ['127.0.0.1']
     SHOW_COLLAPSED = True
     DEBUG_TOOLBAR_PANELS = [
-        'ddt_request_history.panels.request_history.RequestHistoryPanel',
+        'debug_toolbar.panels.history.HistoryPanel',
         'debug_toolbar.panels.timer.TimerPanel',
         'debug_toolbar.panels.settings.SettingsPanel',
         'debug_toolbar.panels.headers.HeadersPanel',
