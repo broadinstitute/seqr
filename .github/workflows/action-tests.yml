@@ -1,9 +1,9 @@
-name: Python tests
+name: Seqr tests
 
 on: [push, pull_request]
 
 jobs:
-  test:
+  python:
 
     runs-on: ubuntu-latest
     strategy:
@@ -43,3 +43,21 @@ jobs:
       run: |
         coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
         coverage report --fail-under=99
+
+  nodejs:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [11.8.0]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: |
+        cd ui/
+        echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
+    - run: npm test
