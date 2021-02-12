@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
@@ -9,6 +11,9 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
     GOOGLE_LOGIN_REQUIRED_URL
+
+logger = logging.getLogger(__name__)
+
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
@@ -88,8 +93,10 @@ def check_workspace_perm(user, permission_level, namespace, name, can_share=Fals
     if has_workspace_perm(user, permission_level, namespace, name, can_share):
         return True
 
-    raise PermissionDenied("{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
-        user=user, namespace=namespace, name=name))
+    message = "{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
+        user=user, namespace=namespace, name=name)
+    logger.warning(message)
+    raise PermissionDenied(message)
 
 
 def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):

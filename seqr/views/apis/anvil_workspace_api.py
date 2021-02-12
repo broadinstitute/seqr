@@ -5,7 +5,6 @@ import json
 
 from django.shortcuts import redirect
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.exceptions import PermissionDenied
 
 from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -15,7 +14,7 @@ from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
-from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm, has_workspace_perm
+from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +38,7 @@ def anvil_workspace_page(request, namespace, name):
     :return Redirect to a page depending on if the workspace permissions or project exists.
 
     """
-    if not has_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True):
-        message = "{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
-            user=request.user, namespace=namespace, name=name)
-        logger.warning(message)
-        raise PermissionDenied(message)
+    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
 
     project = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if project:

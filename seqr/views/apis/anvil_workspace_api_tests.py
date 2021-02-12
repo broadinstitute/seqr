@@ -29,12 +29,12 @@ REQUEST_BODY = {
         }
 
 
-@mock.patch('seqr.views.apis.anvil_workspace_api.logger')
 @mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_anvil_workspace_page(self, mock_get_access_level, mock_local_logger):
+    @mock.patch('seqr.views.utils.permissions_utils.logger')
+    def test_anvil_workspace_page(self, mock_logger, mock_get_access_level):
         # Requesting to load data for a non-existing project
         url = reverse(anvil_workspace_page, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
         self.check_require_login(url)
@@ -56,14 +56,15 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_get_access_level.return_value = {"pending": False, "canShare": False, "accessLevel": "WRITER"}
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
-        mock_local_logger.warning.assert_called_with('test_user_no_access does not have sufficient permissions for workspace my-seqr-billing/anvil-project 1000 Genomes Demo')
+        mock_logger.warning.assert_called_with('test_user_no_access does not have sufficient permissions for workspace my-seqr-billing/anvil-project 1000 Genomes Demo')
 
+    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMessage')
     @mock.patch('seqr.utils.middleware.logger')
     def test_create_project_from_workspace(self, mock_logger, mock_email, mock_add_service_account,
-                                           mock_load_file, mock_get_access_level, mock_local_logger):
+                                           mock_load_file, mock_local_logger, mock_get_access_level):
         # Requesting to load data for a non-existing project
         url = reverse(create_project_from_workspace, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
         self.check_collaborator_login(url)
