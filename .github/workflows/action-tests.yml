@@ -57,7 +57,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: |
-        cd ui/
-        echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
+    - run: echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
+      working-directory: ./ui
     - run: npm test
