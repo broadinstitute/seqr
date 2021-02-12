@@ -63,5 +63,7 @@ jobs:
       working-directory: ./ui
 
   local_install_test:
-    - uses: actions/checkout@v2
-    - run: ./test_local_deployment.sh
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run test_local_deployment script
+        run: ./test_local_deployment.sh
