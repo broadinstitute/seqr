@@ -63,6 +63,8 @@ jobs:
       working-directory: ./ui
 
   local_install_test:
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
       - name: Run test_local_deployment script
