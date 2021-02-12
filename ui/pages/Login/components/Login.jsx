@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Divider, Message } from 'semantic-ui-react'
-import queryString from 'query-string'
 
 import { getGoogleLoginEnabled } from 'redux/selectors'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
@@ -36,7 +35,7 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
       <Message visible warning>
         No existing seqr account for the Google user.
       </Message> }
-      <a href={'/login/google-oauth2?next='.concat(`${queryString.parse(location.search).next || '/'}`)}>Sign in with Google</a>
+      <a href={`/login/google-oauth2${location.search}`}>Sign in with Google</a>
     </div>}
 
   </UserFormLayout>
