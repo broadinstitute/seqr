@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @google_auth_required
 def anvil_workspace_page(request, namespace, name):
     """
-    Validate the workspace and project before loading data.
+    This view will be requested from AnVIL, it validates the workspace and project before loading data.
 
     :param request: Django request object.
     :param namespace: The namespace (or the billing account) of the workspace.

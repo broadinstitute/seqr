@@ -30,7 +30,8 @@ def _get_record_individual_id(record):
 
 
 def add_or_update_individuals_and_families(project, individual_records, user):
-    """Add or update individual and family records in the given project.
+    """
+    Add or update individual and family records in the given project.
 
     Args:
         project (object): Django ORM model for the project to add families to
@@ -39,6 +40,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
     Return:
         2-tuple: updated_families, updated_individuals containing Django ORM models
+
     """
     updated_families = set()
     updated_individuals = set()

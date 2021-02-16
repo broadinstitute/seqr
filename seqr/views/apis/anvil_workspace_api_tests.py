@@ -161,20 +161,17 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-no-project-workspace2')
 
 
-@mock.patch('seqr.views.utils.permissions_utils.logger')
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users']
 
-    def test_anvil_workspace_page(self, mock_logger):
+    def test_anvil_workspace_page(self):
         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        self.login_manager()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
-    def test_create_project_from_workspace(self, mock_logger):
+    def test_create_project_from_workspace(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        self.login_manager()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
