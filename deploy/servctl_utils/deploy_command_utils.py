@@ -47,7 +47,7 @@ SECRETS = {
     'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
+        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret',  '{deploy_to}/anvil_service_account_id'
     ],
 }
 

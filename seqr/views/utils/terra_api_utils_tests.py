@@ -86,7 +86,7 @@ class TerraApiUtilsCase(TestCase):
 
         url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, GET_WORKSPACE_PATH)
         mock_redis.return_value.get.return_value = None
-        responses.add(responses.GET, url, status = 200,
+        responses.add(responses.GET, url, status=200,
             body = '[{"public": false, "workspace": {"name": "1000 Genomes Demo", "namespace": "my-seqr-billing" }},' +
                    '{"public": true,"workspace": {"name": "degenome","namespace": "degenome"}},' +
                    '{"public": false,"workspace": {"name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing"}}]')
@@ -110,7 +110,7 @@ class TerraApiUtilsCase(TestCase):
 
         mock_logger.reset_mock()
         mock_redis.return_value.get.return_value = None
-        responses.add(responses.GET, url, status = 401)
+        responses.add(responses.GET, url, status=401)
         with self.assertRaises(TerraAPIException) as ec:
             _ = list_anvil_workspaces(user)
         self.assertEqual(str(ec.exception),
@@ -217,15 +217,17 @@ class TerraApiUtilsCase(TestCase):
         r = add_service_account(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertTrue(r)
         self.assertEqual(responses.calls[0].request.url, url)
+        responses.assert_call_count(url, 1)
 
-        responses.replace(responses.GET, url, status=200, body='{"acl": {}}')
+        responses.reset()
+        responses.add(responses.GET, url, status=200, body='{"acl": {}}')
         responses.add(responses.PATCH, url, status=200, body='{{"usersUpdated": [{{"email": "{}" }}]}}'.format(TEST_SERVICE_ACCOUNT))
         r = add_service_account(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertTrue(r)
-        self.assertEqual(responses.calls[1].request.url, url)
-        self.assertEqual(responses.calls[1].request.method, responses.GET)
-        self.assertEqual(responses.calls[2].request.url, url)
-        self.assertEqual(responses.calls[2].request.method, responses.PATCH)
+        responses.assert_call_count(url, 2)
+        self.assertEqual(responses.calls[0].request.method, responses.GET)
+        self.assertEqual(responses.calls[1].request.method, responses.PATCH)
+        self.assertEqual(responses.calls[1].request.body, '[{"email": "test_account@my-seqr.iam.gserviceaccount.com", "accessLevel": "READER", "canShare": false, "canCompute": false}]')
 
         responses.replace(responses.PATCH, url, status=200, body='{"usersUpdated": []}')
         with self.assertRaises(TerraAPIException) as te:

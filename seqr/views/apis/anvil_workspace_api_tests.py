@@ -1,16 +1,14 @@
 import json
 import mock
 
+from django.contrib.auth.models import User
 from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-
-WORKSPACE_NAMESPACE = 'my-seqr-billing'
-EXIST_WORKSPACE_NAME = 'anvil-project 1000 Genomes Demo'
-WORKSPACE_NAME = 'anvil project name'
-NEW_WORKSPACE_NAME = 'anvil new project'
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
+    TEST_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
+from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
@@ -29,58 +27,72 @@ REQUEST_BODY = {
         }
 
 
-@mock.patch('seqr.views.utils.permissions_utils.user_get_workspace_access_level')
+@mock.patch('seqr.views.utils.permissions_utils.logger')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    @mock.patch('seqr.views.utils.permissions_utils.logger')
-    def test_anvil_workspace_page(self, mock_logger, mock_get_access_level):
-        # Requesting to load data for a non-existing project
-        url = reverse(anvil_workspace_page, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
-        self.check_require_login(url)
+    def test_anvil_workspace_page(self, mock_logger):
+        # Requesting to load data from a workspace without an existing project
+        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
 
-        mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "WRITER"}
+        # Test user doesn't login
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/create_project_from_workspace/my-seqr-billing/anvil%20project%20name')
+        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/{}/{}'
+                         .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+
+        # Test the user needs sufficient workspace permissions
+        self.check_manager_login(url)
+        mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
+                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+        user = User.objects.get(username='test_user_manager')
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
 
         # Requesting to load data for an existing project
-        url = reverse(anvil_workspace_page, args=[WORKSPACE_NAMESPACE, EXIST_WORKSPACE_NAME])
+        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
+        self.check_manager_login(url)
 
-        mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "WRITER"}
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/project/R0003_test/project_page')
+        self.assertEqual(response.url, '/project/R0001_1kg/project_page')
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME)
 
-        # Test lack of permissions
-        mock_get_access_level.return_value = {"pending": False, "canShare": False, "accessLevel": "WRITER"}
+        # Test login locally
+        remove_token(user)  # The user will be same as logging in locally after the access token is removed
         response = self.client.post(url)
-        self.assertEqual(response.status_code, 403)
-        mock_logger.warning.assert_called_with('test_user_no_access does not have sufficient permissions for workspace my-seqr-billing/anvil-project 1000 Genomes Demo')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMessage')
-    @mock.patch('seqr.utils.middleware.logger')
-    def test_create_project_from_workspace(self, mock_logger, mock_email, mock_add_service_account,
-                                           mock_load_file, mock_local_logger, mock_get_access_level):
-        # Requesting to load data for a non-existing project
-        url = reverse(create_project_from_workspace, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
-        self.check_collaborator_login(url)
+    def test_create_project_from_workspace(self, mock_email, mock_add_service_account, mock_load_file,
+                                           mock_api_logger, mock_utils_logger):
+        # Requesting to load data from a workspace without an existing project
+        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
 
-        # Test lack of permissions
-        mock_logger.reset_mock()
-        mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "READER"}
+        # Test user doesn't login
         response = self.client.post(url)
-        self.assertEqual(response.status_code, 403)
-        mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace my-seqr-billing/anvil project name', extra=mock.ANY)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/{}/{}'
+                         .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+
+        # Test the user needs sufficient workspace permissions
+        self.check_manager_login(url)
+        mock_utils_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
+                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test missing required fields in the request body
-        mock_get_access_level.return_value = {"pending": False, "canShare": True, "accessLevel": "OWNER"}
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId" are required')
+        user = User.objects.get(username='test_user_manager')
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
 
         data = {
             'genomeVersion': '38',
@@ -97,39 +109,72 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['NA19679 is the mother of NA19674 but doesn\'t have a separate record in the table'])
 
-        # Test valid operation
-        mock_add_service_account.return_value = True
+        # Test adding service account exception
         mock_load_file.return_value = LOAD_SAMPLE_DATA
+        mock_add_service_account.side_effect = TerraAPIException('Failed to grant seqr service account access to the workspace {}/{}'
+                                                                 .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME), 400)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace {}/{}'
+                              .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+
+        # Test valid operation
+        mock_add_service_account.reset_mock(side_effect=True)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        project = Project.objects.get(workspace_namespace=WORKSPACE_NAMESPACE, workspace_name=WORKSPACE_NAME)
+        project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
         response_json = response.json()
         self.assertEqual(project.guid, response_json['projectGuid'])
         self.assertListEqual(
             [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
-            ['38', 'A test project', WORKSPACE_NAMESPACE, WORKSPACE_NAME])
-        mock_add_service_account.assert_called_with(mock.ANY, WORKSPACE_NAMESPACE, WORKSPACE_NAME)
+            ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        mock_add_service_account.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_email.assert_called_with(
             subject='AnVIL data loading request',
             body="""
     Data from AnVIL workspace "{namespace}/{name}" needs to be loaded to seqr project <a href="http://testserver/project/{guid}/project_page">{name}</a> (guid: {guid})
 
     The sample IDs to load are attached.    
-    """.format(namespace=WORKSPACE_NAMESPACE, name=WORKSPACE_NAME, guid=project.guid),
+    """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid),
             to=['test_superuser@test.com', 'test_data_manager@test.com'],
-            attachments=[('{}_sample_ids.tsv'.format(project.guid), 'Individual ID\nNA19675\nNA19678\nHG00735')]
+            attachments=[('{}_sample_ids.tsv'.format(project.guid), 'NA19675\nNA19678\nHG00735')]
         )
 
         # Test project exist
-        url = reverse(create_project_from_workspace, args=[WORKSPACE_NAMESPACE, WORKSPACE_NAME])
+        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         response = self.client.post(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Project "anvil project name" for workspace "{}/{}" exists.'
-                         .format(WORKSPACE_NAMESPACE, WORKSPACE_NAME))
+        self.assertEqual(response.reason_phrase, 'Project "{name}" for workspace "{namespace}/{name}" exists.'
+                         .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test sending email exception
-        url = reverse(create_project_from_workspace, args=[WORKSPACE_NAMESPACE, NEW_WORKSPACE_NAME])
+        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_email.side_effect = Exception('Something wrong while sending email.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_local_logger.error.assert_called_with('Exception while sending email to user test_user_collaborator. Something wrong while sending email.')
+        mock_api_logger.error.assert_called_with('Exception while sending email to user test_user_manager. Something wrong while sending email.')
+
+        # Test login locally
+        remove_token(user)  # The user will be same as logging in locally after the access token is removed
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-no-project-workspace2')
+
+
+@mock.patch('seqr.views.utils.permissions_utils.logger')
+class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def test_anvil_workspace_page(self, mock_logger):
+        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
+        self.login_manager()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+
+    def test_create_project_from_workspace(self, mock_logger):
+        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
+        self.login_manager()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')

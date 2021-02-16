@@ -12,19 +12,11 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.apis.individual_api import add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
 from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
 
 logger = logging.getLogger(__name__)
-
-
-def add_individuals_and_families(project, individual_records, user):
-    _, updated_individuals = add_or_update_individuals_and_families(
-        project, individual_records=individual_records, user=user
-    )
-
-    return '\n'.join(['Individual ID'] + [individual.individual_id for individual in updated_individuals])
 
 
 @google_auth_required
@@ -100,7 +92,10 @@ def create_project_from_workspace(request, namespace, name):
     project = create_model_from_json(Project, project_args, user=request.user)
 
     # add families and individuals according to the uploaded individual records
-    individual_ids_tsv = add_individuals_and_families(project, individual_records=pedigree_records, user=request.user)
+    _, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=pedigree_records, user=request.user
+    )
+    individual_ids_tsv = '\n'.join([individual.individual_id for individual in updated_individuals])
 
     # Send an email to all seqr data managers
     try:

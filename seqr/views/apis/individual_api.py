@@ -9,16 +9,14 @@ from django.contrib.auth.decorators import login_required
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family
-from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
-    update_model_from_json, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -362,108 +360,6 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     }
 
     return create_json_response(updated_families_and_individuals_by_guid)
-
-
-def add_or_update_individuals_and_families(project, individual_records, user):
-    """Add or update individual and family records in the given project.
-
-    Args:
-        project (object): Django ORM model for the project to add families to
-        individual_records (list): A list of JSON records representing individuals. See
-            the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
-
-    Return:
-        2-tuple: updated_families, updated_individuals containing Django ORM models
-    """
-    updated_families = set()
-    updated_individuals = set()
-    parent_updates = []
-
-    family_ids = {_get_record_family_id(record) for record in individual_records}
-    families_by_id = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=family_ids)}
-
-    missing_family_ids = family_ids - set(families_by_id.keys())
-    for family_id in missing_family_ids:
-        family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
-        families_by_id[family_id] = family
-        updated_families.add(family)
-        logger.info('Created family: {}'.format(family))
-
-    individual_models = Individual.objects.filter(family__project=project).prefetch_related(
-        'family', 'mother', 'father')
-    has_individual_guid = any(record.get('individualGuid') for record in individual_records)
-    if has_individual_guid:
-        individual_lookup = {
-            i.guid: i for i in individual_models.filter(
-            guid__in=[record['individualGuid'] for record in individual_records])
-        }
-    else:
-        individual_lookup = defaultdict(dict)
-        for i in individual_models.filter(
-                individual_id__in=[_get_record_individual_id(record) for record in individual_records]):
-            individual_lookup[i.individual_id][i.family] = i
-
-    for record in individual_records:
-        family_id = _get_record_family_id(record)
-        family = families_by_id.get(family_id)
-
-        if has_individual_guid:
-            individual = individual_lookup[record.pop('individualGuid')]
-        else:
-            # uploaded files do not have unique guid's so fall back to a combination of family and individualId
-            individual_id = _get_record_individual_id(record)
-            individual = individual_lookup[individual_id].get(family)
-            if not individual:
-                individual = create_model_from_json(
-                    Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
-
-        record['family'] = family
-        record.pop('familyId', None)
-        if individual.family != family:
-            family = individual.family
-            updated_families.add(family)
-
-        previous_id = record.pop(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN, None)
-        if previous_id:
-            updated_individuals.update(individual.maternal_children.all())
-            updated_individuals.update(individual.paternal_children.all())
-            record['displayName'] = ''
-
-        # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
-        if record.get('maternalId') or record.get('paternalId'):
-            parent_updates.append({
-                'individual': individual,
-                'maternalId': record.pop('maternalId', None),
-                'paternalId': record.pop('paternalId', None),
-            })
-
-        family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
-        if family_notes:
-            update_family_from_json(family, {'analysis_notes': family_notes}, user)
-            updated_families.add(family)
-
-        is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
-        if is_updated:
-            updated_individuals.add(individual)
-            updated_families.add(family)
-
-    for update in parent_updates:
-        individual = update.pop('individual')
-        update_individual_from_json(individual, update, user=user)
-
-    # update pedigree images
-    update_pedigree_images(updated_families, user, project_guid=project.guid)
-
-    return list(updated_families), list(updated_individuals)
-
-
-def _get_record_family_id(record):
-    # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
-    return record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {})['familyId']
-
-
-def _get_record_individual_id(record):
-    return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
 # Use column keys that align with phenotips fields to support phenotips json export format
