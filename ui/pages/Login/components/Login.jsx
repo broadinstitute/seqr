@@ -35,7 +35,7 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
       <Message visible warning>
         No existing seqr account for the Google user.
       </Message> }
-      <a href="/login/google-oauth2">Sign in with Google</a>
+      <a href={`/login/google-oauth2${location.search}`}>Sign in with Google</a>
     </div>}
 
   </UserFormLayout>

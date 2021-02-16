@@ -2,13 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
-import styled from 'styled-components'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'
+import { NoBorderTable } from 'shared/components/StyledComponents'
+import { INDIVIDUAL_HPO_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
 import {
   INDIVIDUAL_ID_EXPORT_DATA,
   INDIVIDUAL_CORE_EXPORT_DATA,
@@ -22,35 +22,8 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-
-const Container = styled.div`
-  textAlign: left;
-  width: 100%;
-  padding: 5px 15px 5px 35px;
-`
-
-const BoldText = styled.span`
-  font-weight: 600
-`
-
-const StyledTable = styled(Table)`
-  padding: 5px 0px 5px 25px !important;
-  border: none !important;
-`
-
-const TableRow = styled(Table.Row)`
-  border-top: none !important;
-`
-
-const TableCell = styled(Table.Cell)`
-  padding: 2px 5px 2px 0px !important;
-  border-top: none !important;
-  vertical-align: top;
-`
-
-const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
-const BASE_UPLOAD_FORMATS = [
+export const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
     title: 'Text',
@@ -67,71 +40,83 @@ const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const BaseBulkContent = React.memo(({ actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+export const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
   <div>
-    <Container>
-      To {actionDescription}, upload a table in one of these formats:
-      <StyledTable>
-        <Table.Body>
-          {uploadFormats.map(({ title, ext, formatLinks }) =>
-            <TableRow key={title}>
-              <TableCell>
-                <BoldText>{title}</BoldText> ({formatLinks ? formatLinks.map(
-                  ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
-                  : `.${ext}`})
-              </TableCell>
-              <TableCell>
-                {ext &&
+    <NoBorderTable compact>
+      <Table.Body>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            To {actionDescription}, upload a table in one of these formats:
+          </Table.Cell>
+        </Table.Row>
+        <Table.Row><Table.Cell /></Table.Row>
+        {uploadFormats.map(({ title, ext, formatLinks }) =>
+          <Table.Row key={title}>
+            <Table.HeaderCell collapsing>
+              {title} ({formatLinks ? formatLinks.map(
+                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
+                : `.${ext}`})
+            </Table.HeaderCell>
+            <Table.Cell>
+              {ext &&
+                <span>
+                  download &nbsp;
+                  {blankExportConfig &&
                   <span>
-                    download &nbsp;
-                    {blankExportConfig &&
-                    <span>
-                      template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
-                    </span>
-                    }
-                    <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                    template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
                   </span>
-                }
-              </TableCell>
-            </TableRow>,
-          )}
-        </Table.Body>
-      </StyledTable>
-
-      The table must have a header row with the following column names.<br />
-      <br />
-      <div>
-        <BoldText>Required Columns:</BoldText><br />
-        <StyledTable>
-          <Table.Body>
-            {requiredFields.map(field =>
-              <TableRow key={field.header}>
-                <TableCell><BoldText>{field.header}</BoldText></TableCell>
-                <TableCell />
-              </TableRow>,
-            )}
-          </Table.Body>
-        </StyledTable>
-        <BoldText>Optional Columns:</BoldText>
-        <StyledTable>
-          <Table.Body>
-            {optionalFields.map(field =>
-              <TableRow key={field.header}>
-                <TableCell><BoldText>{field.header}</BoldText></TableCell>
-                <TableCell>{field.description}</TableCell>
-              </TableRow>,
-            )}
-          </Table.Body>
-        </StyledTable>
-      </div>
-      {details && <div><br />{details}</div>}
-      <br />
-    </Container>
-    <br />
+                  }
+                  {exportConfig &&
+                  <span>
+                    {blankExportConfig && 'or'} <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                  </span>
+                  }
+                </span>
+              }
+            </Table.Cell>
+          </Table.Row>,
+        )}
+        <Table.Row><Table.Cell /></Table.Row>
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            The table must have a header row with the following column names.
+          </Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.HeaderCell colSpan={2}>
+            Required Columns:
+          </Table.HeaderCell>
+        </Table.Row>
+        {requiredFields.map(field =>
+          <Table.Row key={field.header}>
+            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
+            <Table.Cell>{field.description}</Table.Cell>
+          </Table.Row>,
+        )}
+        <Table.Row><Table.Cell /></Table.Row>
+        <Table.Row>
+          <Table.HeaderCell colSpan={2}>
+            Optional Columns:
+          </Table.HeaderCell>
+        </Table.Row>
+        {optionalFields.map(field =>
+          <Table.Row key={field.header}>
+            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
+            <Table.Cell>{field.description}</Table.Cell>
+          </Table.Row>,
+        )}
+        {details &&
+        <Table.Row>
+          <Table.Cell colSpan={2}>
+            {details}
+          </Table.Cell>
+        </Table.Row>}
+      </Table.Body>
+    </NoBorderTable>
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={`/api/project/${project.projectGuid}/upload_${name}_table`}
+      url={url || `/api/project/${project.projectGuid}/upload_${name}_table`}
       auto
       required
       name={FILE_FIELD_NAME}
@@ -141,6 +126,7 @@ const BaseBulkContent = React.memo(({ actionDescription, details, project, name,
 )
 
 BaseBulkContent.propTypes = {
+  url: PropTypes.string,
   actionDescription: PropTypes.string.isRequired,
   requiredFields: PropTypes.array.isRequired,
   optionalFields: PropTypes.array.isRequired,

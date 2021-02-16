@@ -41,9 +41,13 @@ export const GENOME_VERSION_DISPLAY_LOOKUP = {
 
 // PROJECT FIELDS
 
+export const FILE_FIELD_NAME = 'uploadedFile'
+
+export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
+
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  { name: 'description', label: 'Project Description', placeholder: 'Description' },
+  PROJECT_DESC_FIELD,
 ]
 
 export const PROJECT_FIELDS = [
@@ -59,7 +63,6 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
   format: val => (val || '').replace('mailto:', ''),
   validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
 }
-
 
 // SAMPLES
 
