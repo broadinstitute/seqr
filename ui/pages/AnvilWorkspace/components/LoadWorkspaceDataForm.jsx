@@ -2,9 +2,17 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment } from 'semantic-ui-react'
 
-import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
-import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
-import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
+import {
+  FILE_FIELD_NAME,
+  PROJECT_DESC_FIELD,
+  GENOME_VERSION_FIELD,
+  FAMILY_FIELD_ID,
+  INDIVIDUAL_FIELD_ID,
+  BASE_UPLOAD_FORMATS,
+  INDIVIDUAL_CORE_EXPORT_DATA,
+  INDIVIDUAL_ID_EXPORT_DATA,
+} from 'shared/utils/constants'
+import BaseBulkContent from 'shared/components/form/BaseBulkContent'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
