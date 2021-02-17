@@ -83,10 +83,14 @@ const IGVContainer = styled.div`
   
 `
 
+const getTrackId = track =>
+  // merged tracks do not have a URL
+  track.url || track.name
+
 class IGV extends React.PureComponent {
 
   static propTypes = {
-    igvOptions: PropTypes.object.isRequired,
+    tracks: PropTypes.array,
   }
 
   constructor(props) {
@@ -105,16 +109,22 @@ class IGV extends React.PureComponent {
 
   componentDidMount() {
     if (this.container) {
-      igv.createBrowser(this.container, this.props.igvOptions).then((browser) => {
+      igv.createBrowser(this.container, { ...this.props }).then((browser) => {
         this.browser = browser
       })
     }
   }
 
   componentDidUpdate(prevProps) {
-    if (this.browser && prevProps.igvOptions.tracks !== this.props.igvOptions.tracks) {
-      this.browser.removeAllTracks()
-      this.props.igvOptions.tracks.forEach((track) => {
+    if (this.browser && prevProps.tracks !== this.props.tracks) {
+      const prevTrackIds = prevProps.tracks.map(getTrackId)
+      const newTrackIds = this.props.tracks.map(getTrackId)
+
+      prevProps.tracks.filter(track => track.name && !newTrackIds.includes(getTrackId(track))).forEach((track) => {
+        this.browser.removeTrackByName(track.name)
+      })
+
+      this.props.tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.loadTrack(track)
       })
 
