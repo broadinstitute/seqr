@@ -829,6 +829,7 @@ class EsSearch(object):
                 valid_ch_1_index, valid_ch_2_index in valid_combinations]
 
     def _deduplicate_results(self, sorted_new_results):
+        # TODO multiple results in genome exome in same family?
         original_result_count = len(sorted_new_results)
 
         if self._filtered_variant_ids:

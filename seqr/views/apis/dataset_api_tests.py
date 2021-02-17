@@ -15,6 +15,7 @@ from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCas
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
+NEW_INDEX_NAME = 'test_new_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
@@ -243,6 +244,7 @@ class DatasetAPITest(object):
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
+        self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['sampleType'], 'WES')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
@@ -253,6 +255,42 @@ class DatasetAPITest(object):
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
         self.assertEqual(len(sample_models), 2)
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid}, {sample.guid for sample in sample_models})
+        self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
+
+        # Adding an index for a different sample type works additively
+        mock_random.return_value = 987654
+        urllib3_responses.add_json('/{}/_mapping'.format(NEW_INDEX_NAME), {
+            NEW_INDEX_NAME: {'mappings': {'_meta': {
+                'sampleType': 'WGS',
+                'genomeVersion': '37',
+                'sourceFilePath': 'test_data.vds',
+            }}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
+        }, method=urllib3_responses.POST)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': NEW_INDEX_NAME,
+            'datasetType': 'VARIANTS',
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
+        new_sample_type_sample_guid = 'S987654_NA19675_1'
+        self.assertDictEqual(response_json['familiesByGuid'], {})
+        self.assertListEqual(list(response_json['samplesByGuid'].keys()), [new_sample_type_sample_guid])
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'VARIANTS')
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['sampleType'], 'WGS')
+        self.assertTrue(response_json['samplesByGuid'][new_sample_type_sample_guid]['isActive'])
+        self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
+                            set([sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid]))
+
+        # Previous variant samples should still be active
+        sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
+        self.assertEqual(len(sample_models), 3)
+        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid}, {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
     def test_receive_alignment_table_handler(self):
