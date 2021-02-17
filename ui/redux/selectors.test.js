@@ -14,13 +14,12 @@ import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/
 test('getPairedSelectedSavedVariants', () => {
 
   const savedAllVariants = getPairedSelectedSavedVariants(STATE_WITH_2_FAMILIES, { match: { params:  {} } })
-  expect(savedAllVariants.length).toEqual(4)
+  expect(savedAllVariants.length).toEqual(3)
   expect(savedAllVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
   expect(savedAllVariants[1].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
-  expect(savedAllVariants[2].variantGuid).toEqual('SV0000002_SV48367227_r0390_100')
-  expect(savedAllVariants[3].length).toEqual(2)
-  expect(savedAllVariants[3][0].variantGuid).toEqual('SV0000003_2246859832_r0390_100')
-  expect(savedAllVariants[3][1].variantGuid).toEqual('SV0000005_2246859833_r0390_100')
+  expect(savedAllVariants[2].length).toEqual(2)
+  expect(savedAllVariants[2][0].variantGuid).toEqual('SV0000003_2246859832_r0390_100')
+  expect(savedAllVariants[2][1].variantGuid).toEqual('SV0000005_2246859833_r0390_100')
 
   const savedReviewVariants = getPairedSelectedSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  { tag: 'Review' } } }
@@ -80,10 +79,9 @@ test('getPairedFilteredSavedVariants', () => {
   const pairedSavedVariants = getPairedFilteredSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  {} } }
   )
-  expect(pairedSavedVariants.length).toEqual(3)
+  expect(pairedSavedVariants.length).toEqual(2)
   expect(pairedSavedVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
   expect(pairedSavedVariants[1].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
-  expect(pairedSavedVariants[2].variantGuid).toEqual('SV0000002_SV48367227_r0390_100')
 })
 
 test('getVisibleSortedSavedVariants', () => {
