@@ -55,7 +55,7 @@ def anvil_enabled():
 
 
 def is_google_authenticated(user):
-    if not google_auth_enabled():
+    if not google_auth_enabled() or not hasattr(user, 'social_auth'):
         return False
 
     social = _safe_get_social(user)
@@ -91,7 +91,7 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 def _safe_get_social(user):
-    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER) if hasattr(user, 'social_auth') else []
+    social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
     return social.first() if social else None
 
 

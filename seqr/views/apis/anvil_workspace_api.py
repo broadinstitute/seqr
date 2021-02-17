@@ -99,9 +99,9 @@ def create_project_from_workspace(request, namespace, name):
 
     # Send an email to all seqr data managers
     try:
-        send_load_data_email(project, request.scheme+'://'+get_current_site(request).domain, individual_ids_tsv)
+        send_load_data_email(project, individual_ids_tsv)
     except Exception as ee:
-        message = 'Exception while sending email to user {}. {}'.format(request.user, (ee))
+        message = 'Exception while sending email to user {}. {}'.format(request.user, str(ee))
         logger.error(message)
 
     return create_json_response({'projectGuid':  project.guid})

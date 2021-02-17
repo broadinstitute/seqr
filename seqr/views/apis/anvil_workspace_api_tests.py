@@ -67,6 +67,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
+    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'http://testserver')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
@@ -154,8 +155,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         mock_api_logger.error.assert_called_with('Exception while sending email to user test_user_manager. Something wrong while sending email.')
 
-        # Test login locally
-        remove_token(user)  # The user will be same as logging in locally after the access token is removed
+        # Test logged in locally
+        remove_token(user)  # The user will look like having logged in locally after the access token is removed
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-no-project-workspace2')
@@ -170,8 +171,18 @@ class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
+        self.login_base_user()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+
     def test_create_project_from_workspace(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+
+        self.login_base_user()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
