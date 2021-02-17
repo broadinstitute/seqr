@@ -220,7 +220,7 @@ export const getPairedSelectedSavedVariants = createSelector(
     } else if (tag && tag !== SHOW_ALL) {
       pairedVariants = matchingVariants(
         pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
-    } else if (!familyGuid) {
+    } else if (!(familyGuid || analysisGroupGuid)) {
       pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
     }
 
