@@ -74,11 +74,3 @@ jobs:
       working-directory: ./ui
     - run: npm test
       working-directory: ./ui
-
-  local_install_test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run test_local_deployment script
-        run: ./test_local_deployment.sh
