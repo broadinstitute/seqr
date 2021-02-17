@@ -35,7 +35,7 @@ from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 

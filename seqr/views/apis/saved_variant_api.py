@@ -17,7 +17,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     user_is_analyst
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
