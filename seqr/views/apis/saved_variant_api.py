@@ -32,7 +32,8 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     if family_guids:
         variant_query = SavedVariant.objects.filter(family__guid__in=family_guids)
     else:
-        variant_query = SavedVariant.objects.filter(family__project=project)
+        get_note_only = bool(request.GET.get('includeNoteVariants'))
+        variant_query = SavedVariant.objects.filter(family__project=project, varianttag__isnull=get_note_only).distinct()
     if variant_guids:
         variant_query = variant_query.filter(guid__in=variant_guids)
         if variant_query.count() < 1:
