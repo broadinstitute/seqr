@@ -172,7 +172,9 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
-def _get_case_review_fields(model, has_case_review_perm):
+def _get_case_review_fields(model, has_case_review_perm, user, get_project):
+    if has_case_review_perm is None:
+        has_case_review_perm = user and has_case_review_permissions(get_project(model), user)
     if not has_case_review_perm:
         return []
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
@@ -225,9 +227,9 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
-    if has_case_review_perm is None:
-        has_case_review_perm = user and has_case_review_permissions(families[0].project, user)
-    kwargs = {'additional_model_fields': _get_case_review_fields(families[0], has_case_review_perm)}
+    kwargs = {'additional_model_fields': _get_case_review_fields(
+        families[0], has_case_review_perm, user, lambda family: family.project)
+    }
     if project_guid or not skip_nested:
         kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
     else:
@@ -287,10 +289,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
             result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
-    if has_case_review_perm is None:
-        has_case_review_perm = user and has_case_review_permissions(individuals[0].family.project, user)
     kwargs = {
-        'additional_model_fields': _get_case_review_fields(individuals[0], has_case_review_perm)
+        'additional_model_fields': _get_case_review_fields(
+            individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
     }
     if project_guid or not skip_nested:
         nested_fields = [
