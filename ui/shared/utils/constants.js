@@ -55,7 +55,7 @@ export const PROJECT_FIELDS = [
   GENOME_VERSION_FIELD,
 ]
 
-export const BASE_UPLOAD_FORMATS = [
+export const FILE_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
     title: 'Text',

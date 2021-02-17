@@ -4,11 +4,11 @@ import { connect } from 'react-redux'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import BaseBulkContent from 'shared/components/form/BaseBulkContent'
+import BaseBulkContent from 'shared/components/form/BulkUploadForm'
 import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FILE_FIELD_NAME,
-  BASE_UPLOAD_FORMATS,
+  FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
@@ -21,10 +21,10 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-const ALL_UPLOAD_FORMATS = BASE_UPLOAD_FORMATS.concat([
+const ALL_UPLOAD_FORMATS = FILE_FORMATS.concat([
   { title: 'Phenotips Export', formatLinks: [{ href: 'https://phenotips.org/', linkExt: 'json' }] },
 ])
-const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
+const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
@@ -83,7 +83,7 @@ const FamiliesBulkForm = React.memo(props =>
     }
     requiredFields={FAMILY_ID_EXPORT_DATA}
     optionalFields={FAMILY_EXPORT_DATA}
-    uploadFormats={BASE_UPLOAD_FORMATS}
+    uploadFormats={FILE_FORMATS}
     blankDownload
     {...props}
   />,

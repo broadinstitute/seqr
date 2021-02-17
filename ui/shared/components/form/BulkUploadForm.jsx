@@ -9,7 +9,7 @@ import { FILE_FIELD_NAME } from 'shared/utils/constants'
 
 const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
 
-const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+const BulkUploadForm = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
   <div>
     <NoBorderTable compact>
       <Table.Body>
@@ -94,7 +94,7 @@ const BaseBulkContent = React.memo(({ url, actionDescription, details, project, 
   </div>,
 )
 
-BaseBulkContent.propTypes = {
+BulkUploadForm.propTypes = {
   url: PropTypes.string,
   actionDescription: PropTypes.string.isRequired,
   requiredFields: PropTypes.array.isRequired,
@@ -107,4 +107,4 @@ BaseBulkContent.propTypes = {
   blankExportConfig: PropTypes.object,
 }
 
-export default BaseBulkContent
+export default BulkUploadForm
