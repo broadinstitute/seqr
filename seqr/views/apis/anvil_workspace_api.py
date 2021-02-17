@@ -4,7 +4,6 @@ import logging
 import json
 
 from django.shortcuts import redirect
-from django.contrib.sites.shortcuts import get_current_site
 
 from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
