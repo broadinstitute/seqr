@@ -11,7 +11,7 @@ import logging
 
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import user_is_data_manager
-from seqr.views.utils.terra_api_utils import google_auth_enabled
+from seqr.views.utils.terra_api_utils import google_auth_enabled, remove_token
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,7 @@ def login_view(request):
 
 def logout_view(request):
     user = request.user
+    remove_token(user)
     logout(request)
     logger.info('Logged out {}'.format(user.email), extra={'user': user})
     return redirect('/login')

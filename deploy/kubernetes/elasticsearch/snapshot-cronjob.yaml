@@ -1,0 +1,33 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: es-monthly-snapshotter
+  labels:
+    name: es-monthly-snapshotter
+spec:
+  schedule: "@monthly"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: es-monthly-snapshotter
+        spec:
+          containers:
+          - name: es-monthly-snapshotter
+            image: {{ DOCKER_IMAGE_PREFIX }}/curl{{ DOCKER_IMAGE_TAG }}
+            imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+            env:
+            - name: ES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kibana-secrets
+                  key: elasticsearch.password
+            - name: ELASTICSEARCH_SERVICE_HOSTNAME
+              value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
+            args:
+            - /bin/sh
+            - -c
+            - 'curl -s -i -u "kibana:${ES_PASSWORD}" -XPUT "http://${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage/%3Csnapshot-%7Bnow%2Fd%7D%3E" | tee /dev/stderr | grep "200 OK"'
+          restartPolicy: OnFailure

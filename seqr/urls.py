@@ -277,7 +277,7 @@ api_endpoints = {
 urlpatterns = [url('^status', status_view)]
 
 # anvil workspace
-anvil_workspace_url = 'anvil_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'
+anvil_workspace_url = 'workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)'
 urlpatterns += [url("^%(anvil_workspace_url)s$" % locals(), anvil_workspace_page)]
 
 # core react page templates

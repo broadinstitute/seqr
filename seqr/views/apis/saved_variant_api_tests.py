@@ -106,7 +106,7 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
-    @mock.patch('seqr.views.apis.saved_variant_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_saved_variant_data(self, mock_analyst_group):
@@ -123,9 +123,7 @@ class SavedVariantAPITest(object):
         })
 
         variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(
-            set(variants.keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
+        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
 
         variant = variants['SV0000001_2103343353_r0390_100']
         fields = {
@@ -140,9 +138,18 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(
             set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
         )
+        self.assertListEqual(variant['noteGuids'], [])
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
+
+        # get variants with no tags for whole project
+        response = self.client.get('{}?includeNoteVariants=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        variants = response.json()['savedVariantsByGuid']
+        self.assertSetEqual(set(variants.keys()), {COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
+        self.assertListEqual(variants[COMPOUND_HET_1_GUID]['tagGuids'], [])
+        self.assertListEqual(variant['noteGuids'], [])
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
@@ -176,7 +183,7 @@ class SavedVariantAPITest(object):
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID}
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
         )
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], [{
             'savedVariant': {
@@ -782,7 +789,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 6)
+        assert_no_list_ws_has_al(self, 7)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()

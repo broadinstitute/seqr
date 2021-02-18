@@ -10,6 +10,8 @@ import {
   GENOME_VERSION_DISPLAY_LOOKUP,
   familyVariantSamples,
   getVariantMainTranscript,
+  INDIVIDUAL_EXPORT_DATA,
+  INDIVIDUAL_HAS_DATA_FIELD,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -28,8 +30,6 @@ import {
   FAMILY_EXPORT_DATA,
   CASE_REVIEW_FAMILY_EXPORT_DATA,
   CASE_REVIEW_TABLE_NAME,
-  INDIVIDUAL_HAS_DATA_FIELD,
-  INDIVIDUAL_EXPORT_DATA,
   CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
 } from './constants'

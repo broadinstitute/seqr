@@ -1,0 +1,16 @@
+name: local install tests
+
+# Run the docker-compose test suite on pushes (incl. merges) to master and dev
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+jobs:
+  local_install_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run test_local_deployment script
+        run: ./test_local_deployment.sh

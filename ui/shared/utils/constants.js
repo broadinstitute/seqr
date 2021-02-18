@@ -55,6 +55,17 @@ export const PROJECT_FIELDS = [
   GENOME_VERSION_FIELD,
 ]
 
+export const FILE_FORMATS = [
+  { title: 'Excel', ext: 'xls' },
+  {
+    title: 'Text',
+    ext: 'tsv',
+    formatLinks: [
+      { href: 'https://en.wikipedia.org/wiki/Tab-separated_values', linkExt: 'tsv' },
+      { href: 'https://en.wikipedia.org/wiki/Comma-separated_values', linkExt: 'csv' },
+    ] },
+]
+
 const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 export const MATCHMAKER_CONTACT_NAME_FIELD = { label: 'Contact Name' }
 export const MATCHMAKER_CONTACT_URL_FIELD = {
@@ -337,6 +348,38 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
     description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
 ]
+
+export const exportConfigForField = fieldConfigs => (field) => {
+  const { label, format, description } = fieldConfigs[field]
+  return { field, header: label, format, description }
+}
+
+export const INDIVIDUAL_HAS_DATA_FIELD = 'hasLoadedSamples'
+export const INDIVIDUAL_ID_EXPORT_DATA = [
+  FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID,
+].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+const INDIVIDUAL_HAS_DATA_EXPORT_CONFIG = {
+  field: INDIVIDUAL_HAS_DATA_FIELD,
+  header: 'Individual Data Loaded',
+  format: hasData => (hasData ? 'Yes' : 'No'),
+}
+
+export const INDIVIDUAL_CORE_EXPORT_DATA = [
+  INDIVIDUAL_FIELD_PATERNAL_ID,
+  INDIVIDUAL_FIELD_MATERNAL_ID,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_NOTES,
+].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
+  ...INDIVIDUAL_CORE_EXPORT_DATA, exportConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP),
+]
+
+export const INDIVIDUAL_EXPORT_DATA = [].concat(
+  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
+)
 
 export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
   const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(

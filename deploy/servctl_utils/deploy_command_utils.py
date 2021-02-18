@@ -31,6 +31,8 @@ DEPLOYMENT_TARGETS = [
     "redis",
     "seqr",
     "kube-scan",
+    "elasticsearch-snapshot-infra",
+    "elasticsearch-snapshot-config",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -40,6 +42,7 @@ GCLOUD_CLIENT = 'gcloud-client'
 
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
+    'es-snapshot-gcs': ['{deploy_to}/gcs.client.default.credentials_file'],
     GCLOUD_CLIENT: ['service-account-key.json'],
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
@@ -47,7 +50,7 @@ SECRETS = {
     'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
+        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret',  '{deploy_to}/anvil_service_account_id'
     ],
 }
 
@@ -187,6 +190,45 @@ def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+
+
+def deploy_elasticsearch_snapshot_infra(settings):
+    print_separator('elasticsearch snapshot infra')
+
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
+        # create the bucket
+        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
+            errors_to_ignore=["already exists"])
+        # create the IAM user
+        run(" ".join([
+            "gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s",
+            "--display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s"]) % settings,
+            errors_to_ignore="already exists within project projects/seqr-project")
+        # grant storage admin permissions on the snapshot bucket
+        run(" ".join([
+            "gsutil iam ch",
+            "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
+            "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
+
+
+def deploy_elasticsearch_snapshot_config(settings):
+    print_separator('elasticsearch snapshot configuration')
+
+    docker_build("curl", settings)
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
+        # run the k8s job to set up the repo
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        wait_for_resource(
+            'configure-es-snapshot-repo', resource_type='job', json_path='{.items[0].status.conditions[0].type}',
+            expected_status='Complete')
+        # clean up the job after completion
+        run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        # Set up the monthly cron job
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
 
 
 def deploy_linkerd(settings):

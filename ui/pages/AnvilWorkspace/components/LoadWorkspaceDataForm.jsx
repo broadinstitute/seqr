@@ -1,10 +1,21 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment } from 'semantic-ui-react'
+import { SubmissionError } from 'redux-form'
 
-import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
-import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
-import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+
+import {
+  FILE_FIELD_NAME,
+  PROJECT_DESC_FIELD,
+  GENOME_VERSION_FIELD,
+  FAMILY_FIELD_ID,
+  INDIVIDUAL_FIELD_ID,
+  FILE_FORMATS,
+  INDIVIDUAL_CORE_EXPORT_DATA,
+  INDIVIDUAL_ID_EXPORT_DATA,
+} from 'shared/utils/constants'
+import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
@@ -27,11 +38,11 @@ const UploadPedigreeField = React.memo(() =>
     {/* eslint-disable-next-line jsx-a11y/label-has-for */}
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm">
-      <BaseBulkContent
+      <BulkUploadForm
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
         optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
-        uploadFormats={BASE_UPLOAD_FORMATS}
+        uploadFormats={FILE_FORMATS}
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
@@ -53,13 +64,28 @@ const AGREE_CHECKBOX = {
 
 const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
 
+const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
+  return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
+    (responseJson) => {
+      window.location.href = `/project/${responseJson.projectGuid}/project_page`
+    },
+    (e) => {
+      if (e.body && e.body.errors) {
+        throw new SubmissionError({ _error: e.body.errors })
+      } else {
+        throw new SubmissionError({ _error: [e.message] })
+      }
+    },
+  ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
+}
+
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
   <div>
     <Header size="large" textAlign="center">Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;</Header>
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
-      onSubmit={values => console.log(values, namespace, name)}
+      onSubmit={values => createProjectFromWorkspace(values, namespace, name)}
       confirmCloseIfNotSaved
       closeOnSuccess
       showErrorPanel

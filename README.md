@@ -1,7 +1,7 @@
 
 seqr
 ====
-[![Build Status](https://travis-ci.org/broadinstitute/seqr.svg?branch=master)](https://travis-ci.org/broadinstitute/seqr)
+![Unit Tests](https://github.com/broadinstitute/seqr/workflows/Unit%20Tests/badge.svg?branch=master) | ![Local Install Tests](https://github.com/broadinstitute/seqr/workflows/local%20install%20tests/badge.svg?branch=master)
 
 seqr is a web-based tool for rare disease genomics.
 This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments. To check for any active incidents occuring on the Broad seqr instance, check [here](/INCIDENTS.md)

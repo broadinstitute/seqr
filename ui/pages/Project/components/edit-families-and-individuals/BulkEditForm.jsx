@@ -1,20 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Table } from 'semantic-ui-react'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
-import { FileLink } from 'shared/components/buttons/ExportTableButton'
-import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { NoBorderTable } from 'shared/components/StyledComponents'
-import { INDIVIDUAL_HPO_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
+import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import {
-  INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_HPO_EXPORT_DATA,
+  FILE_FIELD_NAME,
+  FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
-  FAMILY_BULK_EDIT_EXPORT_DATA,
-} from '../../constants'
+  INDIVIDUAL_ID_EXPORT_DATA,
+} from 'shared/utils/constants'
+import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
   getEntityExportConfig,
@@ -22,121 +21,12 @@ import {
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'
 
-const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
-export const BASE_UPLOAD_FORMATS = [
-  { title: 'Excel', ext: 'xls' },
-  {
-    title: 'Text',
-    ext: 'tsv',
-    formatLinks: [
-      { href: 'https://en.wikipedia.org/wiki/Tab-separated_values', linkExt: 'tsv' },
-      { href: 'https://en.wikipedia.org/wiki/Comma-separated_values', linkExt: 'csv' },
-    ] },
-]
-const ALL_UPLOAD_FORMATS = BASE_UPLOAD_FORMATS.concat([
+const ALL_UPLOAD_FORMATS = FILE_FORMATS.concat([
   { title: 'Phenotips Export', formatLinks: [{ href: 'https://phenotips.org/', linkExt: 'json' }] },
 ])
-const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
+const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
-
-export const BaseBulkContent = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
-  <div>
-    <NoBorderTable compact>
-      <Table.Body>
-        <Table.Row>
-          <Table.Cell colSpan={2}>
-            To {actionDescription}, upload a table in one of these formats:
-          </Table.Cell>
-        </Table.Row>
-        <Table.Row><Table.Cell /></Table.Row>
-        {uploadFormats.map(({ title, ext, formatLinks }) =>
-          <Table.Row key={title}>
-            <Table.HeaderCell collapsing>
-              {title} ({formatLinks ? formatLinks.map(
-                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
-                : `.${ext}`})
-            </Table.HeaderCell>
-            <Table.Cell>
-              {ext &&
-                <span>
-                  download &nbsp;
-                  {blankExportConfig &&
-                  <span>
-                    template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
-                  </span>
-                  }
-                  {exportConfig &&
-                  <span>
-                    {blankExportConfig && 'or'} <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
-                  </span>
-                  }
-                </span>
-              }
-            </Table.Cell>
-          </Table.Row>,
-        )}
-        <Table.Row><Table.Cell /></Table.Row>
-        <Table.Row>
-          <Table.Cell colSpan={2}>
-            The table must have a header row with the following column names.
-          </Table.Cell>
-        </Table.Row>
-        <Table.Row>
-          <Table.HeaderCell colSpan={2}>
-            Required Columns:
-          </Table.HeaderCell>
-        </Table.Row>
-        {requiredFields.map(field =>
-          <Table.Row key={field.header}>
-            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
-            <Table.Cell>{field.description}</Table.Cell>
-          </Table.Row>,
-        )}
-        <Table.Row><Table.Cell /></Table.Row>
-        <Table.Row>
-          <Table.HeaderCell colSpan={2}>
-            Optional Columns:
-          </Table.HeaderCell>
-        </Table.Row>
-        {optionalFields.map(field =>
-          <Table.Row key={field.header}>
-            <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
-            <Table.Cell>{field.description}</Table.Cell>
-          </Table.Row>,
-        )}
-        {details &&
-        <Table.Row>
-          <Table.Cell colSpan={2}>
-            {details}
-          </Table.Cell>
-        </Table.Row>}
-      </Table.Body>
-    </NoBorderTable>
-    <FileUploadField
-      clearTimeOut={0}
-      dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={url || `/api/project/${project.projectGuid}/upload_${name}_table`}
-      auto
-      required
-      name={FILE_FIELD_NAME}
-      styles={UPLOADER_STYLES}
-    />
-  </div>,
-)
-
-BaseBulkContent.propTypes = {
-  url: PropTypes.string,
-  actionDescription: PropTypes.string.isRequired,
-  requiredFields: PropTypes.array.isRequired,
-  optionalFields: PropTypes.array.isRequired,
-  uploadFormats: PropTypes.array,
-  details: PropTypes.node,
-  name: PropTypes.string.isRequired,
-  project: PropTypes.object,
-  exportConfig: PropTypes.object,
-  blankExportConfig: PropTypes.object,
-}
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
@@ -150,7 +40,7 @@ const mapStateToProps = (state, ownProps) => ({
   blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getCurrentProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
 })
 
-const BulkContent = connect(mapStateToProps)(BaseBulkContent)
+const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
 const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
@@ -193,7 +83,7 @@ const FamiliesBulkForm = React.memo(props =>
     }
     requiredFields={FAMILY_ID_EXPORT_DATA}
     optionalFields={FAMILY_EXPORT_DATA}
-    uploadFormats={BASE_UPLOAD_FORMATS}
+    uploadFormats={FILE_FORMATS}
     blankDownload
     {...props}
   />,
