@@ -597,10 +597,12 @@ class EsSearch(object):
         genotypes = {}
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
-            genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
-                for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
-            })
+            for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
+                sample = samples_by_id.get(genotype_hit['sample_id'])
+                if sample:
+                    genotype_hit['sample_type'] = sample.sample_type
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+
             if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
@@ -895,7 +897,11 @@ class EsSearch(object):
 
     @classmethod
     def _merge_duplicate_variants(cls, variant, duplicate_variant):
-        variant['genotypes'].update(duplicate_variant['genotypes'])
+        for guid, genotype in duplicate_variant['genotypes'].items():
+            if guid in variant['genotypes']:
+                variant['genotypes'][guid]['otherSample'] = genotype
+            else:
+                variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
     def _deduplicate_compound_het_results(self, compound_het_results):
