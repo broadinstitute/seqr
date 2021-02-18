@@ -62,7 +62,9 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
-const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
+const DATA_BUCK_FIELD = { name: 'dataBucket', label: 'Google Path to the VCF files', placeholder: 'gs://google-storage-path' }
+
+const FORM_FIELDS = [PROJECT_DESC_FIELD, DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
 
 const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
@@ -93,6 +95,14 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
       size="small"
       fields={FORM_FIELDS}
     />
+    <p>
+      Need help? please submit &nbsp;
+      <a href="https://github.com/broadinstitute/seqr/issues">GitHub Issues</a>
+      , &nbsp; or &nbsp;
+      <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org" target="_blank">
+        Email Us
+      </a>
+    </p>
   </div>,
 )
 
