@@ -5,9 +5,17 @@ import { SubmissionError } from 'redux-form'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
-import { FILE_FIELD_NAME, PROJECT_DESC_FIELD, GENOME_VERSION_FIELD, FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID } from 'shared/utils/constants'
-import { BaseBulkContent, BASE_UPLOAD_FORMATS } from 'pages/Project/components/edit-families-and-individuals/BulkEditForm'
-import { INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_ID_EXPORT_DATA } from 'pages/Project/constants'
+import {
+  FILE_FIELD_NAME,
+  PROJECT_DESC_FIELD,
+  GENOME_VERSION_FIELD,
+  FAMILY_FIELD_ID,
+  INDIVIDUAL_FIELD_ID,
+  FILE_FORMATS,
+  INDIVIDUAL_CORE_EXPORT_DATA,
+  INDIVIDUAL_ID_EXPORT_DATA,
+} from 'shared/utils/constants'
+import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
@@ -30,11 +38,11 @@ const UploadPedigreeField = React.memo(() =>
     {/* eslint-disable-next-line jsx-a11y/label-has-for */}
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm">
-      <BaseBulkContent
+      <BulkUploadForm
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
         optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
-        uploadFormats={BASE_UPLOAD_FORMATS}
+        uploadFormats={FILE_FORMATS}
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
       />
