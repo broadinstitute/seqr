@@ -150,9 +150,15 @@ class AuthenticationTestCase(TestCase):
         self.client.force_login(self.super_user)
 
 
+TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
+TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
+TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
+TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
+TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+
 ANVIL_WORKSPACES = [{
-    'workspace_namespace': 'my-seqr-billing',
-    'workspace_name': 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_WORKSPACE_NAME,
     'public': False,
     'acl': {
         'test_user_manager@test.com': {
@@ -181,8 +187,8 @@ ANVIL_WORKSPACES = [{
         }
     }
 }, {
-    'workspace_namespace': 'my-seqr-billing',
-    'workspace_name': 'anvil-project 1000 Genomes Demo',
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_WORKSPACE_NAME1,
     'public': False,
     'acl': {
         'test_user_manager@test.com': {
@@ -199,8 +205,8 @@ ANVIL_WORKSPACES = [{
         }
     }
 }, {
-    'workspace_namespace': 'my-seqr-billing',
-    'workspace_name': 'anvil-no-project-workspace1',
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME,
     'public': True,
     'acl': {
         'test_user_manager@test.com': {
@@ -217,8 +223,8 @@ ANVIL_WORKSPACES = [{
         }
     }
 }, {
-    'workspace_namespace': 'my-seqr-billing',
-    'workspace_name': 'anvil-no-project-workspace2',
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME2,
     'public': False,
     'acl': {
         'test_user_manager@test.com': {
@@ -250,9 +256,8 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    if user.email in acl.keys():
-        return {'accessLevel': acl[user.email]['accessLevel']}
-    return {}
+    return {'accessLevel': acl[user.email]['accessLevel'], 'canShare': acl[user.email]['canShare']}\
+        if user.email in acl.keys() else {}
 
 
 def get_workspaces_side_effect(user):
@@ -799,3 +804,5 @@ GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
+
+TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
