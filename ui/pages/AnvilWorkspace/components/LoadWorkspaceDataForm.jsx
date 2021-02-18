@@ -62,7 +62,12 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
-const DATA_BUCK_FIELD = { name: 'dataBucket', label: 'Google Path to the VCF files', placeholder: 'gs://google-storage-path' }
+const DATA_BUCK_FIELD = {
+  name: 'dataPath',
+  label: 'Google Path to the VCF files',
+  placeholder: 'gs://google-storage-path',
+  validate: validators.required,
+}
 
 const FORM_FIELDS = [PROJECT_DESC_FIELD, DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
 

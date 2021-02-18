@@ -45,12 +45,14 @@ def send_welcome_email(user, referrer):
     user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
-def send_load_data_email(project, data):
+def send_load_data_email(project, data, data_path):
     email_content = """
-    Data from AnVIL workspace "{namespace}/{name}" needs to be loaded to seqr project <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
+    Data from AnVIL workspace "{namespace}/{name}" at "{path}" needs to be loaded to seqr project
+    <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
 
     The sample IDs to load are attached.    
     """.format(
+        path=data_path,
         namespace=project.workspace_namespace,
         name=project.workspace_name,
         base_url=BASE_URL,
