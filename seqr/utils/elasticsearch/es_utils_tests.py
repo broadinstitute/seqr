@@ -446,7 +446,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
     variant['genotypes'].update({
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
@@ -460,7 +460,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'genotypes': {
             'I000015_na20885': {
                 'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
         },
         'genomeVersion': '38',
@@ -493,23 +493,23 @@ PARSED_MULTI_INDEX_VARIANT.update({
     'genotypes': {
         'I000004_hg00731': {
             'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
         'I000005_hg00732': {
             'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
         'I000006_hg00733': {
             'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
         'I000007_na20870': {
             'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
     },
 })
@@ -534,11 +534,11 @@ PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'genotypes': {
         'I000007_na20870': {
             'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         },
     },
 })
@@ -1044,7 +1044,7 @@ class EsUtilsTest(TestCase):
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
             'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
@@ -1701,6 +1701,8 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[2][0], PARSED_COMPOUND_HET_VARIANTS[0])
         self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        # diff_k = {k for k, v in variants[3].items() if PARSED_VARIANTS[1].get(k) != v}
+        # import pdb; pdb.set_trace()
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
         self.assertExecutedSearches([

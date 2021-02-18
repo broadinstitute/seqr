@@ -641,7 +641,7 @@ PARSED_VARIANTS = [
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             }
         },
         'genomeVersion': '37',
@@ -687,19 +687,19 @@ PARSED_VARIANTS = [
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000005_hg00732': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000006_hg00733': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000007_na20870': {
                 'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             }
         },
         'genotypeFilters': '',
@@ -746,11 +746,12 @@ PARSED_SV_VARIANT = {
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33,
+            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33, 'sampleType': 'WES',
         },
         'I000005_hg00732': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
+            'sampleType': None,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
