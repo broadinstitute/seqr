@@ -165,6 +165,9 @@ export const getSavedVariantTableState = state => (
   state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
 )
 
+const matchingVariants = (variants, matchFunc) =>
+  variants.filter(o => (Array.isArray(o) ? o : [o]).some(matchFunc))
+
 export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -212,17 +215,17 @@ export const getPairedSelectedSavedVariants = createSelector(
       return acc
     }, [])
 
-    if (tag) {
-      if (tag === NOTE_TAG_NAME) {
-        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ noteGuids }) => noteGuids.length))
-      } else if (tag !== SHOW_ALL) {
-        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag)))
-      }
+    if (tag === NOTE_TAG_NAME) {
+      pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
+    } else if (tag && tag !== SHOW_ALL) {
+      pairedVariants = matchingVariants(
+        pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
+    } else if (!(familyGuid || analysisGroupGuid)) {
+      pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
     }
 
     if (gene) {
-      pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(
-        ({ transcripts }) => gene in (transcripts || {})))
+      pairedVariants = matchingVariants(pairedVariants, ({ transcripts }) => gene in (transcripts || {}))
     }
 
     return pairedVariants
