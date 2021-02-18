@@ -55,7 +55,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 
 class VariantSearchAPITest(object):
 
-    @mock.patch('seqr.views.apis.variant_search_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.utils.middleware.logger.error')

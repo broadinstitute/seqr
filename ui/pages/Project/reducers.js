@@ -5,7 +5,7 @@ import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity, loadProject } from 'redux/rootReducer'
-import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
+import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
@@ -33,12 +33,14 @@ export const loadCurrentProject = (projectGuid) => {
   }
 }
 
-export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
+export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => {
   return (dispatch, getState) => {
     const state = getState()
     const projectGuid = state.currentProjectGuid
 
     let url = `/api/project/${projectGuid}/saved_variants`
+
+    const loadNotes = tag === NOTE_TAG_NAME || familyGuids
 
     // Do not load if already loaded
     let expectedFamilyGuids
@@ -53,9 +55,19 @@ export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
         expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
           family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
       }
-      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
+      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every((family) => {
+        const { loaded, noteVariants } = state.savedVariantFamilies[family] || {}
+        return loaded && (noteVariants || !loadNotes)
+      })) {
         return
       }
+    }
+
+    const params = {}
+    if (familyGuids) {
+      params.families = familyGuids.join(',')
+    } else if (loadNotes) {
+      params.includeNoteVariants = true
     }
 
     dispatch({ type: REQUEST_SAVED_VARIANTS })
@@ -64,7 +76,7 @@ export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
         if (expectedFamilyGuids) {
           dispatch({
             type: RECEIVE_SAVED_VARIANT_FAMILIES,
-            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
+            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: { loaded: true, noteVariants: loadNotes } }), {}),
           })
         }
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
@@ -72,7 +84,7 @@ export const loadSavedVariants = ({ familyGuids, variantGuid }) => {
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
       },
-    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
+    ).get(params)
   }
 }
 
@@ -81,7 +93,8 @@ export const loadFamilySavedVariants = familyGuid => loadSavedVariants({ familyG
 const unloadSavedVariants = (dispatch, getState) => {
   const state = getState()
   const variantsToDelete = Object.keys(state.savedVariantsByGuid).reduce((acc, o) => ({ ...acc, [o]: null }), {})
-  const variantFamiliesToDelete = Object.keys(state.savedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
+  const variantFamiliesToDelete = Object.keys(state.savedVariantFamilies).reduce((acc, o) => (
+    { ...acc, [o]: { loaded: false } }), {})
   dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
   dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
 }
@@ -216,7 +229,7 @@ export const loadMmeMatches = (submissionGuid, search) => {
       dispatch({ type: REQUEST_MME_MATCHES })
       new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${submissionGuid}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: true } })
+          dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: { loaded: true, noteVariants: true } } })
           dispatch({
             type: RECEIVE_DATA,
             updatesById: responseJson,
