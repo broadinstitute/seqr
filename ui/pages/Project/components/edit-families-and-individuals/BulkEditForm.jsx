@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import BaseBulkContent from 'shared/components/form/BulkUploadForm'
+import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FILE_FIELD_NAME,
@@ -40,7 +40,7 @@ const mapStateToProps = (state, ownProps) => ({
   blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getCurrentProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
 })
 
-const BulkContent = connect(mapStateToProps)(BaseBulkContent)
+const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
 const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
