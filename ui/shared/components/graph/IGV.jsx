@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import igv from 'igv'
+import igv from 'igv/dist/igv'
 
 // Map font-awesome icons to semantic-ui icons
 const IGVContainer = styled.div`
