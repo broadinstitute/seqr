@@ -68,7 +68,7 @@ const variantSummary = variant => (
 const GENOTYPE_FIELDS = [
   { name: 'geneSymbol', content: 'Gene', width: 2 },
   { name: 'xpos', content: 'Variant', width: 3, format: val => variantSummary(val) },
-  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} numAlt={val.numAlt} cn={val.cn} /> },
+  { name: 'numAlt', content: 'Genotype', width: 2, format: val => <Alleles variant={val} genotype={val} /> },
   {
     name: 'tags',
     content: 'Tags',

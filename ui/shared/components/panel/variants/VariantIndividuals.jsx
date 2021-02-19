@@ -92,19 +92,7 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-const SnpAlleles = ({ numAlt, variant, isHemiX }) =>
-  <span>
-    <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
-  </span>
-
-
-SnpAlleles.propTypes = {
-  numAlt: PropTypes.number,
-  isHemiX: PropTypes.bool,
-  variant: PropTypes.object,
-}
-
-export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
       <Popup
@@ -113,23 +101,24 @@ export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {numAlt >= 0 ?
-      <SnpAlleles numAlt={numAlt} variant={variant} isHemiX={isHemiX} /> :
-      <span>CN: {cn === (isHemiX ? 1 : 2) ? cn : <b><i>{cn}</i></b>}</span>
+    {genotype.numAlt >= 0 ?
+      <span>
+        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} />
+        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} />}
+      </span> :
+      <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>
     }
   </AlleleContainer>,
 )
 
 Alleles.propTypes = {
-  numAlt: PropTypes.number,
-  cn: PropTypes.number,
+  genotype: PropTypes.object,
   variant: PropTypes.object,
   warning: PropTypes.string,
   isHemiX: PropTypes.bool,
 }
 
 const GENOTYPE_DETAILS = [
-  { title: 'Genotype', field: 'numAlt' },
   { title: 'Sample Type', field: 'sampleType' },
   {
     title: 'Raw Alt. Alleles',
@@ -148,17 +137,9 @@ const GENOTYPE_DETAILS = [
   { title: 'End', field: 'end' },
 ]
 
-const genotypeDetails = (genotype, variant, includeGenotype, isHemiX) =>
+const genotypeDetails = (genotype, variant) =>
   GENOTYPE_DETAILS.map(({ shouldHide, title, field, variantField, format }) => {
     const value = field ? genotype[field] : variant[variantField]
-
-    if (field === 'numAlt') {
-      if (includeGenotype) {
-        return <span>{title}: <SnpAlleles numAlt={value} variant={variant} isHemiX={isHemiX} /></span>
-      }
-      return null
-    }
-
     return value && !(shouldHide && shouldHide(value, variant)) ?
       <div key={title}>
         {title}:<HorizontalSpacer width={10} /><b>{format ? format(value) : value}</b>
@@ -198,10 +179,21 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
               flowing
               header="Additional Sample Type"
               trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-              content={genotypeDetails(genotype.otherSample, variant, hasConflictingNumAlt, isHemiX)}
+              content={
+                <div>
+                  {hasConflictingNumAlt &&
+                    <div>
+                      <VerticalSpacer height={5} />
+                      <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                      <VerticalSpacer height={5} />
+                    </div>
+                  }
+                  {genotypeDetails(genotype.otherSample, variant)}
+                </div>
+              }
             />}
-            <Alleles cn={genotype.cn} numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} warning={warning} />
-            <VerticalSpacer width={5} />
+            <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
+            <VerticalSpacer height={2} />
             {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
           </span>
