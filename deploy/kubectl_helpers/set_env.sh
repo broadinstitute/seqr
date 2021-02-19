@@ -5,7 +5,7 @@ set -x -e
 DEPLOYMENT_TARGET=$1
 
 set +x
-source ./load_settings.sh ${DEPLOYMENT_TARGET}
+source ./utils/load_settings.sh ${DEPLOYMENT_TARGET}
 set -x
 
 export KUBECONFIG=~/.kube/config
