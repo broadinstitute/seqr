@@ -2,9 +2,9 @@
 
 set -x
 
-deployment=$1
-component=$2
+DEPLOYMENT_TARGET=$1
+COMPONENT=$2
 
-pod_name=$(./get_resource_name.sh pod ${deployment} ${component})
+POD_NAME=$(./get_resource_name.sh pod ${DEPLOYMENT_TARGET} ${COMPONENT})
 
-kubectl exec -it ${pod_name} -- /bin/bash
+kubectl exec -it ${POD_NAME} -- /bin/bash
