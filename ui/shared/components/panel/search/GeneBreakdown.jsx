@@ -10,12 +10,6 @@ import Modal from 'shared/components/modal/Modal'
 import { GeneDetails } from 'shared/components/panel/variants/VariantGene'
 import DataTable from 'shared/components/table/DataTable'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import {
-  FAMILY_FIELD_DESCRIPTION,
-  FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
-} from 'shared/utils/constants'
 
 import {
   getSearchGeneBreakdownValues,
@@ -23,13 +17,6 @@ import {
   getSearchGeneBreakdownErrorMessage,
 } from 'redux/selectors'
 import { loadGeneBreakdown } from 'redux/rootReducer'
-
-const FAMILY_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
-]
 
 const COLUMNS = [
   {
@@ -47,7 +34,7 @@ const COLUMNS = [
     noFormatExport: true,
     format: row =>
       <SearchResultsLink
-        geneId={row.geneId}
+        location={row.geneId}
         projectFamilies={Object.entries(row.families.reduce((acc, { family }) => {
           if (!acc[family.projectGuid]) {
             acc[family.projectGuid] = []
@@ -70,8 +57,7 @@ const COLUMNS = [
         row.families.map(({ family, count }, index) =>
           <span key={family.familyGuid}>
             {index > 0 && <span>,&nbsp;</span>}
-            <FamilyLink family={family} fields={FAMILY_FIELDS} />
-            ({count})
+            <FamilyLink family={family} target="_blank" disableEdit /> ({count})
           </span>)
     ),
   },

@@ -35,9 +35,10 @@ import {
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   INDIVIDUAL_FIELD_CONFIGS,
-  INDIVIDUAL_HPO_EXPORT_DATA,
   SHOW_ALL,
   familyVariantSamples,
+  exportConfigForField,
+  INDIVIDUAL_EXPORT_DATA,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -345,11 +346,6 @@ export const FAMILY_SORT_OPTIONS = [
   },
 ]
 
-const exportConfigForField = fieldConfigs => (field) => {
-  const  { label, format, description } = fieldConfigs[field]
-  return { field,  header: label, format, description }
-}
-
 const tableConfigForField = fieldConfigs => (field) => {
   const  { label, width, formFieldProps = {} } = fieldConfigs[field]
   return { name: field,  content: label, width, formFieldProps }
@@ -396,14 +392,6 @@ export const FAMILY_BULK_EDIT_EXPORT_DATA = [
   FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
-
-export const INDIVIDUAL_HAS_DATA_FIELD = 'hasLoadedSamples'
-const INDIVIDUAL_HAS_DATA_EXPORT_CONFIG = {
-  field: INDIVIDUAL_HAS_DATA_FIELD,
-  header: 'Individual Data Loaded',
-  format: hasData => (hasData ? 'Yes' : 'No'),
-}
-
 export const INDIVIDUAL_FIELDS = [
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
@@ -422,27 +410,6 @@ export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
 
 
 export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
-
-export const INDIVIDUAL_ID_EXPORT_DATA = [
-  FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID,
-].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
-
-const INDIVIDUAL_CORE_EXPORT_DATA = [
-  INDIVIDUAL_FIELD_PATERNAL_ID,
-  INDIVIDUAL_FIELD_MATERNAL_ID,
-  INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_AFFECTED,
-  INDIVIDUAL_FIELD_NOTES,
-].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
-
-export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
-  ...INDIVIDUAL_CORE_EXPORT_DATA, exportConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP),
-]
-
-export const INDIVIDUAL_EXPORT_DATA = [].concat(
-  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
-)
-
 
 export const CASE_REVIEW_INDIVIDUAL_EXPORT_DATA = [
   ...INDIVIDUAL_EXPORT_DATA,

@@ -155,7 +155,7 @@ class Command(BaseCommand):
                 else:
                     raise CommandError('Error: unable to find family data for lifted over variant')
             for saved_variant in saved_variant_models:
-                saved_variant.xpos_start = var['xpos']
+                saved_variant.xpos = var['xpos']
                 saved_variant.saved_variant_json = var
                 saved_variant.save()
 

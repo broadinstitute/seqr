@@ -94,7 +94,7 @@ const addDividedLink = (links, name, href) =>
   )
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
-  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
+  const links = []
   const mainGene = genesById[mainTranscript.geneId]
   let geneNames
   const variations = []
@@ -147,7 +147,10 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
   }
 
+  const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
+    seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}`
+
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
       const endOffset = variant.end - variant.pos
@@ -155,7 +158,12 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       const region = `${variant.chrom}-${start}-${start + endOffset}`
       addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
     }
+  } else {
+    seqrLinkProps.variantId = variant.variantId
   }
+  links.unshift(
+    <SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />,
+  )
 
   return links
 })

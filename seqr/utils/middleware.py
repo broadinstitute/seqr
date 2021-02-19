@@ -9,6 +9,7 @@ import traceback
 
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.terra_api_utils import TerraAPIException
 from settings import DEBUG
 
 logger = logging.getLogger()
@@ -22,6 +23,7 @@ EXCEPTION_ERROR_MAP = {
     elasticsearch.exceptions.ConnectionError: 504,
     elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
+    TerraAPIException: lambda e: e.status_code,
 }
 
 EXCEPTION_MESSAGE_MAP = {

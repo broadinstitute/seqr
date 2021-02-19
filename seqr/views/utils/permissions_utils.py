@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
@@ -5,8 +7,13 @@ from django.db.models import Value
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
-    anvil_enabled, user_get_workspace_access_level
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
+    anvil_enabled, user_get_workspace_access_level, is_google_authenticated, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
+    PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
+    GOOGLE_LOGIN_REQUIRED_URL
+
+logger = logging.getLogger(__name__)
+
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
@@ -17,10 +24,12 @@ def user_is_data_manager(user):
 def user_is_pm(user):
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
 
+
 # User access decorators
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
 data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
 pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
+google_auth_required = user_passes_test(is_google_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
@@ -59,7 +68,7 @@ def _map_anvil_seqr_permission(anvil_permission):
     if anvil_permission.get('pending'):
         return None
     access_level = anvil_permission.get('accessLevel')
-    if access_level in ['WRITER', 'OWNER', 'PROJECT_OWNER']:
+    if access_level in [WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL]:
         return CAN_EDIT
     return CAN_VIEW if access_level == 'READER' else None
 
@@ -67,11 +76,27 @@ def _map_anvil_seqr_permission(anvil_permission):
 def anvil_has_perm(user, permission_level, project):
     if not project_has_anvil(project):
         return False
-    workspace_permission = user_get_workspace_access_level(user, project.workspace_namespace, project.workspace_name)
+    return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+
+
+def has_workspace_perm(user, permission_level, namespace, name, can_share=False):
+    workspace_permission = user_get_workspace_access_level(user, namespace, name)
     if not workspace_permission:
+        return False
+    if can_share and not workspace_permission.get(CAN_SHARE_PERM):
         return False
     permission = _map_anvil_seqr_permission(workspace_permission)
     return True if permission == CAN_EDIT else permission == permission_level
+
+
+def check_workspace_perm(user, permission_level, namespace, name, can_share=False):
+    if has_workspace_perm(user, permission_level, namespace, name, can_share):
+        return True
+
+    message = "{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
+        user=user, namespace=namespace, name=name)
+    logger.warning(message)
+    raise PermissionDenied(message)
 
 
 def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):

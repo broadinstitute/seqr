@@ -74,16 +74,16 @@ if ENABLE_DJANGO_DEBUG_TOOLBAR:
     INTERNAL_IPS = ['127.0.0.1']
     SHOW_COLLAPSED = True
     DEBUG_TOOLBAR_PANELS = [
-        'ddt_request_history.panels.request_history.RequestHistoryPanel',
+        'debug_toolbar.panels.history.HistoryPanel',
         'debug_toolbar.panels.timer.TimerPanel',
         'debug_toolbar.panels.settings.SettingsPanel',
         'debug_toolbar.panels.headers.HeadersPanel',
         'debug_toolbar.panels.request.RequestPanel',
-        'debug_toolbar.panels.profiling.ProfilingPanel',
         'debug_toolbar.panels.sql.SQLPanel',
         'debug_toolbar.panels.staticfiles.StaticFilesPanel',
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
     ]
     DEBUG_TOOLBAR_CONFIG = {
         'RESULTS_CACHE_SIZE': 100,
@@ -203,7 +203,7 @@ POSTGRES_DB_CONFIG = {
     'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
     'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
-    'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+    'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'pgtest'),
 }
 DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
@@ -236,8 +236,8 @@ else:
         'http://localhost:3000',
         'http://localhost:8000',
     )
-    STATICFILES_DIRS.append(STATIC_ROOT)
-    STATIC_ROOT = None
+    # STATICFILES_DIRS.append(STATIC_ROOT)
+    # STATIC_ROOT = None
     CORS_ALLOW_CREDENTIALS = True
     CORS_REPLACE_HTTPS_REFERER = True
     # django-hijack plugin
@@ -250,8 +250,8 @@ else:
 #########################################################
 
 SEQR_VERSION = 'v1.0'
-SEQR_PRIVACY_VERSION = 1.0
-SEQR_TOS_VERSION = 1.0
+SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.0))
+SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.0))
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 
@@ -261,6 +261,7 @@ AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
+GOOGLE_LOGIN_REQUIRED_URL = '/login/google-oauth2'
 
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
@@ -323,11 +324,15 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'openid'
 ]
 
+SOCIAL_AUTH_PROVIDER = 'google-oauth2'
+
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+
+SERVICE_ACCOUNT_FOR_ANVIL = os.environ.get('SERVICE_ACCOUNT_FOR_ANVIL')
 
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'

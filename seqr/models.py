@@ -606,21 +606,11 @@ class IgvSample(ModelWithGUID):
         json_fields = ['guid', 'file_path', 'sample_type', 'sample_id']
 
 
-class AliasField(models.Field):
-    def contribute_to_class(self, cls, name, private_only=False):
-        super(AliasField, self).contribute_to_class(cls, name, private_only=True)
-        setattr(cls, name, self)
-
-    def __get__(self, instance, instance_type=None):
-        return getattr(instance, self.db_column)
-
-
 class SavedVariant(ModelWithGUID):
     family = models.ForeignKey('Family', on_delete=models.CASCADE)
 
-    xpos_start = models.BigIntegerField()
+    xpos = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
     ref = models.TextField(null=True)
     alt = models.TextField(null=True)
     variant_id = models.TextField(db_index=True)
@@ -629,14 +619,14 @@ class SavedVariant(ModelWithGUID):
     saved_variant_json = JSONField(default=dict)
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
+        chrom, pos = get_chrom_pos(self.xpos)
         return "%s:%s-%s" % (chrom, pos, self.family.guid)
 
     def _compute_guid(self):
         return 'SV%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('xpos_start', 'xpos_end', 'variant_id', 'family')
+        unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
 
         json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
 

@@ -1010,7 +1010,7 @@ def _get_gene_row(row, gene_id, inheritances, variant_tag_names, variants):
     for variant in variants:
         variant_id = variant.saved_variant_json.get('variantId')
         if not variant_id:
-            variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
+            variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos)) + [variant.ref, variant.alt]))
         row["extras_variant_tag_list"] += [
             (variant_id, gene_id, vt.variant_tag_type.name.lower()) for vt in variant.discovery_tags
         ]

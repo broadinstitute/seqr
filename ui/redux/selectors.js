@@ -139,14 +139,23 @@ export const getHasActiveVariantSampleByFamily = createSelector(
   },
 )
 
-export const getIGVSamplesByFamily = createSelector(
+export const getIGVSamplesByFamilySampleIndividual = createSelector(
   getSortedIndividualsByFamily,
   getIgvSamplesByGuid,
   (individualsByFamily, igvSamplesByGuid) => {
     return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.igvSampleGuids || [])], []).map(
-        sampleGuid => igvSamplesByGuid[sampleGuid]),
+      [familyGuid]: individuals.reduce((familyAcc, { individualGuid, igvSampleGuids }) => {
+        (igvSampleGuids || []).forEach((sampleGuid) => {
+          const sample = igvSamplesByGuid[sampleGuid]
+          const type = sample.sampleType
+          if (!familyAcc[type]) {
+            familyAcc[type] = {}
+          }
+          familyAcc[type][individualGuid] = sample
+        })
+        return familyAcc
+      }, {}),
     }), {})
   },
 )
@@ -155,6 +164,9 @@ export const getIGVSamplesByFamily = createSelector(
 export const getSavedVariantTableState = state => (
   state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
 )
+
+const matchingVariants = (variants, matchFunc) =>
+  variants.filter(o => (Array.isArray(o) ? o : [o]).some(matchFunc))
 
 export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -203,17 +215,17 @@ export const getPairedSelectedSavedVariants = createSelector(
       return acc
     }, [])
 
-    if (tag) {
-      if (tag === NOTE_TAG_NAME) {
-        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ noteGuids }) => noteGuids.length))
-      } else if (tag !== SHOW_ALL) {
-        pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag)))
-      }
+    if (tag === NOTE_TAG_NAME) {
+      pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
+    } else if (tag && tag !== SHOW_ALL) {
+      pairedVariants = matchingVariants(
+        pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag))
+    } else if (!(familyGuid || analysisGroupGuid)) {
+      pairedVariants = matchingVariants(pairedVariants, ({ tagGuids }) => tagGuids.length)
     }
 
     if (gene) {
-      pairedVariants = pairedVariants.filter(o => (Array.isArray(o) ? o : [o]).some(
-        ({ transcripts }) => gene in (transcripts || {})))
+      pairedVariants = matchingVariants(pairedVariants, ({ transcripts }) => gene in (transcripts || {}))
     }
 
     return pairedVariants

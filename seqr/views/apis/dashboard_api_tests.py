@@ -4,6 +4,7 @@ import mock
 from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
+from seqr.views.utils.terra_api_utils import TerraAPIException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
     PROJECT_FIELDS
 
@@ -66,6 +67,12 @@ class DashboardPageTest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 3)
+
+        if hasattr(self, 'mock_list_workspaces'):
+            self.mock_list_workspaces.side_effect = TerraAPIException('AnVIL Error', 400)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'AnVIL Error')
 
         self.login_data_manager_user()
         response = self.client.get(url)
@@ -137,7 +144,8 @@ class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     NUM_COLLABORATOR_PROJECTS = 3
 
 
-def assert_has_list_workspaces_calls(self):
+def assert_has_list_workspaces_calls(self, call_count=4):
+    self.assertEqual(self.mock_list_workspaces.call_count, call_count)
     calls = [
         mock.call(self.no_access_user),
         mock.call(self.collaborator_user),
@@ -165,7 +173,7 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(AnvilDashboardPageTest, self).test_export_projects_table()
-        assert_has_list_workspaces_calls(self)
+        assert_has_list_workspaces_calls(self, call_count=5)
         self.mock_get_ws_acl.assert_not_called()
 
 
@@ -180,5 +188,5 @@ class MixDashboardPageTest(MixAuthenticationTestCase, DashboardPageTest):
 
     def test_export_projects_table(self):
         super(MixDashboardPageTest, self).test_export_projects_table()
-        assert_has_list_workspaces_calls(self)
+        assert_has_list_workspaces_calls(self, call_count=5)
         self.mock_get_ws_acl.assert_not_called()

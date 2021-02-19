@@ -13,38 +13,20 @@ import {
   getFunctionalTagTypesTypesByProject,
   getVariantId,
 } from 'redux/selectors'
-import {
-  DISCOVERY_CATEGORY_NAME,
-  FAMILY_FIELD_DESCRIPTION,
-  FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
-  FAMILY_FIELD_INTERNAL_NOTES,
-  FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_ANALYSIS_STATUS_LOOKUP,
-} from 'shared/utils/constants'
+import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { ColoredLink, NoBorderTable, InlineHeader } from '../../StyledComponents'
+import { NoBorderTable, InlineHeader } from '../../StyledComponents'
+import FamilyLink from '../../buttons/FamilyLink'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
-import Family from '../family'
 
 const TagTitle = styled.span`
   font-weight: bolder;
   color: #999;
 `
-
-const FAMILY_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-  { id: FAMILY_FIELD_INTERNAL_NOTES },
-  { id: FAMILY_FIELD_INTERNAL_SUMMARY },
-]
 
 const NO_DISPLAY = { display: 'none' }
 
@@ -221,25 +203,10 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyLabel = React.memo(({ family, disableEdit, target, path }) =>
+const FamilyLabel = React.memo(props =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
-    <PopupWithModal
-      hoverable
-      wide="very"
-      position="right center"
-      keepInViewPort
-      trigger={
-        <ColoredLink
-          to={`/project/${family.projectGuid}/${path || `family_page/${family.familyGuid}`}`}
-          color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-          target={target}
-        >
-          {family.displayName}
-        </ColoredLink>
-      }
-      content={<Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} useFullWidth disablePedigreeZoom />}
-    />
+    <FamilyLink PopupClass={PopupWithModal} {...props} />
   </InlineHeader>,
 )
 

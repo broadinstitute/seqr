@@ -31,6 +31,8 @@ DEPLOYMENT_TARGETS = [
     "redis",
     "seqr",
     "kube-scan",
+    "elasticsearch-snapshot-infra",
+    "elasticsearch-snapshot-config",
 ]
 
 # pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
@@ -40,6 +42,7 @@ GCLOUD_CLIENT = 'gcloud-client'
 
 SECRETS = {
     'elasticsearch': ['users', 'users_roles', 'roles.yml'],
+    'es-snapshot-gcs': ['{deploy_to}/gcs.client.default.credentials_file'],
     GCLOUD_CLIENT: ['service-account-key.json'],
     'kibana': ['elasticsearch.password'],
     'matchbox': ['{deploy_to}/config.json'],
@@ -47,7 +50,7 @@ SECRETS = {
     'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
+        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret',  '{deploy_to}/anvil_service_account_id'
     ],
 }
 
@@ -109,7 +112,7 @@ def deploy_settings(settings):
     run("kubectl get configmaps all-settings -o yaml")
 
 
-def deploy_secrets(settings):
+def deploy_secrets(settings, components=None):
     """Deploys or updates k8s secrets."""
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -119,11 +122,18 @@ def deploy_secrets(settings):
 
     create_namespace(settings)
 
+    if not components:
+        components = SECRETS.keys()
+
     # deploy secrets
-    for secret_label in SECRETS.keys():
+    for secret_label in components:
         run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
 
-    for secret_label, secret_files in SECRETS.items():
+    for secret_label in components:
+        secret_files = SECRETS.get(secret_label)
+        if not secret_files:
+            raise Exception('Invalid secret component {}'.format(secret_label))
+
         secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
         secret_command += [
             '--from-file deploy/secrets/gcloud/{secret_label}/{file}'.format(secret_label=secret_label, file=file)
@@ -180,6 +190,45 @@ def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+
+
+def deploy_elasticsearch_snapshot_infra(settings):
+    print_separator('elasticsearch snapshot infra')
+
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
+        # create the bucket
+        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
+            errors_to_ignore=["already exists"])
+        # create the IAM user
+        run(" ".join([
+            "gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s",
+            "--display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s"]) % settings,
+            errors_to_ignore="already exists within project projects/seqr-project")
+        # grant storage admin permissions on the snapshot bucket
+        run(" ".join([
+            "gsutil iam ch",
+            "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
+            "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
+
+
+def deploy_elasticsearch_snapshot_config(settings):
+    print_separator('elasticsearch snapshot configuration')
+
+    docker_build("curl", settings)
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    if settings['ES_CONFIGURE_SNAPSHOTS']:
+        # run the k8s job to set up the repo
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        wait_for_resource(
+            'configure-es-snapshot-repo', resource_type='job', json_path='{.items[0].status.conditions[0].type}',
+            expected_status='Complete')
+        # clean up the job after completion
+        run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
+        # Set up the monthly cron job
+        run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
 
 
 def deploy_linkerd(settings):
@@ -392,6 +441,10 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     # make sure namespace exists
     if "init-cluster" not in components and not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
+
+    if components[0] == 'secrets':
+        deploy_secrets(settings, components=components[1:])
+        return
 
     # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
     for component in DEPLOYABLE_COMPONENTS:
