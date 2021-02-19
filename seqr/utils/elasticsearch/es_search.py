@@ -898,7 +898,7 @@ class EsSearch(object):
     def _merge_duplicate_variants(cls, variant, duplicate_variant):
         for guid, genotype in duplicate_variant['genotypes'].items():
             if guid in variant['genotypes']:
-                variant['genotypes'][guid]['otherSample'] = genotype
+                variant['genotypes'][guid]['otherSample'] = {k: v for k, v in genotype.items() if k != 'otherSample'}
             else:
                 variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))

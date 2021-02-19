@@ -528,6 +528,14 @@ PARSED_MULTI_GENOME_VERSION_VARIANT.update({
     '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
 
+PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
+for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT['genotypes'].items():
+    PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
+for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
+    PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
@@ -1667,7 +1675,8 @@ class EsUtilsTest(TestCase):
 
         variants, total_results = get_es_variants(results_model, page=3, num_results=2)
         self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
+        self.assertDictEqual(variants[1], PARSED_MULTI_SAMPLE_VARIANT)
         self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {
@@ -1675,7 +1684,7 @@ class EsUtilsTest(TestCase):
             'variant_results': [],
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
-                {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
+                {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_MULTI_SAMPLE_VARIANT]}],
             'duplicate_doc_count': 1,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 1, 'loaded': 1}, INDEX_NAME: {'loaded': 4, 'total': 5}},
             'total_results': 5,
@@ -1701,8 +1710,6 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[2][0], PARSED_COMPOUND_HET_VARIANTS[0])
         self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
-        # diff_k = {k for k, v in variants[3].items() if PARSED_VARIANTS[1].get(k) != v}
-        # import pdb; pdb.set_trace()
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
         self.assertExecutedSearches([
@@ -2061,7 +2068,7 @@ class EsUtilsTest(TestCase):
 
         cache_results = {
             'compound_het_results': [],
-            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'variant_results': [PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]},
                 {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2},
@@ -2627,14 +2634,16 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_deduplicate_variants(self):
         setup_responses()
-        # Test deduplication works when first variants are build 37 and when they are build 38
-        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
-            [PARSED_VARIANTS[1],  PARSED_VARIANTS[1], PARSED_MULTI_GENOME_VERSION_VARIANT]
-        ), [PARSED_MULTI_GENOME_VERSION_VARIANT])
+        no_second_project_duplicate = deepcopy(PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT)
+        no_second_project_duplicate['genotypes']['I000015_na20885'].pop('otherSample')
 
         self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
-            [PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_VARIANTS[1]]
-        ), [PARSED_MULTI_GENOME_VERSION_VARIANT])
+            deepcopy([PARSED_VARIANTS[1],  PARSED_VARIANTS[1], PARSED_MULTI_GENOME_VERSION_VARIANT])
+        ), [no_second_project_duplicate])
+
+        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
+            deepcopy([PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_VARIANTS[1]])
+        ), [PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT])
 
     @urllib3_responses.activate
     def test_genotype_inheritance_filter(self):
