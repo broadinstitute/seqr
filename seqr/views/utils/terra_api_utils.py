@@ -162,23 +162,9 @@ def list_anvil_workspaces(user):
     return r
 
 
-def user_get_workspace_bucket(user, workspace_namespace, workspace_name):
-    """
-    Get the Google storage bucket name from AnVIL.
-
-    :param user: The user model object
-    :param workspace_namespace: The namespace (or billing project name) of the workspace
-    :param workspace_name: The name of the workspace
-    :return: bucket name string
-
-    """
-    path = "api/workspaces/{0}/{1}?fields=workspace.bucketName".format(workspace_namespace, workspace_name)
-    r = _user_anvil_call('get', path, user)
-    return r['workspace']['bucketName']
-
-
-def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
-    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare".format(workspace_namespace, workspace_name)
+def user_get_workspace_access_level(user, workspace_namespace, workspace_name, meta_fields=None):
+    fields = ',{}'.format(','.join(meta_fields)) if meta_fields else ''
+    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare{2}".format(workspace_namespace, workspace_name, fields)
 
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)

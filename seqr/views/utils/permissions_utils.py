@@ -76,22 +76,26 @@ def _map_anvil_seqr_permission(anvil_permission):
 def anvil_has_perm(user, permission_level, project):
     if not project_has_anvil(project):
         return False
-    return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+    return bool(has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name))
 
 
-def has_workspace_perm(user, permission_level, namespace, name, can_share=False):
-    workspace_permission = user_get_workspace_access_level(user, namespace, name)
+def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+    workspace_permission = user_get_workspace_access_level(user, namespace, name, meta_fields) if meta_fields else \
+        user_get_workspace_access_level(user, namespace, name)
     if not workspace_permission:
         return False
     if can_share and not workspace_permission.get(CAN_SHARE_PERM):
         return False
     permission = _map_anvil_seqr_permission(workspace_permission)
-    return True if permission == CAN_EDIT else permission == permission_level
+    if permission != CAN_EDIT and permission != permission_level:
+        return False
+    return workspace_permission
 
 
-def check_workspace_perm(user, permission_level, namespace, name, can_share=False):
-    if has_workspace_perm(user, permission_level, namespace, name, can_share):
-        return True
+def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+    workspace_meta = has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
+    if workspace_meta:
+        return workspace_meta
 
     message = "{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
         user=user, namespace=namespace, name=name)

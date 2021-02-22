@@ -8,7 +8,7 @@ from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, GOOGLE_API_TOKE
     GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_KEY
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
     anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated, \
-    is_google_authenticated, remove_token, add_service_account, user_get_workspace_bucket
+    is_google_authenticated, remove_token, add_service_account
 
 GET_WORKSPACE_PATH = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
@@ -230,18 +230,3 @@ class TerraApiUtilsCase(TestCase):
         with self.assertRaises(TerraAPIException) as te:
             _ = add_service_account(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertEqual(str(te.exception), 'Failed to grant seqr service account access to the workspace my-seqr-billing/my-seqr-workspace')
-
-    @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
-    @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_user_get_workspace_bucket(self, mock_time):
-        user = User.objects.get(username='test_user')
-        responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
-        mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10
-
-        url = '{}api/workspaces/my-seqr-billing/my-seqr-workspace?fields=workspace.bucketName'.format(TEST_TERRA_API_ROOT_URL)
-        responses.add(responses.GET, url, status=200, body='{"workspace": {"bucketName": "fc-bucket"}}')
-        r = user_get_workspace_bucket(user, 'my-seqr-billing', 'my-seqr-workspace')
-        self.assertEqual(r, "fc-bucket")
-        self.assertEqual(responses.calls[0].request.url, url)
-        responses.assert_call_count(url, 1)

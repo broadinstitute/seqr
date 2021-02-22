@@ -74,8 +74,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMessage')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.user_get_workspace_bucket')
-    def test_create_project_from_workspace(self, mock_get_bucket, mock_file_exist, mock_email, mock_add_service_account,
+    def test_create_project_from_workspace(self, mock_file_exist, mock_email, mock_add_service_account,
                                            mock_load_file, mock_api_logger, mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -87,16 +86,28 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test the user needs sufficient workspace permissions
-        self.check_manager_login(url)
+        self.mock_get_ws_access_level.reset_mock(side_effect=True)
+        self.mock_get_ws_access_level.return_value = {
+            'accessLevel': 'READER',
+            'canShare': False,
+        }
+        self.login_collaborator()
+        _ = self.client.post(url)
         mock_utils_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test missing required fields in the request body
+        self.login_manager()
+        self.mock_get_ws_access_level.return_value = {
+            'accessLevel': 'WRITER',
+            'canShare': True,
+            'workspace': {'bucketName': 'test_bucket'}
+        }
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId, dataPath" are required')
         user = User.objects.get(username='test_user_manager')
-        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, ['workspace.bucketName'])
 
         data = {
             'genomeVersion': '38',
@@ -125,13 +136,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Test bad data path
         mock_add_service_account.reset_mock(side_effect=True)
-        mock_get_bucket.return_value = 'test_bucket'
         mock_file_exist.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Data path gs://test_bucket/test_path is not valid.')
         mock_file_exist.assert_called_with('gs://test_bucket/test_path')
-        mock_get_bucket.assert_called_with(mock.ANY, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
 
         # Test valid operation
         mock_file_exist.return_value = True

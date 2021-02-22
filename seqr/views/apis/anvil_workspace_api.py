@@ -9,7 +9,7 @@ from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
-from seqr.views.utils.terra_api_utils import add_service_account, user_get_workspace_bucket
+from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
@@ -51,7 +51,7 @@ def create_project_from_workspace(request, namespace, name):
 
     """
     # Validate that the current user has logged in through google and has sufficient permissions
-    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
+    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
 
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
@@ -71,7 +71,7 @@ def create_project_from_workspace(request, namespace, name):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the data path
-    bucket_name = user_get_workspace_bucket(request.user, namespace, name)
+    bucket_name = workspace_meta['workspace']['bucketName']
     slash = '' if request_json['dataPath'].startswith('/') else '/'
     data_path = 'gs://{bucket}{slash}{path}'.format(bucket=bucket_name, slash=slash, path=request_json['dataPath'])
     if not does_file_exist(data_path):
