@@ -57,17 +57,6 @@ const COLUMNS = [
     format: project => <CategoryIndicator project={project} />,
   },
   {
-    name: 'anvil',
-    width: 1,
-    content: 'AnVIL',
-    format: project => (
-      <div>
-        {project.workspaceName &&
-        <Popup content={`AnVIL workspace: ${project.workspaceNamespace}/${project.workspaceName}`} position="top center" trigger={<Icon name="fire" />} />}
-      </div>
-    ),
-  },
-  {
     name: 'name',
     width: 5,
     content: 'Name',
@@ -77,6 +66,18 @@ const COLUMNS = [
         <HorizontalSpacer width={10} />
         { project.description }
       </div>
+    ),
+  },
+  {
+    name: 'anvil',
+    width: 1,
+    content: 'AnVIL',
+    format: project => (project.workspaceName ?
+      <Popup
+        content={`AnVIL workspace: ${project.workspaceNamespace}/${project.workspaceName}`}
+        position="top center"
+        trigger={<Icon name="fire" />}
+      /> : null
     ),
   },
   {
@@ -155,10 +156,10 @@ SUPERUSER_COLUMNS.splice(3, 0, {
 })
 
 const COLUMNS_NO_ANVIL = [...COLUMNS]
-COLUMNS_NO_ANVIL.splice(1, 1)
+COLUMNS_NO_ANVIL.splice(2, 1)
 
 const SUPERUSER_COLUMNS_NO_ANVIL = [...SUPERUSER_COLUMNS]
-SUPERUSER_COLUMNS_NO_ANVIL.splice(1, 1)
+SUPERUSER_COLUMNS_NO_ANVIL.splice(2, 1)
 
 const getColumns = (googleLoginEnabled, isAnvil, isSuperuser) => {
   if (googleLoginEnabled && isAnvil) {
