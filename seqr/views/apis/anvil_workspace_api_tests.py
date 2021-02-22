@@ -24,7 +24,7 @@ REQUEST_BODY = {
             'uploadedFileId': 'test_temp_file_id',
             'description': 'A test project',
             'agreeSeqrAccess': True,
-            'dataPath': 'test_path'
+            'dataPath': '/test_path'
         }
 
 
@@ -101,7 +101,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         data = {
             'genomeVersion': '38',
             'uploadedFileId': 'test_temp_file_id',
-            'dataPath': 'gs://test_path',
+            'dataPath': '/test_path',
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(data))
         self.assertEqual(response.status_code, 400)

@@ -163,6 +163,15 @@ def list_anvil_workspaces(user):
 
 
 def user_get_workspace_bucket(user, workspace_namespace, workspace_name):
+    """
+    Get the Google storage bucket name from AnVIL.
+
+    :param user: The user model object
+    :param workspace_namespace: The namespace (or billing project name) of the workspace
+    :param workspace_name: The name of the workspace
+    :return: bucket name string
+
+    """
     path = "api/workspaces/{0}/{1}?fields=workspace.bucketName".format(workspace_namespace, workspace_name)
     r = _user_anvil_call('get', path, user)
     return r['workspace']['bucketName']
