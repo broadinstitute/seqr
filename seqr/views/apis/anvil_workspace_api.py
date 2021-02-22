@@ -9,7 +9,7 @@ from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
-from seqr.views.utils.terra_api_utils import add_service_account
+from seqr.views.utils.terra_api_utils import add_service_account, user_get_workspace_bucket
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
@@ -81,8 +81,11 @@ def create_project_from_workspace(request, namespace, name):
     add_service_account(request.user, namespace, name)
 
     # Validate the data path
-    if not request_json['dataPath'].startswith("gs://") or not does_file_exist(request_json['dataPath']):
-        error = 'Data path is not valid.'
+    bucket_name = user_get_workspace_bucket(request.user, namespace, name)
+    slash = '' if request_json['dataPath'].startswith('/') else '/'
+    data_path = 'gs://{bucket}{slash}{path}'.format(bucket=bucket_name, slash=slash, path=request_json['dataPath'])
+    if not does_file_exist(data_path):
+        error = 'Data path {} is not valid.'.format(data_path)
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Create a new Project in seqr
@@ -104,7 +107,7 @@ def create_project_from_workspace(request, namespace, name):
 
     # Send an email to all seqr data managers
     try:
-        send_load_data_email(project, individual_ids_tsv, request_json['dataPath'])
+        send_load_data_email(project, individual_ids_tsv, data_path)
     except Exception as ee:
         message = 'Exception while sending email to user {}. {}'.format(request.user, str(ee))
         logger.error(message)

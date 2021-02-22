@@ -162,6 +162,12 @@ def list_anvil_workspaces(user):
     return r
 
 
+def user_get_workspace_bucket(user, workspace_namespace, workspace_name):
+    path = "api/workspaces/{0}/{1}?fields=workspace.bucketName".format(workspace_namespace, workspace_name)
+    r = _user_anvil_call('get', path, user)
+    return r['workspace']['bucketName']
+
+
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
     path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare".format(workspace_namespace, workspace_name)
 

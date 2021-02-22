@@ -64,8 +64,9 @@ const AGREE_CHECKBOX = {
 
 const DATA_BUCK_FIELD = {
   name: 'dataPath',
-  label: 'Google Path to the VCF files',
-  placeholder: 'gs://google-storage-path',
+  label: 'Path to the Joint Called VCF',
+  labelHelp: 'File path for a joint called VCF available in the workspace files. If The VCF is split, provide the path to the directory containing the split VCF',
+  placeholder: '/path-under-Files-of-the-workspace',
   validate: validators.required,
 }
 
@@ -102,9 +103,9 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
     />
     <p>
       Need help? please submit &nbsp;
-      <a href="https://github.com/broadinstitute/seqr/issues">GitHub Issues</a>
+      <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
       , &nbsp; or &nbsp;
-      <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org" target="_blank">
+      <a href="mailto:seqr@broadinstitute.org" target="_blank">
         Email Us
       </a>
     </p>
