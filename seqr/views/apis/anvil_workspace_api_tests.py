@@ -139,7 +139,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data path gs://test_bucket/test_path is not valid.')
+        self.assertEqual(response.json()['error'], 'Data path /test_path is not valid.')
         mock_file_exist.assert_called_with('gs://test_bucket/test_path')
 
         # Test valid operation

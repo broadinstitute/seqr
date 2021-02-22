@@ -75,7 +75,7 @@ def create_project_from_workspace(request, namespace, name):
     slash = '' if request_json['dataPath'].startswith('/') else '/'
     data_path = 'gs://{bucket}{slash}{path}'.format(bucket=bucket_name, slash=slash, path=request_json['dataPath'])
     if not does_file_exist(data_path):
-        error = 'Data path {} is not valid.'.format(data_path)
+        error = 'Data path {} is not valid.'.format(request_json['dataPath'])
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Parse families/individuals in the uploaded pedigree file
