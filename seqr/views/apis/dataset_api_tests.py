@@ -15,7 +15,7 @@ from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCas
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
-NEW_INDEX_NAME = 'test_new_index'
+NEW_SAMPLE_TYPE_INDEX_NAME = 'test_new_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
@@ -259,17 +259,17 @@ class DatasetAPITest(object):
 
         # Adding an index for a different sample type works additively
         mock_random.return_value = 987654
-        urllib3_responses.add_json('/{}/_mapping'.format(NEW_INDEX_NAME), {
-            NEW_INDEX_NAME: {'mappings': {'_meta': {
+        urllib3_responses.add_json('/{}/_mapping'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
+            NEW_SAMPLE_TYPE_INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
             }}}})
-        urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_INDEX_NAME), {
+        urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
             'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
         }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'elasticsearchIndex': NEW_INDEX_NAME,
+            'elasticsearchIndex': NEW_SAMPLE_TYPE_INDEX_NAME,
             'datasetType': 'VARIANTS',
         }))
         self.assertEqual(response.status_code, 200)
