@@ -70,7 +70,7 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm install
+    - run: npm install || true
       working-directory: ./ui
     - run: npm test
       working-directory: ./ui
