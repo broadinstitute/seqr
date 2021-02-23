@@ -97,12 +97,15 @@
     "timeago.js": "3.0.2",
     "timeout-as-promise": "1.0.0",
     "typescript": "^2.9.2",
-    "union-value": "^1.0.1"
+    "union-value": "^1.0.1",
+    "snyk": "^1.459.0"
   },
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
-    "test": "node scripts/test.js --env=jsdom"
+    "test": "node scripts/test.js --env=jsdom",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -203,5 +206,6 @@
     "type": "git",
     "url": "git+https://github.com/broadinstitute/seqr.git"
   },
-  "license": "AGPL-3.0"
+  "license": "AGPL-3.0",
+  "snyk": true
 }
