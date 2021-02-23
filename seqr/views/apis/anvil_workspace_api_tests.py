@@ -86,28 +86,16 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test the user needs sufficient workspace permissions
-        self.mock_get_ws_access_level.reset_mock(side_effect=True)
-        self.mock_get_ws_access_level.return_value = {
-            'accessLevel': 'READER',
-            'canShare': False,
-        }
-        self.login_collaborator()
-        _ = self.client.post(url)
+        self.check_manager_login(url)
         mock_utils_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test missing required fields in the request body
-        self.login_manager()
-        self.mock_get_ws_access_level.return_value = {
-            'accessLevel': 'WRITER',
-            'canShare': True,
-            'workspace': {'bucketName': 'test_bucket'}
-        }
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId, dataPath" are required')
         user = User.objects.get(username='test_user_manager')
-        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, ['workspace.bucketName'])
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.bucketName'])
 
         data = {
             'genomeVersion': '38',
@@ -139,7 +127,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data path /test_path is not valid.')
+        self.assertEqual(response.json()['error'], 'Data file or path /test_path is not found.')
         mock_file_exist.assert_called_with('gs://test_bucket/test_path')
 
         # Test valid operation
