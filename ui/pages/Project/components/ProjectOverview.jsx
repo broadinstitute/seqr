@@ -132,18 +132,22 @@ const ProjectOverview = React.memo((
       title: 'Datasets',
       content: (
         <div>
-          No Datasets Loaded <br />
-          <i>Where is my data?</i> <Popup
-            trigger={<HelpIcon />}
-            hoverable
-            content={
-              <div>
-                Loading data from AnVIL to seqr is a slow process, and generally takes a week.
-                If you have been waiting longer than this for your data, please reach
-                out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
-              </div>
-            }
-          />
+          No Datasets Loaded
+          {project.workspaceName &&
+            <div>
+              <i>Where is my data?</i> <Popup
+                trigger={<HelpIcon />}
+                hoverable
+                content={
+                  <div>
+                    Loading data from AnVIL to seqr is a slow process, and generally takes a week.
+                    If you have been waiting longer than this for your data, please reach
+                    out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
+                  </div>
+                }
+              />
+            </div>
+          }
         </div>
       ),
       key: 'blank' })
