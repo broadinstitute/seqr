@@ -185,7 +185,10 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_WORKSPACE_NAME1,
@@ -203,7 +206,10 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": False
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME,
@@ -221,7 +227,10 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME2,
@@ -233,7 +242,10 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }
 ]
 
@@ -252,12 +264,17 @@ def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
     return wss[0]['acl'] if wss else {}
 
 
-def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
+def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields=None):
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    return {'accessLevel': acl[user.email]['accessLevel'], 'canShare': acl[user.email]['canShare']}\
-        if user.email in acl.keys() else {}
+    access_level = {
+        'accessLevel': acl[user.email]['accessLevel'],
+        'canShare': acl[user.email]['canShare'],
+    } if user.email in acl.keys() else {}
+    if meta_fields and 'workspace.bucketName' in meta_fields:
+        access_level['workspace'] = {'bucketName': wss[0]['workspace']['bucketName']}
+    return access_level
 
 
 def get_workspaces_side_effect(user):

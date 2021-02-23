@@ -24,6 +24,7 @@ REQUEST_BODY = {
             'uploadedFileId': 'test_temp_file_id',
             'description': 'A test project',
             'agreeSeqrAccess': True,
+            'dataPath': '/test_path'
         }
 
 
@@ -72,8 +73,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMessage')
-    def test_create_project_from_workspace(self, mock_email, mock_add_service_account, mock_load_file,
-                                           mock_api_logger, mock_utils_logger):
+    @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
+    def test_create_project_from_workspace(self, mock_file_exist, mock_email, mock_add_service_account,
+                                           mock_load_file, mock_api_logger, mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
 
@@ -91,13 +93,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId" are required')
+        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId, dataPath" are required')
         user = User.objects.get(username='test_user_manager')
-        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        self.mock_get_ws_access_level.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.bucketName'])
 
         data = {
             'genomeVersion': '38',
             'uploadedFileId': 'test_temp_file_id',
+            'dataPath': '/test_path',
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(data))
         self.assertEqual(response.status_code, 400)
@@ -119,8 +122,16 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace {}/{}'
                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
-        # Test valid operation
+        # Test bad data path
         mock_add_service_account.reset_mock(side_effect=True)
+        mock_file_exist.return_value = False
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Data file or path /test_path is not found.')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path')
+
+        # Test valid operation
+        mock_file_exist.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -133,7 +144,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_email.assert_called_with(
             subject='AnVIL data loading request',
             body="""
-    Data from AnVIL workspace "{namespace}/{name}" needs to be loaded to seqr project <a href="http://testserver/project/{guid}/project_page">{name}</a> (guid: {guid})
+    Data from AnVIL workspace "{namespace}/{name}" at "gs://test_bucket/test_path" needs to be loaded to seqr project
+    <a href="http://testserver/project/{guid}/project_page">{name}</a> (guid: {guid})
 
     The sample IDs to load are attached.    
     """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid),

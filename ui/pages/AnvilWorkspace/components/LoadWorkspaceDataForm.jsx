@@ -62,7 +62,15 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
-const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
+const DATA_BUCK_FIELD = {
+  name: 'dataPath',
+  label: 'Path to the Joint Called VCF',
+  labelHelp: 'File path for a joint called VCF available in the workspace files. If The VCF is split, provide the path to the directory containing the split VCF',
+  placeholder: '/path-under-Files-of-the-workspace',
+  validate: validators.required,
+}
+
+const FORM_FIELDS = [PROJECT_DESC_FIELD, DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
 
 const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
@@ -93,6 +101,14 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
       size="small"
       fields={FORM_FIELDS}
     />
+    <p>
+      Need help? please submit &nbsp;
+      <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
+      , &nbsp; or &nbsp;
+      <a href="mailto:seqr@broadinstitute.org" target="_blank">
+        Email Us
+      </a>
+    </p>
   </div>,
 )
 
