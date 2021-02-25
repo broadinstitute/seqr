@@ -64,6 +64,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # django-debug-toolbar settings
