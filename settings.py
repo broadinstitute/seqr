@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import subprocess
 
 from ssl import create_default_context
 
@@ -333,7 +334,8 @@ USE_UNIQUE_USER_ID = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 
-SERVICE_ACCOUNT_FOR_ANVIL = os.environ.get('SERVICE_ACCOUNT_FOR_ANVIL')
+SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
+                                           capture_output=True, text=True, shell=True).stdout.split('\n')[0]
 
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
