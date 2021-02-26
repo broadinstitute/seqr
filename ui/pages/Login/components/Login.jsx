@@ -7,6 +7,7 @@ import { Divider, Message, Button, Icon } from 'semantic-ui-react'
 
 import { getGoogleLoginEnabled } from 'redux/selectors'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { ANVIL_URL } from 'shared/utils/constants'
 import { login } from '../reducers'
 import UserFormLayout from './UserFormLayout'
 
@@ -31,7 +32,7 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
         {queryString.parse(location.search).anvilLoginFailed &&
         <Message visible error>
           Unable to authorize the selected Google user. Please register your account in AnVIL by signing in and
-          registering at <a href="https://anvil.terra.bio" target="_blank">anvil.terra.bio</a>
+          registering at <a href={ANVIL_URL} target="_blank">anvil.terra.bio</a>
         </Message> }
         {queryString.parse(location.search).googleLoginFailed &&
         <Message visible error>
