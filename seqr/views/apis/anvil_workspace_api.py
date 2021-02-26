@@ -70,13 +70,6 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # Parse families/individuals in the uploaded pedigree file
-    json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user)
-    errors += ped_warnings
-    if errors:
-        return create_json_response({'errors': errors}, status=400)
-
     # Add the seqr service account to the corresponding AnVIL workspace
     add_service_account(request.user, namespace, name)
 
@@ -87,6 +80,13 @@ def create_project_from_workspace(request, namespace, name):
     if not does_file_exist(data_path):
         error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
         return create_json_response({'error': error}, status=400, reason=error)
+
+    # Parse families/individuals in the uploaded pedigree file
+    json_records = load_uploaded_file(request_json['uploadedFileId'])
+    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user)
+    errors += ped_warnings
+    if errors:
+        return create_json_response({'errors': errors}, status=400)
 
     # Create a new Project in seqr
     project_args = {
