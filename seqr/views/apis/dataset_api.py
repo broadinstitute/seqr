@@ -92,6 +92,7 @@ def add_variants_dataset_handler(request, project_guid):
             family__in=included_families,
             sample__is_active=True,
             sample__dataset_type=dataset_type,
+            sample__sample_type=sample_type,
         ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
         missing_family_individuals = defaultdict(list)
         for individual in missing_individuals:
@@ -106,7 +107,7 @@ def add_variants_dataset_handler(request, project_guid):
                     ))))
 
         inactivate_sample_guids = _update_variant_samples(
-            matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type)
+            matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
@@ -229,7 +230,7 @@ def update_individual_igv_sample(request, individual_guid):
 
 
 def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,
-                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
     if not loaded_date:
         loaded_date = timezone.now()
     updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
@@ -248,6 +249,7 @@ def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsea
         individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
         is_active=True,
         dataset_type=dataset_type,
+        sample_type=sample_type,
     ).exclude(id__in=updated_samples)
 
     inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)

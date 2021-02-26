@@ -26,7 +26,7 @@ import rootReducer from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
 import { configureStore } from 'redux/utils/configureStore'
 
-import 'semantic-ui/dist/semantic.min.css'
+import 'semantic-ui-css/semantic.min.css'
 import 'shared/global.css'
 
 const BaseHome = ({ user, ...props }) => (

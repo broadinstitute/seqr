@@ -33,11 +33,11 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
-const UploadPedigreeField = React.memo(() =>
-  <div className="field">
+const UploadPedigreeField = React.memo(({ error }) =>
+  <div className={`${error ? 'error' : ''} field`}>
     {/* eslint-disable-next-line jsx-a11y/label-has-for */}
     <label key="uploadLabel">Upload Pedigree Data</label>
-    <Segment key="uploadForm">
+    <Segment key="uploadForm" color={error ? 'red' : null}>
       <BulkUploadForm
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
@@ -50,8 +50,13 @@ const UploadPedigreeField = React.memo(() =>
   </div>,
 )
 
+UploadPedigreeField.propTypes = {
+  error: PropTypes.bool,
+}
+
 const UPLOAD_PEDIGREE_FIELD = {
   name: FILE_FIELD_NAME,
+  validate: validators.required,
   component: UploadPedigreeField,
 }
 
@@ -62,7 +67,17 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
-const FORM_FIELDS = [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD, GENOME_VERSION_FIELD, AGREE_CHECKBOX]
+const DATA_BUCK_FIELD = {
+  name: 'dataPath',
+  label: 'Path to the Joint Called VCF',
+  labelHelp: 'File path for a joint called VCF available in the workspace files. If The VCF is split, provide the path to the directory containing the split VCF',
+  placeholder: '/path-under-Files-of-the-workspace',
+  validate: validators.required,
+}
+
+const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
+
+const FORM_FIELDS = [PROJECT_DESC_FIELD, DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX]
 
 const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
@@ -89,10 +104,17 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
       confirmCloseIfNotSaved
       closeOnSuccess
       showErrorPanel
-      liveValidate
       size="small"
       fields={FORM_FIELDS}
     />
+    <p>
+      Need help? please submit &nbsp;
+      <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
+      , &nbsp; or &nbsp;
+      <a href="mailto:seqr@broadinstitute.org" target="_blank">
+        Email Us
+      </a>
+    </p>
   </div>,
 )
 

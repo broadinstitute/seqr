@@ -203,11 +203,8 @@ class TerraApiUtilsCase(TestCase):
 
     @responses.activate
     @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
-    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.terra_api_utils.time')
-    def test_add_service_account(self, mock_time, mock_redis):
-        mock_redis.return_value.get.return_value = None
-
+    def test_add_service_account(self, mock_time):
         user = User.objects.get(username='test_user')
         responses.add(responses.POST, GOOGLE_API_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
         mock_time.time.return_value = AUTH_EXTRA_DATA['auth_time'] + 10

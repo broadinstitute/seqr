@@ -185,7 +185,10 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_WORKSPACE_NAME1,
@@ -203,7 +206,10 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": False
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME,
@@ -221,7 +227,10 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME2,
@@ -233,7 +242,10 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         }
-    }
+    },
+    'workspace': {
+        'bucketName': 'test_bucket'
+    },
 }
 ]
 
@@ -252,12 +264,17 @@ def get_ws_acl_side_effect(user, workspace_namespace, workspace_name):
     return wss[0]['acl'] if wss else {}
 
 
-def get_ws_al_side_effect(user, workspace_namespace, workspace_name):
+def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields=None):
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    return {'accessLevel': acl[user.email]['accessLevel'], 'canShare': acl[user.email]['canShare']}\
-        if user.email in acl.keys() else {}
+    access_level = {
+        'accessLevel': acl[user.email]['accessLevel'],
+        'canShare': acl[user.email]['canShare'],
+    } if user.email in acl.keys() else {}
+    if meta_fields and 'workspace.bucketName' in meta_fields:
+        access_level['workspace'] = {'bucketName': wss[0]['workspace']['bucketName']}
+    return access_level
 
 
 def get_workspaces_side_effect(user):
@@ -641,7 +658,7 @@ PARSED_VARIANTS = [
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             }
         },
         'genomeVersion': '37',
@@ -687,19 +704,19 @@ PARSED_VARIANTS = [
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000005_hg00732': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000006_hg00733': {
                 'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             },
             'I000007_na20870': {
                 'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None,
+                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
             }
         },
         'genotypeFilters': '',
@@ -746,11 +763,12 @@ PARSED_SV_VARIANT = {
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33,
+            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33, 'sampleType': 'WES',
         },
         'I000005_hg00732': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
+            'sampleType': None,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},

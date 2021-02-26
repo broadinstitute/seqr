@@ -162,8 +162,9 @@ def list_anvil_workspaces(user):
     return r
 
 
-def user_get_workspace_access_level(user, workspace_namespace, workspace_name):
-    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare".format(workspace_namespace, workspace_name)
+def user_get_workspace_access_level(user, workspace_namespace, workspace_name, meta_fields=None):
+    fields = ',{}'.format(','.join(meta_fields)) if meta_fields else ''
+    path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare{2}".format(workspace_namespace, workspace_name, fields)
 
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)

@@ -13,6 +13,7 @@ from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_load_data_email
+from seqr.utils.file_utils import does_file_exist
 from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ def create_project_from_workspace(request, namespace, name):
 
     """
     # Validate that the current user has logged in through google and has sufficient permissions
-    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
+    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
 
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
@@ -60,7 +61,7 @@ def create_project_from_workspace(request, namespace, name):
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
 
-    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId'] if not request_json.get(field)]
+    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId', 'dataPath'] if not request_json.get(field)]
     if missing_fields:
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
@@ -78,6 +79,14 @@ def create_project_from_workspace(request, namespace, name):
 
     # Add the seqr service account to the corresponding AnVIL workspace
     add_service_account(request.user, namespace, name)
+
+    # Validate the data path
+    bucket_name = workspace_meta['workspace']['bucketName']
+    slash = '' if request_json['dataPath'].startswith('/') else '/'
+    data_path = 'gs://{bucket}{slash}{path}'.format(bucket=bucket_name, slash=slash, path=request_json['dataPath'])
+    if not does_file_exist(data_path):
+        error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
+        return create_json_response({'error': error}, status=400, reason=error)
 
     # Create a new Project in seqr
     project_args = {
@@ -98,7 +107,7 @@ def create_project_from_workspace(request, namespace, name):
 
     # Send an email to all seqr data managers
     try:
-        send_load_data_email(project, individual_ids_tsv)
+        send_load_data_email(project, individual_ids_tsv, data_path)
     except Exception as ee:
         message = 'Exception while sending email to user {}. {}'.format(request.user, str(ee))
         logger.error(message)
