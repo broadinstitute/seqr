@@ -27,18 +27,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         samples = (IgvSample.objects.filter(
-            individual__family__project__name__in=args,
-        ) if args else IgvSample.objects.all()).prefetch_related('individual', 'individual__family__project')
+            individual__family__project__name__in=args
+        ) if args else IgvSample.objects.all()).filter(
+            file_path__startswith='gs://'
+        ).prefetch_related('individual', 'individual__family__project')
 
         missing_counter = collections.defaultdict(int)
         for sample in tqdm.tqdm(samples, unit=" samples"):
-            if sample.file_path and sample.file_path.startswith("gs://") and not hl.hadoop_is_file(sample.file_path):
+            if not hl.hadoop_is_file(sample.file_path):
                 individual_id = sample.individual.individual_id
                 project = sample.individual.family.project.name
                 missing_counter[project] += 1
                 logger.info('Individual: {}  file not found: {}'.format(individual_id, sample.file_path))
                 if not options.get('dry_run'):
-                    sample.file_path = ""  # TODO is it better to just delete the sample record?
+                    sample.file_path = ""
                     sample.save()
 
         logger.info('---- DONE ----')
