@@ -359,7 +359,7 @@ if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0]
     if not SERVICE_ACCOUNT_FOR_ANVIL:
-        raise Exception('Login Google service account with command "$ gcloud auth activate-service-account" before running seqr')
+        raise Exception('Error starting seqr - gcloud auth is not properly configured')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
