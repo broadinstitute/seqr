@@ -29,8 +29,6 @@ class Command(BaseCommand):
             file_path__startswith='gs://'
         ).prefetch_related('individual', 'individual__family__project')
 
-        hl.init(log="/dev/null")
-
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
         for sample in tqdm.tqdm(samples, unit=" samples"):
