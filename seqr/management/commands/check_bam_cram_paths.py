@@ -33,6 +33,7 @@ class Command(BaseCommand):
         ).prefetch_related('individual', 'individual__family__project')
 
         missing_counter = collections.defaultdict(int)
+        guids_of_samples_with_missing_file = set()
         for sample in tqdm.tqdm(samples, unit=" samples"):
             if not hl.hadoop_is_file(sample.file_path):
                 individual_id = sample.individual.individual_id
@@ -40,8 +41,10 @@ class Command(BaseCommand):
                 missing_counter[project] += 1
                 logger.info('Individual: {}  file not found: {}'.format(individual_id, sample.file_path))
                 if not options.get('dry_run'):
-                    sample.file_path = ""
-                    sample.save()
+                    guids_of_samples_with_missing_file.add(sample.guid)
+
+        if len(guids_of_samples_with_missing_file) > 0:
+            IgvSample.objects.filter(guid__in=guids_of_samples_with_missing_file).update(file_path='')
 
         logger.info('---- DONE ----')
         logger.info('Checked {} samples'.format(len(samples)))
