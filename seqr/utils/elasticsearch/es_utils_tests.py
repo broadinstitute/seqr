@@ -1215,6 +1215,13 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
+        # test does not re-fetch once all loaded
+        urllib3_responses.reset()
+        mock_max_variants.__int__.return_value = 1
+        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
+        self.assertEqual(len(variants), 5)
+        self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
+
     @urllib3_responses.activate
     def test_filtered_get_es_variants(self):
         setup_responses()
