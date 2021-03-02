@@ -16,6 +16,7 @@ import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
   DATASET_TYPE_SV_CALLS,
+  ANVIL_URL,
 } from 'shared/utils/constants'
 import {
   getAnalysisStatusCounts,
@@ -206,6 +207,11 @@ const ProjectOverview = React.memo((
         )}
       </Grid.Column>
       <Grid.Column width={6}>
+        {project.workspaceName && user.isAnvil && <DetailSection title="AnVIL Workspace" content={
+          <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank">
+            {project.workspaceName}
+          </a>}
+        />}
         <DetailSection
           title="Analysis Status"
           content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}
