@@ -10,7 +10,12 @@ class CheckBamCramPathsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     def setUp(self):
-        IgvSample.objects.update(file_path='gs://missing-bucket/missing_file.cram')
+        existing_sample = IgvSample.objects.first()
+        IgvSample.objects.create(
+            individual=existing_sample.individual,
+            sample_type=IgvSample.SAMPLE_TYPE_GCNV,
+            file_path='gs://missing-bucket/missing_file',
+        )
 
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
     def test_command_with_project(self, mock_logger):
@@ -27,10 +32,10 @@ class CheckBamCramPathsTest(TestCase):
 
     def _check_results(self, mock_logger):
         self.assertEqual(IgvSample.objects.filter(file_path='').count(), 1)
-        self.assertEqual(IgvSample.objects.count(), 1)
+        self.assertEqual(IgvSample.objects.count(), 2)
 
         calls = [
-            mock.call('Individual: NA19675_1  file not found: gs://missing-bucket/missing_file.cram'),
+            mock.call('Individual: NA19675_1  file not found: gs://missing-bucket/missing_file'),
             mock.call('---- DONE ----'),
             mock.call('Checked 1 samples'),
             mock.call('1 files not found:'),
