@@ -23,4 +23,5 @@ tqdm==4.42.1                     # convenient way to create progress bar for lon
 whitenoise==5.2.0                # simplified static file handling. Behind a major version due to missing Python 2 support
 
 wheel==0.36.2			 # needed for installing hail/pyspark
+pypandoc==1.5			 # needed for installing hail/pyspark
 hail==0.2.62                     # provides convenient apis for working with files in google cloud storage
