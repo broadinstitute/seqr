@@ -18,11 +18,11 @@ from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
+USERNAME = 'test_user_collaborator'
 USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
 
 class UsersAPITest(object):
-    EDITABLE_USERNAME = None
-    UNEDITABLE_USERNAME = None
+    USERNAME = USERNAME
 
     @mock.patch('seqr.views.apis.users_api.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
@@ -132,12 +132,16 @@ class UsersAPITest(object):
         mock_send_mail.assert_not_called()
         mock_logger.info.assert_not_called()
 
-    def _test_update_user(self, update_url, username, edited_index_offet=1, can_edit=True):
+    def _test_update_user(self, username, can_edit=True, check_access=True):
+        update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, username])
+        if check_access:
+            self.check_manager_login(update_url)
+
         response = self.client.post(update_url, content_type='application/json', data=json.dumps(
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
-        edited_collab = collaborators[len(self.COLLABORATOR_NAMES) - edited_index_offet]
+        edited_collab = collaborators[len(self.COLLABORATOR_NAMES) - 1]
         self.assertEqual(edited_collab['username'], username)
         self.assertEqual(edited_collab['displayName'], 'Edited Collaborator')
         self.assertFalse(edited_collab['isSuperuser'])
@@ -145,39 +149,25 @@ class UsersAPITest(object):
         self.assertEqual(edited_collab['hasEditPermissions'], can_edit)
 
     def test_update_project_collaborator(self):
-        username = self.UNEDITABLE_USERNAME or self.EDITABLE_USERNAME
-        update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, username])
-        self.check_manager_login(update_url)
+        self._test_update_user(self.USERNAME)
 
-        self._test_update_user(update_url, username, can_edit=False if self.UNEDITABLE_USERNAME else True)
 
-        if self.EDITABLE_USERNAME and self.UNEDITABLE_USERNAME:
-            update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, self.EDITABLE_USERNAME])
-            self._test_update_user(update_url, self.EDITABLE_USERNAME, edited_index_offet=2)
+    def _test_delete_user(self, username, check_access=True, num_removed=1):
+        delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
+        if check_access:
+            self.check_manager_login(delete_url)
+
+        response = self.client.post(delete_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
+        self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES) - num_removed)
+
+        # check that user still exists
+        self.assertEqual(User.objects.filter(username=username).count(), 1)
 
     def test_delete_project_collaborator(self):
-        username = self.UNEDITABLE_USERNAME or self.EDITABLE_USERNAME
-        delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
-        self.check_manager_login(delete_url)
-
-        if self.UNEDITABLE_USERNAME:
-            response = self.client.post(delete_url, content_type='application/json')
-
-            self.assertEqual(response.status_code, 200)
-            collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-            self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
-
-            delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, self.EDITABLE_USERNAME])
-
-        if self.EDITABLE_USERNAME:
-            response = self.client.post(delete_url, content_type='application/json')
-
-            self.assertEqual(response.status_code, 200)
-            collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-            self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES) - 1)
-
-            # check that user still exists
-            self.assertEqual(User.objects.filter(username=username).count(), 1)
+        self._test_delete_user(self.USERNAME)
 
     def test_set_password(self):
         username = 'test_new_user'
@@ -283,7 +273,6 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
-    EDITABLE_USERNAME = 'test_user_collaborator'
 
 def assert_has_anvil_calls(self):
     calls = [
@@ -299,7 +288,6 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
     LOCAL_COLLABORATOR_NAMES = set()
-    UNEDITABLE_USERNAME = 'test_user_collaborator'
 
     def test_get_all_collaborator_options(self):
         super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
@@ -321,12 +309,14 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
 
     def test_update_project_collaborator(self):
-        super(AnvilUsersAPITest, self).test_update_project_collaborator()
+        self._test_update_user(USERNAME, can_edit=False)
+
         self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
 
     def test_delete_project_collaborator(self):
-        super(AnvilUsersAPITest, self).test_delete_project_collaborator()
+        self._test_delete_user(USERNAME, num_removed=0)
+
         self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
 
@@ -351,8 +341,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_local_user'}
     COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
-    EDITABLE_USERNAME = 'test_local_user'
-    UNEDITABLE_USERNAME = 'test_user_collaborator'
+    USERNAME = 'test_local_user'
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
@@ -370,11 +359,15 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
 
     def test_update_project_collaborator(self):
         super(MixUsersAPITest, self).test_update_project_collaborator()
+        self._test_update_user(USERNAME, can_edit=False, check_access=False)
+
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
     def test_delete_project_collaborator(self):
         super(MixUsersAPITest, self).test_delete_project_collaborator()
+        self._test_delete_user(USERNAME, check_access=False)
+
         self.assertEqual(self.mock_get_ws_acl.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
