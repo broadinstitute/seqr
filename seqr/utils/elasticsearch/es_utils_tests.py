@@ -1163,8 +1163,9 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
 
+    @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
     @urllib3_responses.activate
-    def test_get_es_variants(self):
+    def test_get_es_variants(self, mock_max_variants):
         setup_responses()
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1203,6 +1204,12 @@ class EsUtilsTest(TestCase):
 
         # test load_all
         setup_responses()
+        mock_max_variants.__int__.return_value = 5
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model, page=1, num_results=2, load_all=True)
+        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
+
+        mock_max_variants.__int__.return_value = 100
         variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
