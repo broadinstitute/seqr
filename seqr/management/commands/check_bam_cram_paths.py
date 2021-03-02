@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import IgvSample
-from seqr.views.utils.dataset_utils import validate_alignment_dataset_path
 
 import collections
 import hail as hl
@@ -9,8 +8,6 @@ import logging
 import tqdm
 
 logger = logging.getLogger(__name__)
-
-hl.init(log="/dev/null")
 
 
 class Command(BaseCommand):
@@ -31,6 +28,8 @@ class Command(BaseCommand):
         ) if args else IgvSample.objects.all()).filter(
             file_path__startswith='gs://'
         ).prefetch_related('individual', 'individual__family__project')
+
+        hl.init(log="/dev/null")
 
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
