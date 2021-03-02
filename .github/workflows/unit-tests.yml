@@ -57,6 +57,7 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install -r requirements.txt --upgrade
         pip install -r requirements-dev.txt
+        curl -sSL https://broad.io/install-gcs-connector | python
     - name: Run coverage tests
       run: |
         coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
