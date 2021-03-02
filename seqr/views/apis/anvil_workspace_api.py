@@ -77,8 +77,7 @@ def create_project_from_workspace(request, namespace, name):
 
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
-    slash = '' if request_json['dataPath'].startswith('/') else '/'
-    data_path = 'gs://{bucket}{slash}{path}'.format(bucket=bucket_name, slash=slash, path=request_json['dataPath'])
+    data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
     if not does_file_exist(data_path):
         error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
         return create_json_response({'error': error}, status=400, reason=error)
