@@ -6,11 +6,7 @@ from django.test import TestCase
 from seqr.models import IgvSample
 
 
-def hadoop_is_file_mock(path: str) -> bool:
-    return False
-
-
-@mock.patch('hail.hadoop_is_file', hadoop_is_file_mock)
+@mock.patch('hail.hadoop_is_file', lambda path: False)
 class CheckBamCramPathsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
