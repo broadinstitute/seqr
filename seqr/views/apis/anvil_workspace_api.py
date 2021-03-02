@@ -3,6 +3,7 @@
 import logging
 import json
 
+from django.contrib.auth.models import User
 from django.shortcuts import redirect
 
 from seqr.models import Project, CAN_EDIT
@@ -12,9 +13,10 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
-from seqr.utils.communication_utils import send_load_data_email
+from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import does_file_exist
 from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
+from settings import BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +105,39 @@ def create_project_from_workspace(request, namespace, name):
     _, updated_individuals = add_or_update_individuals_and_families(
         project, individual_records=pedigree_records, user=request.user
     )
-    individual_ids_tsv = '\n'.join([individual.individual_id for individual in updated_individuals])
 
     # Send an email to all seqr data managers
     try:
-        send_load_data_email(project, individual_ids_tsv, data_path)
+        _send_load_data_email(project, updated_individuals, data_path, request.user)
     except Exception as ee:
         message = 'Exception while sending email to user {}. {}'.format(request.user, str(ee))
         logger.error(message)
 
     return create_json_response({'projectGuid':  project.guid})
+
+
+def _send_load_data_email(project, updated_individuals, data_path, user):
+    email_content = """
+        {user} requested to load data from AnVIL workspace "{namespace}/{name}" at "{path}" to seqr project
+        <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
+
+        The sample IDs to load are attached.    
+        """.format(
+        user=user.email,
+        path=data_path,
+        namespace=project.workspace_namespace,
+        name=project.workspace_name,
+        base_url=BASE_URL,
+        guid=project.guid,
+        project_name=project.name,
+    )
+
+    send_html_email(
+        email_content,
+        subject='AnVIL data loading request',
+        to=[dm.email for dm in User.objects.filter(is_staff=True)],
+        attachments=[(
+            '{}_sample_ids.tsv'.format(project.guid),
+            '\n'.join([individual.individual_id for individual in updated_individuals])
+        )]
+    )

@@ -99,7 +99,7 @@ class PedigreeInfoUtilsTest(TestCase):
 
     @mock.patch('seqr.views.utils.pedigree_info_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
-    @mock.patch('seqr.views.utils.pedigree_info_utils.EmailMultiAlternatives')
+    @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     def test_parse_sample_manifest(self, mock_email, mock_pm_group):
         header_1 = [
             'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
