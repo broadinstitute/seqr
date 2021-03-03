@@ -156,6 +156,8 @@ TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
 
+TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
+
 ANVIL_WORKSPACES = [{
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
     'workspace_name': TEST_WORKSPACE_NAME,
@@ -171,6 +173,12 @@ ANVIL_WORKSPACES = [{
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
+            "canCompute": True
+        },
+        TEST_SERVICE_ACCOUNT: {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
             "canCompute": True
         },
         'test_user_not_registered@test.com': {
@@ -300,6 +308,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
@@ -822,5 +833,3 @@ GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-
-TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'

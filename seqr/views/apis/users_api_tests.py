@@ -298,7 +298,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_create_project_collaborator(self, *args):
+    def test_create_project_collaborator(self):
         # Creating project collaborators is only allowed in non-anvil projects, so it always fails for the AnVIL only case
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)
