@@ -3,6 +3,7 @@
 import logging
 import json
 
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 
@@ -15,13 +16,14 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import does_file_exist
-from seqr.views.utils.permissions_utils import google_auth_required, check_workspace_perm
-from settings import BASE_URL
+from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
+anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
-@google_auth_required
+@anvil_auth_required
 def anvil_workspace_page(request, namespace, name):
     """
     This view will be requested from AnVIL, it validates the workspace and project before loading data.
@@ -41,7 +43,7 @@ def anvil_workspace_page(request, namespace, name):
         return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
 
-@google_auth_required
+@anvil_auth_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
