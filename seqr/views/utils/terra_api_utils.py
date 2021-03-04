@@ -55,7 +55,7 @@ def anvil_enabled():
 
 
 def is_google_authenticated(user):
-    bool(_safe_get_social(user))
+    return bool(_safe_get_social(user))
 
 
 def remove_token(user):
