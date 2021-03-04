@@ -153,6 +153,7 @@ class TerraApiUtilsCallsCase(TestCase):
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status=401)
         r = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
+        self.assertDictEqual(r, {})
 
         mock_logger.warning.assert_called_with(
             'Error: called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status: 401 with a reason: Unauthorized')
