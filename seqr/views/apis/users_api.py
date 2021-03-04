@@ -6,6 +6,7 @@ from anymail.exceptions import AnymailError
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
+from django.core.exceptions import PermissionDenied
 
 from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
@@ -107,6 +108,9 @@ def update_policies(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    if project.workspace_name:
+        raise PermissionDenied(
+            'Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace')
 
     request_json = json.loads(request.body)
     if not request_json.get('email'):

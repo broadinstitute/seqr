@@ -222,7 +222,7 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
     try:
         return _user_anvil_call('get', path, user).get('acl', {})
     # Exceptions are handled to return an empty result for the users who have no permission to access the acl
-    except (TerraNotFoundException, PermissionDenied) as et:
+    except (TerraAPIException, PermissionDenied) as et:
         logger.warning(str(et))
         return {}
 
