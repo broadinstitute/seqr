@@ -31,3 +31,9 @@ class TransferFamiliesTest(TestCase):
 
         self.assertEqual(SavedVariant.objects.filter(family__project__guid='R0003_test').count(), 0)
         self.assertEqual(VariantTag.objects.filter(saved_variants__family__project__guid='R0003_test').count(), 0)
+
+        # Test only demo projects can be deleted
+        mock_input.side_effect = 'y'
+        call_command('clear_project_tags', '1kg')
+        mock_input.assert_called_with('Are you sure you want to clear the tags for the following 0 projects (y/n): \n')
+        mock_logger.assert_called_with('Deleted 0 entities:')
