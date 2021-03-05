@@ -120,7 +120,7 @@ def create_project_from_workspace(request, namespace, name):
 def _send_load_data_email(project, updated_individuals, data_path, user):
     email_content = """
         {user} requested to load data from AnVIL workspace "{namespace}/{name}" at "{path}" to seqr project
-        <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
+        <a href="{base_url}project/{guid}/project_page">{project_name}</a> (guid: {guid})
 
         The sample IDs to load are attached.    
         """.format(

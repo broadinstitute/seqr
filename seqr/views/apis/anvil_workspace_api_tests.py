@@ -71,7 +71,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
