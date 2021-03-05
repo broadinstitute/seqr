@@ -2,6 +2,7 @@
 
 import logging
 import json
+import time
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
@@ -11,7 +12,7 @@ from seqr.models import Project, CAN_EDIT
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
-from seqr.views.utils.terra_api_utils import add_service_account
+from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
@@ -75,7 +76,9 @@ def create_project_from_workspace(request, namespace, name):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Add the seqr service account to the corresponding AnVIL workspace
-    add_service_account(request.user, namespace, name)
+    added_account_to_workspace = add_service_account(request.user, namespace, name)
+    if added_account_to_workspace:
+        _wait_for_service_account_access(request.user,namespace, name)
 
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
@@ -116,6 +119,13 @@ def create_project_from_workspace(request, namespace, name):
 
     return create_json_response({'projectGuid':  project.guid})
 
+
+def _wait_for_service_account_access(user, namespace, name):
+    for i in range(2):
+        time.sleep(3)
+        if has_service_account_access(user, namespace, name):
+            return True
+    raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
 
 def _send_load_data_email(project, updated_individuals, data_path, user):
     email_content = """

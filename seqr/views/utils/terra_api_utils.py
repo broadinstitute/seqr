@@ -238,10 +238,8 @@ def add_service_account(user, workspace_namespace, workspace_name):
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
     :return: Success: True, Fail: False
     """
-    old_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
-    service_account = old_acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
-    if service_account and not service_account['pending']:
-        return True
+    if has_service_account_access(user, workspace_namespace, workspace_name):
+        return False
     acl = [
              {
                "email": SERVICE_ACCOUNT_FOR_ANVIL,
@@ -256,3 +254,9 @@ def add_service_account(user, workspace_namespace, workspace_name):
         message = 'Failed to grant seqr service account access to the workspace {}/{}'.format(workspace_namespace, workspace_name)
         raise TerraAPIException(message, 400)
     return True
+
+
+def has_service_account_access(user, workspace_namespace, workspace_name):
+    acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
+    service_account = acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
+    return bool(service_account and (not service_account['pending']))
