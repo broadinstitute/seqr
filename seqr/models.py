@@ -126,13 +126,13 @@ class ModelWithGUID(models.Model):
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         log_model_bulk_update(logger, queryset, user, 'delete')
-        queryset.delete()
+        return queryset.delete()
 
 
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    privacy_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
-    tos_version = models.DecimalField(max_digits=4, decimal_places=2, null=True)
+    privacy_version = models.FloatField(null=True)
+    tos_version = models.FloatField(null=True)
 
 
 class Project(ModelWithGUID):

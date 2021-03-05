@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import mock
 
@@ -20,12 +21,14 @@ LOAD_SAMPLE_DATA = [
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
 REQUEST_BODY = {
-            'genomeVersion': '38',
-            'uploadedFileId': 'test_temp_file_id',
-            'description': 'A test project',
-            'agreeSeqrAccess': True,
-            'dataPath': '/test_path'
-        }
+    'genomeVersion': '38',
+    'uploadedFileId': 'test_temp_file_id',
+    'description': 'A test project',
+    'agreeSeqrAccess': True,
+    'dataPath': '/test_path'
+}
+REQUEST_BODY_NO_SLASH_DATA_PATH = deepcopy(REQUEST_BODY)
+REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -68,11 +71,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
 
-    @mock.patch('seqr.utils.communication_utils.BASE_URL', 'http://testserver')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
-    @mock.patch('seqr.utils.communication_utils.EmailMessage')
+    @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     def test_create_project_from_workspace(self, mock_file_exist, mock_email, mock_add_service_account,
                                            mock_load_file, mock_api_logger, mock_utils_logger):
@@ -125,10 +128,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test bad data path
         mock_add_service_account.reset_mock(side_effect=True)
         mock_file_exist.return_value = False
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_NO_SLASH_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path /test_path is not found.')
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path')
+        self.assertEqual(response.json()['error'], 'Data file or path test_no_slash_path is not found.')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path')
 
         # Test valid operation
         mock_file_exist.return_value = True
@@ -141,17 +144,25 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
             ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         mock_add_service_account.assert_called_with(user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path')
+
+        email_body = """
+        test_user_manager@test.com requested to load data from AnVIL workspace "{namespace}/{name}" at "gs://test_bucket/test_path" to seqr project
+        {{project_name}} (guid: {guid})
+
+        The sample IDs to load are attached.    
+        """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)
         mock_email.assert_called_with(
             subject='AnVIL data loading request',
-            body="""
-    Data from AnVIL workspace "{namespace}/{name}" at "gs://test_bucket/test_path" needs to be loaded to seqr project
-    <a href="http://testserver/project/{guid}/project_page">{name}</a> (guid: {guid})
-
-    The sample IDs to load are attached.    
-    """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid),
+            body=email_body.format(project_name=TEST_NO_PROJECT_WORKSPACE_NAME),
             to=['test_superuser@test.com', 'test_data_manager@test.com'],
             attachments=[('{}_sample_ids.tsv'.format(project.guid), 'NA19675\nNA19678\nHG00735')]
         )
+        html_project_name = '<a href="http://testserver/project/{guid}/project_page">{name}</a>'.format(
+                name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)
+        mock_email.return_value.attach_alternative.assert_called_with(
+            email_body.format(project_name=html_project_name), 'text/html')
+        mock_email.return_value.send.assert_called()
 
         # Test project exist
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])

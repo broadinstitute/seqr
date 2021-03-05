@@ -6,10 +6,9 @@ import logging
 import tempfile
 import openpyxl as xl
 from django.contrib.auth.models import User
-from django.core.mail.message import EmailMultiAlternatives
-from django.utils.html import strip_tags
 
 from settings import PM_USER_GROUP
+from seqr.utils.communication_utils import send_html_email
 from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.models import Individual
 
@@ -390,17 +389,15 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb_out.save(temp_original_file.name)
     temp_original_file.seek(0)
 
-    email_message = EmailMultiAlternatives(
+    send_html_email(
+        email_body,
         subject=kit_id + " Merged Sample Pedigree File",
-        body=strip_tags(email_body),
         to=recipients,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         ],
     )
-    email_message.attach_alternative(email_body, 'text/html')
-    email_message.send()
 
 
 def _parse_datstat_export_format(rows):
