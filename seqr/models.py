@@ -126,7 +126,7 @@ class ModelWithGUID(models.Model):
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         log_model_bulk_update(logger, queryset, user, 'delete')
-        queryset.delete()
+        return queryset.delete()
 
 
 class UserPolicy(models.Model):
