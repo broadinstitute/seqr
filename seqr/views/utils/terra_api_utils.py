@@ -55,20 +55,10 @@ def anvil_enabled():
 
 
 def is_google_authenticated(user):
-    if not google_auth_enabled() or not hasattr(user, 'social_auth'):
-        return False
-
-    social = _safe_get_social(user)
-    if social and social.extra_data:
-        return social.extra_data.get('access_token', '') != ''
-
-    return False
+    return bool(_safe_get_social(user))
 
 
 def remove_token(user):
-    if not google_auth_enabled():
-        return
-
     social = _safe_get_social(user)
     if social and social.extra_data:
         social.extra_data.pop('access_token', None)
@@ -77,7 +67,14 @@ def remove_token(user):
 
 
 def is_anvil_authenticated(user):
-    return anvil_enabled() and is_google_authenticated(user)
+    if not anvil_enabled():
+        return False
+
+    social = _safe_get_social(user)
+    if social and social.extra_data:
+        return social.extra_data.get('access_token', '') != ''
+
+    return False
 
 
 def _get_call_args(path, headers=None, root_url=None):
@@ -91,6 +88,9 @@ def _get_call_args(path, headers=None, root_url=None):
 
 
 def _safe_get_social(user):
+    if not google_auth_enabled() or not hasattr(user, 'social_auth'):
+        return None
+
     social = user.social_auth.filter(provider=SOCIAL_AUTH_PROVIDER)
     return social.first() if social else None
 
