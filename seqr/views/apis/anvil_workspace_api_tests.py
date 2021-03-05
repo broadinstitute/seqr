@@ -1,8 +1,6 @@
 from copy import deepcopy
 import json
 import mock
-
-from django.contrib.auth.models import User
 from django.urls.base import reverse
 
 from seqr.models import Project

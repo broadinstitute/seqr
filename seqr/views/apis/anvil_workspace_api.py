@@ -121,7 +121,7 @@ def create_project_from_workspace(request, namespace, name):
 
 
 def _wait_for_service_account_access(user, namespace, name):
-    for i in range(2):
+    for _ in range(2):
         time.sleep(3)
         if has_service_account_access(user, namespace, name):
             return True
