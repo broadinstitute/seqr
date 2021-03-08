@@ -236,7 +236,7 @@ def add_service_account(user, workspace_namespace, workspace_name):
     :param user: the seqr user object
     :param workspace_namespace: namespace or billing project name of the workspace
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
-    :return: Success: True, Fail: False
+    :return: True if service account was added, False if it was already associated with the workspace
     """
     if has_service_account_access(user, workspace_namespace, workspace_name):
         return False
