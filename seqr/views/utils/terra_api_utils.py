@@ -104,35 +104,43 @@ def _get_social_access_token(user):
             social.refresh_token(strategy)
         except Exception as ee:
             logger.warning('Refresh token failed. {}'.format(str(ee)))
+            # TODO redirect to login on failure?
             raise TerraAPIException('Refresh token failed. {}'.format(str(ee)), 401)
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None, handle_errors=False):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, data=data, headers=headers)
 
+    exception = None
     if r.status_code == 404:
-        raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
+        exception = TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
                                      .format(user, method.upper(), path, r.reason))
     if r.status_code == 403:
-        raise PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
+        exception = PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
                                .format(user, method.upper(), path, r.reason))
 
     if r.status_code != 200:
-        raise TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
+        exception  = TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
             path, r.status_code, r.reason), r.status_code)
+
+    if exception:
+        if handle_errors:
+            logger.warning(str(exception))
+            return {}
+        raise exception
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
 
     return json.loads(r.text)
 
 
-def _user_anvil_call(method, path, user, data=None):
+def _user_anvil_call(method, path, user, data=None, handle_errors=False):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, user=user, data=data)
+    return anvil_call(method, path, access_token, user=user, data=data, handle_errors=handle_errors)
 
 
 def list_anvil_workspaces(user):
@@ -172,14 +180,11 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name, m
         logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
         return r
 
-    try:
-        r = _user_anvil_call('get', path, user)
     # Exceptions are handled to return an empty result for users who have no permission to access the workspace
-    except (TerraAPIException, PermissionDenied) as et:
-        logger.warning(str(et))
-        return {}
+    r = _user_anvil_call('get', path, user, handle_errors=True)
 
-    safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
+    if r:
+        safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
 
     return r
 
@@ -218,12 +223,8 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
 
     """
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-    try:
-        return _user_anvil_call('get', path, user).get('acl', {})
     # Exceptions are handled to return an empty result for the users who have no permission to access the acl
-    except (TerraAPIException, PermissionDenied) as et:
-        logger.warning(str(et))
-        return {}
+    return _user_anvil_call('get', path, user, handle_errors=True).get('acl', {})
 
 
 def add_service_account(user, workspace_namespace, workspace_name):
