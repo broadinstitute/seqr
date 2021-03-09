@@ -24,7 +24,7 @@ const PageHeader = React.memo(({ user }) =>
       user.isDataManager ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
       <Menu.Item key="user" position="right">
-        <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email) + (user.isAnvil ? '(AnVIL)' : '')}</b></p>
+        <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email)}</b></p>
       </Menu.Item>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ] : <Menu.Item as="a" href="/login" position="right">Log in</Menu.Item>}
