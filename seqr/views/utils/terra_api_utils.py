@@ -143,7 +143,7 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
         if handle_errors:
             logger.warning(str(exception))
             return {}
-        raise exception
+        raise exception  # pylint: disable=raising-bad-type
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
 
