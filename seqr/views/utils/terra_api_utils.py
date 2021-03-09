@@ -111,12 +111,12 @@ def _get_social_access_token(user):
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
-        logger.info('Refreshing token for {}'.format(user))
+        logger.info('Refreshing access token', extra={'user': user})
         try:
             social.refresh_token(strategy)
         except Exception as ee:
             logger.warning(traceback.format_exc())
-            logger.warning('Refresh token failed. {}'.format(str(ee)))
+            logger.warning('Refresh token failed. {}'.format(str(ee)), extra={'user': user})
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
