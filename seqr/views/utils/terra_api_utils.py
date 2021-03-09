@@ -3,6 +3,7 @@
 import json
 import logging
 import time
+import traceback
 import requests
 
 from urllib.parse import urljoin
@@ -44,6 +45,16 @@ class TerraNotFoundException(TerraAPIException):
         :param message: error message
         """
         super(TerraNotFoundException, self).__init__(message, 404)
+
+
+class TerraRefreshTokenFailedException(TerraAPIException):
+    def __init__(self, message):
+        """
+        Custom Exception to capture refresh token failures. Maps to 401 error to redirect user to login
+
+        :param message: error message
+        """
+        super(TerraNotFoundException, self).__init__(message, 401)
 
 
 def google_auth_enabled():
@@ -104,8 +115,8 @@ def _get_social_access_token(user):
             social.refresh_token(strategy)
         except Exception as ee:
             logger.warning('Refresh token failed. {}'.format(str(ee)))
-            # TODO redirect to login on failure?
-            raise TerraAPIException('Refresh token failed. {}'.format(str(ee)), 401)
+            logger.warning(traceback.format_exc())
+            raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
 
