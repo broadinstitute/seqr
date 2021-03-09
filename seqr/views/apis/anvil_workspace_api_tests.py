@@ -44,7 +44,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test the user needs sufficient workspace permissions
-        self.check_manager_login(url)
+        self.check_require_login(url)
+
+        self.login_collaborator()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
         mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
@@ -55,8 +59,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Requesting to load data for an existing project
         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        self.check_manager_login(url)
-
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/project/R0001_1kg/project_page')
@@ -90,7 +92,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Test the user needs sufficient workspace permissions
         self.check_manager_login(url)
-        mock_utils_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
+        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test missing required fields in the request body

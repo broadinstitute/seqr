@@ -54,7 +54,7 @@ class TerraRefreshTokenFailedException(TerraAPIException):
 
         :param message: error message
         """
-        super(TerraNotFoundException, self).__init__(message, 401)
+        super(TerraRefreshTokenFailedException, self).__init__(message, 401)
 
 
 def google_auth_enabled():
@@ -114,8 +114,8 @@ def _get_social_access_token(user):
         try:
             social.refresh_token(strategy)
         except Exception as ee:
-            logger.warning('Refresh token failed. {}'.format(str(ee)))
             logger.warning(traceback.format_exc())
+            logger.warning('Refresh token failed. {}'.format(str(ee)))
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
@@ -130,11 +130,11 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
     if r.status_code == 404:
         exception = TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
                                      .format(user, method.upper(), path, r.reason))
-    if r.status_code == 403:
+    elif r.status_code == 403:
         exception = PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
                                .format(user, method.upper(), path, r.reason))
 
-    if r.status_code != 200:
+    elif r.status_code != 200:
         exception  = TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
             path, r.status_code, r.reason), r.status_code)
 

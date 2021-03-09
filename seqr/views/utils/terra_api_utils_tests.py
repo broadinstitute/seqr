@@ -7,8 +7,9 @@ from django.contrib.auth.models import User
 from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, GOOGLE_TOKEN_RESULT,\
     GOOGLE_ACCESS_TOKEN_URL, TOKEN_AUTH_TIME, REGISTER_RESPONSE, TEST_SERVICE_ACCOUNT, TEST_OAUTH2_KEY
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
-    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, is_anvil_authenticated, \
-    is_google_authenticated, remove_token, add_service_account, has_service_account_access
+    anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, \
+    TerraRefreshTokenFailedException,  is_anvil_authenticated, is_google_authenticated, remove_token, \
+    add_service_account, has_service_account_access
 
 GET_WORKSPACE_PATH = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
@@ -130,13 +131,13 @@ class TerraApiUtilsCallsCase(TestCase):
         with mock.patch('seqr.views.utils.terra_api_utils.time.time') as mock_time:
             mock_time.return_value = AUTH_EXTRA_DATA['auth_time'] + 60*60 + 10
             responses.add(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status = 401)
-            with self.assertRaises(TerraAPIException) as te:
+            with self.assertRaises(TerraRefreshTokenFailedException) as te:
                 _ = list_anvil_workspaces(user)
             self.assertEqual(str(te.exception),
                 'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
             self.assertEqual(te.exception.status_code, 401)
             mock_logger.warning.assert_called_with('Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
-            self.assertEqual(mock_logger.warning.call_count, 1)
+            self.assertEqual(mock_logger.warning.call_count, 2)
 
             mock_logger.reset_mock()
             responses.replace(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)

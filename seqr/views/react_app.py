@@ -52,7 +52,7 @@ def render_app_html(request, additional_json=None, include_user=True):
     if include_user:
         initial_json['user'] = _get_json_for_initial_user(request.user)
     if additional_json:
-        initial_json.update(initial_json)
+        initial_json.update(additional_json)
 
     html = html.replace(
         "window.initialJSON=null",
