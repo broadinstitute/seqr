@@ -111,6 +111,7 @@ def _get_social_access_token(user):
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
+        logger.info('Refreshing token for {}'.format(user))
         try:
             social.refresh_token(strategy)
         except Exception as ee:

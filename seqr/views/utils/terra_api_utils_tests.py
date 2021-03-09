@@ -138,11 +138,15 @@ class TerraApiUtilsCallsCase(TestCase):
             self.assertEqual(te.exception.status_code, 401)
             mock_logger.warning.assert_called_with('Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token')
             self.assertEqual(mock_logger.warning.call_count, 2)
+            mock_logger.info.assert_called_with('Refreshing token for test_user')
+            self.assertEqual(mock_logger.info.call_count, 1)
 
             mock_logger.reset_mock()
             responses.replace(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
             list_anvil_workspaces(user)
             mock_logger.warning.assert_not_called()
+            mock_logger.info.assert_called_with('Refreshing token for test_user')
+            self.assertEqual(mock_logger.info.call_count, 1)
             self.assertEqual(mock_anvil_call.call_count, 1)
             self.assertEqual(mock_anvil_call.call_args.args[2], 'ya29.c.EXAMPLE')
 
