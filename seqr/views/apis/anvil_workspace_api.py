@@ -46,7 +46,7 @@ def anvil_workspace_page(request, namespace, name):
     try:
         check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
     except PermissionDenied:
-        return render_app_html(request)
+        return render_app_html(request, status=403)
     except TerraRefreshTokenFailedException:
         return redirect_to_login(request.get_full_path(), GOOGLE_LOGIN_REQUIRED_URL)
 

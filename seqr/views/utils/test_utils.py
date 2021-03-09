@@ -4,10 +4,12 @@ from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
 import mock
+import re
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
+INITIAL_JSON_REGEX = r'\(window\.initialJSON=(?P<initial_json>[^)]+)'
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
@@ -149,6 +151,11 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.super_user)
 
+    def get_initial_page_json(self, response):
+        content = response.content.decode('utf-8')
+        self.assertRegex(content, INITIAL_JSON_REGEX)
+        m = re.search(INITIAL_JSON_REGEX, content)
+        return json.loads(m.group('initial_json'))
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'

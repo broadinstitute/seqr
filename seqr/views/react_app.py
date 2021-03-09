@@ -41,7 +41,7 @@ def _get_json_for_initial_user(user):
 
     return user_json
 
-def render_app_html(request, additional_json=None, include_user=True):
+def render_app_html(request, additional_json=None, include_user=True, status=200):
     html = loader.render_to_string('app.html')
     ui_version = re.search('static/app-(.*)\.js', html).group(1)
     initial_json = {'meta':  {
@@ -63,4 +63,4 @@ def render_app_html(request, additional_json=None, include_user=True):
         html = re.sub(r'static/app(-.*)js', 'app.js', html)
         html = re.sub(r'<link\s+href="/static/app.*css"[^>]*>', '', html)
 
-    return HttpResponse(html, content_type="text/html")
+    return HttpResponse(html, content_type="text/html", status=status)
