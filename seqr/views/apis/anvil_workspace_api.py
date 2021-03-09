@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import redirect
 
 from seqr.models import Project, CAN_EDIT
+from seqr.views.react_app import render_app_html
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
@@ -17,7 +18,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import does_file_exist
-from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm
+from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, has_workspace_perm
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -35,14 +36,14 @@ def anvil_workspace_page(request, namespace, name):
     :return Redirect to a page depending on if the workspace permissions or project exists.
 
     """
-    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
-
     project = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if project:
         return redirect('/project/{}/project_page'.format(project.first().guid))
-    else:
+
+    if has_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True):
         return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
+    return render_app_html(request)
 
 @anvil_auth_required
 def create_project_from_workspace(request, namespace, name):

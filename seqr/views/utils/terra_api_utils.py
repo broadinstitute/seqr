@@ -174,9 +174,8 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name, m
 
     try:
         r = _user_anvil_call('get', path, user)
-    # TerraNotFoundException is handled to return empty perms to allow users to work with local projects when Terra is not available
-    # It should be taken out when local access is deprecated.
-    except TerraNotFoundException as et:
+    # Exceptions are handled to return an empty result for users who have no permission to access the workspace
+    except (TerraAPIException, PermissionDenied) as et:
         logger.warning(str(et))
         return {}
 

@@ -9,7 +9,7 @@ import PropTypes from 'prop-types'
 import BaseLayout from 'shared/components/page/BaseLayout'
 import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
-import LoadWorkspaceData from 'pages/AnvilWorkspace/LoadWorkspaceData'
+import LoadWorkspaceData, { WorkspaceAccessError } from 'pages/AnvilWorkspace/LoadWorkspaceData'
 import VariantSearch from 'pages/Search/VariantSearch'
 import DataManagement from 'pages/DataManagement/DataManagement'
 import Report from 'pages/Report/Report'
@@ -54,6 +54,7 @@ ReactDOM.render(
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
             <Route path="/create_project_from_workspace/:namespace/:name" component={LoadWorkspaceData} />
+            <Route path="/workspace/:namespace/:name" component={WorkspaceAccessError} />
             <Route path="/variant_search" component={VariantSearch} />
             <Route path="/data_management" component={DataManagement} />
             <Route path="/report" component={Report} />
