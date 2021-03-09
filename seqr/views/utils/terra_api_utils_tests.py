@@ -140,20 +140,20 @@ class TerraApiUtilsCallsCase(TestCase):
                 'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token',
                 extra={'user': user})
             self.assertEqual(mock_logger.warning.call_count, 2)
-            mock_logger.info.assert_called_with('Refreshing token for test_user', extra={'user': user})
+            mock_logger.info.assert_called_with('Refreshing access token', extra={'user': user})
             self.assertEqual(mock_logger.info.call_count, 1)
 
             mock_logger.reset_mock()
             responses.replace(responses.POST, GOOGLE_ACCESS_TOKEN_URL, status=200, body=GOOGLE_TOKEN_RESULT)
             list_anvil_workspaces(user)
             mock_logger.warning.assert_not_called()
-            mock_logger.info.assert_called_with('Refreshing token for test_user', extra={'user': user})
+            mock_logger.info.assert_called_with('Refreshing access token', extra={'user': user})
             self.assertEqual(mock_logger.info.call_count, 1)
             self.assertEqual(mock_anvil_call.call_count, 1)
             self.assertEqual(mock_anvil_call.call_args.args[2], 'ya29.c.EXAMPLE')
 
     @responses.activate
-    @mock.patch('seqr.views.utils.terra_api_utils.logger1')
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
     def test_get_workspace_acl(self, mock_logger):
         user = User.objects.get(username='test_user')
 
