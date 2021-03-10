@@ -1188,26 +1188,29 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
 def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
     q = None
     if intervals:
-        # interval_xpos_range = [
-        #     (get_xpos(interval['chrom'], interval['start']), get_xpos(interval['chrom'], interval['end']))
-        #     for interval in intervals
-        # ]
-        # range_filters = []
-        # for key in ['xpos', 'xstop']:
-        #     range_filters += [{
-        #         key: {
-        #             'gte': xstart,
-        #             'lte': xstop,
-        #         }
-        #     } for (xstart, xstop) in interval_xpos_range]
-        # q = _build_or_filter('range', range_filters)
-        # for (xstart, xstop) in interval_xpos_range:
-        #     q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
-        interval = intervals[0]
-        size = interval['end'] - interval['start']
-        offset = int(size*.2)
-        q = Q('range', xpos={'lte': get_xpos(interval['chrom'], min(interval['start'] + offset, MAX_POS)), 'gte': get_xpos(interval['chrom'], max(interval['start'] - offset, MIN_POS))}) & Q(
-            'range', xstop={'lte': get_xpos(interval['chrom'], min(interval['end'] + offset, MAX_POS)), 'gte':  get_xpos(interval['chrom'], max(interval['end'] - offset, MIN_POS))})
+        for interval in intervals:
+            if interval.get('offset'):
+                offset_pos = int((interval['end'] - interval['start']) * interval['offset'])
+                interval_q = Q(
+                    'range', xpos=_pos_offset_range_filter(interval['chrom'], interval['start'], offset_pos)) & Q(
+                    'range', xstop=_pos_offset_range_filter(interval['chrom'], interval['end'], offset_pos))
+            else:
+                xstart = get_xpos(interval['chrom'], interval['start'])
+                xstop = get_xpos(interval['chrom'], interval['end'])
+                range_filters = [{
+                    key: {
+                        'gte': xstart,
+                        'lte': xstop,
+                    }
+                } for key in ['xpos', 'xstop']]
+                interval_q = _build_or_filter('range', range_filters)
+                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+
+            if q:
+                q |= interval_q
+            else:
+                q = interval_q
+
         logger.info(q.to_dict())
 
     filters = [
@@ -1227,6 +1230,13 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
         return ~q
     else:
         return q
+
+
+def _pos_offset_range_filter(chrom, pos, offset):
+    return {
+        'lte': get_xpos(chrom, min(pos + offset, MAX_POS)),
+        'gte': get_xpos(chrom, max(pos - offset, MIN_POS)),
+    }
 
 
 def _pathogenicity_filter(pathogenicity):
