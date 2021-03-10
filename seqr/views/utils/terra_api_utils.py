@@ -46,6 +46,16 @@ class TerraNotFoundException(TerraAPIException):
         super(TerraNotFoundException, self).__init__(message, 404)
 
 
+class TerraRefreshTokenFailedException(TerraAPIException):
+    def __init__(self, message):
+        """
+        Custom Exception to capture refresh token failures. Maps to 401 error to redirect user to login
+
+        :param message: error message
+        """
+        super(TerraRefreshTokenFailedException, self).__init__(message, 401)
+
+
 def google_auth_enabled():
     return bool(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
 
@@ -100,39 +110,47 @@ def _get_social_access_token(user):
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
+        logger.info('Refreshing access token', extra={'user': user})
         try:
             social.refresh_token(strategy)
         except Exception as ee:
-            logger.warning('Refresh token failed. {}'.format(str(ee)))
-            raise TerraAPIException('Refresh token failed. {}'.format(str(ee)), 401)
+            logger.warning('Refresh token failed. {}'.format(str(ee)), extra={'user': user})
+            raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
 
-def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None):
+def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None, handle_errors=False):
     url, headers = _get_call_args(path, headers, root_url)
     request_func = getattr(requests, method)
     headers.update({'Authorization': 'Bearer {}'.format(access_token)})
     r = request_func(url, data=data, headers=headers)
 
+    exception = None
     if r.status_code == 404:
-        raise TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
+        exception = TerraNotFoundException('{} called Terra API: {} /{} got status 404 with reason: {}'
                                      .format(user, method.upper(), path, r.reason))
-    if r.status_code == 403:
-        raise PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
+    elif r.status_code == 403:
+        exception = PermissionDenied('{} got access denied (403) from Terra API: {} /{} with reason: {}'
                                .format(user, method.upper(), path, r.reason))
 
-    if r.status_code != 200:
-        raise TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
+    elif r.status_code != 200:
+        exception  = TerraAPIException('Error: called Terra API: {} /{} got status: {} with a reason: {}'.format(method.upper(),
             path, r.status_code, r.reason), r.status_code)
+
+    if exception:
+        if handle_errors:
+            logger.warning(str(exception))
+            return {}
+        raise exception  # pylint: disable=raising-bad-type
 
     logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
 
     return json.loads(r.text)
 
 
-def _user_anvil_call(method, path, user, data=None):
+def _user_anvil_call(method, path, user, data=None, handle_errors=False):
     access_token = _get_social_access_token(user)
-    return anvil_call(method, path, access_token, user=user, data=data)
+    return anvil_call(method, path, access_token, user=user, data=data, handle_errors=handle_errors)
 
 
 def list_anvil_workspaces(user):
@@ -172,15 +190,11 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name, m
         logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
         return r
 
-    try:
-        r = _user_anvil_call('get', path, user)
-    # TerraNotFoundException is handled to return empty perms to allow users to work with local projects when Terra is not available
-    # It should be taken out when local access is deprecated.
-    except TerraNotFoundException as et:
-        logger.warning(str(et))
-        return {}
+    # Exceptions are handled to return an empty result for users who have no permission to access the workspace
+    r = _user_anvil_call('get', path, user, handle_errors=True)
 
-    safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
+    if r:
+        safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
 
     return r
 
@@ -219,12 +233,8 @@ def user_get_workspace_acl(user, workspace_namespace, workspace_name):
 
     """
     path = "api/workspaces/{0}/{1}/acl".format(workspace_namespace, workspace_name)
-    try:
-        return _user_anvil_call('get', path, user).get('acl', {})
     # Exceptions are handled to return an empty result for the users who have no permission to access the acl
-    except (TerraAPIException, PermissionDenied) as et:
-        logger.warning(str(et))
-        return {}
+    return _user_anvil_call('get', path, user, handle_errors=True).get('acl', {})
 
 
 def add_service_account(user, workspace_namespace, workspace_name):
@@ -236,12 +246,10 @@ def add_service_account(user, workspace_namespace, workspace_name):
     :param user: the seqr user object
     :param workspace_namespace: namespace or billing project name of the workspace
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
-    :return: Success: True, Fail: False
+    :return: True if service account was added, False if it was already associated with the workspace
     """
-    old_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
-    service_account = old_acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
-    if service_account and not service_account['pending']:
-        return True
+    if has_service_account_access(user, workspace_namespace, workspace_name):
+        return False
     acl = [
              {
                "email": SERVICE_ACCOUNT_FOR_ANVIL,
@@ -256,3 +264,9 @@ def add_service_account(user, workspace_namespace, workspace_name):
         message = 'Failed to grant seqr service account access to the workspace {}/{}'.format(workspace_namespace, workspace_name)
         raise TerraAPIException(message, 400)
     return True
+
+
+def has_service_account_access(user, workspace_namespace, workspace_name):
+    acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
+    service_account = acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
+    return bool(service_account and (not service_account['pending']))

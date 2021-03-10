@@ -170,7 +170,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneId}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
     { title: 'Monarch', link: `http://monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
-    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneId}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=${gene.geneId}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,

@@ -338,7 +338,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SEC
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
 
 SOCIAL_AUTH_PIPELINE_BASE = (
     'social_core.pipeline.social_auth.social_details',
@@ -363,6 +363,7 @@ if TERRA_API_ROOT_URL:
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
+        'approval_prompt': 'auto', # required for successful token refresh
     }
 
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \
