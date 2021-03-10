@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Header, Segment } from 'semantic-ui-react'
+import { Header, Segment, Message } from 'semantic-ui-react'
 import { SubmissionError } from 'redux-form'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -18,6 +18,8 @@ import {
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
+
+const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
@@ -70,14 +72,14 @@ const AGREE_CHECKBOX = {
 const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
-  labelHelp: 'File path for a joint called VCF available in the workspace files. If The VCF is split, provide the path to the directory containing the split VCF',
+  labelHelp: 'File path for a joint called VCF available in the workspace "Files". If the VCF is split, provide the path to the directory containing the split VCF',
   placeholder: '/path-under-Files-of-the-workspace',
   validate: validators.required,
 }
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const FORM_FIELDS = [PROJECT_DESC_FIELD, DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX]
+const FORM_FIELDS = [DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX]
 
 const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
@@ -96,7 +98,16 @@ const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
   <div>
-    <Header size="large" textAlign="center">Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;</Header>
+    <Header size="large" textAlign="center">
+      Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;
+    </Header>
+    <Segment basic textAlign="center">
+      <Message info compact>
+        In order to load your data to seqr, you must have a joint called VCF available in your workspace. For more
+        information about generating and validating this file,
+        see <b><a href={VCF_DOCUMENTATION_URL} target="_blank">this documentation</a></b>.
+      </Message>
+    </Segment>
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
