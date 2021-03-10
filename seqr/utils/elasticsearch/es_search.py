@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
     GRCH38_LOCUS_FIELD
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = logging.getLogger(__name__)
@@ -1188,21 +1188,27 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
 def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
     q = None
     if intervals:
-        interval_xpos_range = [
-            (get_xpos(interval['chrom'], interval['start']), get_xpos(interval['chrom'], interval['end']))
-            for interval in intervals
-        ]
-        range_filters = []
-        for key in ['xpos', 'xstop']:
-            range_filters += [{
-                key: {
-                    'gte': xstart,
-                    'lte': xstop,
-                }
-            } for (xstart, xstop) in interval_xpos_range]
-        q = _build_or_filter('range', range_filters)
-        for (xstart, xstop) in interval_xpos_range:
-            q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+        # interval_xpos_range = [
+        #     (get_xpos(interval['chrom'], interval['start']), get_xpos(interval['chrom'], interval['end']))
+        #     for interval in intervals
+        # ]
+        # range_filters = []
+        # for key in ['xpos', 'xstop']:
+        #     range_filters += [{
+        #         key: {
+        #             'gte': xstart,
+        #             'lte': xstop,
+        #         }
+        #     } for (xstart, xstop) in interval_xpos_range]
+        # q = _build_or_filter('range', range_filters)
+        # for (xstart, xstop) in interval_xpos_range:
+        #     q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+        interval = intervals[0]
+        size = interval['end'] - interval['start']
+        offset = int(size*.2)
+        q = Q('range', xpos={'lte': get_xpos(interval['chrom'], min(interval['start'] + offset, MAX_POS)), 'gte': get_xpos(interval['chrom'], max(interval['start'] - offset, MIN_POS))}) & Q(
+            'range', xstop={'lte': get_xpos(interval['chrom'], min(interval['end'] + offset, MAX_POS)), 'gte':  get_xpos(interval['chrom'], max(interval['end'] - offset, MIN_POS))})
+        logger.info(q.to_dict())
 
     filters = [
         {'geneIds': list((genes or {}).keys())},
