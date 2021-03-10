@@ -149,7 +149,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
-    seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}`
+    seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
 
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
