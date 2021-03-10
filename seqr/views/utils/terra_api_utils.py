@@ -3,7 +3,6 @@
 import json
 import logging
 import time
-import traceback
 import requests
 
 from urllib.parse import urljoin
@@ -115,7 +114,6 @@ def _get_social_access_token(user):
         try:
             social.refresh_token(strategy)
         except Exception as ee:
-            logger.warning(traceback.format_exc())
             logger.warning('Refresh token failed. {}'.format(str(ee)), extra={'user': user})
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']

@@ -363,6 +363,7 @@ if TERRA_API_ROOT_URL:
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
+        'approval_prompt': 'auto', # required for successful token refresh
     }
 
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \

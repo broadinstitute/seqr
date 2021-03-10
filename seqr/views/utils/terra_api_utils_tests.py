@@ -139,7 +139,7 @@ class TerraApiUtilsCallsCase(TestCase):
             mock_logger.warning.assert_called_with(
                 'Refresh token failed. 401 Client Error: Unauthorized for url: https://accounts.google.com/o/oauth2/token',
                 extra={'user': user})
-            self.assertEqual(mock_logger.warning.call_count, 2)
+            self.assertEqual(mock_logger.warning.call_count, 1)
             mock_logger.info.assert_called_with('Refreshing access token', extra={'user': user})
             self.assertEqual(mock_logger.info.call_count, 1)
 
