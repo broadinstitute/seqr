@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Popup, Icon } from 'semantic-ui-react'
+import { Grid, Popup } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -10,16 +10,13 @@ import {
   getProjectsByGuid,
   getFirstSampleByFamily,
   getUserOptionsIsLoading,
-  getGenesById,
   getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
-import CreateVariantButton from '../buttons/CreateVariantButton'
-import VariantTagTypeBar from '../graph/VariantTagTypeBar'
+
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
-import { ColoredIcon, InlineHeader, HelpIcon, ButtonLink } from '../StyledComponents'
-import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
+import { ColoredIcon, InlineHeader } from '../StyledComponents'
 import { Select } from '../form/Inputs'
 import DataLoader from '../DataLoader'
 import {
@@ -34,7 +31,6 @@ import {
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
-  getVariantMainGeneId,
 } from '../../utils/constants'
 import { getAnalystOptions } from '../../../pages/Project/selectors'
 
@@ -219,34 +215,9 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const SearchLink = React.memo(({ family, disabled, children }) => (
-  <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
-))
-
-SearchLink.propTypes = {
-  family: PropTypes.object.isRequired,
-  disabled: PropTypes.bool,
-  children: PropTypes.node,
-}
-
-const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
-    (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
-  return discoveryGenes.length > 0 ? (
-    <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
-  ) : null
-})
-
-DiscoveryGenes.propTypes = {
-  project: PropTypes.object.isRequired,
-  familyGuid: PropTypes.string.isRequired,
-  genesById: PropTypes.object.isRequired,
-}
-
 const Family = React.memo((
-  { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hasActiveVariantSample, hidePedigree,
-    disableEdit,
+  { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
@@ -289,29 +260,6 @@ const Family = React.memo((
     ]
   }
 
-  const rightContent = showVariantDetails ? [
-    <div key="variants">
-      <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
-      <HorizontalSpacer width={10} />
-      <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
-      <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
-    </div>,
-    !compact ?
-      <div key="links">
-        <VerticalSpacer height={20} />
-        <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /> Variant Search</SearchLink>
-        {!hasActiveVariantSample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
-        <VerticalSpacer height={10} />
-        <CreateVariantButton family={family} />
-        <VerticalSpacer height={10} />
-        {project.isMmeEnabled &&
-          <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
-            MatchMaker Exchange
-          </Link>
-        }
-      </div> : null,
-  ] : null
-
   return <FamilyLayout
     useFullWidth={useFullWidth}
     compact={compact}
@@ -329,7 +277,7 @@ Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   fields: PropTypes.array,
-  showVariantDetails: PropTypes.bool,
+  rightContent: PropTypes.node,
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
@@ -337,16 +285,12 @@ Family.propTypes = {
   hidePedigree: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
-  genesById: PropTypes.object,
-  hasActiveVariantSample: PropTypes.bool,
   disableEdit: PropTypes.bool,
 }
 
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
-  genesById: getGenesById(state),
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {
