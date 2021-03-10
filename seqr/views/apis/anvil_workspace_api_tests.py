@@ -7,7 +7,7 @@ from seqr.models import Project
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
     TEST_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
-from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException
+from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
@@ -44,29 +44,47 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test the user needs sufficient workspace permissions
-        self.check_manager_login(url)
-        mock_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
+        self.check_require_login(url)
+
+        self.login_collaborator()
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.get('Content-Type'), 'text/html')
+        initial_json = self.get_initial_page_json(response)
+        self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
+        mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
+        self.login_manager()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
 
-        # Requesting to load data for an existing project
-        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        self.check_manager_login(url)
+        # Test error handling when token refresh fails
+        self.mock_get_ws_access_level.side_effect = TerraRefreshTokenFailedException('Failed to refresh token')
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            '/login/google-oauth2?next=/workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        )
+        self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
 
+        # Requesting to load data for an existing project
+        self.mock_get_ws_access_level.reset_mock()
+        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/project/R0001_1kg/project_page')
-        self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME)
+        self.mock_get_ws_access_level.assert_not_called()
 
         # Test login locally
         remove_token(self.manager_user)  # The user will be same as logging in locally after the access token is removed
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+        self.mock_get_ws_access_level.assert_not_called()
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
     @mock.patch('seqr.views.apis.anvil_workspace_api.time.sleep')
@@ -90,7 +108,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Test the user needs sufficient workspace permissions
         self.check_manager_login(url)
-        mock_utils_logger.warning.assert_called_with('test_user_collaborator does not have sufficient permissions for workspace {}/{}'
+        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test missing required fields in the request body

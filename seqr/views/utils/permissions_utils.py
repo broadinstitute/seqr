@@ -95,8 +95,8 @@ def check_workspace_perm(user, permission_level, namespace, name, can_share=Fals
     if workspace_meta:
         return workspace_meta
 
-    message = "{user} does not have sufficient permissions for workspace {namespace}/{name}".format(
-        user=user, namespace=namespace, name=name)
+    message = "User does not have sufficient permissions for workspace {namespace}/{name}".format(
+        namespace=namespace, name=name)
     logger.warning(message)
     raise PermissionDenied(message)
 
