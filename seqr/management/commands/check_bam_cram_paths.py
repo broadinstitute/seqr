@@ -41,7 +41,7 @@ class Command(BaseCommand):
                     guids_of_samples_with_missing_file.add(sample.guid)
 
         if len(guids_of_samples_with_missing_file) > 0:
-            IgvSample.objects.filter(guid__in=guids_of_samples_with_missing_file).update(file_path='')
+            IgvSample.bulk_update(user=None, update_json={'file_path': ''}, guid__in=guids_of_samples_with_missing_file)
 
         logger.info('---- DONE ----')
         logger.info('Checked {} samples'.format(len(samples)))
