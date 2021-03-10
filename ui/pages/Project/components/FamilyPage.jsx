@@ -12,14 +12,15 @@ import {
   getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
-import CreateVariantButton from 'shared/components/buttons/CreateVariantButton'
-import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
+import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar' // TODO move
 
 import Family from 'shared/components/panel/family'
 import FamilyReads from 'shared/components/panel/FamilyReads'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
+
 import IndividualRow from './FamilyTable/IndividualRow'
+import CreateVariantButton from './CreateVariantButton'
 
 const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
 
