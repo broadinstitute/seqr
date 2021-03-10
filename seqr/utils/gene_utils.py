@@ -53,7 +53,7 @@ def parse_locus_list_items(request_json):
     gene_ids = set()
     gene_symbols = set()
     for item in raw_items.replace(',', ' ').replace('\t', '<TAB>').split():
-        interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)', item)
+        interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)(%(?P<offset>(\d+)))?', item)
         if not interval_match:
             interval_match = re.match('(?P<chrom>\w+)<TAB>(?P<start>\d+)<TAB>(?P<end>\d+)', item)
         if interval_match:
@@ -62,6 +62,8 @@ def parse_locus_list_items(request_json):
                 interval['chrom'] = interval['chrom'].lstrip('chr')
                 interval['start'] = int(interval['start'])
                 interval['end'] = int(interval['end'])
+                if interval.get('offset'):
+                    interval['offset'] = int(interval['offset']) / 100
                 if interval['start'] > interval['end']:
                     raise ValueError
                 get_xpos(interval['chrom'], interval['start'])

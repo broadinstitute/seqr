@@ -17,7 +17,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP
+from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
 logger = logging.getLogger(__name__)
 
@@ -771,6 +771,8 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
         users_by_email = {u.email: u for u in User.objects.filter(email__in = permission_levels.keys())}
         for email, permission in permission_levels.items():
+            if email == SERVICE_ACCOUNT_FOR_ANVIL:
+                continue
             collaborator = users_by_email.get(email)
             if collaborator:
                 collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,

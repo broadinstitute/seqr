@@ -1163,8 +1163,9 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
 
+    @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
     @urllib3_responses.activate
-    def test_get_es_variants(self):
+    def test_get_es_variants(self, mock_max_variants):
         setup_responses()
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1203,8 +1204,21 @@ class EsUtilsTest(TestCase):
 
         # test load_all
         setup_responses()
+        mock_max_variants.__int__.return_value = 5
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model, page=1, num_results=2, load_all=True)
+        self.assertEqual(str(cm.exception), 'Too many variants to load. Please refine your search and try again')
+
+        mock_max_variants.__int__.return_value = 100
         variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
+        self.assertEqual(len(variants), 5)
+        self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
+
+        # test does not re-fetch once all loaded
+        urllib3_responses.reset()
+        mock_max_variants.__int__.return_value = 1
+        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
@@ -1240,7 +1254,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, ENSG00012345')
 
-        search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678'
+        search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10'
         with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model, sort='cadd', num_results=2)
         self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
@@ -1264,6 +1278,9 @@ class EsUtilsTest(TestCase):
                         {'bool': {'must': [
                             {'range': {'xpos': {'lte': 2000001234}}},
                             {'range': {'xstop': {'gte': 2000005678}}}]}},
+                        {'bool': {'must': [
+                            {'range': {'xpos': {'gte': 7000000001, 'lte': 7000001100}}},
+                            {'range': {'xstop': {'gte': 7000009100, 'lte': 7000011100}}}]}},
                         {'terms': {'geneIds': ['ENSG00000223972']}},
                         {'terms': {'rsid': ['rs9876']}},
                         {'terms': {'variantId': ['2-1234-A-C']}},

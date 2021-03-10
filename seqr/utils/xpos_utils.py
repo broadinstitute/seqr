@@ -37,7 +37,8 @@ CHROMOSOMES = [
 
 CHROM_TO_CHROM_NUMBER = {chrom: i for i, chrom in enumerate(CHROMOSOMES)}
 CHROM_NUMBER_TO_CHROM = {i: chrom for i, chrom in enumerate(CHROMOSOMES)}
-
+MIN_POS = 1
+MAX_POS = 3e8
 
 def get_xpos(chrom, pos):
     """Compute single number representing this chromosome and position.
@@ -55,7 +56,7 @@ def get_xpos(chrom, pos):
         else:
             chrom = fixed_chrom
 
-    if pos < 1 or pos > 3e8:
+    if pos < MIN_POS or pos > MAX_POS:
         raise ValueError("Invalid position: %s" % (pos,))
 
     return ((1 + CHROM_TO_CHROM_NUMBER[chrom])*int(1e9)) + pos

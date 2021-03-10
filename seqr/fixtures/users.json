@@ -176,8 +176,8 @@
   "pk": 1,
   "fields": {
     "user_id": 10,
-    "privacy_version": 1.0,
-    "tos_version": 1.0
+    "privacy_version": 1,
+    "tos_version": 1.1
   }
 },
 {

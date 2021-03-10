@@ -4,10 +4,12 @@ from django.test import TestCase
 from guardian.shortcuts import assign_perm
 import json
 import mock
+import re
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
+INITIAL_JSON_REGEX = r'\(window\.initialJSON=(?P<initial_json>[^)]+)'
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
@@ -149,12 +151,19 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.super_user)
 
+    def get_initial_page_json(self, response):
+        content = response.content.decode('utf-8')
+        self.assertRegex(content, INITIAL_JSON_REGEX)
+        m = re.search(INITIAL_JSON_REGEX, content)
+        return json.loads(m.group('initial_json'))
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
 TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+
+TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'
 
 ANVIL_WORKSPACES = [{
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
@@ -171,6 +180,12 @@ ANVIL_WORKSPACES = [{
             "accessLevel": "READER",
             "pending": False,
             "canShare": True,
+            "canCompute": True
+        },
+        TEST_SERVICE_ACCOUNT: {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
             "canCompute": True
         },
         'test_user_not_registered@test.com': {
@@ -300,6 +315,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', TEST_OAUTH2_KEY)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
@@ -822,5 +840,3 @@ GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 
 GOOGLE_TOKEN_RESULT = '{"access_token":"ya29.c.EXAMPLE","expires_in":3599,"token_type":"Bearer"}'
-
-TEST_SERVICE_ACCOUNT = 'test_account@my-seqr.iam.gserviceaccount.com'

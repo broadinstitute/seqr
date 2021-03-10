@@ -26,7 +26,7 @@ import {
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
-import ProjectCollaborators, { AddProjectCollaboratorButton } from './ProjectCollaborators'
+import ProjectCollaborators from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
@@ -115,10 +115,9 @@ const ProjectPageUI = React.memo((props) => {
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection label="Collaborators" editButton={<AddProjectCollaboratorButton />}>
-            <ProjectCollaborators anvilCollaborator={false} />
+          <ProjectSection label="Collaborators">
+            <ProjectCollaborators />
           </ProjectSection>
-          <br /><ProjectCollaborators anvilCollaborator />
         </Grid.Column>
       </Grid.Row>
       <Grid.Row>

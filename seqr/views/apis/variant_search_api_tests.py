@@ -351,9 +351,11 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
-            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11', 'F000012_12']}],
+            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': mock.ANY}],
             'totalResults': 3,
         })
+        self.assertSetEqual(
+            {'F000011_11', 'F000012_12'}, set(response_json['search']['projectFamilies'][0]['familyGuids']))
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)

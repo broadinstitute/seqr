@@ -73,87 +73,97 @@ const EDIT_FIELDS = [
 ]
 
 
-const AddCollaboratorButton = React.memo(({ project, onSubmit }) => (
-  project.canEdit ?
-    <UpdateButton
-      modalId="addCollaborator"
-      modalTitle="Add Collaborator"
-      onSubmit={onSubmit}
-      formFields={CREATE_FIELDS}
-      editIconName="plus"
-      buttonText="Add Collaborator"
-      showErrorPanel
-    /> : null
+const AddCollaboratorButton = React.memo(({ onSubmit }) => (
+  <UpdateButton
+    modalId="addCollaborator"
+    modalTitle="Add Collaborator"
+    onSubmit={updates => onSubmit(updates.user)}
+    formFields={CREATE_FIELDS}
+    editIconName="plus"
+    buttonText="Add Collaborator"
+    showErrorPanel
+  />
 ))
 
 AddCollaboratorButton.propTypes = {
-  project: PropTypes.object,
+  onSubmit: PropTypes.func,
+}
+
+const CollaboratorContainer = styled.div`
+  white-space: nowrap;
+`
+
+const CollaboratorRow = React.memo(({ collaborator, update }) =>
+  <CollaboratorContainer>
+    {update &&
+      <span>
+        <HorizontalSpacer width={10} />
+        <UpdateButton
+          modalId={`editCollaborator-${collaborator.email}`}
+          modalTitle={`Edit Collaborator: ${collaborator.displayName || collaborator.email}`}
+          onSubmit={update}
+          formFields={EDIT_FIELDS}
+          initialValues={collaborator}
+          showErrorPanel
+          size="tiny"
+        />
+        <DeleteButton
+          initialValues={collaborator}
+          onSubmit={update}
+          size="tiny"
+          hideNoRequestStatus
+          confirmDialog={
+            <div className="content">
+              Are you sure you want to delete <b>{collaborator.displayName || collaborator.email}</b>. They will still
+              have their user account and be able to log in, but will not be able to access this project anymore.
+            </div>
+          }
+        />
+      </span>
+    }
+    <Popup
+      position="top center"
+      trigger={<Icon link size="small" name={collaborator.hasEditPermissions ? 'star' : ''} />}
+      content={`Has "${collaborator.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
+      size="small"
+    />
+    {collaborator.displayName && `${collaborator.displayName} - `}
+    <a href={`mailto:${collaborator.email}`}>{collaborator.email}</a>
+  </CollaboratorContainer>,
+)
+
+CollaboratorRow.propTypes = {
+  collaborator: PropTypes.object.isRequired,
+  update: PropTypes.func,
+}
+
+const getSortedCollabs = (project, isAnvil) => orderBy(
+  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc'])
+
+const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
+  const localCollabs = getSortedCollabs(project, false)
+  const anvilCollabs = getSortedCollabs(project, true)
+  return [
+    localCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />),
+    ((project.canEdit && !project.workspaceName) ?
+      <div key="addButton" >
+        <br />
+        <AddCollaboratorButton onSubmit={onSubmit} />
+      </div> : null),
+    (localCollabs.length && anvilCollabs.length) ? <p key="subheader"><br />AnVIL Workspace Users</p> : null,
+    anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
+  ]
+})
+
+
+ProjectCollaborators.propTypes = {
+  project: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
 })
-
-const mapCreateDispatchToProps = {
-  onSubmit: updates => updateCollaborator(updates.user),
-}
-
-export const AddProjectCollaboratorButton = connect(mapStateToProps, mapCreateDispatchToProps)(AddCollaboratorButton)
-
-const CollaboratorContainer = styled.div`
-  white-space: nowrap;
-`
-
-const ProjectCollaborators = React.memo(({ project, anvilCollaborator, onSubmit }) => (
-  <div>{anvilCollaborator && project.collaborators.filter(col => col.isAnvil === anvilCollaborator).length > 0 && <p>AnVIL Workspace Users</p>}{
-  orderBy(project.collaborators.filter(col => col.isAnvil === anvilCollaborator), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
-    <CollaboratorContainer key={c.username}>
-      {project.canEdit && !c.isAnvil &&
-        <span>
-          <HorizontalSpacer width={10} />
-          <UpdateButton
-            modalId={`editCollaborator-${c.email}`}
-            modalTitle={`Edit Collaborator: ${c.displayName || c.email}`}
-            onSubmit={onSubmit}
-            formFields={EDIT_FIELDS}
-            initialValues={c}
-            showErrorPanel
-            size="tiny"
-          />
-          <DeleteButton
-            initialValues={c}
-            onSubmit={onSubmit}
-            size="tiny"
-            hideNoRequestStatus
-            confirmDialog={
-              <div className="content">
-                Are you sure you want to delete <b>{c.displayName || c.email}</b>. They will still have their user account
-                and be able to log in, but will not be able to access this project anymore.
-              </div>
-            }
-          />
-        </span>
-      }
-      <Popup
-        position="top center"
-        trigger={<Icon link size="small" name={c.hasEditPermissions ? 'star' : ''} />}
-        content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
-        size="small"
-      />
-      {c.displayName && `${c.displayName} - `}
-      <a href={`mailto:${c.email}`}>{c.email}</a>
-    </CollaboratorContainer>,
-  )}
-  </div>
-))
-
-
-ProjectCollaborators.propTypes = {
-  project: PropTypes.object.isRequired,
-  anvilCollaborator: PropTypes.bool.isRequired,
-  onSubmit: PropTypes.func,
-}
 
 const mapDispatchToProps = {
   onSubmit: updateCollaborator,

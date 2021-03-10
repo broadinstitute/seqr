@@ -1,13 +1,10 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
-import json
-import re
 import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
-INITIAL_JSON_REGEX = r'\(window\.initialJSON=(?P<initial_json>[^)]+)'
 
 MAIN_APP_USER_FIELDS = {'currentPolicies'}
 MAIN_APP_USER_FIELDS.update(USER_FIELDS)
@@ -15,12 +12,6 @@ MAIN_APP_USER_FIELDS.update(USER_FIELDS)
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
-
-    def get_initial_page_json(self, response):
-        content = response.content.decode('utf-8')
-        self.assertRegex(content, INITIAL_JSON_REGEX)
-        m = re.search(INITIAL_JSON_REGEX, content)
-        return json.loads(m.group('initial_json'))
 
     def run_react_page(self, google_enabled):
         url = reverse(main_app)
