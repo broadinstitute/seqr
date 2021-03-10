@@ -35,7 +35,6 @@ class CheckBamCramPathsTest(TestCase):
     @mock.patch('hail.hadoop_is_file')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
     def test_dry_run_arg(self, mock_logger, mock_hadoop_is_file):
-        # run on just the 1kg project
         mock_hadoop_is_file.return_value = False
         call_command('check_bam_cram_paths', '--dry-run')
         self._check_results(0, mock_logger, mock_hadoop_is_file)
