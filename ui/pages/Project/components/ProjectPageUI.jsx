@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
-import { getCurrentProject } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { SectionHeader } from 'shared/components/StyledComponents'
 import {
@@ -15,6 +14,7 @@ import {
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
 import {
+  getCurrentProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getFamiliesExportConfig,

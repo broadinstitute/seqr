@@ -16,9 +16,9 @@ import {
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
-  getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getProjectGuid, getHasActiveVariantSampleByFamily,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily,
   getVariantTagsByGuid, getUserOptionsByUsername,
 } from 'redux/selectors'
 
@@ -43,10 +43,14 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 
 // project data selectors
 
+export const getProjectGuid = state => state.currentProjectGuid
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 
+export const getCurrentProject = createSelector(
+  getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
+)
 
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)

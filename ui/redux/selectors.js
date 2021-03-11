@@ -32,7 +32,6 @@ export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoadi
 export const getVersion = state => state.meta.version
 export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
-export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
@@ -52,10 +51,6 @@ export const getAnnotationSecondary = (state) => {
     return false
   }
 }
-
-export const getCurrentProject = createSelector(
-  getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
-)
 
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {

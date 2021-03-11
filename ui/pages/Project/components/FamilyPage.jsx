@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import {
-  getCurrentProject, // TODO move
   getFamiliesByGuid,
   getSortedIndividualsByFamily,
   getGenesById,
@@ -17,6 +16,7 @@ import FamilyReads from 'shared/components/panel/FamilyReads'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
+import { getCurrentProject } from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
