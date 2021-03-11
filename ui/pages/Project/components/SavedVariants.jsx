@@ -13,10 +13,10 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
-import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
+import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 
 const ALL_FILTER = 'ALL'
 

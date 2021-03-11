@@ -5,15 +5,13 @@ import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import {
-  getCurrentProject,
+  getCurrentProject, // TODO move
   getFamiliesByGuid,
   getSortedIndividualsByFamily,
   getGenesById,
   getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
-import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar' // TODO move
-
 import Family from 'shared/components/panel/family'
 import FamilyReads from 'shared/components/panel/FamilyReads'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
@@ -21,6 +19,7 @@ import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
+import VariantTagTypeBar from './VariantTagTypeBar'
 
 const READ_BUTTON_PROPS = { padding: '0.5em 0 1.5em 0' }
 
