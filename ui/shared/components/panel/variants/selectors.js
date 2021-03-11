@@ -13,8 +13,9 @@ import {
   VARIANT_EXPORT_DATA,
 } from 'shared/utils/constants'
 import {
-  getProjectGuid, getVariantTagsByGuid, getFamiliesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid,
-  getVariantNotesByGuid, getGenesById, getUser, getCurrentProject, getTagsByVariantGuids, getNotesByVariantGuids } from 'redux/selectors'
+  getVariantTagsByGuid, getVariantNotesByGuid, getTagsByVariantGuids, getNotesByVariantGuids, getSavedVariantsByGuid,
+  getFamiliesByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
+} from 'redux/selectors'
 
 
 // Saved variant selectors
@@ -30,7 +31,7 @@ export const getPairedSelectedSavedVariants = createSelector(
   (state, props) => props.match.params,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
-  getProjectGuid,
+  (state, props) => (props.project || {}).projectGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
   (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid, notesByGuid) => {
@@ -166,7 +167,7 @@ export const getSavedVariantExportConfig = createSelector(
   getAnalysisGroupsByGuid,
   getTagsByVariantGuids,
   getNotesByVariantGuids,
-  getCurrentProject,
+  (state, props) => props.project,
   getSavedVariantTableState,
   (state, props) => props.match.params,
   (pairedVariants, familiesByGuid, analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
@@ -187,7 +188,7 @@ export const getSavedVariantExportConfig = createSelector(
     return [{
       name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analysisGroupName ? ` in Analysis Group ${analysisGroupName}` : ''}`,
       data: {
-        filename: toSnakecase(`saved_${tagName}_variants_${(project || {}).name}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
+        filename: toSnakecase(`saved_${tagName}_variants${project ? `_${project.name}` : ''}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
         rawData: familyVariants,
         headers: [
           ...VARIANT_EXPORT_DATA.map(config => config.header),

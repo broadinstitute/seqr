@@ -109,6 +109,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       discoveryFilters={FILTER_FIELDS}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
+      project={project}
       tableSummaryComponent={
         summaryProps =>
           <Grid.Row>
