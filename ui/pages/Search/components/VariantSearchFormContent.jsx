@@ -11,7 +11,7 @@ import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_FILTER_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -131,6 +131,18 @@ const ANNOTATION_PANEL_MAP = {
   },
 }
 
+const ANNOTATION_FILTER_PANEL_MAP = {
+  ...ANNOTATION_FILTER_PANEL,
+  headerProps: {
+    title: 'Annotation Filter',
+    name: 'annotation_filter',
+    inputSize: 5,
+  },
+}
+
+console.log(ANNOTATION_PANEL_MAP)
+console.log(ANNOTATION_PANEL)
+
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
 const secondaryPanel = panel => ({
   ...panel,
@@ -185,6 +197,7 @@ const PANELS = [
     isAnalyst: { [true]: ANALYST_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
+  ANNOTATION_FILTER_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
   {
     ...FREQUENCY_PANEL,

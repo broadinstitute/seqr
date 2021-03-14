@@ -118,6 +118,34 @@ Dropdown.propTypes = {
   includeCategories: PropTypes.bool,
 }
 
+export const InputGroup = React.memo((props) => {
+  const { options, ...baseProps } = props
+  console.log(options)
+  return (
+    <List>
+      <List.Item>
+        <List.List>
+          {options.map(option =>
+            <List.Item key={option.label}>
+              <BaseSemanticInput
+                {...baseProps}
+                inputType="Input"
+                label={helpLabel(option.label, option.labelHelp)}
+              />
+            </List.Item>,
+          )}
+        </List.List>
+      </List.Item>
+    </List>
+  )
+})
+
+InputGroup.propTypes = {
+  options: PropTypes.array,
+  label: PropTypes.node,
+  horizontalGrouped: PropTypes.bool,
+}
+
 export const Select = props =>
   <Dropdown selection fluid {...props} />
 
