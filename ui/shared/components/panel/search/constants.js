@@ -375,6 +375,94 @@ export const LOCATION_FIELDS = [
   },
 ]
 
+export const ANNOTATION_FILTER_OPTION_LIST = [
+  {
+    name: 'cadd',
+    label: 'CADD',
+    labelHelp: 'Cadd value',
+  },
+  {
+    name: 'revel',
+    label: 'Revel',
+    labelHelp: 'Revel value',
+  },
+  {
+    name: 'primate_ai',
+    label: 'Primate AI',
+    labelHelp: 'Primate AI value',
+  },
+  {
+    name: 'mpc',
+    label: 'MPC',
+    labelHelp: 'MPC value',
+  },
+  {
+    name: 'splice_ai',
+    label: 'Splice AI',
+    labelHelp: 'Splice AI value',
+  },
+  {
+    name: 'eigen',
+    label: 'Eigen',
+    labelHelp: 'Eigen value',
+  },
+  {
+    name: 'dann',
+    label: 'Dann',
+    labelHelp: 'Dann value',
+  },
+  {
+    name: 'strvctvre',
+    label: 'STRVCTVRE',
+    labelHelp: 'STRVCTVRE value',
+  },
+  {
+    name: 'polyphen',
+    label: 'Polyphen',
+    labelHelp: 'Polyphen value',
+  },
+  {
+    name: 'sift',
+    label: 'Sift',
+    labelHelp: 'Sift value',
+  },
+  {
+    name: 'mut_taster',
+    label: 'Mut Taster',
+    labelHelp: 'Mut Taster value',
+  },
+  {
+    name: 'fathmm',
+    label: 'FATHMM',
+    labelHelp: 'FATHMM value',
+  },
+  {
+    name: 'metasvm',
+    label: 'METASVM',
+    labelHelp: 'METASVM value',
+  },
+  {
+    name: 'gerp_rs',
+    label: 'GERP RS',
+    labelHelp: 'GERP RS value',
+  },
+  {
+    name: 'phastcons_100_vert',
+    label: 'Phastcons 100 Vert',
+    labelHelp: 'Phastcons 100 Vert value',
+  },
+]
+
+const ANNOTATION_FILTER_FIELD = {
+  name: 'annotationFilterField',
+  options: ANNOTATION_FILTER_OPTION_LIST,
+  width: 1,
+}
+
+export const ANNOTATION_FILTER_FIELDS = [
+  ANNOTATION_FILTER_FIELD,
+]
+
 export const QUALITY_FILTER_FIELDS = [
   {
     name: 'vcf_filter',

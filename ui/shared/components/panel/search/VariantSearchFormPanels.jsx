@@ -6,7 +6,7 @@ import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
+import { Select, LabeledSlider, AlignedCheckboxGroup, InputGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
@@ -20,6 +20,7 @@ import {
   ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
+  ANNOTATION_FILTER_FIELDS,
   ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
@@ -175,6 +176,12 @@ export const QUALITY_PANEL = {
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
+}
+
+export const ANNOTATION_FILTER_PANEL = {
+  name: 'AnnotationFilter',
+  fields: ANNOTATION_FILTER_FIELDS,
+  fieldProps: { control: InputGroup, format: val => val || [] },
 }
 
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>
