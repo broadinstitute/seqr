@@ -1,9 +1,4 @@
-import mock
-import responses
-import tempfile
-
 from django.core.management import call_command
-from django.test import TestCase
 
 from reference_data.models import MGI, dbNSFPGene
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
