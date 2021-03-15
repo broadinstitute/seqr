@@ -17,6 +17,8 @@ import { HorizontalSpacer } from '../../Spacers'
 
 const NOTE_STYLE = { display: 'block' }
 
+const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
+
 const CompactGrid = styled(Grid)`
   padding: 10px !important;
   
@@ -79,7 +81,7 @@ export const getOtherGeneNames = gene =>
 
 const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
   const fieldsToShow = fields.map(({ field, shouldShow, ...config }) => {
-    let value = scores[field]
+    let value = (scores || {})[field]
     if (shouldShow && !shouldShow(value)) {
       value = null
     }
@@ -90,25 +92,29 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
       {fieldsToShow.map(({ value, label, rankField }) => value &&
         <span key={label}>
           {label}: {value.toPrecision(4)}
-          {rankField && <span>(ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)</span>}
+          {rankField && <span> (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)</span>}
           <br />
-        </span>
+        </span>,
       )}
       <i style={{ color: 'gray' }}>NOTE: {note}</i>
     </div> : 'No score available'
+}
+
+ScoreDetails.propTypes = {
+  scores: PropTypes.object,
+  fields: PropTypes.array,
+  note: PropTypes.node,
+  rankDescription: PropTypes.string,
 }
 
 const STAT_DETAILS = [
   { title: 'Coding Size', content: gene => ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
   {
     title: 'Missense Constraint',
-    fields: [{
-      field: 'misZ',
-      rankField: 'misZRank',
-      label: 'z-score',
-    }],
+    scoreField: 'constraints',
+    fields: [{ field: 'misZ', rankField: 'misZRank', label: 'z-score' }],
     rankDescription: 'constrained',
-    note:
+    note: (
       <span>
         Missense contraint is a measure of the degree to which the number of missense variants found
         in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
@@ -117,46 +123,40 @@ const STAT_DETAILS = [
           K. Samocha 2014
         </a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where
         a large proportion of the protein is heavily functionally constrained. For more details see
-        this
-        <a
-          href="ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt"
-          target="_blank">
-          {' README'}
-        </a>.
-      </span>,
+        this <a href={EXAC_README_URL} target="_blank">README</a>.
+      </span>
+    ),
   },
-    {
-      title: 'LoF Constraint',
-      fields: [
-        {
-          field: 'louef',
-          label: 'louef',
-          shouldShow: val => val !== undefined && val !== 100,
-          detail: scores => `(ranked ${scores.louefRank} most intolerant of LoF mutations out of ${scores.totalGenes} genes under study)`,
-        },
-        {
-          field: 'misZ',
-          label: 'z-score',
-          detail: scores => `(ranked ${scores.misZRank} most constrained out of ${scores.totalGenes} genes under study)`,
-        },
-      ],
-      content: (constraints.pli || (constraints.louef !== undefined && constraints.louef !== 100)) ?
-        <div>
-          {constraints.louef !== undefined && constraints.louef !== 100 &&
-            <span>louef: {constraints.louef.toPrecision(4)} (ranked {constraints.louefRank} most intolerant of LoF
-              mutations out of {constraints.totalGenes} genes under study). <br />
-            </span>}
-          {constraints.pli > 0 &&
-            <span>pLI-score: {constraints.pli.toPrecision(4)} (ranked {constraints.pliRank} most intolerant of LoF
-              mutations out of {constraints.totalGenes} genes under study). <br />
-            </span>}
-          <i style={{ color: 'gray' }}>
-            NOTE: These metrics are based on the amount of expected variation observed in the gnomAD data and is a
-            measure of how likely the gene is to be intolerant of loss-of-function mutations.
-          </i>
-        </div> : 'No score available',
-    },
-  ]
+  {
+    title: 'LoF Constraint',
+    scoreField: 'constraints',
+    fields: [
+      { field: 'louef', rankField: 'louefRank', label: 'louef', shouldShow: val => val !== undefined && val !== 100 },
+      { field: 'pli', rankField: 'pliRank', label: 'pLI-score' },
+    ],
+    rankDescription: 'intolerant of LoF mutations',
+    note: 'These metrics are based on the amount of expected variation observed in the gnomAD data and is a measure ' +
+    'of how likely the gene is to be intolerant of loss-of-function mutations.',
+  },
+  {
+    title: 'Haploinsufficient',
+    scoreField: 'cnSensitivity',
+    fields: [{ field: 'phi', label: 'pHI-score' }],
+    rankDescription: 'intolerant of LoF mutations',
+    note: 'These are a score under development by the Talkowski lab that predict whether a gene is haploinsufficient ' +
+    'based on large chromosomal microarray data set analysis. Scores >0.84 are considered to have high likelihood to ' +
+    'be haploinsufficient.',
+  },
+  {
+    title: 'Triplosensitive',
+    scoreField: 'cnSensitivity',
+    fields: [{ field: 'pts', label: 'pTS-score' }],
+    rankDescription: 'intolerant of LoF mutations',
+    note: 'These are a score under development by the Talkowski lab that predict whether a gene is triplosensitive ' +
+    'based on large chromosomal microarray dataset analysis. Scores >0.993 are considered to have high likelihood to ' +
+    'be triplosensitive.',
+  },
+]
 
 const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
@@ -175,49 +175,10 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   if (otherGeneNames.length > 0) {
     basicDetails.splice(1, 0, { title: 'Other Gene Names', content: otherGeneNames.join(', ') })
   }
-  const constraints = gene.constraints || {}
-  const statDetails = [
-    { title: 'Coding Size', content: ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
-    {
-      title: 'Missense Constraint',
-      content: scoreDetails(constraints, [{
-        field: 'misZ',
-        label: 'z-score',
-        detail: `(ranked ${constraints.misZRank} most constrained out of ${constraints.totalGenes} genes under study)`,
-      }],
-        <span>
-          Missense contraint is a measure of the degree to which the number of missense variants found
-          in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
-          described in [
-          <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank">
-            K. Samocha 2014
-          </a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where
-          a large proportion of the protein is heavily functionally constrained. For more details see
-          this
-          <a href="ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt" target="_blank">
-            {' README'}
-          </a>.
-        </span>)
-    },
-    {
-      title: 'LoF Constraint',
-      content: (constraints.pli || (constraints.louef !== undefined && constraints.louef !== 100)) ?
-        <div>
-          {constraints.louef !== undefined && constraints.louef !== 100 &&
-            <span>louef: {constraints.louef.toPrecision(4)} (ranked {constraints.louefRank} most intolerant of LoF
-              mutations out of {constraints.totalGenes} genes under study). <br />
-            </span>}
-          {constraints.pli > 0 &&
-            <span>pLI-score: {constraints.pli.toPrecision(4)} (ranked {constraints.pliRank} most intolerant of LoF
-              mutations out of {constraints.totalGenes} genes under study). <br />
-            </span>}
-          <i style={{ color: 'gray' }}>
-            NOTE: These metrics are based on the amount of expected variation observed in the gnomAD data and is a
-            measure of how likely the gene is to be intolerant of loss-of-function mutations.
-          </i>
-        </div> : 'No score available',
-    },
-  ]
+  const statDetails = STAT_DETAILS.map(({ title, content, scoreField, ...props }) => ({
+    title, content: content ? content(gene) : <ScoreDetails scores={gene[scoreField]} {...props} />,
+  }))
+
   const associationDetails = [
     {
       title: 'OMIM',
