@@ -19,7 +19,7 @@ GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 
-#TERRA_API_ROOT_URL: 'https://api.firecloud.org'
+TERRA_API_ROOT_URL: 'https://api.firecloud.org'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
