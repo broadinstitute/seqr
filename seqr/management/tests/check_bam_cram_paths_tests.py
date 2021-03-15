@@ -9,6 +9,14 @@ from seqr.models import IgvSample
 class CheckBamCramPathsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
+    def setUp(self):
+        existing_sample = IgvSample.objects.first()
+        IgvSample.objects.create(
+            individual=existing_sample.individual,
+            sample_type=IgvSample.SAMPLE_TYPE_GCNV,
+            file_path='gs://missing-bucket/missing_file',
+        )
+
     @mock.patch('hail.hadoop_is_file')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
     def test_command_with_project(self, mock_logger, mock_hadoop_is_file):
