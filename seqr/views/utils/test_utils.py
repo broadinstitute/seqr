@@ -447,6 +447,7 @@ GENE_FIELDS = {
 }
 GENE_VARIANT_FIELDS = {
     'constraints', 'diseaseDesc', 'functionDesc', 'omimPhenotypes', 'mimNumber', 'geneNames', 'primateAi',
+    'cnSensitivity',
 }
 GENE_VARIANT_FIELDS.update(GENE_FIELDS)
 

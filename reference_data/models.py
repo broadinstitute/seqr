@@ -235,3 +235,4 @@ class MGI(models.Model):
 
     class Meta:
         unique_together = ('gene', 'marker_id')
+        json_fields = ['marker_id']

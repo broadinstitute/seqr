@@ -201,7 +201,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual({gene['geneId'] for gene in json}, gene_ids)
         self.assertSetEqual(set(json[0].keys()), GENE_FIELDS)
 
-        fields = {'constraints', 'omimPhenotypes', 'mimNumber'}
+        fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
         fields.update(GENE_FIELDS)
         json = get_json_for_genes(genes, user, add_variant_gene_display_fields=True)
         self.assertSetEqual({gene['geneId'] for gene in json}, gene_ids)

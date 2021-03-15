@@ -215,7 +215,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber'}
+        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
         gene_fields.update(GENE_FIELDS)
         self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
 

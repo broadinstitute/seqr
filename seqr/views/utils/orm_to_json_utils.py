@@ -11,7 +11,8 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
-from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology
+from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology, \
+    GeneCopyNumberSensitivity
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
@@ -802,15 +803,15 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil
 
 OMIM = 'omim'
 CONSTRAINT = 'constraint'
-CN_SENSITIVITY = 'cn_sensitivity' # TODO implement
+CN_SENSITIVITY = 'cn_sensitivity'
 DBNSFP = 'dbnsfp'
 PRIMATE_AI = 'primate_ai'
 MGI_FIELD = 'mgi'
 NOTES= 'notes'
-VARIANT_GENE_DISPLAY_FIELDS = {OMIM, CONSTRAINT, CN_SENSITIVITY}
-VARIANT_GENE_FIELDS = {DBNSFP, PRIMATE_AI}
+VARIANT_GENE_DISPLAY_FIELDS = {OMIM: Omim, CONSTRAINT: GeneConstraint, CN_SENSITIVITY: GeneCopyNumberSensitivity}
+VARIANT_GENE_FIELDS = {DBNSFP: dbNSFPGene, PRIMATE_AI: PrimateAI}
 VARIANT_GENE_FIELDS.update(VARIANT_GENE_DISPLAY_FIELDS)
-ALL_GENE_FIELDS = {MGI_FIELD, NOTES}
+ALL_GENE_FIELDS = {MGI_FIELD: MGI, NOTES: None}
 ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
 
 def get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=False, add_variant_gene_display_fields=False):
@@ -828,7 +829,7 @@ def get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=
     elif add_variant_gene_display_fields:
         gene_fields = VARIANT_GENE_DISPLAY_FIELDS
     else:
-        gene_fields = set()
+        gene_fields = {}
 
     total_gene_constraints = None
     if CONSTRAINT in gene_fields:
@@ -863,19 +864,17 @@ def get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=
         if CONSTRAINT in gene_fields:
             constraint = next((constraint for constraint in gene.geneconstraint_set.all()), None)
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
+        if CN_SENSITIVITY in gene_fields:
+            sensitivity = next((constraint for constraint in gene.genecopynumbersensitivity_set.all()), None)
+            result['cnSensitivity'] = _get_json_for_model(sensitivity) if sensitivity else {}
         if NOTES in gene_fields:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
 
-    if DBNSFP in gene_fields:
-        prefetch_related_objects(genes, Prefetch('dbnsfpgene_set', queryset=dbNSFPGene.objects.only('gene__gene_id', *dbNSFPGene._meta.json_fields)))
-    if OMIM in gene_fields:
-        prefetch_related_objects(genes, Prefetch('omim_set', queryset=Omim.objects.only('gene__gene_id', *Omim._meta.json_fields)))
-    if CONSTRAINT in gene_fields:
-        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI').only('gene__gene_id', *GeneConstraint._meta.json_fields)))
-    if PRIMATE_AI in gene_fields:
-        prefetch_related_objects(genes, Prefetch('primateai_set', queryset=PrimateAI.objects.only('gene__gene_id', *PrimateAI._meta.json_fields)))
-    if MGI_FIELD in gene_fields:
-        prefetch_related_objects(genes, Prefetch('mgi_set', queryset=MGI.objects.only('gene__gene_id', 'marker_id')))
+    for model in gene_fields.values():
+        if model:
+            prefetch_related_objects(genes, Prefetch(
+                '{}_set'.format(model.__name__.lower()),
+                queryset=model.objects.only('gene__gene_id', *model._meta.json_fields)))
 
     return _get_json_for_models(genes, process_result=_process_result)
 
