@@ -445,11 +445,13 @@ GENE_FIELDS = {
     'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38',  'endGrch37', 'endGrch38',
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
-
-GENE_DETAIL_FIELDS = {
-    'constraints', 'diseaseDesc', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber', 'mgiMarkerId', 'geneNames',
+GENE_VARIANT_FIELDS = {
+    'constraints', 'diseaseDesc', 'functionDesc', 'omimPhenotypes', 'mimNumber', 'geneNames', 'primateAi',
 }
-GENE_DETAIL_FIELDS.update(GENE_FIELDS)
+GENE_VARIANT_FIELDS.update(GENE_FIELDS)
+
+GENE_DETAIL_FIELDS = {'notes', 'mgiMarkerId'}
+GENE_DETAIL_FIELDS.update(GENE_VARIANT_FIELDS)
 
 VARIANTS = [
     {

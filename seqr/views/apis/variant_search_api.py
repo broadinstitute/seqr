@@ -252,7 +252,7 @@ def get_variant_gene_breakdown(request, search_hash):
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes(list(gene_counts.keys()), add_omim=True, add_constraints=True),
+        'genesById': get_genes(list(gene_counts.keys()), add_variant_gene_display_fields=True),
     })
 
 

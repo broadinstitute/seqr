@@ -72,7 +72,7 @@ def saved_variant_genes(variants):
                 gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
         else:
             gene_ids.update(list(variant.get('transcripts', {}).keys()))
-    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
+    genes = get_genes(gene_ids, add_variant_gene_fields=True)
     for gene in genes.values():
         if gene:
             gene['locusListGuids'] = []

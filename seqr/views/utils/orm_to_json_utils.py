@@ -800,8 +800,20 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil
     return collaborator_json
 
 
-def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
-                       add_primate_ai=False, add_mgi=False):
+OMIM = 'omim'
+CONSTRAINT = 'constraint'
+CN_SENSITIVITY = 'cn_sensitivity' # TODO implement
+DBNSFP = 'dbnsfp'
+PRIMATE_AI = 'primate_ai'
+MGI_FIELD = 'mgi'
+NOTES= 'notes'
+VARIANT_GENE_DISPLAY_FIELDS = {OMIM, CONSTRAINT, CN_SENSITIVITY}
+VARIANT_GENE_FIELDS = {DBNSFP, PRIMATE_AI}
+VARIANT_GENE_FIELDS.update(VARIANT_GENE_DISPLAY_FIELDS)
+ALL_GENE_FIELDS = {MGI_FIELD, NOTES}
+ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
+
+def get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=False, add_variant_gene_display_fields=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -809,55 +821,66 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
     Returns:
         array: array of json objects
     """
-    total_gene_constraints = GeneConstraint.objects.count()
-    if add_notes:
+    if add_all:
+        gene_fields = ALL_GENE_FIELDS
+    elif add_variant_gene_fields:
+        gene_fields = VARIANT_GENE_FIELDS
+    elif add_variant_gene_display_fields:
+        gene_fields = VARIANT_GENE_DISPLAY_FIELDS
+    else:
+        gene_fields = set()
+
+    total_gene_constraints = None
+    if CONSTRAINT in gene_fields:
+        total_gene_constraints = GeneConstraint.objects.count()
+
+    if NOTES in gene_fields:
         gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user)
 
     def _add_total_constraint_count(result, *args):
         result['totalGenes'] = total_gene_constraints
 
     def _process_result(result, gene):
-        if add_dbnsfp:
+        if DBNSFP in gene_fields:
             # prefetching only works with all()
             dbnsfp = next((dbnsfp for dbnsfp in gene.dbnsfpgene_set.all()), None)
             if dbnsfp:
                 result.update(_get_json_for_model(dbnsfp))
             else:
                 result.update(_get_empty_json_for_model(dbNSFPGene))
-        if add_primate_ai:
+        if PRIMATE_AI in gene_fields:
             # prefetching only works with all()
             primate_ai = next((primate_ai for primate_ai in gene.primateai_set.all()), None)
-            if primate_ai:
-                result['primateAi'] = _get_json_for_model(primate_ai)
-        if add_mgi:
+            result['primateAi'] = _get_json_for_model(primate_ai) if primate_ai else None
+        if MGI_FIELD in gene_fields:
             # prefetching only works with all()
             mgi = next((mgi for mgi in gene.mgi_set.all()), None)
             result['mgiMarkerId'] = mgi.marker_id if mgi else None
-        if add_omim:
+        if OMIM in gene_fields:
             omim_phenotypes = _get_json_for_models(gene.omim_set.all())
             result['omimPhenotypes'] = [phenotype for phenotype in omim_phenotypes if phenotype['phenotypeMimNumber']]
             result['mimNumber'] = omim_phenotypes[0]['mimNumber'] if omim_phenotypes else None
-        if add_constraints:
+        if CONSTRAINT in gene_fields:
             constraint = next((constraint for constraint in gene.geneconstraint_set.all()), None)
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
-        if add_notes:
+        if NOTES in gene_fields:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
 
-    if add_dbnsfp:
+    if DBNSFP in gene_fields:
         prefetch_related_objects(genes, Prefetch('dbnsfpgene_set', queryset=dbNSFPGene.objects.only('gene__gene_id', *dbNSFPGene._meta.json_fields)))
-    if add_omim:
+    if OMIM in gene_fields:
         prefetch_related_objects(genes, Prefetch('omim_set', queryset=Omim.objects.only('gene__gene_id', *Omim._meta.json_fields)))
-    if add_constraints:
+    if CONSTRAINT in gene_fields:
         prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI').only('gene__gene_id', *GeneConstraint._meta.json_fields)))
-    if add_primate_ai:
+    if PRIMATE_AI in gene_fields:
         prefetch_related_objects(genes, Prefetch('primateai_set', queryset=PrimateAI.objects.only('gene__gene_id', *PrimateAI._meta.json_fields)))
-    if add_mgi:
+    if MGI_FIELD in gene_fields:
         prefetch_related_objects(genes, Prefetch('mgi_set', queryset=MGI.objects.only('gene__gene_id', 'marker_id')))
 
     return _get_json_for_models(genes, process_result=_process_result)
 
 
-def get_json_for_gene(gene, **kwargs):
+def get_json_for_gene(gene, user):
     """Returns a JSON representation of the given GeneInfo.
 
     Args:
@@ -866,7 +889,7 @@ def get_json_for_gene(gene, **kwargs):
         dict: json object
     """
 
-    return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
+    return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, user=user, add_all=True)
 
 
 def get_json_for_saved_searches(searches, user):
