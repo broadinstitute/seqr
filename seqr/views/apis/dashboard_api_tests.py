@@ -36,6 +36,7 @@ DASHBOARD_PROJECT_FIELDS = {
 }
 DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 
+@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class DashboardPageTest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
