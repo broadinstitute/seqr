@@ -12,7 +12,6 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required
 
-
 logger = logging.getLogger(__name__)
 
 
