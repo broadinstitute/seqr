@@ -120,17 +120,18 @@ Dropdown.propTypes = {
 
 export const InputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
-  console.log(options)
   return (
     <List>
       <List.Item>
         <List.List>
           {options.map(option =>
             <List.Item key={option.label}>
+              {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+              {option.label && <label>{helpLabel(option.label, option.labelHelp)}</label>}
               <BaseSemanticInput
                 {...baseProps}
                 inputType="Input"
-                label={helpLabel(option.label, option.labelHelp)}
+                width="300"
               />
             </List.Item>,
           )}
@@ -144,6 +145,32 @@ InputGroup.propTypes = {
   options: PropTypes.array,
   label: PropTypes.node,
   horizontalGrouped: PropTypes.bool,
+}
+
+export const AlignedInputGroup = styled(InputGroup)`
+  .ui.form .fields .wide.field {
+    width: 100% !important
+  }
+`
+
+export const InlineInputGroup = React.memo((props) => {
+  const { options, ...baseProps } = props
+  const optionChunks = []
+  const optionChunkCount = 3
+  for (let i = optionChunkCount; i > 0; i--) {
+    optionChunks.push(options.splice(0, Math.ceil(options.length / i)))
+  }
+  return (
+    <InlineFormGroup>
+      {optionChunks.map((chunk) => {
+        return <AlignedInputGroup options={chunk} {...baseProps} />
+      })}
+    </InlineFormGroup>
+  )
+})
+
+InlineInputGroup.propTypes = {
+  options: PropTypes.array,
 }
 
 export const Select = props =>

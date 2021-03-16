@@ -6,7 +6,7 @@ import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { Select, LabeledSlider, AlignedCheckboxGroup, InputGroup } from 'shared/components/form/Inputs'
+import { Select, LabeledSlider, AlignedCheckboxGroup, InlineInputGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
@@ -181,7 +181,7 @@ export const QUALITY_PANEL = {
 export const ANNOTATION_FILTER_PANEL = {
   name: 'AnnotationFilter',
   fields: ANNOTATION_FILTER_FIELDS,
-  fieldProps: { control: InputGroup, format: val => val || [] },
+  fieldProps: { control: InlineInputGroup, format: val => val || [] },
 }
 
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>
