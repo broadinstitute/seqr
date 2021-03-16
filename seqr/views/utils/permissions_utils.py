@@ -158,31 +158,34 @@ def _user_project_cache_key(user):
 
 def get_project_guids_user_can_view(user):
     project_guids = safe_redis_get_json(_user_project_cache_key(user))
-    if not project_guids:
-        project_guids = [p.guid for p in get_projects_user_can_view(user)]
+    if project_guids is not None:
+        return project_guids
+
+    is_data_manager = user_is_data_manager(user)
+    if is_data_manager:
+        projects = Project.objects.all()
+    else:
+        projects = get_local_access_projects(user)
+
+    project_guids = [p.guid for p in projects.only('guid')]
+    if is_anvil_authenticated(user) and not is_data_manager:
+        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
+                      list_anvil_workspaces(user)]
+        project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
+            workspace_name='').exclude(guid__in=project_guids).annotate(
+            workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
+            workspace__in=workspaces).only('guid')]
+
+    safe_redis_set_json(
+        _user_project_cache_key(user), project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+
     return project_guids
 
 
-def get_projects_user_can_view(user):
-    # TODO add cache check here
-    if user_is_data_manager(user):
-        projects = Project.objects.all()
-    else:
-        projects = Project.objects.filter(can_view_group__user=user)
-        if user_is_analyst(user):
-            projects = (projects | _get_analyst_projects())
-
-        if is_anvil_authenticated(user):
-            workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
-                          list_anvil_workspaces(user)]
-            projects = list(projects) + list(Project.objects.exclude(
-                workspace_name__isnull=True, workspace_name='', guid__in=[p.guid for p in projects]
-            ).annotate(workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
-                workspace__in=workspaces))
-
-    safe_redis_set_json(
-        _user_project_cache_key(user), [p.guid for p in projects], expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
-
+def get_local_access_projects(user):
+    projects = Project.objects.filter(can_view_group__user=user)
+    if user_is_analyst(user):
+        projects = (projects | _get_analyst_projects())
     return projects
 
 

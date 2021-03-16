@@ -36,12 +36,14 @@ DASHBOARD_PROJECT_FIELDS = {
 }
 DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 
-@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
+@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
-    def test_dashboard_page_data(self):
+    @mock.patch('seqr.views.utils.permissions_utils.safe_redis_set_json')
+    def test_dashboard_page_data(self, mock_set_redis, mock_get_redis):
+        mock_get_redis.return_value = None
         url = reverse(dashboard_page_data)
         self.check_require_login(url)
 
@@ -63,6 +65,9 @@ class DashboardPageTest(object):
         self.assertSetEqual(
             set(next(iter(response_json['projectsByGuid'].values())).keys()), DASHBOARD_PROJECT_FIELDS
         )
+        mock_get_redis.assert_called_with('projects__test_user_collaborator')
+        mock_set_redis.assert_called_with(
+            'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)
 
         self.login_analyst_user()
         response = self.client.get(url)
@@ -80,8 +85,17 @@ class DashboardPageTest(object):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 4)
 
+        mock_get_redis.return_value = ['R0001_1kg']
+        mock_set_redis.reset_mock()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {'R0001_1kg'})
+        mock_get_redis.assert_called_with('projects__test_data_manager')
+        mock_set_redis.assert_not_called()
+
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    def test_export_projects_table(self):
+    def test_export_projects_table(self, mock_get_redis):
+        mock_get_redis.return_value = None
         url = reverse(export_projects_table_handler)
         self.check_require_login(url)
 

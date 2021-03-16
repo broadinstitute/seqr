@@ -13,7 +13,7 @@ from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
-from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'em
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def get_all_collaborator_options(request):
     collaborators = set()
-    for project in get_projects_user_can_view(request.user):
+    for project in get_local_access_projects(request.user):
         collaborators.update(project.get_collaborators())
 
     return create_json_response({

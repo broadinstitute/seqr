@@ -4,6 +4,7 @@ from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
+@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class AwesomebarAPITest(object):
 
     def test_awesomebar_autocomplete_handler(self):
