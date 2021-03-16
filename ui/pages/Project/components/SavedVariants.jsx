@@ -5,7 +5,7 @@ import { Route, Switch, Link } from 'react-router-dom'
 import { Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getAnalysisGroupsByGuid, getCurrentProject } from 'redux/selectors'
+import { getAnalysisGroupsByGuid } from 'redux/selectors'
 import {
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
@@ -13,10 +13,11 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
-import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
+import { getCurrentProject } from '../selectors'
+import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 
 const ALL_FILTER = 'ALL'
 
@@ -109,6 +110,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       discoveryFilters={FILTER_FIELDS}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
+      project={project}
       tableSummaryComponent={
         summaryProps =>
           <Grid.Row>

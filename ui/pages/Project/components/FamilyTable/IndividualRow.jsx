@@ -26,10 +26,11 @@ import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS } from 'shared/utils/constants'
 
 import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
 import {
-  getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
+  getSamplesByGuid, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
 } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME } from '../../constants'
+import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 

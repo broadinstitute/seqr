@@ -4,10 +4,9 @@ import { Link } from 'react-router-dom'
 import { Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getCurrentProject } from 'redux/selectors'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { getProjectAnalysisGroupsByGuid } from '../selectors'
+import { getProjectAnalysisGroupsByGuid, getCurrentProject } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 

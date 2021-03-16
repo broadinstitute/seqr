@@ -4,8 +4,8 @@ import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 import { Popup, Table } from 'semantic-ui-react'
 
-import { getVariantTagTypeCount, getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledComponents'
+import { getVariantTagTypeCount, getSavedVariantsLinkPath } from './VariantTagTypeBar'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`

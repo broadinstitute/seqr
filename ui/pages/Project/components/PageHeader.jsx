@@ -2,12 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getCurrentProject } from 'redux/selectors'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import {
+  getCurrentProject,
   getPageHeaderEntityLinks,
   getPageHeaderBreadcrumbIdSections,
   getPageHeaderFamily,
