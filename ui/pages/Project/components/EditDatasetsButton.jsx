@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Tab, Table } from 'semantic-ui-react'
 
-import { getProjectGuid } from 'redux/selectors'
 import Modal from 'shared/components/modal/Modal'
 import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
@@ -12,6 +11,7 @@ import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
+import { getProjectGuid } from '../selectors'
 
 const UPLOADER_STYLES = { placeHolderStyle: { paddingLeft: '5%', paddingRight: '5%' } }
 

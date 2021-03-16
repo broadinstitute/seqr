@@ -7,11 +7,11 @@ import { Grid, Divider } from 'semantic-ui-react'
 import { updateVariantTags } from 'redux/rootReducer'
 import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
-import UpdateButton from './UpdateButton'
-import { Select, IntegerInput, LargeMultiselect } from '../form/Inputs'
-import { validators, configuredField } from '../form/ReduxFormWrapper'
-import { AwesomeBarFormInput } from '../page/AwesomeBar'
-import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from '../../utils/constants'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
+import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
+import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
 
 const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
