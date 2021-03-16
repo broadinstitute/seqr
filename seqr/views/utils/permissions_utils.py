@@ -152,12 +152,9 @@ def _get_analyst_projects():
     return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
 
-def _user_project_cache_key(user):
-    return 'projects__{}'.format(user)
-
-
 def get_project_guids_user_can_view(user):
-    project_guids = safe_redis_get_json(_user_project_cache_key(user))
+    cache_key = 'projects__{}'.format(user)
+    project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
@@ -176,8 +173,7 @@ def get_project_guids_user_can_view(user):
             workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
             workspace__in=workspaces).only('guid')]
 
-    safe_redis_set_json(
-        _user_project_cache_key(user), project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
 
