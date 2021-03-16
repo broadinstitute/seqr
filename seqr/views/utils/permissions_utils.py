@@ -157,8 +157,8 @@ def get_projects_user_can_view(user):
     projects = Project.objects.filter(can_view_group__user=user)
     if user_is_analyst(user):
         projects = (projects | _get_analyst_projects())
-
-    if is_anvil_authenticated(user):
+    # The resulting query is breaking postgres. Need to debug more but disabling as a hotfix to restore system functionality
+    if False and is_anvil_authenticated(user):
         workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in list_anvil_workspaces(user)]
         anvil_permitted_projects = Project.objects.annotate(
             workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
