@@ -6,10 +6,12 @@ from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -150,21 +152,37 @@ def _get_analyst_projects():
     return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
 
-def get_projects_user_can_view(user):
-    if user_is_data_manager(user):
-        return Project.objects.all()
+def get_project_guids_user_can_view(user):
+    cache_key = 'projects__{}'.format(user)
+    project_guids = safe_redis_get_json(cache_key)
+    if project_guids is not None:
+        return project_guids
 
+    is_data_manager = user_is_data_manager(user)
+    if is_data_manager:
+        projects = Project.objects.all()
+    else:
+        projects = get_local_access_projects(user)
+
+    project_guids = [p.guid for p in projects.only('guid')]
+    if is_anvil_authenticated(user) and not is_data_manager:
+        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
+                      list_anvil_workspaces(user)]
+        project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
+            workspace_name='').exclude(guid__in=project_guids).annotate(
+            workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
+            workspace__in=workspaces).only('guid')]
+
+    safe_redis_set_json(cache_key, project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+
+    return project_guids
+
+
+def get_local_access_projects(user):
     projects = Project.objects.filter(can_view_group__user=user)
     if user_is_analyst(user):
         projects = (projects | _get_analyst_projects())
-
-    if is_anvil_authenticated(user):
-        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in list_anvil_workspaces(user)]
-        anvil_permitted_projects = Project.objects.annotate(
-            workspace = Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(workspace__in=workspaces)
-        return (anvil_permitted_projects | projects).distinct()
-    else:
-        return projects.distinct()
+    return projects
 
 
 def check_mme_permissions(submission, user):
