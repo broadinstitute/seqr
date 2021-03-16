@@ -7,11 +7,11 @@ import logging
 from django.db import models
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family
+from seqr.models import ProjectCategory, Sample, Family, Project
 from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
-from seqr.views.utils.permissions_utils import get_projects_user_can_view
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
@@ -40,10 +40,11 @@ def dashboard_page_data(request):
 
 
 def _get_projects_json(user):
-    projects = get_projects_user_can_view(user)
-    if not projects:
+    project_guids = get_project_guids_user_can_view(user)
+    if not project_guids:
         return {}
 
+    projects = Project.objects.filter(guid__in=project_guids)
     projects_with_counts = projects.annotate(
         models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
         models.Count('family__savedvariant', distinct=True))
