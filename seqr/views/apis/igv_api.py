@@ -2,7 +2,7 @@ from collections import defaultdict
 import json
 import re
 from django.http import StreamingHttpResponse
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 from seqr.models import Individual, IgvSample
 from seqr.views.utils.dataset_utils import validate_alignment_dataset_path # TODO wrong file?
@@ -12,14 +12,16 @@ from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    data_manager_required
+    user_is_data_manager, user_is_pm
 from settings import API_LOGIN_REQUIRED_URL
 
 import logging
 logger = logging.getLogger(__name__)
 
+pm_or_data_manager_required = user_passes_test(
+    lambda user: user_is_data_manager(user) or user_is_pm(user), login_url=API_LOGIN_REQUIRED_URL)
 
-@data_manager_required
+@pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     info = []
@@ -85,7 +87,7 @@ SAMPLE_TYPE_MAP = {
     'dcr.bed.gz': IgvSample.SAMPLE_TYPE_GCNV,
 }
 
-@data_manager_required
+@pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project

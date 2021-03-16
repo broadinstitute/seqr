@@ -55,9 +55,10 @@ class IgvAPITest(AuthenticationTestCase):
         mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
         mock_file.seek.assert_not_called()
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         # Send invalid requests
         f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
@@ -85,11 +86,17 @@ class IgvAPITest(AuthenticationTestCase):
             {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
         ])
 
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.post(url, data={'f': f})
+        self.assertEqual(response.status_code, 200)
+
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
         url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        self.check_data_manager_login(url)
+        self.check_pm_login(url)
 
         # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -148,4 +155,11 @@ class IgvAPITest(AuthenticationTestCase):
             {'S000145_na19675', sample_guid}
         )
         mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+
+        # test data manager access
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'filePath': '/readviz/NA19675_new.cram',
+        }))
+        self.assertEqual(response.status_code, 200)
 
