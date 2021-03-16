@@ -5,7 +5,6 @@ from django.http import StreamingHttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 from seqr.models import Individual, IgvSample
-from seqr.views.utils.dataset_utils import validate_alignment_dataset_path # TODO wrong file?
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
@@ -105,7 +104,8 @@ def update_individual_igv_sample(request, individual_guid):
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
-        validate_alignment_dataset_path(file_path)
+        if not does_file_exist(file_path):
+            raise Exception('Error accessing "{}"'.format(file_path))
 
         sample, created = get_or_create_model_from_json(
             IgvSample, create_json={'individual': individual, 'sample_type': sample_type},

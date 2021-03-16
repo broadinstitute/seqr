@@ -55,11 +55,6 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
 
-def validate_alignment_dataset_path(dataset_path):
-    if not does_file_exist(dataset_path):
-        raise Exception('Error accessing "{}"'.format(dataset_path))
-
-
 def load_mapping_file(mapping_file_path):
     file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
     return _load_mapping_file(file_content)
