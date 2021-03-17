@@ -29,7 +29,7 @@ class UpdateAllReferenceDataTest(TestCase):
         patcher = mock.patch('reference_data.management.commands.update_dbnsfp_gene.DbNSFPReferenceDataHandler', lambda: 'dbnsfp_gene')
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('reference_data.management.commands.update_gene_cn_sensitivity.GeneCopyNumberSensitivityReferenceDataHandler', lambda: 'gene_cn_sensitivity')
+        patcher = mock.patch('reference_data.management.commands.update_gene_cn_sensitivity.CNSensitivityReferenceDataHandler', lambda: 'gene_cn_sensitivity')
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.management.commands.update_gene_constraint.GeneConstraintReferenceDataHandler', lambda: 'gene_constraint')
