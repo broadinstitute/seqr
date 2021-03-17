@@ -5,7 +5,7 @@ from reference_data.models import GeneCopyNumberSensitivity
 logger = logging.getLogger(__name__)
 
 
-class GeneCopyNumberSensitivityReferenceDataHandler(ReferenceDataHandler):
+class CNSensitivityReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneCopyNumberSensitivity
     url = 'https://storage.googleapis.com/seqr-reference-data/cn_sensitivity/pHI_pTS_scores.Jan21.txt'
@@ -20,4 +20,4 @@ class GeneCopyNumberSensitivityReferenceDataHandler(ReferenceDataHandler):
 
 
 class Command(GeneCommand):
-    reference_data_handler = GeneCopyNumberSensitivityReferenceDataHandler
+    reference_data_handler = CNSensitivityReferenceDataHandler
