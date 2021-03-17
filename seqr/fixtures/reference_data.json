@@ -1044,6 +1044,15 @@
         "pLI_rank": 1
     }
 },
+{
+    "model": "reference_data.genecopynumbersensitivity",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "pHI": 0.90576,
+        "pTS": 0.7346
+    }
+},
     {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,
