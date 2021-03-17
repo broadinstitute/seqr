@@ -121,15 +121,14 @@ Dropdown.propTypes = {
 export const InputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
   return (
-    <div style={{ display: 'table-row' }}>
+    <div>
       {options.map(option =>
-        <div style={{ display: 'table-cell', padding: '3px 10px' }}>
+        <div style={{ float: 'left', width: '33%', padding: '10px 0px' }}>
           {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-          <label style={{ float: 'left', width: '120px', fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
-          <BaseSemanticInput
+          <label style={{ fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
+          <BaseSemanticInput style={{ width: '75%' }}
             {...baseProps}
             inputType="Input"
-            inline
           />
         </div>,
       )}
@@ -145,13 +144,15 @@ InputGroup.propTypes = {
 
 export const InlineInputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
+  const inputOptions = options[0] !== undefined ? options[0].options : []
+  console.log(inputOptions)
   const optionChunks = []
-  const optionChunkCount = 5
+  const optionChunkCount = 3
   for (let i = optionChunkCount; i > 0; i--) {
-    optionChunks.push(options.splice(0, Math.ceil(options.length / i)))
+    optionChunks.push(inputOptions.splice(0, Math.ceil(inputOptions.length / i)))
   }
   return (
-    <div style={{ display: 'table', width: '100%' }}>
+    <div>
       {optionChunks.map((chunk) => {
         return <InputGroup options={chunk} {...baseProps} />
       })}
