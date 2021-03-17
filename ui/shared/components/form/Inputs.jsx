@@ -121,23 +121,19 @@ Dropdown.propTypes = {
 export const InputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
   return (
-    <List>
-      <List.Item>
-        <List.List>
-          {options.map(option =>
-            <List.Item key={option.label}>
-              {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-              {option.label && <label>{helpLabel(option.label, option.labelHelp)}</label>}
-              <BaseSemanticInput
-                {...baseProps}
-                inputType="Input"
-                width="300"
-              />
-            </List.Item>,
-          )}
-        </List.List>
-      </List.Item>
-    </List>
+    <div style={{ display: 'table-row' }}>
+      {options.map(option =>
+        <div style={{ display: 'table-cell', padding: '3px 10px' }}>
+          {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+          <label style={{ float: 'left', width: '120px', fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
+          <BaseSemanticInput
+            {...baseProps}
+            inputType="Input"
+            inline
+          />
+        </div>,
+      )}
+    </div>
   )
 })
 
@@ -147,25 +143,19 @@ InputGroup.propTypes = {
   horizontalGrouped: PropTypes.bool,
 }
 
-export const AlignedInputGroup = styled(InputGroup)`
-  .ui.form .fields .wide.field {
-    width: 100% !important
-  }
-`
-
 export const InlineInputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
   const optionChunks = []
-  const optionChunkCount = 3
+  const optionChunkCount = 5
   for (let i = optionChunkCount; i > 0; i--) {
     optionChunks.push(options.splice(0, Math.ceil(options.length / i)))
   }
   return (
-    <InlineFormGroup>
+    <div style={{ display: 'table', width: '100%' }}>
       {optionChunks.map((chunk) => {
-        return <AlignedInputGroup options={chunk} {...baseProps} />
+        return <InputGroup options={chunk} {...baseProps} />
       })}
-    </InlineFormGroup>
+    </div>
   )
 })
 
