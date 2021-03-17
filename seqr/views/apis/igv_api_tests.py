@@ -55,6 +55,7 @@ class IgvAPITest(AuthenticationTestCase):
         mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
         mock_file.seek.assert_not_called()
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
@@ -91,6 +92,7 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
