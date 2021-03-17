@@ -202,7 +202,7 @@ const ProjectOverview = React.memo((
         {datasetSections.map((sectionProps, i) =>
           <DetailSection
             {...sectionProps}
-            button={(datasetSections.length - 1 === i && user.isDataManager) ? <EditDatasetsButton /> : null}
+            button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
           />,
         )}
       </Grid.Column>

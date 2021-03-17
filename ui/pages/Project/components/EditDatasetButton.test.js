@@ -1,7 +1,6 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import configureStore from 'redux-mock-store'
 
 import EditDatasetsButton from './EditDatasetsButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
@@ -9,6 +8,5 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  shallow(<EditDatasetsButton store={store} />)
+  shallow(<EditDatasetsButton user={STATE_WITH_2_FAMILIES.user} />)
 })
