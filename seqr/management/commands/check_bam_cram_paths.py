@@ -1,32 +1,51 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import IgvSample
-from seqr.views.utils.dataset_utils import validate_alignment_dataset_path
 
+import collections
+import hail as hl
 import logging
+import tqdm
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
+    help = 'Checks all gs:// bam or cram paths and, if a file no longer exists, deletes the path from the database'
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='*')
+        parser.add_argument(
+            '-d',
+            '--dry-run',
+            action="store_true",
+            help='Only print missing paths without updating the database',
+        )
+        parser.add_argument('args', nargs='*', help='only check paths in these project name(s)')
 
     def handle(self, *args, **options):
-        samples = IgvSample.objects.filter(
-            individual__family__project__name__in=args,
-        ).prefetch_related('individual', 'individual__family')
+        samples = (IgvSample.objects.filter(
+            individual__family__project__name__in=args
+        ) if args else IgvSample.objects.all()).filter(
+            file_path__startswith='gs://'
+        ).prefetch_related('individual', 'individual__family__project')
 
-        failed = []
-        for sample in samples:
-            try:
-                validate_alignment_dataset_path(sample.file_path)
-            except Exception as e:
+        missing_counter = collections.defaultdict(int)
+        guids_of_samples_with_missing_file = set()
+        for sample in tqdm.tqdm(samples, unit=" samples"):
+            if not hl.hadoop_is_file(sample.file_path):
                 individual_id = sample.individual.individual_id
-                failed.append(individual_id)
-                logger.info('Error at {} (Individual: {}): {} '.format(sample.file_path, individual_id, str(e)))
+                project = sample.individual.family.project.name
+                missing_counter[project] += 1
+                logger.info('Individual: {}  file not found: {}'.format(individual_id, sample.file_path))
+                if not options.get('dry_run'):
+                    guids_of_samples_with_missing_file.add(sample.guid)
+
+        if len(guids_of_samples_with_missing_file) > 0:
+            IgvSample.bulk_update(user=None, update_json={'file_path': ''}, guid__in=guids_of_samples_with_missing_file)
 
         logger.info('---- DONE ----')
         logger.info('Checked {} samples'.format(len(samples)))
-        logger.info('{} failed samples: {}'.format(len(failed), ', '.join(failed)))
+        if missing_counter:
+            logger.info('{} files not found:'.format(sum(missing_counter.values())))
+            for project_name, c in sorted(missing_counter.items(), key=lambda t: -t[1]):
+                logger.info('   {} in {}'.format(c, project_name))
