@@ -26,8 +26,21 @@ class CheckBamCramPathsTest(TestCase):
 
     @mock.patch('hail.hadoop_is_file')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
+    def test_command_with_other_project(self, mock_logger, mock_hadoop_is_file):
+        mock_hadoop_is_file.return_value = False
+        call_command('check_bam_cram_paths', '1kg project')
+        self.assertEqual(IgvSample.objects.filter(file_path='').count(), 0)
+        self.assertEqual(IgvSample.objects.count(), 2)
+
+        calls = [
+            mock.call('---- DONE ----'),
+            mock.call('Checked 0 samples'),
+        ]
+        mock_logger.info.assert_has_calls(calls)
+
+    @mock.patch('hail.hadoop_is_file')
+    @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
     def test_command(self, mock_logger, mock_hadoop_is_file):
-        # run on just the 1kg project
         mock_hadoop_is_file.return_value = False
         call_command('check_bam_cram_paths')
         self._check_results(1, mock_logger, mock_hadoop_is_file)
