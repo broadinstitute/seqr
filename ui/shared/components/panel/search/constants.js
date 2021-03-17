@@ -1,4 +1,4 @@
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput, InlineInputGroup } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -375,7 +375,7 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const ANNOTATION_FILTER_OPTION_LIST = [
+export const ANNOTATION_FILTER_OPTIONS_LIST = [
   {
     name: 'cadd',
     label: 'CADD',
@@ -453,10 +453,17 @@ export const ANNOTATION_FILTER_OPTION_LIST = [
   },
 ]
 
+export const ANNOTATION_FILTER_OPTION_LIST = [
+  {
+    control: InlineInputGroup,
+    options: ANNOTATION_FILTER_OPTIONS_LIST,
+  },
+]
+
 const ANNOTATION_FILTER_FIELD = {
   name: 'annotationFilterField',
   options: ANNOTATION_FILTER_OPTION_LIST,
-  width: 1,
+  width: 7,
 }
 
 export const ANNOTATION_FILTER_FIELDS = [
