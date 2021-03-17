@@ -9,6 +9,7 @@ social-auth-core==3.3.3          # the Python social authentication package. Req
 elasticsearch==7.9.1             # elasticsearch client
 elasticsearch-dsl==7.2.1	     # elasticsearch query utilities
 gunicorn==19.10.0                # web server
+hail==0.2.62                     # provides convenient apis for working with files in google cloud storage
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
 pillow==8.1.0                    # required dependency of Djagno ImageField-type database records
@@ -19,6 +20,6 @@ redis==3.3.11                    # client lib for the redis in-memory database -
 requests-toolbelt==0.9.1         # for troubleshooting requests
 slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
-tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations
+tqdm==4.42.1                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==5.2.0                # simplified static file handling. Behind a major version due to missing Python 2 support
 
