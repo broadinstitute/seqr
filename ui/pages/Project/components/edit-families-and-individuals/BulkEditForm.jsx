@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getCurrentProject, getUser } from 'redux/selectors'
+import { getUser } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import {
@@ -16,6 +16,7 @@ import {
 import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
+  getCurrentProject,
   getEntityExportConfig,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,

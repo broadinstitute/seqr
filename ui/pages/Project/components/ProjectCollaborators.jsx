@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsByUsername, getCurrentProject, getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsByUsername, getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -15,7 +15,7 @@ import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { updateCollaborator } from '../reducers'
-import { getUserOptions } from '../selectors'
+import { getUserOptions, getCurrentProject } from '../selectors'
 
 
 const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) =>

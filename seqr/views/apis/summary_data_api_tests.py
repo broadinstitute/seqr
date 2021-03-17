@@ -26,6 +26,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 }
 
 
+@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(object):
 
     @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')

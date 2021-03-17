@@ -291,7 +291,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
     def test_get_all_collaborator_options(self):
         super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
-        assert_has_anvil_calls(self)
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_get_all_analyst_options(self):
         super(AnvilUsersAPITest, self).test_get_all_analyst_options()
@@ -345,7 +346,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
-        assert_has_anvil_calls(self)
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
 
     def test_get_all_analyst_options(self):
         super(MixUsersAPITest, self).test_get_all_analyst_options()

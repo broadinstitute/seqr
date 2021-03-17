@@ -4,10 +4,8 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
-import { getCurrentProject } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { SectionHeader } from 'shared/components/StyledComponents'
-import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -16,6 +14,7 @@ import {
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
 import {
+  getCurrentProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getFamiliesExportConfig,
@@ -30,6 +29,7 @@ import ProjectCollaborators from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
+import VariantTagTypeBar from './VariantTagTypeBar'
 
 
 const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project }) => {

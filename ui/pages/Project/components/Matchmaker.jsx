@@ -527,7 +527,7 @@ const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, canEdit: true, colWidth
 const Matchmaker = React.memo(({ individuals, family }) =>
   <div>
     <Header dividing size="medium" content="Notes" />
-    <Family family={family} compact useFullWidth hidePedigree showVariantDetails={false} fields={MME_FAMILY_FIELDS} />
+    <Family family={family} compact useFullWidth hidePedigree fields={MME_FAMILY_FIELDS} />
     {individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
       <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
     )}

@@ -11,6 +11,8 @@ NODE_POOLS:
     num_nodes: 3
     machine_type: n1-highmem-8
     labels: nodeType=data
+#  es-loading-nodes:
+#    num_nodes: 2
 
 DISKS: postgres, seqr-static-files, es-data
 

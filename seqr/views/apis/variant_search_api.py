@@ -33,7 +33,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     get_json_for_discovery_tags, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, user_is_analyst
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -110,9 +110,9 @@ def _get_or_create_results_model(search_hash, search_context, user):
                 all_families.update(project_family['familyGuids'])
             families = Family.objects.filter(guid__in=all_families)
         elif _is_all_project_family_search(search_context):
-            omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
-            families = Family.objects.filter(project__in=projects)
+            omit_projects = [p.guid for p in ProjectCategory.objects.get(name='Demo').projects.only('guid').all()]
+            project_guids = [project_guid for project_guid in get_project_guids_user_can_view(user) if project_guid not in omit_projects]
+            families = Family.objects.filter(project__guid__in=project_guids)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:
