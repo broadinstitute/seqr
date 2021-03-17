@@ -2,7 +2,6 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
 
-from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
@@ -11,8 +10,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
  get_json_for_saved_search, get_json_for_saved_variants_with_tags
 from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
-    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, GENE_FIELDS, GENE_DETAIL_FIELDS, IGV_SAMPLE_FIELDS, \
-    TAG_FIELDS, VARIANT_NOTE_FIELDS, CASE_REVIEW_FAMILY_FIELDS, GENE_VARIANT_FIELDS
+    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, IGV_SAMPLE_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
+    TAG_FIELDS, VARIANT_NOTE_FIELDS
 
 class JSONUtilsTest(TestCase):
     databases = '__all__'

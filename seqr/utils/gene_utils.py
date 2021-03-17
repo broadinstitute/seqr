@@ -110,13 +110,6 @@ ALL_GENE_FIELDS = {
 ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
 
 def _get_json_for_genes(genes, user=None, gene_fields=None):
-    """Returns a JSON representation of the given list of GeneInfo.
-
-    Args:
-        genes (array): array of django models for the GeneInfo.
-    Returns:
-        array: array of json objects
-    """
     if not gene_fields:
         gene_fields = {}
 
