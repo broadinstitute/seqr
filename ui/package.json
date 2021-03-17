@@ -62,7 +62,7 @@
   },
   "dependencies": {
     "draft-js": "^0.11.7",
-    "draftjs-md-converter": "^0.1.6",
+    "draftjs-md-converter": "^1.5.1",
     "extend": "^3.0.2",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "igv": "^2.2.2",
