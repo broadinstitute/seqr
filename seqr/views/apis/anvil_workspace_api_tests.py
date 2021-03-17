@@ -193,7 +193,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_email.assert_called_with(
             subject='AnVIL data loading request',
             body=email_body.format(project_name=TEST_NO_PROJECT_WORKSPACE_NAME),
-            to=['test_superuser@test.com', 'test_data_manager@test.com'],
+            to=['test_data_manager@test.com', 'test_superuser@test.com'],
             attachments=[('{}_sample_ids.tsv'.format(project.guid), 'NA19675\nNA19678\nHG00735')]
         )
         html_project_name = '<a href="http://testserver/project/{guid}/project_page">{name}</a>'.format(
