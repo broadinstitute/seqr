@@ -16,7 +16,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
-from seqr.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -252,7 +252,7 @@ def get_variant_gene_breakdown(request, search_hash):
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes(list(gene_counts.keys()), add_variant_gene_display_fields=True),
+        'genesById': get_genes_for_variant_display(list(gene_counts.keys())),
     })
 
 

@@ -11,16 +11,32 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
 
 def get_gene(gene_id, user):
     gene = GeneInfo.objects.get(gene_id=gene_id)
-    gene_json = _get_json_for_model(gene, get_json_for_models=_get_json_for_genes, user=user, add_all=True)
+    gene_json = _get_json_for_model(gene, get_json_for_models=_get_json_for_genes, user=user, gene_fields=ALL_GENE_FIELDS)
     return gene_json
 
 
-def get_genes(gene_ids, **kwargs):
+def get_genes(gene_ids):
+    return _get_genes(gene_ids)
+
+
+def get_genes_for_variant_display(gene_ids):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS)
+
+
+def get_genes_for_variants(gene_ids):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS)
+
+
+def get_genes_with_detail(gene_ids, user):
+    return _get_genes(gene_ids, user=user, gene_fields=ALL_GENE_FIELDS)
+
+
+def _get_genes(gene_ids, user=None, gene_fields=None):
     gene_filter = {}
     if gene_ids is not None:
         gene_filter['gene_id__in'] = gene_ids
     genes = GeneInfo.objects.filter(**gene_filter)
-    return {gene['geneId']: gene for gene in _get_json_for_genes(genes, **kwargs)}
+    return {gene['geneId']: gene for gene in _get_json_for_genes(genes, user=user, gene_fields=gene_fields)}
 
 
 def get_gene_ids_for_gene_symbols(gene_symbols):
@@ -93,7 +109,7 @@ ALL_GENE_FIELDS = {
 }
 ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
 
-def _get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=False, add_variant_gene_display_fields=False):
+def _get_json_for_genes(genes, user=None, gene_fields=None):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -101,13 +117,7 @@ def _get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields
     Returns:
         array: array of json objects
     """
-    if add_all:
-        gene_fields = ALL_GENE_FIELDS
-    elif add_variant_gene_fields:
-        gene_fields = VARIANT_GENE_FIELDS
-    elif add_variant_gene_display_fields:
-        gene_fields = VARIANT_GENE_DISPLAY_FIELDS
-    else:
+    if not gene_fields:
         gene_fields = {}
 
     total_gene_constraints = None
