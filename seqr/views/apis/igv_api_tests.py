@@ -9,6 +9,10 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
 PROJECT_GUID = 'R0001_1kg'
 
+
+@mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+@mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+@mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class IgvAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
@@ -55,8 +59,6 @@ class IgvAPITest(AuthenticationTestCase):
         mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
         mock_file.seek.assert_not_called()
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
         self.check_pm_login(url)
@@ -92,8 +94,6 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
-    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
