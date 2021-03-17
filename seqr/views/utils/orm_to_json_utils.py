@@ -11,8 +11,7 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
-from reference_data.models import GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, HumanPhenotypeOntology, \
-    GeneCopyNumberSensitivity
+from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
@@ -799,115 +798,6 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil
             'hasEditPermissions': can_edit,
         })
     return collaborator_json
-
-def _get_gene_model(gene, field):
-    # prefetching only works with all()
-    return next((model for model in getattr(gene, '{}_set'.format(field)).all()), None)
-
-def _add_gene_model(field, return_key):
-    def _add_gene_model_func(gene):
-        model = _get_gene_model(gene, field)
-        return {return_key: _get_json_for_model(model) if model else None}
-    return _add_gene_model_func
-
-def _add_dbnsfp(gene):
-    model = _get_gene_model(gene, 'dbnsfpgene')
-    if model:
-        return _get_json_for_model(model)
-    else:
-        return _get_empty_json_for_model(dbNSFPGene)
-
-def _add_omim(gene):
-    omim_phenotypes = _get_json_for_models(gene.omim_set.all())
-    return {
-        'omimPhenotypes': [phenotype for phenotype in omim_phenotypes if phenotype['phenotypeMimNumber']],
-        'mimNumber': omim_phenotypes[0]['mimNumber'] if omim_phenotypes else None,
-    }
-
-def _add_mgi(gene):
-    model = _get_gene_model(gene, 'mgi')
-    return {'mgiMarkerId': model.marker_id if model else None}
-
-OMIM = 'omim'
-CONSTRAINT = 'constraint'
-CN_SENSITIVITY = 'cn_sensitivity'
-DBNSFP = 'dbnsfp'
-PRIMATE_AI = 'primate_ai'
-MGI_FIELD = 'mgi'
-NOTES= 'notes'
-VARIANT_GENE_DISPLAY_FIELDS = {
-    OMIM: (Omim, _add_omim),
-    CONSTRAINT: (GeneConstraint, None),
-    CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity')),
-}
-VARIANT_GENE_FIELDS = {
-    DBNSFP: (dbNSFPGene, _add_dbnsfp),
-    PRIMATE_AI: (PrimateAI, _add_gene_model('primateai', 'primateAi')),
-}
-VARIANT_GENE_FIELDS.update(VARIANT_GENE_DISPLAY_FIELDS)
-ALL_GENE_FIELDS = {
-    MGI_FIELD: (MGI, _add_mgi),
-    NOTES: (None, None),
-}
-ALL_GENE_FIELDS.update(VARIANT_GENE_FIELDS)
-
-def get_json_for_genes(genes, user=None, add_all=False, add_variant_gene_fields=False, add_variant_gene_display_fields=False):
-    """Returns a JSON representation of the given list of GeneInfo.
-
-    Args:
-        genes (array): array of django models for the GeneInfo.
-    Returns:
-        array: array of json objects
-    """
-    if add_all:
-        gene_fields = ALL_GENE_FIELDS
-    elif add_variant_gene_fields:
-        gene_fields = VARIANT_GENE_FIELDS
-    elif add_variant_gene_display_fields:
-        gene_fields = VARIANT_GENE_DISPLAY_FIELDS
-    else:
-        gene_fields = {}
-
-    total_gene_constraints = None
-    if CONSTRAINT in gene_fields:
-        total_gene_constraints = GeneConstraint.objects.count()
-
-    if NOTES in gene_fields:
-        gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user)
-
-    def _add_total_constraint_count(result, *args):
-        result['totalGenes'] = total_gene_constraints
-
-    def _process_result(result, gene):
-        for field, (_, result_func) in gene_fields.items():
-            if field == NOTES:
-                updates = {'notes': gene_notes_json.get(result['geneId'], [])}
-            elif field ==  CONSTRAINT:
-                constraint = _get_gene_model(gene, 'geneconstraint')
-                updates = {'constraints':  _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}}
-            else:
-                updates = result_func(gene)
-            result.update(updates)
-
-    for model, _ in gene_fields.values():
-        if model:
-            prefetch_related_objects(genes, Prefetch(
-                '{}_set'.format(model.__name__.lower()),
-                queryset=model.objects.only('gene__gene_id', *model._meta.json_fields)))
-
-    return _get_json_for_models(genes, process_result=_process_result)
-
-
-def get_json_for_gene(gene, user):
-    """Returns a JSON representation of the given GeneInfo.
-
-    Args:
-        gene (object): Django model for the GeneInfo.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, user=user, add_all=True)
 
 
 def get_json_for_saved_searches(searches, user):
