@@ -225,7 +225,8 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
-if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
+DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
+if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
