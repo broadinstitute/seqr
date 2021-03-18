@@ -26,3 +26,17 @@ for model_class in [
             list_display.append('last_modified_date')
         save_on_top = True
         list_per_page = 2000
+
+@admin.register(admin.models.LogEntry)
+class SpecificModelAdmin(admin.ModelAdmin):
+    search_fields = ['object_id', 'object_repr', 'change_message']
+    list_display = ['object_id', 'object_repr', 'get_change_message', 'content_type', 'action_time', 'user']
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
