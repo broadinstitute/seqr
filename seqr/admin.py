@@ -18,8 +18,11 @@ for model_class in [
             'guid', 'name', 'display_name', 'family_id', 'individual_id', 'description', 'search_hash', 'id',
         }]
         list_display = deepcopy(model_class._meta.json_fields if getattr(model_class._meta, 'json_fields', None) else search_fields)
+        if 'guid' in list_display:
+            list_display.remove('guid')
+        list_display.insert(0, 'guid')
         if hasattr(model_class._meta, 'internal_json_fields'):
-            list_display = model_class._meta.internal_json_fields + list_display
+            list_display += model_class._meta.internal_json_fields
         if 'created_date' not in list_display:
             list_display.append('created_date')
         if 'last_modified_date' not in list_display:
