@@ -35,7 +35,7 @@ class LogEntryModelAdmin(admin.ModelAdmin):
     search_fields = ['object_id', 'object_repr', 'change_message']
     list_display = ['object_id', 'object_repr', 'get_change_message', 'content_type', 'action_time', 'user']
 
-    def has_add_permission(self, request, obj):
+    def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
