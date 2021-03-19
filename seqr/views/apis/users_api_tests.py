@@ -193,12 +193,13 @@ class UsersAPITest(object):
         self.assertEqual(response.reason_phrase, 'Password is required')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({
-            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test'}))
+            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test', 'isSuperuser': True}))
         self.assertEqual(response.status_code, 200)
 
         user = User.objects.get(username='test_new_user')
         self.assertEqual(user.first_name, 'Test')
         self.assertFalse(user.password == password)
+        self.assertFalse(user.is_superuser)
 
         auth_user = auth.get_user(self.client)
         self.assertEqual(user, auth_user)
