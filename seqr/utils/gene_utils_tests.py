@@ -35,6 +35,20 @@ class GeneUtilsTest(TestCase):
 
         json = get_genes_with_detail(gene_ids, user)
         self.assertSetEqual(set(json.keys()), gene_ids)
-        self.assertSetEqual(set(json[GENE_ID].keys()), GENE_DETAIL_FIELDS)
+        gene = json[GENE_ID]
+        self.assertSetEqual(set(gene.keys()), GENE_DETAIL_FIELDS)
 
+        # test nested models
+        self.assertSetEqual(set(gene['primateAi'].keys()), {'percentile25', 'percentile75'})
+        self.assertSetEqual(
+            set(gene['constraints'].keys()), {'misZ', 'misZRank', 'pli', 'pliRank', 'louef', 'louefRank', 'totalGenes'})
+        self.assertSetEqual(set(gene['cnSensitivity'].keys()), {'phi', 'pts'})
+        self.assertSetEqual(
+            set(gene['omimPhenotypes'][0].keys()),
+            {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance'})
 
+        sparse_gene = json['ENSG00000227232']
+        self.assertIsNone(sparse_gene['primateAi'])
+        self.assertDictEqual(sparse_gene['constraints'], {})
+        self.assertDictEqual(sparse_gene['cnSensitivity'], {})
+        self.assertListEqual(sparse_gene['omimPhenotypes'], [])
