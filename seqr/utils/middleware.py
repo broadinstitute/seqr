@@ -82,8 +82,9 @@ class LogRequestMiddleware(MiddlewareMixin):
             if request.body:
                 request_body = json.loads(request.body)
                 # TODO update settings in stackdriver so this isn't neccessary
-                if 'password' in request_body:
-                    request_body['password'] = '***'
+                password_keys = [k for k in request_body.keys() if k.startswith('password')]
+                for key in password_keys:
+                    request_body[key] = '***'
         except (ValueError, RawPostDataException):
             pass
 

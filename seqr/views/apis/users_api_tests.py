@@ -5,6 +5,7 @@ from anymail.exceptions import AnymailError
 from django.contrib import auth
 from django.contrib.auth.models import User
 from django.urls.base import reverse
+from urllib.parse import quote_plus
 
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
@@ -178,11 +179,21 @@ class UsersAPITest(object):
 
         set_password_url = reverse(set_password, args=[username])
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
+            {'userToken': 'invalid'}))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
+            {'userToken': quote_plus(password)}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Password is required')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({
-            'password': 'password123', 'firstName': 'Test'}))
+            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test'}))
         self.assertEqual(response.status_code, 200)
 
         user = User.objects.get(username='test_new_user')
