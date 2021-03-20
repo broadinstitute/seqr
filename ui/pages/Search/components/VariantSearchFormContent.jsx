@@ -194,6 +194,9 @@ const QS_FILTER_FIELD = {
   component: DividedFormField,
 }
 
+console.log(LOCATION_PANEL)
+console.log(ANNOTATION_FILTER_PANEL)
+
 const PANELS = [
   INHERITANCE_PANEL,
   {

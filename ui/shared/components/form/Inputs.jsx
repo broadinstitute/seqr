@@ -145,6 +145,7 @@ export const InputGroup = React.memo((props) => {
 
 InputGroup.propTypes = {
   options: PropTypes.array,
+  inputgroupid: PropTypes.number,
 }
 
 export const InlineInputGroup = React.memo((props) => {
@@ -156,7 +157,7 @@ export const InlineInputGroup = React.memo((props) => {
     optionChunks.push({ id: i, key: `chunk${i}`, chunk: inputOptions.splice(0, Math.ceil(inputOptions.length / i)) })
   }
   return (
-    <div key={'inlineInputGroup'}>
+    <div key="inlineInputGroup">
       {optionChunks.map((chunk) => {
         return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} {...baseProps} />
       })}
@@ -166,7 +167,7 @@ export const InlineInputGroup = React.memo((props) => {
 
 InlineInputGroup.propTypes = {
   options: PropTypes.array,
-  inlineinputgroupid: PropTypes.number
+  inlineinputgroupid: PropTypes.number,
 }
 
 export const Select = props =>
