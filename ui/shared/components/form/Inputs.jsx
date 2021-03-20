@@ -121,20 +121,21 @@ Dropdown.propTypes = {
 
 
 export const InputGroup = React.memo((props) => {
-  const { options, ...baseProps } = props
-  const styles = {
+  const { inputgroupid, options, ...baseProps } = props
+  const inputGroupStyle = {
     width: '75%',
   }
   return (
-    <div>
+    <div key={`inputGroupId${inputgroupid}`}>
       {options.map(option =>
-        <div style={{ float: 'left', width: '33%', padding: '10px 0px' }}>
+        <div style={{ float: 'left', width: '33%', padding: '10px 0px' }} key={option.label}>
           {/* eslint-disable-next-line jsx-a11y/label-has-for */}
           <label style={{ fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
           <BaseSemanticInput
             {...baseProps}
             inputType="Input"
-            inputStyle={styles}
+            inputStyle={inputGroupStyle}
+            key={option.name}
           />
         </div>,
       )}
@@ -144,23 +145,20 @@ export const InputGroup = React.memo((props) => {
 
 InputGroup.propTypes = {
   options: PropTypes.array,
-  label: PropTypes.node,
-  horizontalGrouped: PropTypes.bool,
 }
 
 export const InlineInputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
-  console.log(inputOptions)
   const optionChunks = []
   const optionChunkCount = 3
   for (let i = optionChunkCount; i > 0; i--) {
-    optionChunks.push(inputOptions.splice(0, Math.ceil(inputOptions.length / i)))
+    optionChunks.push({ id: i, key: `chunk${i}`, chunk: inputOptions.splice(0, Math.ceil(inputOptions.length / i)) })
   }
   return (
-    <div>
+    <div key={'inlineInputGroup'}>
       {optionChunks.map((chunk) => {
-        return <InputGroup options={chunk} {...baseProps} />
+        return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} {...baseProps} />
       })}
     </div>
   )
@@ -168,6 +166,7 @@ export const InlineInputGroup = React.memo((props) => {
 
 InlineInputGroup.propTypes = {
   options: PropTypes.array,
+  inlineinputgroupid: PropTypes.number
 }
 
 export const Select = props =>
