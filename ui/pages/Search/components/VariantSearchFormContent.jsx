@@ -143,9 +143,6 @@ const ANNOTATION_FILTER_PANEL_MAP = {
   },
 }
 
-console.log(ANNOTATION_PANEL_MAP)
-console.log(ANNOTATION_PANEL)
-
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
 const secondaryPanel = panel => ({
   ...panel,
