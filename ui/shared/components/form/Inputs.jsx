@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search, Icon } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -121,21 +121,32 @@ Dropdown.propTypes = {
 
 
 export const InputGroup = React.memo((props) => {
-  const { inputgroupid, options, ...baseProps } = props
+  const { inputGroupId, options } = props
   const inputGroupStyle = {
     width: '75%',
   }
   return (
-    <div key={`inputGroupId${inputgroupid}`}>
+    <div key={`inputGroupId${inputGroupId}`}>
       {options.map(option =>
         <div style={{ float: 'left', width: '33%', padding: '10px 0px' }} key={option.label}>
-          {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-          <label style={{ fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
+          <div>
+            {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+            <label style={{ fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
+            {(option.isDefault === undefined || option.isDefault === false) &&
+            <Icon name="times circle outline"
+              onClick={() => {
+                console.log('Click!')
+              }}
+            />
+          }
+          </div>
           <BaseSemanticInput
-            {...baseProps}
+            id={option.name}
             inputType="Input"
             inputStyle={inputGroupStyle}
             key={option.name}
+            onChange={() => {}}
+            onFocus={() => {}}
           />
         </div>,
       )}
@@ -145,7 +156,7 @@ export const InputGroup = React.memo((props) => {
 
 InputGroup.propTypes = {
   options: PropTypes.array,
-  inputgroupid: PropTypes.number,
+  inputGroupId: PropTypes.number,
 }
 
 export const InlineInputGroup = React.memo((props) => {
@@ -154,7 +165,8 @@ export const InlineInputGroup = React.memo((props) => {
   const optionChunks = []
   const optionChunkCount = 3
   for (let i = optionChunkCount; i > 0; i--) {
-    optionChunks.push({ id: i, key: `chunk${i}`, chunk: inputOptions.splice(0, Math.ceil(inputOptions.length / i)) })
+    const optionChunk = inputOptions.splice(0, Math.ceil(inputOptions.length / i))
+    optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
   }
   return (
     <div key="inlineInputGroup">
