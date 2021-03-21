@@ -222,8 +222,9 @@ export const InlineInputGroup = React.memo((props) => {
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
   const optionChunkCount = 5
+  const inputOptionsCopy = [...inputOptions]
   for (let i = optionChunkCount; i > 0; i--) {
-    const optionChunk = inputOptions.splice(0, Math.ceil(inputOptions.length / i))
+    const optionChunk = inputOptionsCopy.splice(0, Math.ceil(inputOptions.length / i))
     optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
   }
   return (
