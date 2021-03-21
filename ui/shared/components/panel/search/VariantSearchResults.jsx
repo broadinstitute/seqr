@@ -21,6 +21,7 @@ import ExportTableButton from '../../buttons/ExportTableButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
+import { filteredPredictions } from '../../form/Inputs'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -48,6 +49,41 @@ DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
+const filterVariants = (variants) => {
+  const filteredVariants = []
+  const filteredPredictionKeys = Object.keys(filteredPredictions)
+
+  if (filteredPredictionKeys.length === 0) {
+    return variants
+  }
+
+  let filterVariantExpression = ''
+  for (let variantIdx = 0; variantIdx < variants.length; variantIdx++) {
+    const variant = variants[variantIdx]
+    for (let predictionKeyIdx = 0; predictionKeyIdx < filteredPredictionKeys.length; predictionKeyIdx++) {
+      const predictionKey = filteredPredictionKeys[predictionKeyIdx]
+      const filteredPredictionValue = filteredPredictions[predictionKey]
+      const variantPredictionValue = parseFloat(variant.predictions[predictionKey]).toPrecision(2)
+
+      if (filterVariantExpression !== '') {
+        filterVariantExpression += ' && '
+      }
+
+      filterVariantExpression += `${variantPredictionValue} < ${filteredPredictionValue}`
+    }
+
+    /* eslint no-eval: 0 */
+    const result = eval(filterVariantExpression)
+    if (result === true) {
+      filteredVariants.push(variant)
+    }
+
+    filterVariantExpression = ''
+  }
+
+  return filteredVariants
+}
+
 const BaseVariantSearchResultsContent = React.memo((
   { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants }) => {
   const { searchHash } = match.params
@@ -55,6 +91,8 @@ const BaseVariantSearchResultsContent = React.memo((
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
+
+  const filteredVariants = filterVariants(displayVariants)
 
   return [
     <LargeRow key="resultsSummary">
@@ -79,7 +117,7 @@ const BaseVariantSearchResultsContent = React.memo((
         <GeneBreakdown searchHash={searchHash} />
       </Grid.Column>
     </LargeRow>,
-    <DisplayVariants key="variants" displayVariants={displayVariants} />,
+    <DisplayVariants key="variants" displayVariants={filteredVariants} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
         <ReduxFormWrapper

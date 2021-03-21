@@ -127,6 +127,11 @@ const getInputOptions = (inputOptions, inputType) => {
 
 }
 
+export const filteredPredictions = {}
+export const updateFilterPredictions = (prediction, key) => {
+  filteredPredictions[prediction] = key
+}
+
 export const InputGroup = React.memo((props) => {
   const { inputGroupId, options } = props
   const inputGroupStyle = {
@@ -179,10 +184,9 @@ export const InputGroup = React.memo((props) => {
               options={getInputOptions(COMPARE_OPTIONS, option.optionType)}
               noResultsMessage={null}
               tabIndex="0"
-              onClick={() => {
-                console.log('Click!')
-              }}
-              onFocus={() => {}}
+              onClick={() => { }}
+              onFocus={() => { }}
+              onChange={() => { }}
             />
             <div>
               {/* eslint-disable-next-line jsx-a11y/label-has-for */}
@@ -193,15 +197,17 @@ export const InputGroup = React.memo((props) => {
                   inputType="Input"
                   inputStyle={inputGroupStyle}
                   key={option.name}
-                  onChange={() => {}}
-                  onFocus={() => {}}
+                  onChange={(value) => {
+                    updateFilterPredictions(option.name, value)
+                  }}
+                  onFocus={() => { }}
                 />
                 {(option.isDefault === undefined || option.isDefault === false) &&
-                <Icon name="times circle outline" style={iconStyle}
-                  onClick={() => {
-                  console.log('Click!')
-                  }}
-                />
+                  <Icon name="times circle outline" style={iconStyle}
+                    onClick={() => {
+                      console.log('Click!')
+                    }}
+                  />
                 }
               </div>
             </div>
@@ -224,7 +230,7 @@ export const InlineInputGroup = React.memo((props) => {
   const optionChunkCount = 5
   const inputOptionsCopy = [...inputOptions]
   for (let i = optionChunkCount; i > 0; i--) {
-    const optionChunk = inputOptionsCopy.splice(0, Math.ceil(inputOptions.length / i))
+    const optionChunk = inputOptionsCopy.splice(0, Math.ceil(inputOptionsCopy.length / i))
     optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
   }
   return (
