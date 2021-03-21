@@ -119,35 +119,93 @@ Dropdown.propTypes = {
   includeCategories: PropTypes.bool,
 }
 
+const getInputOptions = (inputOptions, inputType) => {
+  if (inputType === 'string') {
+    return inputOptions.filter(option => option.value === 'EQ')
+  }
+  return inputOptions
+
+}
 
 export const InputGroup = React.memo((props) => {
   const { inputGroupId, options } = props
   const inputGroupStyle = {
-    width: '75%',
+    padding: '10px',
   }
+  const dropdownGroupStyle = {
+    paddingTop: '35px',
+  }
+  const iconStyle = {
+    zIndex: '2',
+    position: 'absolute',
+    right: '0',
+    top: '0',
+  }
+  const COMPARE_OPTIONS = [
+    {
+      key: 'Option_Less',
+      text: '<',
+      value: 'LT',
+    },
+    {
+      key: 'Option_Greater',
+      text: '>',
+      value: 'GT',
+    },
+    {
+      key: 'Option_LessEqual',
+      text: '<=',
+      value: 'LEQ',
+    },
+    {
+      key: 'Option_GreaterEqual',
+      text: '>=',
+      value: 'GEQ',
+    },
+    {
+      key: 'Option_Equal',
+      text: '=',
+      value: 'EQ',
+    },
+  ]
   return (
     <div key={`inputGroupId${inputGroupId}`}>
       {options.map(option =>
-        <div style={{ float: 'left', width: '33%', padding: '10px 0px' }} key={option.label}>
-          <div>
-            {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-            <label style={{ fontWeight: 'bold' }}>{helpLabel(option.label, option.labelHelp)}</label>
-            {(option.isDefault === undefined || option.isDefault === false) &&
-            <Icon name="times circle outline"
+        <div style={{ float: 'left', width: '33%' }} key={option.label}>
+          <div style={{ gridTemplateColumns: '20% 80%', gridGap: '5px', display: 'grid' }}>
+            <BaseSemanticInput
+              inputType="Dropdown"
+              inputStyle={dropdownGroupStyle}
+              options={getInputOptions(COMPARE_OPTIONS, option.optionType)}
+              noResultsMessage={null}
+              tabIndex="0"
               onClick={() => {
                 console.log('Click!')
               }}
+              onFocus={() => {}}
             />
-          }
+            <div>
+              {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+              <label style={{ fontWeight: 'bold', whiteSpace: 'noWrap' }}>{helpLabel(option.label, option.labelHelp)}</label>
+              <div style={{ position: 'relative' }}>
+                <BaseSemanticInput
+                  id={option.name}
+                  inputType="Input"
+                  inputStyle={inputGroupStyle}
+                  key={option.name}
+                  onChange={() => {}}
+                  onFocus={() => {}}
+                />
+                {(option.isDefault === undefined || option.isDefault === false) &&
+                <Icon name="times circle outline" style={iconStyle}
+                  onClick={() => {
+                  console.log('Click!')
+                  }}
+                />
+                }
+              </div>
+            </div>
           </div>
-          <BaseSemanticInput
-            id={option.name}
-            inputType="Input"
-            inputStyle={inputGroupStyle}
-            key={option.name}
-            onChange={() => {}}
-            onFocus={() => {}}
-          />
         </div>,
       )}
     </div>
@@ -163,7 +221,7 @@ export const InlineInputGroup = React.memo((props) => {
   const { options, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
-  const optionChunkCount = 3
+  const optionChunkCount = 5
   for (let i = optionChunkCount; i > 0; i--) {
     const optionChunk = inputOptions.splice(0, Math.ceil(inputOptions.length / i))
     optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
