@@ -62,10 +62,10 @@ def _get_gene_model(gene, field):
     # prefetching only works with all()
     return next((model for model in getattr(gene, '{}_set'.format(field)).all()), None)
 
-def _add_gene_model(field, return_key):
+def _add_gene_model(field, return_key, default):
     def _add_gene_model_func(gene):
         model = _get_gene_model(gene, field)
-        return {return_key: _get_json_for_model(model) if model else None}
+        return {return_key: _get_json_for_model(model) if model else default()}
     return _add_gene_model_func
 
 def _add_dbnsfp(gene):
@@ -96,11 +96,11 @@ NOTES= 'notes'
 VARIANT_GENE_DISPLAY_FIELDS = {
     OMIM: (Omim, _add_omim),
     CONSTRAINT: (GeneConstraint, None),
-    CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity')),
+    CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity', dict)),
 }
 VARIANT_GENE_FIELDS = {
     DBNSFP: (dbNSFPGene, _add_dbnsfp),
-    PRIMATE_AI: (PrimateAI, _add_gene_model('primateai', 'primateAi')),
+    PRIMATE_AI: (PrimateAI, _add_gene_model('primateai', 'primateAi', lambda: None)),
 }
 VARIANT_GENE_FIELDS.update(VARIANT_GENE_DISPLAY_FIELDS)
 ALL_GENE_FIELDS = {
