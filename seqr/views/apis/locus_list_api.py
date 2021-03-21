@@ -48,7 +48,7 @@ def locus_list_info(request, locus_list_guid):
     gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
+        'genesById': get_genes(gene_ids)
     })
 
 

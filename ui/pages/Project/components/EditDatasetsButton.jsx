@@ -171,13 +171,22 @@ const PANES = [
     </Tab.Pane>,
 }))
 
-export default React.memo(() => (
-  <Modal
-    modalName={MODAL_NAME}
-    title="Datasets"
-    size="small"
-    trigger={<ButtonLink>Edit Datasets</ButtonLink>}
-  >
-    <Tab panes={PANES} />
-  </Modal>
+const IGV_ONLY_PANES = [PANES[1]]
+
+const EditDatasetsButton = React.memo(({ user }) => (
+  (user.isDataManager || user.isPm) ?
+    <Modal
+      modalName={MODAL_NAME}
+      title="Datasets"
+      size="small"
+      trigger={<ButtonLink>Edit Datasets</ButtonLink>}
+    >
+      <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
+    </Modal> : null
 ))
+
+EditDatasetsButton.propTypes = {
+  user: PropTypes.object,
+}
+
+export default EditDatasetsButton

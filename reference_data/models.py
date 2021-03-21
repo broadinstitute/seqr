@@ -140,6 +140,16 @@ class GeneConstraint(models.Model):
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
 
+class GeneCopyNumberSensitivity(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    pHI = models.FloatField()
+    pTS = models.FloatField()
+
+    class Meta:
+        json_fields = ['pHI', 'pTS']
+
+
 class Omim(models.Model):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
@@ -225,3 +235,4 @@ class MGI(models.Model):
 
     class Meta:
         unique_together = ('gene', 'marker_id')
+        json_fields = ['marker_id']

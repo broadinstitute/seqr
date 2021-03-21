@@ -3,7 +3,7 @@ import redis
 
 from seqr.models import SavedVariant, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
-from seqr.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from settings import REDIS_SERVICE_HOSTNAME
 
@@ -72,7 +72,7 @@ def saved_variant_genes(variants):
                 gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
         else:
             gene_ids.update(list(variant.get('transcripts', {}).keys()))
-    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
+    genes = get_genes_for_variants(gene_ids)
     for gene in genes.values():
         if gene:
             gene['locusListGuids'] = []

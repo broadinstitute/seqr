@@ -7,6 +7,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
+from urllib.parse import unquote
 
 from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
@@ -76,11 +77,15 @@ def set_password(request, username):
     user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)
+    user_token = unquote(request_json.get('userToken', ''))
+    if not user_token == user.password:
+        raise PermissionDenied('Not authorized to update password')
+
     if not request_json.get('password'):
         return create_json_response({}, status=400, reason='Password is required')
 
     user.set_password(request_json['password'])
-    update_model_from_json(user, _get_user_json(request_json), user=user, updated_fields={'password'})
+    _update_user_from_json(user, request_json, updated_fields={'password'})
     logger.info('Set password for user {}'.format(user.email), extra={'user': user})
 
     u = authenticate(username=username, password=request_json['password'])
@@ -141,12 +146,13 @@ def create_project_collaborator(request, project_guid):
     })
 
 
-def _get_user_json(request_json):
-    return {k: request_json.get(k) or '' for k in ['firstName', 'lastName']}
+def _update_user_from_json(user, request_json, **kwargs):
+    user_json = {k: request_json.get(k) or '' for k in ['firstName', 'lastName']}
+    update_model_from_json(user, user_json, user=user, **kwargs)
 
 
 def _update_existing_user(user, project, request_json):
-    update_model_from_json(user, _get_user_json(request_json), user=user)
+    _update_user_from_json(user, request_json)
 
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):
