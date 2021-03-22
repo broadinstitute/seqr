@@ -26,7 +26,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
-        config.linkerd.io/skip-inbound-ports: "5432"
+        config.linkerd.io/opaque-ports: "5432"
       labels:
         name: postgres
         deployment: {{ DEPLOY_TO }}
