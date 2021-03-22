@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent, Search, Icon } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -128,8 +128,21 @@ const getInputOptions = (inputOptions, inputType) => {
 }
 
 export const filteredPredictions = {}
-export const updateFilterPredictions = (prediction, key) => {
-  filteredPredictions[prediction] = key
+
+const updateFilterPredictionValue = (prediction, value) => {
+  if (!(prediction in filteredPredictions)) {
+    filteredPredictions[prediction] = { value, ...filteredPredictions[prediction] }
+  } else {
+    filteredPredictions[prediction].value = value
+  }
+}
+
+const updateFilterPredictionOperator = (prediction, operator) => {
+  if (!(prediction in filteredPredictions)) {
+    filteredPredictions[prediction] = { operator, ...filteredPredictions[prediction] }
+  } else {
+    filteredPredictions[prediction].operator = operator
+  }
 }
 
 export const InputGroup = React.memo((props) => {
@@ -137,15 +150,11 @@ export const InputGroup = React.memo((props) => {
   const inputGroupStyle = {
     padding: '10px',
   }
+
   const dropdownGroupStyle = {
     paddingTop: '35px',
   }
-  const iconStyle = {
-    zIndex: '2',
-    position: 'absolute',
-    right: '0',
-    top: '0',
-  }
+
   const COMPARE_OPTIONS = [
     {
       key: 'Option_Less',
@@ -173,6 +182,7 @@ export const InputGroup = React.memo((props) => {
       value: 'EQ',
     },
   ]
+
   return (
     <div key={`inputGroupId${inputGroupId}`}>
       {options.map(option =>
@@ -186,7 +196,9 @@ export const InputGroup = React.memo((props) => {
               tabIndex="0"
               onClick={() => { }}
               onFocus={() => { }}
-              onChange={() => { }}
+              onChange={(operator) => {
+                updateFilterPredictionOperator(option.name, operator)
+              }}
             />
             <div>
               {/* eslint-disable-next-line jsx-a11y/label-has-for */}
@@ -198,17 +210,10 @@ export const InputGroup = React.memo((props) => {
                   inputStyle={inputGroupStyle}
                   key={option.name}
                   onChange={(value) => {
-                    updateFilterPredictions(option.name, value)
+                    updateFilterPredictionValue(option.name, value)
                   }}
                   onFocus={() => { }}
                 />
-                {(option.isDefault === undefined || option.isDefault === false) &&
-                  <Icon name="times circle outline" style={iconStyle}
-                    onClick={() => {
-                      console.log('Click!')
-                    }}
-                  />
-                }
               </div>
             </div>
           </div>

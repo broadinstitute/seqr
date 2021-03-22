@@ -49,6 +49,24 @@ DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
+const getFilterPredictionOperator = (operator, predictionKey) => {
+  if (operator === undefined) {
+    throw new Error(`Error: Please specify operator for prediction ${predictionKey}`)
+  }
+
+  if (operator === 'LT') {
+    return '<'
+  } else if (operator === 'GT') {
+    return '>'
+  } else if (operator === 'LEQ') {
+    return '<='
+  } else if (operator === 'GEQ') {
+    return '>='
+  }
+
+  return '=='
+}
+
 const filterVariants = (variants) => {
   const filteredVariants = []
   const filteredPredictionKeys = Object.keys(filteredPredictions)
@@ -62,16 +80,22 @@ const filterVariants = (variants) => {
     const variant = variants[variantIdx]
     for (let predictionKeyIdx = 0; predictionKeyIdx < filteredPredictionKeys.length; predictionKeyIdx++) {
       const predictionKey = filteredPredictionKeys[predictionKeyIdx]
-      const filteredPredictionValue = filteredPredictions[predictionKey]
+      const filteredPredictionValue = filteredPredictions[predictionKey].value
+      if (filteredPredictionValue === '' || filteredPredictionValue === undefined) {
+        throw new Error(`Error: Please specify value for ${predictionKey}`)
+      }
+
+      const filteredPredictionOperator = getFilterPredictionOperator(filteredPredictions[predictionKey].operator, predictionKey)
       const variantPredictionValue = parseFloat(variant.predictions[predictionKey]).toPrecision(2)
 
       if (filterVariantExpression !== '') {
         filterVariantExpression += ' && '
       }
 
-      filterVariantExpression += `${variantPredictionValue} < ${filteredPredictionValue}`
+      filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
     }
 
+    console.log(filterVariantExpression)
     /* eslint no-eval: 0 */
     const result = eval(filterVariantExpression)
     if (result === true) {
@@ -92,49 +116,60 @@ const BaseVariantSearchResultsContent = React.memo((
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
 
-  const filteredVariants = filterVariants(displayVariants)
+  let filteredVariants = []
+  try {
+    filteredVariants = filterVariants(displayVariants)
 
-  return [
-    <LargeRow key="resultsSummary">
-      <Grid.Column width={5}>
-        {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
-        <b>{totalVariantsCount}</b> variants
-      </Grid.Column>
-      <Grid.Column width={11} floated="right" textAlign="right">
-        {additionalDisplayEdit}
-        <ReduxFormWrapper
-          onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayTop"
-          initialValues={variantSearchDisplay}
-          closeOnSuccess={false}
-          submitOnChange
-          inline
-          fields={fields}
-        />
-        <HorizontalSpacer width={10} />
-        <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
-        <HorizontalSpacer width={10} />
-        <GeneBreakdown searchHash={searchHash} />
-      </Grid.Column>
-    </LargeRow>,
-    <DisplayVariants key="variants" displayVariants={filteredVariants} />,
-    <LargeRow key="bottomPagination">
-      <Grid.Column width={11} floated="right" textAlign="right">
-        <ReduxFormWrapper
-          onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayBottom"
-          initialValues={variantSearchDisplay}
-          closeOnSuccess={false}
-          submitOnChange
-          inline
-          fields={paginationFields}
-        />
-        <HorizontalSpacer width={10} />
-        <Button onClick={scrollToTop}>Scroll To Top</Button>
-        <HorizontalSpacer width={10} />
-      </Grid.Column>
-    </LargeRow>,
-  ]
+    return [
+      <LargeRow key="resultsSummary">
+        <Grid.Column width={5}>
+          {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
+          <b>{totalVariantsCount}</b> variants{filteredVariants.length < totalVariantsCount ? <span>, after filtering showing <b>{filteredVariants.length}</b> variants</span> : null}
+        </Grid.Column>
+        <Grid.Column width={11} floated="right" textAlign="right">
+          {additionalDisplayEdit}
+          <ReduxFormWrapper
+            onSubmit={onSubmit}
+            form="editSearchedVariantsDisplayTop"
+            initialValues={variantSearchDisplay}
+            closeOnSuccess={false}
+            submitOnChange
+            inline
+            fields={fields}
+          />
+          <HorizontalSpacer width={10} />
+          <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
+          <HorizontalSpacer width={10} />
+          <GeneBreakdown searchHash={searchHash} />
+        </Grid.Column>
+      </LargeRow>,
+      <DisplayVariants key="variants" displayVariants={filteredVariants} />,
+      <LargeRow key="bottomPagination">
+        <Grid.Column width={11} floated="right" textAlign="right">
+          <ReduxFormWrapper
+            onSubmit={onSubmit}
+            form="editSearchedVariantsDisplayBottom"
+            initialValues={variantSearchDisplay}
+            closeOnSuccess={false}
+            submitOnChange
+            inline
+            fields={paginationFields}
+          />
+          <HorizontalSpacer width={10} />
+          <Button onClick={scrollToTop}>Scroll To Top</Button>
+          <HorizontalSpacer width={10} />
+        </Grid.Column>
+      </LargeRow>,
+    ]
+  } catch (error) {
+    return [
+      <Grid.Row>
+        <Grid.Column width={16}>
+          <Message error content={error.message} />
+        </Grid.Column>
+      </Grid.Row>,
+    ]
+  }
 })
 
 BaseVariantSearchResultsContent.propTypes = {
