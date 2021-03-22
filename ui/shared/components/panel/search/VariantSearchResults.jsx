@@ -95,7 +95,6 @@ const filterVariants = (variants) => {
       filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
     }
 
-    console.log(filterVariantExpression)
     /* eslint no-eval: 0 */
     const result = eval(filterVariantExpression)
     if (result === true) {
