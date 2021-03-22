@@ -123,6 +123,7 @@ RUN git clone -q $SEQR_REPO --single-branch --branch $SEQR_GIT_BRANCH
 WORKDIR /seqr
 
 # install seqr dependencies
+RUN pip install wheel
 RUN pip install -r requirements.txt
 
 ARG SEQR_SERVICE_PORT
