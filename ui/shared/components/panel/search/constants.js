@@ -480,6 +480,36 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
   },
 ]
 
+
+export const COMPARE_OPTIONS = [
+  {
+    key: 'Option_Less',
+    text: '<',
+    value: 'LT',
+  },
+  {
+    key: 'Option_Greater',
+    text: '>',
+    value: 'GT',
+  },
+  {
+    key: 'Option_LessEqual',
+    text: '<=',
+    value: 'LEQ',
+  },
+  {
+    key: 'Option_GreaterEqual',
+    text: '>=',
+    value: 'GEQ',
+  },
+  {
+    key: 'Option_Equal',
+    text: '=',
+    value: 'EQ',
+  },
+]
+
+
 export const ANNOTATION_FILTER_OPTION_LIST = [
   {
     control: InlineInputGroup,
@@ -490,6 +520,7 @@ export const ANNOTATION_FILTER_OPTION_LIST = [
 const ANNOTATION_FILTER_FIELD = {
   name: 'annotationFilterField',
   options: ANNOTATION_FILTER_OPTION_LIST,
+  compareOptions: COMPARE_OPTIONS,
   width: 9,
 }
 
