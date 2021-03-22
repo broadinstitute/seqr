@@ -119,14 +119,6 @@ Dropdown.propTypes = {
   includeCategories: PropTypes.bool,
 }
 
-const getInputOptions = (inputOptions, inputType) => {
-  if (inputType === 'string') {
-    return inputOptions.filter(option => option.value === 'EQ')
-  }
-  return inputOptions
-
-}
-
 export const filteredPredictions = {}
 
 const updateFilterPredictionValue = (prediction, value) => {
@@ -146,7 +138,7 @@ const updateFilterPredictionOperator = (prediction, operator) => {
 }
 
 export const InputGroup = React.memo((props) => {
-  const { inputGroupId, options } = props
+  const { inputGroupId, options, compareOptions } = props
   const inputGroupStyle = {
     padding: '10px',
   }
@@ -154,34 +146,6 @@ export const InputGroup = React.memo((props) => {
   const dropdownGroupStyle = {
     paddingTop: '35px',
   }
-
-  const COMPARE_OPTIONS = [
-    {
-      key: 'Option_Less',
-      text: '<',
-      value: 'LT',
-    },
-    {
-      key: 'Option_Greater',
-      text: '>',
-      value: 'GT',
-    },
-    {
-      key: 'Option_LessEqual',
-      text: '<=',
-      value: 'LEQ',
-    },
-    {
-      key: 'Option_GreaterEqual',
-      text: '>=',
-      value: 'GEQ',
-    },
-    {
-      key: 'Option_Equal',
-      text: '=',
-      value: 'EQ',
-    },
-  ]
 
   return (
     <div key={`inputGroupId${inputGroupId}`}>
@@ -191,7 +155,7 @@ export const InputGroup = React.memo((props) => {
             <BaseSemanticInput
               inputType="Dropdown"
               inputStyle={dropdownGroupStyle}
-              options={getInputOptions(COMPARE_OPTIONS, option.optionType)}
+              options={compareOptions}
               noResultsMessage={null}
               tabIndex="0"
               onClick={() => { }}
@@ -226,10 +190,11 @@ export const InputGroup = React.memo((props) => {
 InputGroup.propTypes = {
   options: PropTypes.array,
   inputGroupId: PropTypes.number,
+  compareOptions: PropTypes.array,
 }
 
 export const InlineInputGroup = React.memo((props) => {
-  const { options, ...baseProps } = props
+  const { options, compareOptions, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
   const optionChunkCount = 5
@@ -241,7 +206,7 @@ export const InlineInputGroup = React.memo((props) => {
   return (
     <div key="inlineInputGroup">
       {optionChunks.map((chunk) => {
-        return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} {...baseProps} />
+        return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} compareOptions={compareOptions} {...baseProps} />
       })}
     </div>
   )
@@ -249,7 +214,7 @@ export const InlineInputGroup = React.memo((props) => {
 
 InlineInputGroup.propTypes = {
   options: PropTypes.array,
-  inlineinputgroupid: PropTypes.number,
+  compareOptions: PropTypes.array,
 }
 
 export const Select = props =>
