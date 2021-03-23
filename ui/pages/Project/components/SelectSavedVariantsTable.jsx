@@ -1,10 +1,13 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Icon } from 'semantic-ui-react'
 
+import { getSavedVariantsIsLoading } from 'redux/selectors'
 import { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { ColoredLabel } from 'shared/components/StyledComponents'
+import { loadFamilySavedVariants } from '../reducers'
 
 const variantSummary = variant => (
   <span>
@@ -24,29 +27,29 @@ export const TAG_COLUMN = {
   ),
 }
 
-const SelectSavedVariantsTable = React.memo(({ savedVariants, load, loading, familyGuid, idField, columns, value, onChange }) =>
+const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, ...props }) =>
   <DataLoader content contentId={familyGuid} load={load} loading={false}>
-    <SelectableTableFormInput
-      idField={idField}
-      defaultSortColumn="xpos"
-      columns={columns}
-      data={savedVariants}
-      value={value}
-      onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant[idField]]))}
-      loading={loading}
-    />
+    <SelectableTableFormInput defaultSortColumn="xpos" loading={loading} {...props} />
   </DataLoader>,
 )
 // TODO use in matchmaker component
 SelectSavedVariantsTable.propTypes = {
-  savedVariants: PropTypes.array,
-  value: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
   familyGuid: PropTypes.string,
-  idField: PropTypes.string,
-  columns: PropTypes.array,
-  onChange: PropTypes.func,
 }
 
-export default SelectSavedVariantsTable
+const mapStateToProps = state => ({
+  loading: getSavedVariantsIsLoading(state),
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    load: (contentId) => {
+      return dispatch(loadFamilySavedVariants(contentId))
+    },
+    onChange: newValue => ownProps.onChange(ownProps.data.filter(o => newValue[o[ownProps.idField]])),
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(SelectSavedVariantsTable)

@@ -5,7 +5,7 @@ import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily, getSavedVariantsIsLoading } from 'redux/selectors'
+import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
@@ -13,7 +13,6 @@ import { validators, configuredField } from 'shared/components/form/ReduxFormWra
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
 
-import { loadFamilySavedVariants } from '../reducers'
 import { getTaggedVariantsByFamily } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
 
@@ -85,17 +84,12 @@ const SavedVariantToggle = props =>
 const mapSavedVariantsStateToProps = (state, ownProps) => {
   const familyGuid = getFormFamilyGuid(ownProps)
   return {
-    savedVariants: getTaggedVariantsByFamily(state)[familyGuid],
+    data: getTaggedVariantsByFamily(state)[familyGuid],
     familyGuid,
-    loading: getSavedVariantsIsLoading(state),
   }
 }
 
-const mapSavedVariantsDispatchToProps = {
-  load: loadFamilySavedVariants,
-}
-
-const SavedVariantField = connect(mapSavedVariantsStateToProps, mapSavedVariantsDispatchToProps)(SavedVariantToggle)
+const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
 
 const SAVED_VARIANT_COLUMNS = [
   { name: 'genes', width: 3, format: val => val.genes.map(({ geneSymbol }) => geneSymbol).join(', ') },
