@@ -117,7 +117,7 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
     ), []),
 )
 
-export const getTaggedVariantsByFamily = createSelector(
+export const getTaggedVariantsByFamilyType = createSelector(
   getSavedVariantsByGuid,
   getGenesById,
   getVariantTagsByGuid,
@@ -128,9 +128,13 @@ export const getTaggedVariantsByFamily = createSelector(
       variantDetail.genes = Object.keys(variant.transcripts || {}).map(geneId => genesById[geneId])
       familyGuids.forEach((familyGuid) => {
         if (!acc[familyGuid]) {
-          acc[familyGuid] = []
+          acc[familyGuid] = {}
         }
-        acc[familyGuid].push(variantDetail)
+        const isSv = !!variant.svType
+        if (!acc[familyGuid][isSv]) {
+          acc[familyGuid][isSv] = []
+        }
+        acc[familyGuid][isSv].push(variantDetail)
       })
       return acc
     }, {})
@@ -141,12 +145,12 @@ export const getVariantUniqueId = ({ chrom, pos, ref, alt, end, geneId }, varian
   `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
-  getTaggedVariantsByFamily,
+  getTaggedVariantsByFamilyType,
   getIndividualsByGuid,
   (state, props) => props.individualGuid,
   (taggedVariants, individualsByGuid, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
-    return (taggedVariants[familyGuid] || []).reduce((acc, variant) => {
+    return Object.values(taggedVariants[familyGuid] || {}).flat().reduce((acc, variant) => {
       const variantDetail = {
         ...variant.genotypes[individualGuid],
         ...variant,

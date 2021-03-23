@@ -13,7 +13,7 @@ import { validators, configuredField } from 'shared/components/form/ReduxFormWra
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
 
-import { getTaggedVariantsByFamily } from '../selectors'
+import { getTaggedVariantsByFamilyType } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
@@ -72,7 +72,7 @@ const mapTagInputStateToProps = (state, ownProps) => {
   }
 }
 
-const accordionPanels = ({ accordionLabel, ...props }) => ([{
+const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
   key: 'mnv',
   title: accordionLabel,
   content: { content: <SelectSavedVariantsTable {...props} /> },
@@ -84,7 +84,7 @@ const SavedVariantToggle = props =>
 const mapSavedVariantsStateToProps = (state, ownProps) => {
   const familyGuid = getFormFamilyGuid(ownProps)
   return {
-    data: getTaggedVariantsByFamily(state)[familyGuid],
+    data: (getTaggedVariantsByFamilyType(state)[familyGuid] || {})[ownProps.showSVs || false],
     familyGuid,
   }
 }
@@ -92,10 +92,11 @@ const mapSavedVariantsStateToProps = (state, ownProps) => {
 const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
 
 const SAVED_VARIANT_COLUMNS = [
-  { name: 'genes', width: 3, format: val => val.genes.map(({ geneSymbol }) => geneSymbol).join(', ') },
+  { name: 'genes', content: 'Genes', width: 3, format: val => val.genes.map(({ geneSymbol }) => geneSymbol).join(', ') },
   VARIANT_POS_COLUMN,
   TAG_COLUMN,
 ]
+const SAVED_SV_COLUMNS = [{ name: 'svType', content: 'SV Type', width: 2 }, ...SAVED_VARIANT_COLUMNS]
 
 const GENOME_FIELD = { ...GENOME_VERSION_FIELD, inline: false, width: null }
 
@@ -129,6 +130,14 @@ const POS_FIELD = {
 const START_FIELD = { name: 'pos', label: 'Start Position', ...POS_FIELD }
 const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
 
+const SAVED_VARIANT_FIELD = {
+  name: 'variants',
+  idField: 'variantGuid',
+  control: SavedVariantField,
+  format: value => (value || []).reduce((acc, variant) =>
+    ({ ...acc, [variant.variantGuid]: true }), {}),
+}
+
 const SV_TYPE_OPTIONS = [
   { value: 'DEL', text: 'Deletion' },
   { value: 'DUP', text: 'Duplication' },
@@ -149,6 +158,11 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
 const formatField = field => ({ inline: true, width: 16, ...field })
 
 const SNV_FIELDS = [
+  CHROM_FIELD,
+  START_FIELD,
+  { ...END_FIELD, validate: null },
+  { name: 'ref', label: 'Ref', validate: validators.required, width: 4 },
+  { name: 'alt', label: 'Alt', validate: validators.required, width: 4 },
   {
     name: GENE_ID_FIELD_NAME,
     label: 'Gene',
@@ -156,27 +170,15 @@ const SNV_FIELDS = [
     control: AwesomeBarFormInput,
     categories: ['genes'],
     fluid: true,
+    width: 8,
     placeholder: 'Search for gene',
   },
-  CHROM_FIELD,
-  START_FIELD,
-  { ...END_FIELD, validate: null },
-  { name: 'ref', label: 'Ref', validate: validators.required, width: 8 },
-  { name: 'alt', label: 'Alt', validate: validators.required, width: 8 },
   { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
   { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
   { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
   GENOME_FIELD,
   TAG_FIELD,
-  {
-    name: 'mnv',
-    accordionLabel: 'Multinucleotide Variant',
-    idField: 'variantGuid',
-    columns: SAVED_VARIANT_COLUMNS,
-    control: SavedVariantField,
-    format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantGuid]: true }), {}),
-  },
+  { accordionLabel: 'Multinucleotide Variant', columns: SAVED_VARIANT_COLUMNS, ...SAVED_VARIANT_FIELD },
   {
     ...ZYGOSITY_FIELD,
     title: 'Zygosity',
@@ -206,6 +208,7 @@ const SV_FIELDS = [
     validate: validators.required,
     width: 8,
   },
+  { accordionLabel: 'Associated SVs', columns: SAVED_SV_COLUMNS, showSVs: true, ...SAVED_VARIANT_FIELD },
   {
     ...ZYGOSITY_FIELD,
     title: 'Copy Number',
@@ -225,6 +228,7 @@ const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...prop
     key={`manual${variantType}`}
     modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
     modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+    modalSize="large"
     buttonText={`Add Manual ${variantType}`}
     editIconName="plus"
     showErrorPanel
