@@ -32,7 +32,7 @@ const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, ...pro
     <SelectableTableFormInput defaultSortColumn="xpos" loading={loading} {...props} />
   </DataLoader>,
 )
-// TODO use in matchmaker component
+
 SelectSavedVariantsTable.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
