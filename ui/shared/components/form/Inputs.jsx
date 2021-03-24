@@ -9,6 +9,7 @@ import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
 
 import { helpLabel } from './ReduxFormWrapper'
+import { VerticalSpacer } from '../Spacers'
 
 export class BaseSemanticInput extends React.Component {
 
@@ -193,7 +194,9 @@ InputGroup.propTypes = {
   compareOptions: PropTypes.array,
 }
 
-export const InlineInputGroup = React.memo((props) => {
+const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'f'].map(title => ({ title }))
+
+export const GridInputGroup = React.memo((props) => {
   const { options, compareOptions, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
@@ -203,11 +206,41 @@ export const InlineInputGroup = React.memo((props) => {
     const optionChunk = inputOptionsCopy.splice(0, Math.ceil(inputOptionsCopy.length / i))
     optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
   }
+  const floatStyle = {
+    clear: 'both',
+  }
   return (
-    <div key="inlineInputGroup">
+    <div>
       {optionChunks.map((chunk) => {
         return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} compareOptions={compareOptions} {...baseProps} />
       })}
+      <div style={floatStyle} />
+    </div>
+  )
+})
+
+GridInputGroup.propTypes = {
+  options: PropTypes.array,
+  compareOptions: PropTypes.array,
+}
+
+export const InlineInputGroup = React.memo((props) => {
+  const { options, compareOptions, ...baseProps } = props
+  return (
+    <div key="inlineInputGroup">
+      <GridInputGroup
+        {...baseProps}
+        options={options}
+        compareOptions={compareOptions}
+      />
+      <VerticalSpacer height={50} />
+      <SearchAnnotations
+        {...baseProps}
+        onChange={() => { }}
+        searchOptions={searchOptions}
+        onResultSelect={() => { }}
+        compareOptions={compareOptions}
+      />
     </div>
   )
 })
@@ -223,6 +256,65 @@ export const Select = props =>
 
 Select.propTypes = {
   options: PropTypes.array,
+}
+
+export class SearchAnnotations extends React.PureComponent {
+  static propTypes = {
+    onChange: PropTypes.func,
+    searchOptions: PropTypes.array,
+    onResultSelect: PropTypes.func,
+    compareOptions: PropTypes.array,
+  }
+
+  state = {
+    searchResults: this.props.searchOptions,
+    options: [{ options: [] }],
+    compareOptions: this.props.compareOptions,
+  }
+
+  handleResultSelect = (e, { result }) => {
+    this.props.onResultSelect(e, result.title)
+    this.setState((prevState) => {
+      const previousOptions = prevState.options[0].options
+      const newOptions = [...previousOptions]
+      const optionResult = newOptions.filter((option) => { return option.name === result.title })
+      if (optionResult.length === 0) {
+        const hello = {
+          name: result.title.toLowerCase(),
+          label: result.title,
+        }
+        newOptions.push(hello)
+      }
+      return { options: [{ options: newOptions }] }
+    })
+  }
+
+  handleSearchChange = (e, data) => {
+    this.setState({
+      searchResults: this.props.searchOptions.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+    })
+    this.props.onChange(e, data)
+  }
+
+  render() {
+    // eslint-disable-next-line no-shadow
+    const { onChange, searchOptions, onResultSelect, compareOptions, ...props } = this.props
+    return (
+      <div>
+        <Search
+          results={this.state.searchResults}
+          onResultSelect={this.handleResultSelect}
+          onSearchChange={this.handleSearchChange}
+        />
+        <VerticalSpacer height={30} />
+        <GridInputGroup
+          {...props}
+          options={this.state.options}
+          compareOptions={this.state.compareOptions}
+        />
+      </div>
+    )
+  }
 }
 
 export class Multiselect extends React.PureComponent {
