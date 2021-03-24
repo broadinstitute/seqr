@@ -372,6 +372,8 @@ export const LOCATION_FIELDS = [
   },
 ]
 
+export const SEARCH_HELP_CONTENT = 'Using this search, you can find additional annotations that are relevant to you and filter the data by them'
+
 export const ANNOTATION_FILTER_OPTIONS_LIST = [
   {
     name: 'cadd',
@@ -491,6 +493,7 @@ const ANNOTATION_FILTER_FIELD = {
   name: 'annotationFilterField',
   options: ANNOTATION_FILTER_OPTION_LIST,
   compareOptions: COMPARE_OPTIONS,
+  searchHelpText: SEARCH_HELP_CONTENT,
   width: 9,
 }
 

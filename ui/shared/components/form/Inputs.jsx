@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
+import {Form, List, Button, Pagination as PaginationComponent, Search, Icon, Popup } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -225,7 +225,7 @@ GridInputGroup.propTypes = {
 }
 
 export const InlineInputGroup = React.memo((props) => {
-  const { options, compareOptions, ...baseProps } = props
+  const { options, compareOptions, searchHelpText, ...baseProps } = props
   return (
     <div key="inlineInputGroup">
       <GridInputGroup
@@ -240,6 +240,7 @@ export const InlineInputGroup = React.memo((props) => {
         searchOptions={searchOptions}
         onResultSelect={() => { }}
         compareOptions={compareOptions}
+        searchHelpText={searchHelpText}
       />
     </div>
   )
@@ -248,6 +249,7 @@ export const InlineInputGroup = React.memo((props) => {
 InlineInputGroup.propTypes = {
   options: PropTypes.array,
   compareOptions: PropTypes.array,
+  searchHelpText: PropTypes.string,
 }
 
 export const Select = props =>
@@ -264,6 +266,7 @@ export class SearchAnnotations extends React.PureComponent {
     searchOptions: PropTypes.array,
     onResultSelect: PropTypes.func,
     compareOptions: PropTypes.array,
+    searchHelpText: PropTypes.string,
   }
 
   state = {
@@ -298,9 +301,11 @@ export class SearchAnnotations extends React.PureComponent {
 
   render() {
     // eslint-disable-next-line no-shadow
-    const { onChange, searchOptions, onResultSelect, compareOptions, ...props } = this.props
+    const { onChange, searchOptions, onResultSelect, compareOptions, searchHelpText, ...props } = this.props
     return (
       <div>
+        {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+        <label> Search for additional annotations <Popup trigger={<Icon name="question circle outline" />} content={searchHelpText} size="small" position="top center" /></label>
         <Search
           results={this.state.searchResults}
           onResultSelect={this.handleResultSelect}
