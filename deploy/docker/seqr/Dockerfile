@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM python:3.7-stretch
 
 LABEL maintainer="Broad TGG"
 
@@ -24,26 +24,6 @@ RUN apt update && apt install -y --no-install-recommends build-essential zlib1g-
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ARG PYTHON_MAIN_VER="3.7"
-ARG PYTHON_MINOR_VER="8"
-ARG PYTHON_VERSION=$PYTHON_MAIN_VER.$PYTHON_MINOR_VER
-
-# downland and install Python from soruce code
-WORKDIR /
-RUN curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tar.xz \
-    && tar -xf Python-$PYTHON_VERSION.tar.xz \
-    && rm -f Python-$PYTHON_VERSION.tar.xz
-
-WORKDIR /Python-$PYTHON_VERSION
-RUN ./configure --enable-optimizations \
-    && make -j "$(nproc)" \
-    && make install
-
-WORKDIR /
-RUN rm -rf ./Python-$PYTHON_VERSION \
-    && ln -s /usr/local/bin/pip$PYTHON_MAIN_VER /usr/local/bin/pip \
-    && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
-
 # install dependencies of the HaploPainter.pl script used to generate static pedigree images
 RUN apt-get update && apt-get install -y --no-install-recommends \
     perl \
@@ -59,17 +39,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -L0 https://raw.github.com/miyagawa/cpanminus/master/cpanm -o /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
     && cpanm --notest \
-        Cairo \
-        DBI \
-        Gtk2 \
-        Tk \
-        Sort::Naturally
+    Cairo \
+    DBI \
+    Gtk2 \
+    Tk \
+    Sort::Naturally
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y --no-install-recommends \
-        nodejs \
+    nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -77,9 +57,9 @@ RUN apt-get update \
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && curl -L0 -o - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get update && apt-get install -y \
-        postgresql-12 \
-        postgresql-client-12 \
-        libpq-dev \
+    postgresql-12 \
+    postgresql-client-12 \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -92,8 +72,8 @@ RUN apt-get update && apt-get install -y \
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get update && apt-get install -y \
-        gcc \
-        libpq-dev \
+    gcc \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && pip install gsutil
@@ -103,7 +83,7 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update && apt-get install -y \
-        google-cloud-sdk \
+    google-cloud-sdk \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
