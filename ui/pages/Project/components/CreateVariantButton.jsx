@@ -26,8 +26,9 @@ const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
 const TAG_FIELD_NAME = 'tags'
+const VARIANTS_FIELD_NAME = 'variants'
 const FORMAT_RESPONSE_FIELDS = [
-  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME,
+  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
 ]
 
 const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) =>
@@ -92,7 +93,7 @@ const mapSavedVariantsStateToProps = (state, ownProps) => {
 const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
 
 const SAVED_VARIANT_COLUMNS = [
-  { name: 'genes', content: 'Genes', width: 3, format: val => val.genes.map(({ geneSymbol }) => geneSymbol).join(', ') },
+  { name: 'genes', content: 'Genes', width: 3, format: val => (val.genes || []).map(({ geneSymbol }) => geneSymbol).join(', ') },
   VARIANT_POS_COLUMN,
   TAG_COLUMN,
 ]
@@ -131,10 +132,10 @@ const START_FIELD = { name: 'pos', label: 'Start Position', ...POS_FIELD }
 const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
 
 const SAVED_VARIANT_FIELD = {
-  name: 'variants',
+  name: VARIANTS_FIELD_NAME,
   idField: 'variantGuid',
   control: SavedVariantField,
-  format: value => (value || []).reduce((acc, variant) =>
+  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
     ({ ...acc, [variant.variantGuid]: true }), {}),
 }
 
@@ -273,10 +274,12 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         }
       }
 
+      const variants = values[VARIANTS_FIELD_NAME] || []
+
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,
         tags: values[TAG_FIELD_NAME],
-        variant,
+        variant: [variant, ...variants],
       }
 
       return dispatch(updateVariantTags(formattedValues))
