@@ -18,7 +18,7 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername,
 } from 'redux/selectors'
 
@@ -175,6 +175,14 @@ export const getIndividualTaggedVariants = createSelector(
       }))]
     }, [])
   },
+)
+
+export const getProjectTagTypeOptions = createSelector(
+  getProjectGuid,
+  getTagTypesByProject,
+  (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid].map(
+    ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
+  ),
 )
 
 // Family table selectors

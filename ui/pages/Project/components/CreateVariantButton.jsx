@@ -5,15 +5,16 @@ import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getUser, getProjectsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
 import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
+import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
-import { getTaggedVariantsByFamilyType } from '../selectors'
+import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
+import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
@@ -25,7 +26,6 @@ const GENE_ID_FIELD_NAME = 'geneId'
 const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
-const TAG_FIELD_NAME = 'tags'
 const VARIANTS_FIELD_NAME = 'variants'
 const FORMAT_RESPONSE_FIELDS = [
   GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
@@ -63,15 +63,9 @@ const mapZygosityInputStateToProps = (state, ownProps) => ({
 
 const getFormFamilyGuid = props => props.meta.form.split(BASE_FORM_ID)[0]
 
-const mapTagInputStateToProps = (state, ownProps) => {
-  const family = getFamiliesByGuid(state)[getFormFamilyGuid(ownProps)]
-  const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
-  return {
-    options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
-      ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
-    ),
-  }
-}
+const mapTagInputStateToProps = state => ({
+  options: getProjectTagTypeOptions(state),
+})
 
 const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
   key: 'mnv',
@@ -107,13 +101,8 @@ const ZYGOSITY_FIELD = {
 }
 
 const TAG_FIELD = {
-  name: TAG_FIELD_NAME,
-  label: 'Tags',
-  includeCategories: true,
   component: connect(mapTagInputStateToProps)(LargeMultiselect),
-  format: value => (value || []).map(({ name }) => name),
-  normalize: value => (value || []).map(name => ({ name })),
-  validate: value => (value && value.length ? undefined : 'Required'),
+  ...TAG_FORM_FIELD,
 }
 
 const CHROM_FIELD = {

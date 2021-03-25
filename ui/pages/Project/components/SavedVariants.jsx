@@ -14,10 +14,12 @@ import {
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { LargeMultiselect } from 'shared/components/form/Inputs'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
+import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
-import { getCurrentProject, getTaggedVariantsByFamily } from '../selectors'
+import { getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
@@ -50,19 +52,29 @@ const mapVariantLinkStateToProps = (state, ownProps) => {
   }
 }
 
-const LINK_VARIANT_FIELDS = [{
-  name: 'variants',
-  idField: 'variantGuid',
-  component: connect(mapVariantLinkStateToProps)(SelectSavedVariantsTable),
-  columns: [
-    GENES_COLUMN,
-    VARIANT_POS_COLUMN,
-    TAG_COLUMN,
-  ],
-  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
-    ({ ...acc, [variant.variantGuid]: true }), {}),
-  validate: value => (value && value.length > 1 ? undefined : 'Multiple variants required'),
-}]
+const mapTagInputStateToProps = state => ({
+  options: getProjectTagTypeOptions(state),
+})
+
+const LINK_VARIANT_FIELDS = [
+  {
+    component: connect(mapTagInputStateToProps)(LargeMultiselect),
+    ...TAG_FORM_FIELD,
+  },
+  {
+    name: 'variants',
+    idField: 'variantGuid',
+    component: connect(mapVariantLinkStateToProps)(SelectSavedVariantsTable),
+    columns: [
+      GENES_COLUMN,
+      VARIANT_POS_COLUMN,
+      TAG_COLUMN,
+    ],
+    format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
+      ({ ...acc, [variant.variantGuid]: true }), {}),
+    validate: value => (value && value.length > 1 ? undefined : 'Multiple variants required'),
+  },
+]
 
 const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   familyGuid ? <UpdateButton
