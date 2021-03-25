@@ -125,6 +125,7 @@ const SAVED_VARIANT_FIELD = {
   idField: 'variantGuid',
   includeSelectedRowData: true,
   control: SavedVariantField,
+  // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
   normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
 }
 

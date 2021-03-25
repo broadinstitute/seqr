@@ -104,6 +104,7 @@ class DataTable extends React.PureComponent {
     Object.keys(this.props.selectedRows).length === this.props.data.length &&
     Object.values(this.props.selectedRows).every(isSelected => isSelected)
   )
+
   someSelected = () =>
     this.props.data.some(row => this.props.selectedRows[row[this.props.idField]]) &&
     this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]])
@@ -113,9 +114,11 @@ class DataTable extends React.PureComponent {
       return
     }
 
-    const rowIds = this.props.data.map(row => row[this.props.idField])
     const allSelected = !this.allSelected()
-    this.props.selectRows(rowIds.reduce((acc, rowId) => ({ ...acc, [rowId]: allSelected }), {}))
+    this.props.selectRows(
+      this.props.data.reduce((acc, row) => (
+        { ...acc, [row[this.props.idField]]: (allSelected && this.props.includeSelectedRowData) ? row : allSelected }
+      ), {}))
   }
 
   handleSelect = rowId => () => {
@@ -135,7 +138,7 @@ class DataTable extends React.PureComponent {
     const {
       data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, loadingProps = {}, ...tableProps
+      fixedWidth, includeSelectedRowData, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
