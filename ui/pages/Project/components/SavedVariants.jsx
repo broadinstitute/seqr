@@ -75,7 +75,7 @@ const LINK_VARIANT_FIELDS = [
     validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]
-
+// TODO analyst only/ can edit only
 const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   familyGuid ? <UpdateButton
     modalTitle="Link Saved Variants"
@@ -97,7 +97,9 @@ BaseLinkSavedVariants.propTypes = {
 const mapVariantDispatchToProps = (dispatch, { familyGuid }) => {
   return {
     onSubmit: (values) => {
-      dispatch(updateVariantTags({ ...values, familyGuid, variantGuids: Object.keys(values.variantGuids).join(',') }))
+      const variantGuids = Object.keys(values.variantGuids).filter(
+        variantGuid => values.variantGuids[variantGuid]).join(',')
+      dispatch(updateVariantTags({ ...values, familyGuid, variantGuids }))
     },
   }
 }

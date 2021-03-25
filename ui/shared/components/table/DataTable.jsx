@@ -52,6 +52,7 @@ class DataTable extends React.PureComponent {
     getRowFilterVal: PropTypes.func,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
+    includeSelectedRowData: PropTypes.bool,
     loading: PropTypes.bool,
     emptyContent: PropTypes.node,
     footer: PropTypes.node,
@@ -103,7 +104,9 @@ class DataTable extends React.PureComponent {
     Object.keys(this.props.selectedRows).length === this.props.data.length &&
     Object.values(this.props.selectedRows).every(isSelected => isSelected)
   )
-  someSelected = () => Object.values(this.props.selectedRows).includes(true) && Object.values(this.props.selectedRows).includes(false)
+  someSelected = () =>
+    this.props.data.some(row => this.props.selectedRows[row[this.props.idField]]) &&
+    this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]])
 
   selectAll = () => {
     if (!this.props.selectRows) {
@@ -120,7 +123,12 @@ class DataTable extends React.PureComponent {
       return
     }
 
-    this.props.selectRows({ ...this.props.selectedRows, [rowId]: !this.props.selectedRows[rowId] })
+    let newSelected = !this.props.selectedRows[rowId]
+    if (newSelected && this.props.includeSelectedRowData) {
+      newSelected = this.props.data.find(row => row[this.props.idField] === rowId)
+    }
+
+    this.props.selectRows({ ...this.props.selectedRows, [rowId]: newSelected })
   }
 
   render() {
@@ -176,7 +184,7 @@ class DataTable extends React.PureComponent {
       tableContent = <Table.Row><Table.Cell colSpan={columns.length}>{emptyContent}</Table.Cell></Table.Row>
     } else {
       tableContent = sortedData.map(row => (
-        <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selectedRows[row[idField]]}>
+        <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={!!selectedRows[row[idField]]}>
           {selectRows && <Table.Cell content={<Checkbox checked={!!selectedRows[row[idField]]} />} />}
           {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
             <Table.Cell

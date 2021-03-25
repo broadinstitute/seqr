@@ -5,7 +5,7 @@ import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
@@ -14,7 +14,7 @@ import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
 import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
-import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions } from '../selectors'
+import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
@@ -123,9 +123,9 @@ const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
 const SAVED_VARIANT_FIELD = {
   name: VARIANTS_FIELD_NAME,
   idField: 'variantGuid',
+  includeSelectedRowData: true,
   control: SavedVariantField,
-  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
-    ({ ...acc, [variant.variantGuid]: true }), {}),
+  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
 }
 
 const SV_TYPE_OPTIONS = [
@@ -230,15 +230,14 @@ BaseCreateVariantButton.propTypes = {
   variantType: PropTypes.string,
   family: PropTypes.object,
   user: PropTypes.object,
-  initialValues: PropTypes.object,
   formFields: PropTypes.array,
   onSubmit: PropTypes.func,
 }
 
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   user: getUser(state),
-  initialValues: getProjectsByGuid(state)[ownProps.family.projectGuid],
+  initialValues: getCurrentProject(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -263,7 +262,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         }
       }
 
-      const variants = values[VARIANTS_FIELD_NAME] || []
+      const variants = Object.values(values[VARIANTS_FIELD_NAME] || {}).filter(v => v)
 
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,
