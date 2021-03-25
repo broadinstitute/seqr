@@ -76,9 +76,9 @@ const LINK_VARIANT_FIELDS = [
     validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]
-// TODO analyst only/ can edit only
-const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
-  familyGuid ? <UpdateButton
+
+const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) =>
+  <UpdateButton
     modalTitle="Link Saved Variants"
     modalId={`${familyGuid}${BASE_FORM_ID}`}
     buttonText="Link Variants"
@@ -87,8 +87,7 @@ const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
     formFields={LINK_VARIANT_FIELDS}
     onSubmit={onSubmit}
     showErrorPanel
-  /> : null
-)
+  />
 
 BaseLinkSavedVariants.propTypes = {
   familyGuid: PropTypes.string,
@@ -177,7 +176,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
-      additionalFilter={<LinkSavedVariants familyGuid={familyGuid} {...props} />}
+      additionalFilter={(project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}
