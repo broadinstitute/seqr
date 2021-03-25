@@ -117,28 +117,48 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
     ), []),
 )
 
+export const getTaggedVariantsByFamilyType = createSelector(
+  getSavedVariantsByGuid,
+  getGenesById,
+  getVariantTagsByGuid,
+  (savedVariants, genesById, variantTagsByGuid) => {
+    return Object.values(savedVariants).filter(variant => variant.tagGuids.length).reduce((acc, variant) => {
+      const { familyGuids, ...variantDetail } = variant
+      variantDetail.tags = variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid])
+      variantDetail.genes = Object.keys(variant.transcripts || {}).map(geneId => genesById[geneId])
+      familyGuids.forEach((familyGuid) => {
+        if (!acc[familyGuid]) {
+          acc[familyGuid] = {}
+        }
+        const isSv = !!variant.svType
+        if (!acc[familyGuid][isSv]) {
+          acc[familyGuid][isSv] = []
+        }
+        acc[familyGuid][isSv].push(variantDetail)
+      })
+      return acc
+    }, {})
+  },
+)
+
 export const getVariantUniqueId = ({ chrom, pos, ref, alt, end, geneId }, variantGeneId) =>
   `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
-  getSavedVariantsByGuid,
+  getTaggedVariantsByFamilyType,
   getIndividualsByGuid,
-  getGenesById,
-  getVariantTagsByGuid,
   (state, props) => props.individualGuid,
-  (savedVariants, individualsByGuid, genesById, variantTagsByGuid, individualGuid) => {
+  (taggedVariants, individualsByGuid, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
-    return Object.values(savedVariants).filter(
-      o => o.familyGuids.includes(familyGuid) && o.tagGuids.length).reduce((acc, variant) => {
+    return Object.values(taggedVariants[familyGuid] || {}).flat().reduce((acc, variant) => {
       const variantDetail = {
         ...variant.genotypes[individualGuid],
         ...variant,
-        tags: variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid]),
       }
-      return [...acc, ...Object.keys(variant.transcripts || {}).map(geneId => ({
+      return [...acc, ...variant.genes.map(gene => ({
         ...variantDetail,
-        variantId: getVariantUniqueId(variant, geneId),
-        ...genesById[geneId],
+        variantId: getVariantUniqueId(variant, gene.geneId),
+        ...gene,
       }))]
     }, [])
   },
