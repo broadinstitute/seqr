@@ -13,6 +13,7 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
@@ -37,6 +38,25 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
+
+const LINK_VARIANT_FIELDS = []
+
+const LinkSavedVariants = ({ familyGuid }) => (
+  familyGuid ? <UpdateButton
+    modalTitle="Link Saved Variants"
+    modalId={`linkVariants-${familyGuid}`}
+    buttonText="Link Variants"
+    editIconName="linkify"
+    size="medium"
+    formFields={LINK_VARIANT_FIELDS}
+    onSubmit={console.log}
+    showErrorPanel
+  /> : null
+)
+
+LinkSavedVariants.propTypes = {
+  familyGuid: PropTypes.string,
+}
 
 const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
   const { familyGuid, variantGuid, analysisGroupGuid } = props.match.params
@@ -108,6 +128,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
+      additionalFilter={<LinkSavedVariants familyGuid={familyGuid} />}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}
