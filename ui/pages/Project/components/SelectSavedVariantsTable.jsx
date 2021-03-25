@@ -51,12 +51,14 @@ const mapStateToProps = state => ({
   loading: getSavedVariantsIsLoading(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
+// const mapDispatchToProps = (dispatch, ownProps) => {
+const mapDispatchToProps = (dispatch) => {
   return {
     load: (contentId) => {
       return dispatch(loadFamilySavedVariants(contentId))
     },
-    onChange: newValue => ownProps.onChange(ownProps.data.filter(o => newValue[o[ownProps.idField]])),
+    // TODO fix for matchmaker and create variant button
+    // onChange: newValue => ownProps.onChange(ownProps.data.filter(o => newValue[o[ownProps.idField]])),
   }
 }
 

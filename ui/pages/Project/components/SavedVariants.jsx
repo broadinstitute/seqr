@@ -5,6 +5,7 @@ import { Route, Switch, Link } from 'react-router-dom'
 import { Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import { updateVariantTags } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid } from 'redux/selectors'
 import {
   VARIANT_SORT_FIELD,
@@ -62,7 +63,7 @@ const LINK_VARIANT_FIELDS = [
     ...TAG_FORM_FIELD,
   },
   {
-    name: 'variants',
+    name: 'variantGuids',
     idField: 'variantGuid',
     component: connect(mapVariantLinkStateToProps)(SelectSavedVariantsTable),
     columns: [
@@ -70,9 +71,8 @@ const LINK_VARIANT_FIELDS = [
       VARIANT_POS_COLUMN,
       TAG_COLUMN,
     ],
-    format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantGuid]: true }), {}),
-    validate: value => (value && value.length > 1 ? undefined : 'Multiple variants required'),
+    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
+    validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]
 
@@ -94,16 +94,10 @@ BaseLinkSavedVariants.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-// const mapVariantDispatchToProps = {
-//   onSubmit: (values) => {
-//     return console.log(values)
-//   },
-// }
-
-const mapVariantDispatchToProps = () => {
+const mapVariantDispatchToProps = (dispatch, { familyGuid }) => {
   return {
     onSubmit: (values) => {
-      console.log(values)
+      dispatch(updateVariantTags({ ...values, familyGuid, variantGuids: Object.keys(values.variantGuids).join(',') }))
     },
   }
 }
