@@ -14,7 +14,7 @@ import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
 
 import { getTaggedVariantsByFamilyType } from '../selectors'
-import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
+import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
@@ -93,7 +93,7 @@ const mapSavedVariantsStateToProps = (state, ownProps) => {
 const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
 
 const SAVED_VARIANT_COLUMNS = [
-  { name: 'genes', content: 'Genes', width: 3, format: val => (val.genes || []).map(gene => (gene || {}).geneSymbol).join(', ') },
+  GENES_COLUMN,
   VARIANT_POS_COLUMN,
   TAG_COLUMN,
 ]

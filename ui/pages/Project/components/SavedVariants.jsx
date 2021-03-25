@@ -17,8 +17,9 @@ import UpdateButton from 'shared/components/buttons/UpdateButton'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
-import { getCurrentProject } from '../selectors'
+import { getCurrentProject, getTaggedVariantsByFamily } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const ALL_FILTER = 'ALL'
 
@@ -39,24 +40,63 @@ const LabelLink = styled(Link)`
   }
 `
 
-const LINK_VARIANT_FIELDS = []
+const BASE_FORM_ID = '-linkVariants'
 
-const LinkSavedVariants = ({ familyGuid }) => (
+const mapVariantLinkStateToProps = (state, ownProps) => {
+  const familyGuid = ownProps.meta.form.split(BASE_FORM_ID)[0]
+  return {
+    data: getTaggedVariantsByFamily(state)[familyGuid],
+    familyGuid,
+  }
+}
+
+const LINK_VARIANT_FIELDS = [{
+  name: 'variants',
+  idField: 'variantGuid',
+  component: connect(mapVariantLinkStateToProps)(SelectSavedVariantsTable),
+  columns: [
+    GENES_COLUMN,
+    VARIANT_POS_COLUMN,
+    TAG_COLUMN,
+  ],
+  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
+    ({ ...acc, [variant.variantGuid]: true }), {}),
+  validate: value => (value && value.length > 1 ? undefined : 'Multiple variants required'),
+}]
+
+const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   familyGuid ? <UpdateButton
     modalTitle="Link Saved Variants"
-    modalId={`linkVariants-${familyGuid}`}
+    modalId={`${familyGuid}${BASE_FORM_ID}`}
     buttonText="Link Variants"
     editIconName="linkify"
     size="medium"
     formFields={LINK_VARIANT_FIELDS}
-    onSubmit={console.log}
+    onSubmit={onSubmit}
     showErrorPanel
   /> : null
 )
 
-LinkSavedVariants.propTypes = {
+BaseLinkSavedVariants.propTypes = {
   familyGuid: PropTypes.string,
+  onSubmit: PropTypes.func,
 }
+
+// const mapVariantDispatchToProps = {
+//   onSubmit: (values) => {
+//     return console.log(values)
+//   },
+// }
+
+const mapVariantDispatchToProps = () => {
+  return {
+    onSubmit: (values) => {
+      console.log(values)
+    },
+  }
+}
+
+const LinkSavedVariants = connect(null, mapVariantDispatchToProps)(BaseLinkSavedVariants)
 
 const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
   const { familyGuid, variantGuid, analysisGroupGuid } = props.match.params
@@ -128,7 +168,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
-      additionalFilter={<LinkSavedVariants familyGuid={familyGuid} />}
+      additionalFilter={<LinkSavedVariants familyGuid={familyGuid} {...props} />}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}
