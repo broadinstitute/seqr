@@ -188,7 +188,7 @@ def set_environment(deployment_target):
         os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings, print_command=True)
-        run("gcloud container clusters get-credentials --region=%(GCLOUD_REGION)s %(CLUSTER_NAME)s" % settings, print_command=True)
+        run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings, print_command=True)
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 

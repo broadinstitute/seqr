@@ -3,8 +3,8 @@
 
 CLUSTER_NAME: 'seqr-cluster-prod'
 
-CLUSTER_EXTERNAL_IP: '34.117.15.63'
-CLUSTER_HOSTNAME: 'seqr.populationgenomics.org.au'
+CLUSTER_EXTERNAL_IP: '35.194.17.244'
+CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
 
 ES_DATA_SERVICE_IP: 10.128.0.52
 ES_CONFIGURE_SNAPSHOTS: true
