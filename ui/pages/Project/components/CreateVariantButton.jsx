@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { FormSection } from 'redux-form'
-import { Grid, Divider } from 'semantic-ui-react'
+import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
 import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
@@ -12,6 +12,9 @@ import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/I
 import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
+
+import { getTaggedVariantsByFamilyType } from '../selectors'
+import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
@@ -23,8 +26,9 @@ const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
 const TAG_FIELD_NAME = 'tags'
+const VARIANTS_FIELD_NAME = 'variants'
 const FORMAT_RESPONSE_FIELDS = [
-  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME,
+  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
 ]
 
 const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) =>
@@ -57,8 +61,10 @@ const mapZygosityInputStateToProps = (state, ownProps) => ({
   individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]],
 })
 
+const getFormFamilyGuid = props => props.meta.form.split(BASE_FORM_ID)[0]
+
 const mapTagInputStateToProps = (state, ownProps) => {
-  const family = getFamiliesByGuid(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]]
+  const family = getFamiliesByGuid(state)[getFormFamilyGuid(ownProps)]
   const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
   return {
     options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
@@ -67,18 +73,42 @@ const mapTagInputStateToProps = (state, ownProps) => {
   }
 }
 
+const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
+  key: 'mnv',
+  title: accordionLabel,
+  content: { content: <SelectSavedVariantsTable {...props} /> },
+}])
+
+const SavedVariantToggle = props =>
+  <Accordion styled fluid panels={accordionPanels(props)} />
+
+const mapSavedVariantsStateToProps = (state, ownProps) => {
+  const familyGuid = getFormFamilyGuid(ownProps)
+  return {
+    data: (getTaggedVariantsByFamilyType(state)[familyGuid] || {})[ownProps.showSVs || false],
+    familyGuid,
+  }
+}
+
+const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
+
+const SAVED_VARIANT_COLUMNS = [
+  { name: 'genes', content: 'Genes', width: 3, format: val => (val.genes || []).map(gene => (gene || {}).geneSymbol).join(', ') },
+  VARIANT_POS_COLUMN,
+  TAG_COLUMN,
+]
+const SAVED_SV_COLUMNS = [{ name: 'svType', content: 'SV Type', width: 2 }, ...SAVED_VARIANT_COLUMNS]
+
+const GENOME_FIELD = { ...GENOME_VERSION_FIELD, inline: false, width: null }
+
 const ZYGOSITY_FIELD = {
   name: 'genotypes',
-  width: 16,
-  inline: true,
   component: connect(mapZygosityInputStateToProps)(ZygosityInput),
 }
 
 const TAG_FIELD = {
   name: TAG_FIELD_NAME,
   label: 'Tags',
-  width: 16,
-  inline: true,
   includeCategories: true,
   component: connect(mapTagInputStateToProps)(LargeMultiselect),
   format: value => (value || []).map(({ name }) => name),
@@ -93,14 +123,21 @@ const CHROM_FIELD = {
   options: CHROMOSOMES.map(value => ({ value })),
   validate: validators.required,
   width: 2,
-  inline: true,
 }
 
 const POS_FIELD = {
-  validate: validators.required, component: IntegerInput, inline: true, width: 7, min: 0,
+  validate: validators.required, component: IntegerInput, width: 7, min: 0,
 }
 const START_FIELD = { name: 'pos', label: 'Start Position', ...POS_FIELD }
 const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
+
+const SAVED_VARIANT_FIELD = {
+  name: VARIANTS_FIELD_NAME,
+  idField: 'variantGuid',
+  control: SavedVariantField,
+  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
+    ({ ...acc, [variant.variantGuid]: true }), {}),
+}
 
 const SV_TYPE_OPTIONS = [
   { value: 'DEL', text: 'Deletion' },
@@ -119,28 +156,30 @@ const validateHasTranscriptId = (value, allValues, props, name) => {
   return allValues[TRANSCRIPT_ID_FIELD_NAME] ? undefined : `Transcript ID is required to include ${name}`
 }
 
+const formatField = field => ({ inline: true, width: 16, ...field })
+
 const SNV_FIELDS = [
+  CHROM_FIELD,
+  START_FIELD,
+  { ...END_FIELD, validate: null },
+  { name: 'ref', label: 'Ref', validate: validators.required, width: 4 },
+  { name: 'alt', label: 'Alt', validate: validators.required, width: 4 },
   {
     name: GENE_ID_FIELD_NAME,
     label: 'Gene',
     validate: validators.required,
-    width: 16,
     control: AwesomeBarFormInput,
     categories: ['genes'],
     fluid: true,
-    inline: true,
+    width: 8,
     placeholder: 'Search for gene',
   },
-  CHROM_FIELD,
-  START_FIELD,
-  { ...END_FIELD, validate: null },
-  { name: 'ref', label: 'Ref', validate: validators.required, inline: true, width: 8 },
-  { name: 'alt', label: 'Alt', validate: validators.required, inline: true, width: 8 },
-  { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', inline: true, width: 6 },
-  { name: HGVSC_FIELD_NAME, label: 'HGVSC', inline: true, width: 5, validate: validateHasTranscriptId },
-  { name: HGVSP_FIELD_NAME, label: 'HGVSP', inline: true, width: 5, validate: validateHasTranscriptId },
-  GENOME_VERSION_FIELD,
+  { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
+  { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
+  { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
+  GENOME_FIELD,
   TAG_FIELD,
+  { accordionLabel: 'Multinucleotide Variant', columns: SAVED_VARIANT_COLUMNS, ...SAVED_VARIANT_FIELD },
   {
     ...ZYGOSITY_FIELD,
     title: 'Zygosity',
@@ -151,7 +190,7 @@ const SNV_FIELDS = [
       format: value => (value || {}).numAlt,
     },
   },
-].map(field => (
+].map(formatField).map(field => (
   field.validate && field.validate !== validateHasTranscriptId ? { ...field, label: `${field.label}*` } : field
 ))
 
@@ -159,18 +198,18 @@ const SV_FIELDS = [
   CHROM_FIELD,
   START_FIELD,
   END_FIELD,
-  GENOME_VERSION_FIELD,
+  GENOME_FIELD,
   TAG_FIELD,
-  { name: SV_FIELD_NAME, validate: validators.required, label: 'SV Name', inline: true, width: 8 },
+  { name: SV_FIELD_NAME, validate: validators.required, label: 'SV Name', width: 8 },
   {
     name: 'svType',
     label: 'SV Type',
     component: Select,
     options: SV_TYPE_OPTIONS,
     validate: validators.required,
-    inline: true,
     width: 8,
   },
+  { accordionLabel: 'Associated SVs', columns: SAVED_SV_COLUMNS, showSVs: true, ...SAVED_VARIANT_FIELD },
   {
     ...ZYGOSITY_FIELD,
     title: 'Copy Number',
@@ -183,13 +222,14 @@ const SV_FIELDS = [
       max: 12,
     },
   },
-]
+].map(formatField)
 
 const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
   user.isAnalyst ? <UpdateButton
     key={`manual${variantType}`}
     modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
     modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+    modalSize="large"
     buttonText={`Add Manual ${variantType}`}
     editIconName="plus"
     showErrorPanel
@@ -234,10 +274,12 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         }
       }
 
+      const variants = values[VARIANTS_FIELD_NAME] || []
+
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,
         tags: values[TAG_FIELD_NAME],
-        variant,
+        variant: [variant, ...variants],
       }
 
       return dispatch(updateVariantTags(formattedValues))

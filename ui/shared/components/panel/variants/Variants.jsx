@@ -125,17 +125,13 @@ Variant.propTypes = {
 const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
-  const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
+  const sharedGeneIds = variants.slice(1).reduce((acc, v) =>
+    acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}))
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
-    const mainGene1 = getVariantMainGeneId(variants[0])
-    if (sharedGeneIds.includes(mainGene1)) {
-      mainGeneId = mainGene1
-    } else {
-      const mainGene2 = getVariantMainGeneId(variants[1])
-      if (sharedGeneIds.includes(mainGene2)) {
-        mainGeneId = mainGene2
-      }
+    const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
+    if (mainSharedGene) {
+      mainGeneId = mainSharedGene
     }
   }
 
