@@ -1,6 +1,6 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
-KUBERNETES_VERSION: '1.18.15-gke.1501'
+KUBERNETES_VERSION: '1.16.15-gke.4300'
 ELASTICSEARCH_VERSION: 7.8.1
 LINKERD_VERSION: 'stable-2.10.0'
 
@@ -53,11 +53,10 @@ TERRA_PERMS_CACHE_EXPIRE_SECONDS: 60
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS: 300
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
-GCLOUD_PROJECT: 'seqr-308602'
-GCLOUD_REGION: 'australia-southeast1'
-GCLOUD_ZONE: 'australia-southeast1-b'
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/cpg-seqr'
+DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
