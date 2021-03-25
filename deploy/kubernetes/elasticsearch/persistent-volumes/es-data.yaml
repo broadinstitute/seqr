@@ -6,7 +6,7 @@ metadata:
 provisioner: kubernetes.io/gce-pd
 parameters:
   type: {{ ES_DATA_DISK_TYPE }}
-  zone: australia-southeast1-b
+  zone: us-central1-b
 ---
 apiVersion: v1
 kind: PersistentVolume

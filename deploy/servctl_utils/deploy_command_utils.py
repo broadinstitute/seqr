@@ -197,7 +197,7 @@ def deploy_elasticsearch_snapshot_infra(settings):
 
     if settings['ES_CONFIGURE_SNAPSHOTS']:
         # create the bucket
-        run("gsutil mb -p %(GCLOUD_PROJECT)s -c STANDARD -l australia-southeast1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
+        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
             errors_to_ignore=["already exists"])
         # create the IAM user
         run(" ".join([
@@ -544,17 +544,57 @@ def _init_cluster_gcloud(settings):
 
     # create cluster
     run(" ".join([
-        "gcloud beta container clusters create-auto %(CLUSTER_NAME)s",
+        "gcloud beta container clusters create %(CLUSTER_NAME)s",
+        "--enable-autorepair",
+        "--enable-autoupgrade",
+        "--maintenance-window 7:00",
+        "--enable-stackdriver-kubernetes",
+        "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
-        "--region %(GCLOUD_REGION)s",
-        "--network %(GCLOUD_PROJECT)s-auto-vpc",
+        "--zone %(GCLOUD_ZONE)s",
+        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
+        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
+        "--no-enable-legacy-authorization",
+        "--metadata disable-legacy-endpoints=true",
+        "--no-enable-basic-auth",
+        "--no-enable-legacy-authorization",
+        "--no-issue-client-certificate",
+        "--enable-master-authorized-networks",
+        "--master-authorized-networks %(MASTER_AUTHORIZED_NETWORKS)s",
+        #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+        #"--local-ssd-count 1",
         "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
     ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
+
+    # create cluster nodes - breaking them up into node pools of several machines each.
+    # This way, the cluster can be scaled up and down when needed using the technique in
+    #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
+    #
+
+    for pool_name, pool_settings in settings['NODE_POOLS'].items():
+        command = [
+            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
+            "--cluster %(CLUSTER_NAME)s",
+            "--project %(GCLOUD_PROJECT)s",
+            "--zone %(GCLOUD_ZONE)s",
+            "--machine-type %s" % pool_settings.get('machine_type', settings['DEFAULT_POOL_MACHINE_TYPE']),
+            "--node-version %(KUBERNETES_VERSION)s",
+            #"--no-enable-legacy-authorization",
+            "--enable-autorepair",
+            "--enable-autoupgrade",
+            "--num-nodes %s" % pool_settings.get('num_nodes', settings['DEFAULT_POOL_NUM_NODES']),
+            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+            #"--local-ssd-count 1",
+            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
+        ]
+        if pool_settings.get('labels'):
+            command += ['--node-labels', pool_settings['labels']]
+        run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
 
     run(" ".join([
         "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
         "--project %(GCLOUD_PROJECT)s",
-        "--region %(GCLOUD_REGION)s",
+        "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
 
     _init_gcloud_disks(settings)
