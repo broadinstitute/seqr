@@ -128,6 +128,7 @@ const updateFilterPredictionValue = (prediction, value) => {
   } else {
     filteredPredictions[prediction].value = value
   }
+  console.log(filteredPredictions)
 }
 
 const updateFilterPredictionOperator = (prediction, operator) => {
@@ -136,10 +137,11 @@ const updateFilterPredictionOperator = (prediction, operator) => {
   } else {
     filteredPredictions[prediction].operator = operator
   }
+  console.log(filteredPredictions)
 }
 
 export const InputGroup = React.memo((props) => {
-  const { inputGroupId, options, handleOptionDelete, compareOptions } = props
+  const { inputGroupId, isDefaultGroup, options, handleOptionDelete, handleOptionValueUpdate, handleOptionOperatorUpdate, compareOptions } = props
   const inputGroupStyle = {
     padding: '10px',
   }
@@ -165,11 +167,15 @@ export const InputGroup = React.memo((props) => {
               inputStyle={dropdownGroupStyle}
               options={compareOptions}
               noResultsMessage={null}
+              value={!isDefaultGroup ? option.operator : undefined}
               tabIndex="0"
               onClick={() => { }}
               onFocus={() => { }}
               onChange={(operator) => {
                 updateFilterPredictionOperator(option.name, operator)
+                if (!isDefaultGroup) {
+                  handleOptionOperatorUpdate(option, operator)
+                }
               }}
             />
             <div>
@@ -181,8 +187,12 @@ export const InputGroup = React.memo((props) => {
                   inputType="Input"
                   inputStyle={inputGroupStyle}
                   key={option.name}
+                  value={!isDefaultGroup ? option.value : undefined}
                   onChange={(value) => {
                     updateFilterPredictionValue(option.name, value)
+                    if (!isDefaultGroup) {
+                      handleOptionValueUpdate(option.name)
+                    }
                   }}
                   onFocus={() => { }}
                 />
@@ -207,12 +217,15 @@ InputGroup.propTypes = {
   inputGroupId: PropTypes.string,
   compareOptions: PropTypes.array,
   handleOptionDelete: PropTypes.func,
+  handleOptionValueUpdate: PropTypes.func,
+  handleOptionOperatorUpdate: PropTypes.func,
+  isDefaultGroup: PropTypes.func,
 }
 
 const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'e', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'f'].map(title => ({ title }))
 
 export const GridInputGroup = React.memo((props) => {
-  const { options, gridGroupName, compareOptions, topSpacing, handleOptionDelete, ...baseProps } = props
+  const { options, gridGroupName, isDefaultGroup, compareOptions, topSpacing, handleOptionDelete, handleOptionValueUpdate, handleOptionOperatorUpdate, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
   const optionChunkCount = 5
@@ -230,7 +243,7 @@ export const GridInputGroup = React.memo((props) => {
         <VerticalSpacer height={30} />
       }
       {optionChunks.map((chunk) => {
-        return <InputGroup inputGroupId={chunk.id} key={chunk.key} options={chunk.chunk} handleOptionDelete={handleOptionDelete} compareOptions={compareOptions} {...baseProps} />
+        return <InputGroup inputGroupId={chunk.id} key={chunk.key} options={chunk.chunk} isDefaultGroup={isDefaultGroup} handleOptionDelete={handleOptionDelete} handleOptionValueUpdate={handleOptionValueUpdate} handleOptionOperatorUpdate={handleOptionOperatorUpdate} compareOptions={compareOptions} {...baseProps} />
       })}
       <div style={floatStyle} />
       <VerticalSpacer height={40} />
@@ -244,6 +257,9 @@ GridInputGroup.propTypes = {
   topSpacing: PropTypes.bool,
   handleOptionDelete: PropTypes.func,
   compareOptions: PropTypes.array,
+  handleOptionValueUpdate: PropTypes.func,
+  handleOptionOperatorUpdate: PropTypes.func,
+  isDefaultGroup: PropTypes.func,
 }
 
 export const InlineInputGroup = React.memo((props) => {
@@ -255,8 +271,11 @@ export const InlineInputGroup = React.memo((props) => {
         {...baseProps}
         options={options}
         gridGroupName="baseAnnotationsGridGroup"
+        isDefaultGroup
         compareOptions={compareOptions}
         handleOptionDelete={() => {}}
+        handleOptionValueUpdate={() => {}}
+        handleOptionOperatorUpdate={() => {}}
       />
       <VerticalSpacer height={50} />
       <SearchAnnotations
@@ -313,10 +332,35 @@ export class SearchAnnotations extends React.PureComponent {
           name: result.title.toLowerCase(),
           label: result.title,
           isDefault: false,
+          value: '',
+          operator: '',
         }
         newOptions.push(hello)
       }
       return { options: [{ options: newOptions }] }
+    })
+  }
+
+  handleOptionOperatorUpdate = (option, operator) => {
+    this.setState((prevState) => {
+      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
+      const index = inputOptions.findIndex(opt => opt.name === option.name)
+      if (index > -1) {
+        inputOptions[index].operator = operator
+      }
+      return { options: [{ options: inputOptions }] }
+    })
+  }
+
+  handleOptionValueUpdate = (optionName) => {
+    const optionValue = filteredPredictions[optionName].value
+    this.setState((prevState) => {
+      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
+      const index = inputOptions.findIndex(opt => opt.name === optionName)
+      if (index > -1) {
+        inputOptions[index].value = optionValue
+      }
+      return { options: [{ options: inputOptions }] }
     })
   }
 
@@ -333,6 +377,7 @@ export class SearchAnnotations extends React.PureComponent {
       if (index > -1) {
         inputOptions.splice(index, 1)
       }
+      delete filteredPredictions[optionName]
       return { options: [{ options: inputOptions }] }
     })
   }
@@ -356,6 +401,8 @@ export class SearchAnnotations extends React.PureComponent {
           gridGroupName={this.props.gridGroupName}
           topSpacing
           handleOptionDelete={this.handleOptionDelete}
+          handleOptionValueUpdate={this.handleOptionValueUpdate}
+          handleOptionOperatorUpdate={this.handleOptionOperatorUpdate}
         />
       </div>
     )
