@@ -92,7 +92,9 @@ const filterVariants = (variants) => {
         filterVariantExpression += ' && '
       }
 
-      filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
+      if (variant.predictions[predictionKey] !== undefined) {
+        filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
+      }
     }
 
     /* eslint no-eval: 0 */
