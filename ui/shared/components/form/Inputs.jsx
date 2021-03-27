@@ -217,7 +217,7 @@ InputGroup.propTypes = {
   handleOptionDelete: PropTypes.func,
   handleOptionValueUpdate: PropTypes.func,
   handleOptionOperatorUpdate: PropTypes.func,
-  isDefaultGroup: PropTypes.func,
+  isDefaultGroup: PropTypes.bool,
 }
 
 const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'e', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'f'].map(title => ({ title }))
@@ -257,13 +257,13 @@ GridInputGroup.propTypes = {
   compareOptions: PropTypes.array,
   handleOptionValueUpdate: PropTypes.func,
   handleOptionOperatorUpdate: PropTypes.func,
-  isDefaultGroup: PropTypes.func,
+  isDefaultGroup: PropTypes.bool,
 }
 
 export const InlineInputGroup = React.memo((props) => {
   const { options, compareOptions, searchHelpText, ...baseProps } = props
   return (
-    <div key="inlineInputGroup">
+    <div>
       <VerticalSpacer height={50} />
       <GridInputGroup
         {...baseProps}
