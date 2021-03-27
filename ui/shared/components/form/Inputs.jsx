@@ -128,7 +128,6 @@ const updateFilterPredictionValue = (prediction, value) => {
   } else {
     filteredPredictions[prediction].value = value
   }
-  console.log(filteredPredictions)
 }
 
 const updateFilterPredictionOperator = (prediction, operator) => {
@@ -137,7 +136,6 @@ const updateFilterPredictionOperator = (prediction, operator) => {
   } else {
     filteredPredictions[prediction].operator = operator
   }
-  console.log(filteredPredictions)
 }
 
 export const InputGroup = React.memo((props) => {
