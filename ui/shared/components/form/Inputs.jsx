@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import {Form, List, Button, Pagination as PaginationComponent, Search, Icon, Popup } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search, Icon, Popup } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -139,7 +139,7 @@ const updateFilterPredictionOperator = (prediction, operator) => {
 }
 
 export const InputGroup = React.memo((props) => {
-  const { inputGroupId, options, compareOptions } = props
+  const { inputGroupId, options, handleOptionDelete, compareOptions } = props
   const inputGroupStyle = {
     padding: '10px',
   }
@@ -148,8 +148,15 @@ export const InputGroup = React.memo((props) => {
     paddingTop: '35px',
   }
 
+  const iconStyle = {
+    zIndex: '2',
+    position: 'absolute',
+    right: '0',
+    top: '0',
+  }
+
   return (
-    <div key={`inputGroupId${inputGroupId}`}>
+    <div key={`inputGroup-${inputGroupId}`}>
       {options.map(option =>
         <div style={{ float: 'left', width: '33%' }} key={option.label}>
           <div style={{ gridTemplateColumns: '20% 80%', gridGap: '5px', display: 'grid' }}>
@@ -179,6 +186,13 @@ export const InputGroup = React.memo((props) => {
                   }}
                   onFocus={() => { }}
                 />
+                {(option.isDefault !== undefined || false) &&
+                  <Icon name="times circle outline" style={iconStyle}
+                    onClick={() => {
+                      handleOptionDelete(option.name)
+                    }}
+                  />
+                }
               </div>
             </div>
           </div>
@@ -190,37 +204,45 @@ export const InputGroup = React.memo((props) => {
 
 InputGroup.propTypes = {
   options: PropTypes.array,
-  inputGroupId: PropTypes.number,
+  inputGroupId: PropTypes.string,
   compareOptions: PropTypes.array,
+  handleOptionDelete: PropTypes.func,
 }
 
-const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'f'].map(title => ({ title }))
+const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'e', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'f'].map(title => ({ title }))
 
 export const GridInputGroup = React.memo((props) => {
-  const { options, compareOptions, ...baseProps } = props
+  const { options, gridGroupName, compareOptions, topSpacing, handleOptionDelete, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
   const optionChunkCount = 5
   const inputOptionsCopy = [...inputOptions]
   for (let i = optionChunkCount; i > 0; i--) {
     const optionChunk = inputOptionsCopy.splice(0, Math.ceil(inputOptionsCopy.length / i))
-    optionChunks.push({ id: i, key: `chunk${i}`, chunk: optionChunk })
+    optionChunks.push({ id: `${gridGroupName}-${i}`, key: `${gridGroupName}-chunk${i}`, chunk: optionChunk })
   }
   const floatStyle = {
     clear: 'both',
   }
   return (
     <div>
+      {(inputOptions.length > 0 && topSpacing === true) &&
+        <VerticalSpacer height={30} />
+      }
       {optionChunks.map((chunk) => {
-        return <InputGroup inputgroupid={chunk.id} key={chunk.key} options={chunk.chunk} compareOptions={compareOptions} {...baseProps} />
+        return <InputGroup inputGroupId={chunk.id} key={chunk.key} options={chunk.chunk} handleOptionDelete={handleOptionDelete} compareOptions={compareOptions} {...baseProps} />
       })}
       <div style={floatStyle} />
+      <VerticalSpacer height={40} />
     </div>
   )
 })
 
 GridInputGroup.propTypes = {
   options: PropTypes.array,
+  gridGroupName: PropTypes.string,
+  topSpacing: PropTypes.bool,
+  handleOptionDelete: PropTypes.func,
   compareOptions: PropTypes.array,
 }
 
@@ -228,10 +250,13 @@ export const InlineInputGroup = React.memo((props) => {
   const { options, compareOptions, searchHelpText, ...baseProps } = props
   return (
     <div key="inlineInputGroup">
+      <VerticalSpacer height={50} />
       <GridInputGroup
         {...baseProps}
         options={options}
+        gridGroupName="baseAnnotationsGridGroup"
         compareOptions={compareOptions}
+        handleOptionDelete={() => {}}
       />
       <VerticalSpacer height={50} />
       <SearchAnnotations
@@ -241,6 +266,7 @@ export const InlineInputGroup = React.memo((props) => {
         onResultSelect={() => { }}
         compareOptions={compareOptions}
         searchHelpText={searchHelpText}
+        gridGroupName="customAnnotationsGridGroup"
       />
     </div>
   )
@@ -267,6 +293,7 @@ export class SearchAnnotations extends React.PureComponent {
     onResultSelect: PropTypes.func,
     compareOptions: PropTypes.array,
     searchHelpText: PropTypes.string,
+    gridGroupName: PropTypes.string,
   }
 
   state = {
@@ -285,6 +312,7 @@ export class SearchAnnotations extends React.PureComponent {
         const hello = {
           name: result.title.toLowerCase(),
           label: result.title,
+          isDefault: false,
         }
         newOptions.push(hello)
       }
@@ -297,6 +325,16 @@ export class SearchAnnotations extends React.PureComponent {
       searchResults: this.props.searchOptions.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
     })
     this.props.onChange(e, data)
+  }
+  handleOptionDelete = (optionName) => {
+    this.setState((prevState) => {
+      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
+      const index = inputOptions.findIndex(option => option.name === optionName)
+      if (index > -1) {
+        inputOptions.splice(index, 1)
+      }
+      return { options: [{ options: inputOptions }] }
+    })
   }
 
   render() {
@@ -311,11 +349,13 @@ export class SearchAnnotations extends React.PureComponent {
           onResultSelect={this.handleResultSelect}
           onSearchChange={this.handleSearchChange}
         />
-        <VerticalSpacer height={30} />
         <GridInputGroup
           {...props}
           options={this.state.options}
           compareOptions={this.state.compareOptions}
+          gridGroupName={this.props.gridGroupName}
+          topSpacing
+          handleOptionDelete={this.handleOptionDelete}
         />
       </div>
     )
