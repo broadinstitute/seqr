@@ -182,19 +182,6 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-# set the secret key
-SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
-try:
-    SECRET_KEY = open(SECRET_FILE).read().strip()
-except IOError:
-    try:
-        SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
-        with open(SECRET_FILE, 'w') as f:
-            f.write(SECRET_KEY)
-    except IOError as e:
-        logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
-        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
-
 ROOT_URLCONF = 'seqr.urls'
 
 LOGIN_URL = '/login'
@@ -230,6 +217,9 @@ if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
+
+    SECRET_KEY = os.environ.get('DJANGO_KEY')
+    assert SECRET_KEY and len(SECRET_KEY) == 50
 else:
     DEBUG = True
     # Enable CORS and hijak for local development
@@ -247,6 +237,18 @@ else:
     HIJACK_DISPLAY_WARNING = True
     HIJACK_ALLOW_GET_REQUESTS = True
     HIJACK_LOGIN_REDIRECT_URL = '/'
+
+    SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
+    try:
+        SECRET_KEY = open(SECRET_FILE).read().strip()
+    except IOError:
+        try:
+            SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
+            with open(SECRET_FILE, 'w') as f:
+                f.write(SECRET_KEY)
+        except IOError as e:
+            logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 #########################################################
 #  seqr specific settings
