@@ -12,6 +12,8 @@ spec:
             cpu: "4"
             memory: 8Gi
         env:
+          - name: DEPLOYMENT_TYPE
+            value: prod
           - name: POSTGRES_SERVICE_HOSTNAME
             value: "10.94.145.3"
           - name: POSTGRES_SERVICE_PORT
@@ -41,7 +43,7 @@ spec:
           - name: GUNICORN_WORKER_THREADS
             value: "4"
           - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
-            value: 1021400127367-08vc0oh621769ig8m4m3m37vkks9dc7l.apps.googleusercontent.com
+            value: 1021400127367-9uc4sikfsm0vqo38q1g6rclj91mm501r.apps.googleusercontent.com
           - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
             value: sm://seqr-308602/social-auth-google-oauth2-secret
           - name: DJANGO_KEY
