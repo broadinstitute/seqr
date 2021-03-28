@@ -220,8 +220,6 @@ InputGroup.propTypes = {
   isDefaultGroup: PropTypes.bool,
 }
 
-const searchOptions = ['a', 'b', 'hello', 'something', 'c', 'd', 'e', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'f'].map(title => ({ title }))
-
 export const GridInputGroup = React.memo((props) => {
   const { options, gridGroupName, isDefaultGroup, compareOptions, topSpacing, handleOptionDelete, handleOptionValueUpdate, handleOptionOperatorUpdate, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
@@ -260,8 +258,39 @@ GridInputGroup.propTypes = {
   isDefaultGroup: PropTypes.bool,
 }
 
+let searchOptions = []
+const getElasticSearchIndicies = async () => {
+  // Clear searchOptions and get new data
+  searchOptions = []
+
+  const url = ''
+
+  // Get all keys from Elasticsearch
+  let response = await fetch(`${url}/_mapping`)
+  let data = await response.json()
+
+  // Include only index names that are not from ElasticSearch (the ones that start with dot)
+  const indexNames = Object.keys(data).filter(key => key[0] !== '.')
+
+  // For each index name get properties
+  /* eslint-disable no-await-in-loop */
+  for (let indexNameIdx = 0; indexNameIdx < indexNames.length; indexNameIdx++) {
+    const indexName = indexNames[indexNameIdx]
+    response = await fetch(`${url}/${indexName}`)
+    data = await response.json()
+
+    /* eslint-disable no-loop-func */
+    Object.keys(data[indexName].mappings.properties).forEach((property) => {
+      searchOptions.push({ title: property })
+    })
+  }
+}
+
 export const InlineInputGroup = React.memo((props) => {
   const { options, compareOptions, searchHelpText, ...baseProps } = props
+
+  getElasticSearchIndicies()
+
   return (
     <div>
       <VerticalSpacer height={50} />
@@ -271,9 +300,9 @@ export const InlineInputGroup = React.memo((props) => {
         gridGroupName="baseAnnotationsGridGroup"
         isDefaultGroup
         compareOptions={compareOptions}
-        handleOptionDelete={() => {}}
-        handleOptionValueUpdate={() => {}}
-        handleOptionOperatorUpdate={() => {}}
+        handleOptionDelete={() => { }}
+        handleOptionValueUpdate={() => { }}
+        handleOptionOperatorUpdate={() => { }}
       />
       <VerticalSpacer height={50} />
       <SearchAnnotations
@@ -817,4 +846,3 @@ JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   onChange: PropTypes.func,
 }
-
