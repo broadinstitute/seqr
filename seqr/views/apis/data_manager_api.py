@@ -307,7 +307,7 @@ def proxy_to_kibana(request):
         token = base64.b64encode('kibana:{}'.format(KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
         headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
 
-    url = "https://{host}{path}".format(host=KIBANA_SERVER, path=request.get_full_path())
+    url = "http://{host}{path}".format(host=KIBANA_SERVER, path=request.get_full_path())
 
     request_method = getattr(requests.Session(), request.method.lower())
 
