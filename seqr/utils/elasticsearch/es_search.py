@@ -23,7 +23,6 @@ from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
 
-
 class EsSearch(object):
 
     AGGREGATION_NAME = 'compound het'
@@ -700,6 +699,12 @@ class EsSearch(object):
             ),
             'transcripts': dict(transcripts),
         })
+
+        for key in hit:
+            key_type = type(hit[key]).__name__
+            if key_type == "NoneType" or key_type == "AttrList":
+                continue
+            result['predictions'][key.lower()] = hit[key]
         return result
 
     def _parse_compound_het_response(self, response):

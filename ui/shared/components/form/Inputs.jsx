@@ -263,7 +263,7 @@ const getElasticSearchIndicies = async () => {
   // Clear searchOptions and get new data
   searchOptions = []
 
-  const url = ''
+  const url = 'localhost:9200'
 
   // Get all keys from Elasticsearch
   let response = await fetch(`${url}/_mapping`)

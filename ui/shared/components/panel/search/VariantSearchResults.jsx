@@ -89,7 +89,7 @@ const filterVariants = (variants) => {
       }
 
       const filteredPredictionOperator = getFilterPredictionOperator(filteredPredictions[predictionKey].operator, predictionKey)
-      const variantPredictionValue = parseFloat(variant.predictions[predictionKey]).toPrecision(2)
+      const variantPredictionValue = Number.isInteger(variant.predictions[predictionKey]) ? variant.predictions[predictionKey] : parseFloat(variant.predictions[predictionKey]).toPrecision(2)
 
       if (filterVariantExpression !== '') {
         filterVariantExpression += ' && '
