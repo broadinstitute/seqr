@@ -78,7 +78,7 @@ Prediction.propTypes = {
   dangerThreshold: PropTypes.number,
 }
 
-const PREDICTOR_FIELDS = [
+export const PREDICTOR_FIELDS = [
   { field: 'cadd', warningThreshold: 10, dangerThreshold: 20 },
   { field: 'revel', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
@@ -140,17 +140,17 @@ class Predictions extends React.PureComponent {
         }
         {
           predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD &&
-            <Transition.Group animation="fade down" duration="500">
-              {
-                this.state.showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField =>
-                  <Prediction key={predictorField.field} {...predictorField} />,
-                )
-              }
-              <ButtonLink onClick={this.toggleShowMore}>
-                <HorizontalSpacer width={20} />
-                {this.state.showMore ? 'hide' : 'show more...'}
-              </ButtonLink>
-            </Transition.Group>
+          <Transition.Group animation="fade down" duration="500">
+            {
+              this.state.showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField =>
+                <Prediction key={predictorField.field} {...predictorField} />,
+              )
+            }
+            <ButtonLink onClick={this.toggleShowMore}>
+              <HorizontalSpacer width={20} />
+              {this.state.showMore ? 'hide' : 'show more...'}
+            </ButtonLink>
+          </Transition.Group>
         }
       </div>
     )
@@ -162,4 +162,3 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 export default connect(mapStateToProps)(Predictions)
-

@@ -22,6 +22,7 @@ import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 import { filteredPredictions } from '../../form/Inputs'
+import { PREDICTOR_FIELDS } from '../../panel/variants/Predictions'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -71,6 +72,8 @@ const filterVariants = (variants) => {
   const filteredVariants = []
   const filteredPredictionKeys = Object.keys(filteredPredictions)
 
+  filteredPredictionKeys.forEach(filteredPrediction => PREDICTOR_FIELDS.push({ field: filteredPrediction }))
+
   if (filteredPredictionKeys.length === 0) {
     return variants
   }
@@ -97,7 +100,7 @@ const filterVariants = (variants) => {
       }
     }
 
-    /* eslint no-eval: 0 */
+    /* eslint-disable-next-line no-eval */
     const result = eval(filterVariantExpression)
     if (result === true) {
       filteredVariants.push(variant)
