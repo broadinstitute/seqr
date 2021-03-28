@@ -39,7 +39,7 @@ def status_view(request):
 
     # Test kibana connection
     try:
-        requests.head('https://{}/status'.format(KIBANA_SERVER), timeout=3).raise_for_status()
+        requests.head('http://{}/status'.format(KIBANA_SERVER), timeout=3).raise_for_status()
     except Exception as e:
         dependent_services_ok = False
         logger.error('Kibana connection error: {}'.format(str(e)))
