@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_BUILDKIT: 1
+      BUILDKIT_PROGRESS: plain
+      CLOUDSDK_CORE_DISABLE_PROMPTS: 1
+      DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: gcloud setup
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: seqr-308602 
+          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+
+      - name: gcloud docker auth
+        run: |
+          gcloud auth configure-docker australia-southeast1-docker.pkg.dev
+      
+      - name: set deployment type
+        run: |
+          if [[ $GITHUB_REF == 'refs/heads/master' ]]; then
+            echo DEPLOYMENT_TYPE=prod >> $GITHUB_ENV
+          else
+            echo DEPLOYMENT_TYPE=dev >> $GITHUB_ENV
+          fi
+
+      - name: build image
+        run: DOCKER_BUILDKIT=1 docker build --build-arg SEQR_REPO=https://github.com/populationgenomics/seqr --build-arg SEQR_GIT_SHA=${{ github.sha }} --build-arg SEQR_SERVICE_PORT=8000 --tag $DOCKER_IMAGE:${{ github.sha }} --tag $DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE deploy/docker/seqr
+      
+      - name: push image
+        run: docker push --all-tags $DOCKER_IMAGE
+      
+      - name: deploy to Cloud Run
+        run: gcloud beta run services replace --platform managed --region australia-southeast1 deploy/cloud_run/seqr_$DEPLOYMENT_TYPE.yaml

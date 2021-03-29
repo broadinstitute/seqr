@@ -83,7 +83,7 @@ def create_model_from_json(model_class, json, user):
     return model
 
 
-def get_or_create_model_from_json(model_class, create_json, update_json, user):
+def get_or_create_model_from_json(model_class, create_json, update_json, user, update_on_create_only=False):
     model, created = model_class.objects.get_or_create(**create_json)
     updated_fields = set()
     if created:
@@ -94,6 +94,8 @@ def get_or_create_model_from_json(model_class, create_json, update_json, user):
         if update_json:
             log_update_fields += list(update_json.keys())
         log_model_update(logger, model, user, 'create', log_update_fields)
+    elif update_on_create_only:
+        update_json = None
     if update_json or updated_fields:
         update_model_from_json(model, update_json or {}, user, updated_fields=updated_fields, verbose=not created)
     return model, created

@@ -26,8 +26,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
-        config.linkerd.io/skip-outbound-ports: "6379"
-        config.linkerd.io/skip-inbound-ports: "6379"
+        config.linkerd.io/opaque-ports: "6379"
       labels:
         name: redis
         deployment: {{ DEPLOY_TO }}

@@ -77,7 +77,7 @@ def create_saved_variant_handler(request):
             return create_json_response({'error': str(e)}, status=400)
         saved_variant, _ = get_or_create_model_from_json(
             SavedVariant, create_json=parsed_variant_json,
-            update_json={'saved_variant_json': single_variant_json}, user=request.user)
+            update_json={'saved_variant_json': single_variant_json}, user=request.user, update_on_create_only=True)
         saved_variants.append(saved_variant)
 
     if variant_json.get('note'):
