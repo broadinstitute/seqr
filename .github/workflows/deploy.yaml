@@ -1,9 +1,10 @@
-name: Deploy to prod
+name: Deploy
 
 on:
   push:
     branches:
       - main
+      - dev
 
 jobs:
   docker:
