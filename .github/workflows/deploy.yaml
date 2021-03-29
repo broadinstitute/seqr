@@ -44,4 +44,4 @@ jobs:
         run: docker push --all-tags $DOCKER_IMAGE
       
       - name: deploy to Cloud Run
-        gcloud beta run services replace --platform managed --region australia-southeast1 deploy/cloud_run/seqr_$DEPLOYMENT_TYPE.yaml
+        run: gcloud beta run services replace --platform managed --region australia-southeast1 deploy/cloud_run/seqr_$DEPLOYMENT_TYPE.yaml
