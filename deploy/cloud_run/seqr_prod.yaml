@@ -1,0 +1,57 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: seqr-prod
+spec:
+  template:
+    spec:
+      containers:
+      - image: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-prod
+        resources:
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        env:
+          - name: DEPLOYMENT_TYPE
+            value: prod
+          - name: POSTGRES_SERVICE_HOSTNAME
+            value: "10.94.145.3"
+          - name: POSTGRES_SERVICE_PORT
+            value: "5432"
+          - name: POSTGRES_PASSWORD
+            value: sm://seqr-308602/postgres-password
+          - name: PYTHONPATH
+            value: /seqr
+          - name: STATIC_MEDIA_DIR
+            value: /seqr_static_files
+          - name: ELASTICSEARCH_PROTOCOL
+            value: https
+          - name: ELASTICSEARCH_SERVICE_HOSTNAME
+            value: elasticsearch.es.australia-southeast1.gcp.elastic-cloud.com
+          - name: ELASTICSEARCH_SERVICE_PORT
+            value: "9243"
+          - name: SEQR_ES_PASSWORD
+            value: sm://seqr-308602/seqr-es-password
+          - name: KIBANA_SERVICE_HOSTNAME
+            value: elasticsearch.kb.australia-southeast1.gcp.elastic-cloud.com
+          - name: KIBANA_SERVICE_PORT
+            value: "9243"
+          - name: KIBANA_ES_PASSWORD
+            value: sm://seqr-308602/kibana-es-password
+          - name: REDIS_SERVICE_HOSTNAME
+            value: "10.94.144.3"
+          - name: GUNICORN_WORKER_THREADS
+            value: "4"
+          - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+            value: 1021400127367-9uc4sikfsm0vqo38q1g6rclj91mm501r.apps.googleusercontent.com
+          - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+            value: sm://seqr-308602/social-auth-google-oauth2-secret-prod
+          - name: DJANGO_KEY
+            value: sm://seqr-308602/django-key-prod
+        ports:
+        - containerPort: 8000
+      timeoutSeconds: 60
+      serviceAccountName: seqr-prod@seqr-308602.iam.gserviceaccount.com
+    metadata:
+      annotations:
+        run.googleapis.com/vpc-access-connector: serverless-vpc-connector
