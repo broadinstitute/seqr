@@ -4,8 +4,7 @@ name: local install tests
 on:
   push:
     branches:
-      - master
-      - dev
+      - main
 
 jobs:
   local_install_test:
