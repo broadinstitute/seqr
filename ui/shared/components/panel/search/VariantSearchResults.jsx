@@ -68,6 +68,20 @@ const getFilterPredictionOperator = (operator, predictionKey) => {
   return '=='
 }
 
+const getCorrectVariantPredictionValue = (value) => {
+  /* eslint-disable-next-line no-restricted-globals */
+  const isFloat = value !== '' && !isNaN(value) && Math.round(value) !== value
+  if (isFloat) {
+    return parseFloat(value).toPrecision(2)
+  }
+
+  if (typeof (value) === 'string') {
+    return `"${value}"`
+  }
+
+  return value
+}
+
 const filterVariants = (variants) => {
   const filteredVariants = []
   const filteredPredictionKeys = Object.keys(filteredPredictions)
@@ -81,15 +95,16 @@ const filterVariants = (variants) => {
   let filterVariantExpression = ''
   for (let variantIdx = 0; variantIdx < variants.length; variantIdx++) {
     const variant = variants[variantIdx]
+    let nonExistingKey = false
     for (let predictionKeyIdx = 0; predictionKeyIdx < filteredPredictionKeys.length; predictionKeyIdx++) {
       const predictionKey = filteredPredictionKeys[predictionKeyIdx]
-      const filteredPredictionValue = filteredPredictions[predictionKey].value
+      const filteredPredictionValue = getCorrectVariantPredictionValue(filteredPredictions[predictionKey].value)
       if (filteredPredictionValue === '' || filteredPredictionValue === undefined) {
         throw new Error(`Error: Please specify value for ${predictionKey}`)
       }
 
       const filteredPredictionOperator = getFilterPredictionOperator(filteredPredictions[predictionKey].operator, predictionKey)
-      const variantPredictionValue = Number.isInteger(variant.predictions[predictionKey]) ? variant.predictions[predictionKey] : parseFloat(variant.predictions[predictionKey]).toPrecision(2)
+      const variantPredictionValue = getCorrectVariantPredictionValue(variant.predictions[predictionKey])
 
       if (filterVariantExpression !== '') {
         filterVariantExpression += ' && '
@@ -97,13 +112,18 @@ const filterVariants = (variants) => {
 
       if (variant.predictions[predictionKey] !== undefined) {
         filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
+      } else {
+        nonExistingKey = true
+        break
       }
     }
 
-    /* eslint-disable-next-line no-eval */
-    const result = eval(filterVariantExpression)
-    if (result === true) {
-      filteredVariants.push(variant)
+    if (!nonExistingKey) {
+      /* eslint-disable-next-line no-eval */
+      const result = eval(filterVariantExpression)
+      if (result === true) {
+        filteredVariants.push(variant)
+      }
     }
 
     filterVariantExpression = ''
