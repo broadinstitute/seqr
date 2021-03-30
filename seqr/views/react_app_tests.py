@@ -6,9 +6,6 @@ from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 
-MAIN_APP_USER_FIELDS = {'currentPolicies'}
-MAIN_APP_USER_FIELDS.update(USER_FIELDS)
-
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
@@ -21,9 +18,8 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
+        self.assertSetEqual(set(initial_json['user'].keys()), USER_FIELDS)
         self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
-        self.assertFalse(initial_json['user']['currentPolicies'])
         self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
 
         # test static assets are correctly loaded
@@ -62,9 +58,8 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'newUser'})
-        self.assertSetEqual(set(initial_json['newUser'].keys()), MAIN_APP_USER_FIELDS)
+        self.assertSetEqual(set(initial_json['newUser'].keys()), USER_FIELDS)
         self.assertEqual(initial_json['newUser']['username'], 'test_user_manager')
-        self.assertFalse(initial_json['newUser']['currentPolicies'])
         self.assertFalse(initial_json['meta']['googleLoginEnabled'])
 
         with self.assertRaises(ObjectDoesNotExist):
@@ -76,6 +71,5 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
+        self.assertSetEqual(set(initial_json['user'].keys()), USER_FIELDS)
         self.assertEqual(initial_json['user']['username'], 'test_user')
-        self.assertTrue(initial_json['user']['currentPolicies'])

@@ -20,6 +20,8 @@ def _initialize_users(cls):
     cls.manager_user = User.objects.get(username='test_user_manager')
     cls.collaborator_user = User.objects.get(username='test_user_collaborator')
     cls.no_access_user = User.objects.get(username='test_user_no_access')
+    cls.inactive_user = User.objects.get(username='test_user_inactive')
+    cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
@@ -30,6 +32,7 @@ class AuthenticationTestCase(TestCase):
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
+    NO_POLICY_USER = 'no_policy'
 
     super_user = None
     analyst_user = None
@@ -38,6 +41,16 @@ class AuthenticationTestCase(TestCase):
     manager_user = None
     collaborator_user = None
     no_access_user = None
+    inactive_user = None
+    no_policy_user = None
+
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_TOS_VERSION', 1.3)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @classmethod
     def setUpTestData(cls):
@@ -53,6 +66,9 @@ class AuthenticationTestCase(TestCase):
 
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
+
+    def check_require_login_no_policies(self, url):
+        self._check_login(url, self.NO_POLICY_USER)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
@@ -101,10 +117,24 @@ class AuthenticationTestCase(TestCase):
             permission_level (string): what level of permission this url requires
          """
         # check that it redirects if you don't login
-        login_required_url = '{}?next={}'.format(login_redirect_url, '/'.join(map(quote_plus, url.split('/'))))
+        next_url = '/'.join(map(quote_plus, url.split('/')))
+        login_required_url = '{}?next={}'.format(login_redirect_url, next_url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url) # TODO add policies test case
+        self.assertEqual(response.url, login_required_url)
+
+        # self.client.force_login(self.inactive_user) # TODO
+        # response = self.client.get(url)
+        # self.assertEqual(response.status_code, 302)
+        # self.assertEqual(response.url, login_required_url)
+        #
+        self.client.force_login(self.no_policy_user)
+        if permission_level == self.NO_POLICY_USER:
+            return
+
+        # response = self.client.get(url)  # TODO
+        # self.assertEqual(response.status_code, 302)
+        # self.assertEqual(response.url, '/api/policy-required-error?next={}'.format(next_url))
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:
@@ -347,6 +377,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level = patcher.start()
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
+        super(AnvilAuthenticationTestCase, self).setUp()
 
 
 # inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.

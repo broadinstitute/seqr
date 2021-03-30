@@ -56,6 +56,7 @@ const POLICY_FORM_FIELDS = [
 ]
 
 // exported for testing purposes only
+// TODO got rid of currentPolicies in client
 export const BaseAcceptPolicies = React.memo(({ user, onSubmit }) => (
   (user && Object.keys(user).length && !user.currentPolicies) ?
     <Modal open size="small" closeOnDimmerClick={false} closeOnEscape={false}>

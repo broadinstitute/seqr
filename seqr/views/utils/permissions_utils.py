@@ -15,20 +15,6 @@ from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, 
 
 logger = logging.getLogger(__name__)
 
-def has_current_policies(user):
-    if not hasattr(user, 'userpolicy'):
-        return False
-
-    current_privacy = user.userpolicy.privacy_version
-    current_tos = user.userpolicy.tos_version
-    return current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
-
-def login_and_policies_required(view_func):
-    return login_required(
-        user_passes_test(lambda user: has_current_policies(user), login_url=API_POLICY_REQUIRED_URL)(view_func),
-        login_url=API_LOGIN_REQUIRED_URL,
-    )
-
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
@@ -43,6 +29,20 @@ def user_is_pm(user):
 analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
 data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
 pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
+
+def has_current_policies(user):
+    if not hasattr(user, 'userpolicy'):
+        return False
+
+    current_privacy = user.userpolicy.privacy_version
+    current_tos = user.userpolicy.tos_version
+    return current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
+
+current_policies_required = user_passes_test(lambda user: has_current_policies(user), login_url=API_POLICY_REQUIRED_URL)
+active_required = user_passes_test(lambda user: user.is_active, login_url=API_LOGIN_REQUIRED_URL)
+
+def login_and_policies_required(view_func):
+    return login_required(active_required(current_policies_required(view_func)), login_url=API_LOGIN_REQUIRED_URL)
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
