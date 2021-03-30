@@ -60,6 +60,7 @@ def logout_view(request):
 def login_required_error(request):
     """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
 
-    This is used to redirect AJAX HTTP handlers to the login page.
+    This is used to redirect AJAX HTTP handlers to the login or accept policies page.
     """
-    return create_json_response({}, status=401, reason="login required")
+    error = 'login' if not request.user.is_authenticated else 'policies'
+    return create_json_response({'error': error} , status=401, reason="{} required".format(error))

@@ -19,7 +19,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions
+    check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions, \
+    login_and_policies_required
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
 
 
@@ -121,7 +122,7 @@ def delete_project_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def project_page_data(request, project_guid):
     """Returns a JSON object containing information used by the project page:
     ::

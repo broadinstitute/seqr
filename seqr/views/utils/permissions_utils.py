@@ -11,9 +11,21 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION
 
 logger = logging.getLogger(__name__)
+
+def has_current_policies(user):
+    if not hasattr(user, 'userpolicy'):
+        return False
+
+    current_privacy = user.userpolicy.privacy_version
+    current_tos = user.userpolicy.tos_version
+    return current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
+
+
+login_and_policies_required = user_passes_test(
+    lambda user: user.is_authenticated and has_current_policies(user), login_url=API_LOGIN_REQUIRED_URL)
 
 
 def user_is_analyst(user):

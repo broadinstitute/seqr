@@ -33,7 +33,7 @@ def no_login_main_app(request, *args, **kwargs):
 def _get_json_for_initial_user(user):
     user_json = _get_json_for_user(user)
 
-    user_json['currentPolicies'] = False
+    user_json['currentPolicies'] = False # TODO remove
     if hasattr(user, 'userpolicy'):
         current_privacy = user.userpolicy.privacy_version
         current_tos = user.userpolicy.tos_version
