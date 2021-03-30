@@ -416,7 +416,7 @@ export class SearchAnnotations extends React.PureComponent {
       <div>
         {/* eslint-disable-next-line jsx-a11y/label-has-for */}
         <label> Search for additional annotations <Popup trigger={<Icon name="question circle outline" />} content={searchHelpText} size="small" position="top center" /></label>
-        <Search
+        <CustomAnnotationSearch
           results={this.state.searchResults}
           onResultSelect={this.handleResultSelect}
           onSearchChange={this.handleSearchChange}
@@ -435,6 +435,13 @@ export class SearchAnnotations extends React.PureComponent {
     )
   }
 }
+
+export const CustomAnnotationSearch = styled(Search)`
+  .input + .results {
+    max-height: 210px;
+    overflow-y: scroll;
+  }
+`
 
 export class Multiselect extends React.PureComponent {
   static propTypes = {
