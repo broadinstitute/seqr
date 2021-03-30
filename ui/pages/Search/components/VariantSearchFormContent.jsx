@@ -134,9 +134,8 @@ const ANNOTATION_PANEL_MAP = {
 const ANNOTATION_FILTER_PANEL_MAP = {
   ...ANNOTATION_FILTER_PANEL,
   headerProps: {
-    title: 'Annotation Filter',
-    name: 'annotation_filter',
-    inputSize: 5,
+    title: 'Custom Annotation Filter',
+    name: 'custom_annotation_filter',
   },
 }
 
