@@ -15,7 +15,7 @@ class DashboardPageTest(AuthenticationTestCase):
 
     def run_react_page(self, google_enabled):
         url = reverse(main_app)
-        self.check_require_login(url)
+        self.check_require_login(url, login_redirect_url='/login')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

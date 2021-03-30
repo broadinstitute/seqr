@@ -24,7 +24,26 @@ class SuperusersAPITest(AuthenticationTestCase):
 
     def test_admin(self):
         url = 'http://localhost/admin/'
-        self.check_superuser_login(url)
 
+        # test restricted access
+        response = self.client.get(url, follow=True)
+        self.assertListEqual(
+            response.redirect_chain, [('/admin/login/?next=/admin/', 302), ('/login?next=%2Fadmin%2F', 301)])
+        self.assertNotContains(response, 'Django administration')
+
+        self.login_collaborator()
+        response = self.client.get(url, follow=True)
+        self.assertListEqual(
+            response.redirect_chain, [('/admin/login/?next=/admin/', 302), ('/login?next=%2Fadmin%2F', 301)])
+        self.assertNotContains(response, 'Django administration')
+
+        self.login_data_manager_user()
+        response = self.client.get(url, follow=True)
+        self.assertListEqual(
+            response.redirect_chain, [('/admin/login/?next=/admin/', 302), ('/login?next=%2Fadmin%2F', 301)])
+        self.assertNotContains(response, 'Django administration')
+
+        # test success
+        self.client.force_login(self.super_user)
         response = self.client.get(url)
         self.assertContains(response, 'Django administration', status_code=200)

@@ -102,7 +102,7 @@ def _retrieve_project_categories_by_guid(project_guids):
     return project_categories_by_guid
 
 
-@login_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 

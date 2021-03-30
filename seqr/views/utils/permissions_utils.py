@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value
-from functools import wraps
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json

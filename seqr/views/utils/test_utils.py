@@ -51,8 +51,8 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
-    def check_require_login(self, url):
-        self._check_login(url, self.AUTHENTICATED_USER)
+    def check_require_login(self, url, **request_kwargs):
+        self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
@@ -90,7 +90,7 @@ class AuthenticationTestCase(TestCase):
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
-    def _check_login(self, url, permission_level, request_data=None):
+    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error'):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests
         if the user isn't logged-in, and then authenticates a test user.
@@ -101,11 +101,10 @@ class AuthenticationTestCase(TestCase):
             permission_level (string): what level of permission this url requires
          """
         # check that it redirects if you don't login
-        response = self.client.get(url, follow=True)
-        self.assertEqual(response.status_code, 401)
-        self.assertDictEqual(response.json(), {'error': 'login'}) # TODO add policies test case
-        self.assertListEqual(response.redirect_chain, [
-            ('/api/login-required-error?next={}'.format('/'.join(map(quote_plus, url.split('/')))), 302)])
+        login_required_url = '{}?next={}'.format(login_redirect_url, '/'.join(map(quote_plus, url.split('/'))))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url) # TODO add policies test case
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:
@@ -123,9 +122,12 @@ class AuthenticationTestCase(TestCase):
         if permission_level == self.COLLABORATOR:
             return
 
-        response = self.client.get(url, follow=True)
-        self.assertEqual(response.status_code, 403 if permission_level == self.MANAGER else 401)
-        self.assertDictEqual(response.json(), {'error': 'login'})
+        response = self.client.get(url)
+        if permission_level == self.MANAGER:
+            self.assertEqual(response.status_code, 403)
+        else:
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, login_required_url)
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
@@ -133,6 +135,7 @@ class AuthenticationTestCase(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
 
         self.login_analyst_user()
         if permission_level in self.ANALYST:
@@ -140,6 +143,7 @@ class AuthenticationTestCase(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
 
         self.login_pm_user()
         if permission_level in self.PM:
@@ -147,6 +151,7 @@ class AuthenticationTestCase(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
 
         self.login_data_manager_user()
         if permission_level in self.DATA_MANAGER:
@@ -154,6 +159,7 @@ class AuthenticationTestCase(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
 
         self.client.force_login(self.super_user)
 
