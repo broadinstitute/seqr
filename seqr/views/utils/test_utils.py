@@ -5,6 +5,7 @@ from guardian.shortcuts import assign_perm
 import json
 import mock
 import re
+from urllib.parse import quote_plus
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
@@ -99,8 +100,12 @@ class AuthenticationTestCase(TestCase):
             url (string): The url of the django view being tested.
             permission_level (string): what level of permission this url requires
          """
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
+        # check that it redirects if you don't login
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 401)
+        self.assertDictEqual(response.json(), {'error': 'login'}) # TODO add policies test case
+        self.assertListEqual(response.redirect_chain, [
+            ('/api/login-required-error?next={}'.format('/'.join(map(quote_plus, url.split('/')))), 302)])
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:
