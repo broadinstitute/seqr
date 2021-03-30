@@ -130,8 +130,10 @@ const SUBMISSION_EDIT_FIELDS = [
     component: EditGenotypesTable,
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
+    includeSelectedRowData: true,
+    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)),
     format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: true }), {}),
+      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {}),
   },
   {
     name: 'phenotypes',

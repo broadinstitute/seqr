@@ -5,16 +5,17 @@ import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
 import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from 'shared/utils/constants'
+import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
-import { getTaggedVariantsByFamilyType } from '../selectors'
-import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
+import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
+import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
+import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
@@ -25,7 +26,6 @@ const GENE_ID_FIELD_NAME = 'geneId'
 const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
-const TAG_FIELD_NAME = 'tags'
 const VARIANTS_FIELD_NAME = 'variants'
 const FORMAT_RESPONSE_FIELDS = [
   GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
@@ -63,15 +63,9 @@ const mapZygosityInputStateToProps = (state, ownProps) => ({
 
 const getFormFamilyGuid = props => props.meta.form.split(BASE_FORM_ID)[0]
 
-const mapTagInputStateToProps = (state, ownProps) => {
-  const family = getFamiliesByGuid(state)[getFormFamilyGuid(ownProps)]
-  const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
-  return {
-    options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
-      ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
-    ),
-  }
-}
+const mapTagInputStateToProps = state => ({
+  options: getProjectTagTypeOptions(state),
+})
 
 const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
   key: 'mnv',
@@ -93,7 +87,7 @@ const mapSavedVariantsStateToProps = (state, ownProps) => {
 const SavedVariantField = connect(mapSavedVariantsStateToProps)(SavedVariantToggle)
 
 const SAVED_VARIANT_COLUMNS = [
-  { name: 'genes', content: 'Genes', width: 3, format: val => (val.genes || []).map(gene => (gene || {}).geneSymbol).join(', ') },
+  GENES_COLUMN,
   VARIANT_POS_COLUMN,
   TAG_COLUMN,
 ]
@@ -107,13 +101,8 @@ const ZYGOSITY_FIELD = {
 }
 
 const TAG_FIELD = {
-  name: TAG_FIELD_NAME,
-  label: 'Tags',
-  includeCategories: true,
   component: connect(mapTagInputStateToProps)(LargeMultiselect),
-  format: value => (value || []).map(({ name }) => name),
-  normalize: value => (value || []).map(name => ({ name })),
-  validate: value => (value && value.length ? undefined : 'Required'),
+  ...TAG_FORM_FIELD,
 }
 
 const CHROM_FIELD = {
@@ -134,9 +123,10 @@ const END_FIELD = { name: 'end', label: 'Stop Position', ...POS_FIELD }
 const SAVED_VARIANT_FIELD = {
   name: VARIANTS_FIELD_NAME,
   idField: 'variantGuid',
+  includeSelectedRowData: true,
   control: SavedVariantField,
-  format: value => (Array.isArray(value) ? value : []).reduce((acc, variant) =>
-    ({ ...acc, [variant.variantGuid]: true }), {}),
+  // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
+  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
 }
 
 const SV_TYPE_OPTIONS = [
@@ -241,15 +231,14 @@ BaseCreateVariantButton.propTypes = {
   variantType: PropTypes.string,
   family: PropTypes.object,
   user: PropTypes.object,
-  initialValues: PropTypes.object,
   formFields: PropTypes.array,
   onSubmit: PropTypes.func,
 }
 
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   user: getUser(state),
-  initialValues: getProjectsByGuid(state)[ownProps.family.projectGuid],
+  initialValues: getCurrentProject(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -274,7 +263,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         }
       }
 
-      const variants = values[VARIANTS_FIELD_NAME] || []
+      const variants = Object.values(values[VARIANTS_FIELD_NAME] || {}).filter(v => v)
 
       const formattedValues = {
         familyGuid: ownProps.family.familyGuid,

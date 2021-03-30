@@ -18,7 +18,7 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername,
 } from 'redux/selectors'
 
@@ -117,7 +117,7 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
     ), []),
 )
 
-export const getTaggedVariantsByFamilyType = createSelector(
+export const getTaggedVariantsByFamily = createSelector(
   getSavedVariantsByGuid,
   getGenesById,
   getVariantTagsByGuid,
@@ -128,16 +128,29 @@ export const getTaggedVariantsByFamilyType = createSelector(
       variantDetail.genes = Object.keys(variant.transcripts || {}).map(geneId => genesById[geneId])
       familyGuids.forEach((familyGuid) => {
         if (!acc[familyGuid]) {
-          acc[familyGuid] = {}
+          acc[familyGuid] = []
         }
-        const isSv = !!variant.svType
-        if (!acc[familyGuid][isSv]) {
-          acc[familyGuid][isSv] = []
-        }
-        acc[familyGuid][isSv].push(variantDetail)
+        acc[familyGuid].push(variantDetail)
       })
       return acc
     }, {})
+  },
+)
+
+export const getTaggedVariantsByFamilyType = createSelector(
+  getTaggedVariantsByFamily,
+  (variantsByFamily) => {
+    return Object.entries(variantsByFamily).reduce((acc, [familyGuid, variants]) => ({
+      ...acc,
+      [familyGuid]: variants.reduce((acc2, variant) => {
+        const isSv = !!variant.svType
+        if (!acc2[isSv]) {
+          acc2[isSv] = []
+        }
+        acc2[isSv].push(variant)
+        return acc2
+      }, {}),
+    }), {})
   },
 )
 
@@ -145,12 +158,12 @@ export const getVariantUniqueId = ({ chrom, pos, ref, alt, end, geneId }, varian
   `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
-  getTaggedVariantsByFamilyType,
+  getTaggedVariantsByFamily,
   getIndividualsByGuid,
   (state, props) => props.individualGuid,
   (taggedVariants, individualsByGuid, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
-    return Object.values(taggedVariants[familyGuid] || {}).flat().reduce((acc, variant) => {
+    return Object.values(taggedVariants[familyGuid] || []).reduce((acc, variant) => {
       const variantDetail = {
         ...variant.genotypes[individualGuid],
         ...variant,
@@ -162,6 +175,14 @@ export const getIndividualTaggedVariants = createSelector(
       }))]
     }, [])
   },
+)
+
+export const getProjectTagTypeOptions = createSelector(
+  getProjectGuid,
+  getTagTypesByProject,
+  (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid].map(
+    ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
+  ),
 )
 
 // Family table selectors

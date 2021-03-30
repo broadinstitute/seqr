@@ -16,6 +16,13 @@ const variantSummary = variant => (
   </span>
 )
 
+export const GENES_COLUMN = {
+  name: 'genes',
+  content: 'Genes',
+  width: 3,
+  format: val => (val.genes || []).map(gene => (gene || {}).geneSymbol).join(', '),
+}
+
 export const VARIANT_POS_COLUMN = { name: 'xpos', content: 'Variant', width: 3, format: val => variantSummary(val) }
 
 export const TAG_COLUMN = {
@@ -27,7 +34,7 @@ export const TAG_COLUMN = {
   ),
 }
 
-const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, ...props }) =>
+const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, dispatch, ...props }) =>
   <DataLoader content contentId={familyGuid} load={load} loading={false}>
     <SelectableTableFormInput defaultSortColumn="xpos" loading={loading} {...props} />
   </DataLoader>,
@@ -37,19 +44,15 @@ SelectSavedVariantsTable.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   familyGuid: PropTypes.string,
+  dispatch: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   loading: getSavedVariantsIsLoading(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: (contentId) => {
-      return dispatch(loadFamilySavedVariants(contentId))
-    },
-    onChange: newValue => ownProps.onChange(ownProps.data.filter(o => newValue[o[ownProps.idField]])),
-  }
+const mapDispatchToProps = {
+  load: loadFamilySavedVariants,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(SelectSavedVariantsTable)
