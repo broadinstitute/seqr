@@ -123,8 +123,9 @@ class AuthenticationTestCase(TestCase):
         if permission_level == self.COLLABORATOR:
             return
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403 if permission_level == self.MANAGER else 302)
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 403 if permission_level == self.MANAGER else 401)
+        self.assertDictEqual(response.json(), {'error': 'login'})
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
