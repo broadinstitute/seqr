@@ -85,7 +85,7 @@ class LogRequestMiddleware(MiddlewareMixin):
                 password_keys = [k for k in request_body.keys() if k.startswith('password')]
                 for key in password_keys:
                     request_body[key] = '***'
-        except (ValueError, RawPostDataException):
+        except (ValueError, AttributeError, RawPostDataException):
             pass
 
         error = ''
