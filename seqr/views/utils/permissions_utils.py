@@ -34,7 +34,7 @@ def _has_current_policies(user):
 
 
 # User access decorators
-_current_policies_required = user_passes_test(lambda user: _has_current_policies(user), login_url=API_POLICY_REQUIRED_URL)
+_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
 
 def _active_required(view_func, login_url=API_LOGIN_REQUIRED_URL):
     return user_passes_test(lambda user: user.is_active, login_url=login_url)(view_func)

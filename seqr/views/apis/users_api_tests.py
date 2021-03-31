@@ -346,8 +346,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self):
-        super(AnvilUsersAPITest, self).test_update_policies()
+    def test_update_policies(self, *args):
+        super(AnvilUsersAPITest, self).test_update_policies(*args)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
@@ -398,7 +398,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self):
-        super(MixUsersAPITest, self).test_update_policies()
+    def test_update_policies(self, *args):
+        super(MixUsersAPITest, self).test_update_policies(*args)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
