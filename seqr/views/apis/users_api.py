@@ -152,8 +152,6 @@ def _update_user_from_json(user, request_json, **kwargs):
 
 
 def _update_existing_user(user, project, request_json):
-    _update_user_from_json(user, request_json)
-
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):
         project.can_edit_group.user_set.add(user)
