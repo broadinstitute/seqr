@@ -60,7 +60,7 @@ def logout_view(request):
 def login_required_error(request):
     """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
 
-    This is used to redirect AJAX HTTP handlers to the login or accept policies page.
+    This is used to redirect AJAX HTTP handlers to the login page.
     """
     return _unauthorized_error('login')
 
@@ -68,7 +68,7 @@ def login_required_error(request):
 def policies_required_error(request):
     """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
 
-    This is used to redirect AJAX HTTP handlers to the login or accept policies page.
+    This is used to redirect AJAX HTTP handlers to the accept policies page.
     """
     return _unauthorized_error('policies')
 
