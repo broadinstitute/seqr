@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 
-import { Menu, Header } from 'semantic-ui-react'
+import { Menu, Header, Dropdown } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
@@ -23,9 +23,12 @@ const PageHeader = React.memo(({ user }) =>
       user.isAnalyst ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
       user.isDataManager ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
-      <Menu.Item key="user" position="right">
-        <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email)}</b></p>
-      </Menu.Item>,
+      <Menu.Item key="spacer" position="right" />,
+      <Dropdown item key="user" trigger={<span>Logged in as <b>{user.displayName || user.email}</b></span>}>
+        <Dropdown.Menu>
+          <Dropdown.Item icon="write" text="Edit User Info" onClick={console.log} />
+        </Dropdown.Menu>
+      </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ] : <Menu.Item as="a" href="/login" position="right">Log in</Menu.Item>}
   </HeaderMenu>,
