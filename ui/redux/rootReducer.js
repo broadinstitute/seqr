@@ -43,7 +43,7 @@ const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 // action creators
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, receivedUpdateType) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
   return (dispatch, getState) => {
     if (getUrlPath) {
       urlPath = getUrlPath(getState())
@@ -57,7 +57,7 @@ export const updateEntity = (values, receiveDataAction, urlPath, idField, action
 
     return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
       (responseJson) => {
-        dispatch({ type: receiveDataAction, [receivedUpdateType || 'updatesById']: responseJson })
+        dispatch({ type: receiveDataAction, updatesById: responseJson })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
@@ -111,7 +111,16 @@ export const updateUserPolicies = (values) => {
 }
 
 export const updateUser = (values) => {
-  return updateEntity(values, UPDATE_USER, '/api/users', 'username', null, null, 'updates')
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/users/update',
+      (responseJson) => {
+        dispatch({ type: UPDATE_USER, updates: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
 }
 
 export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {

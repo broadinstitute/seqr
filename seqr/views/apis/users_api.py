@@ -95,6 +95,14 @@ def set_password(request, username):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
+def update_user(request):
+    request_json = json.loads(request.body)
+    _update_user_from_json(request.user, request_json)
+
+    return create_json_response(_get_json_for_user(request.user))
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def update_policies(request):
     request_json = json.loads(request.body)
     if not request_json.get('acceptedPolicies'):

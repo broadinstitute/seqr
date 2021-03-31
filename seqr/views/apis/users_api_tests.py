@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_analyst_options, update_policies
+    get_all_analyst_options, update_policies, update_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, USER_FIELDS
 
@@ -277,6 +277,22 @@ class UsersAPITest(object):
         existing_policy = UserPolicy.objects.get(user=self.manager_user)
         self.assertEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
         self.assertEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
+
+    def test_update_user(self):
+        url = reverse(update_user)
+        self.check_require_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'Test@test.com', 'firstName': 'New', 'lastName': 'Username', 'isSuperuser': True}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), USER_FIELDS)
+        self.assertEqual(response_json['firstName'], 'New')
+        self.assertEqual(response_json['lastName'], 'Username')
+        self.assertEqual(response_json['displayName'], 'New Username')
+        self.assertEqual(response_json['email'], 'test_user_no_access@test.com')
+        self.assertFalse(response_json['isSuperuser'])
+
 
 
 # Tests for AnVIL access disabled
