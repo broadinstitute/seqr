@@ -369,8 +369,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_create_project_collaborator(self, *args):
-        super(MixUsersAPITest, self).test_create_project_collaborator(*args)
+    def test_create_project_collaborator(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_create_project_collaborator(*args, **kwargs)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_not_called()
 
