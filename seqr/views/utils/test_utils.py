@@ -67,8 +67,8 @@ class AuthenticationTestCase(TestCase):
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
 
-    def check_require_login_no_policies(self, url):
-        self._check_login(url, self.NO_POLICY_USER)
+    def check_require_login_no_policies(self, url, **request_kwargs):
+        self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
@@ -123,18 +123,18 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, login_required_url)
 
-        # self.client.force_login(self.inactive_user) # TODO
-        # response = self.client.get(url)
-        # self.assertEqual(response.status_code, 302)
-        # self.assertEqual(response.url, login_required_url)
-        #
+        self.client.force_login(self.inactive_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
+
         self.client.force_login(self.no_policy_user)
         if permission_level == self.NO_POLICY_USER:
             return
 
-        # response = self.client.get(url)  # TODO
-        # self.assertEqual(response.status_code, 302)
-        # self.assertEqual(response.url, '/api/policy-required-error?next={}'.format(next_url))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/api/policy-required-error?next={}'.format(next_url))
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:

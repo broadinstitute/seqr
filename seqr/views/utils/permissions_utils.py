@@ -24,13 +24,7 @@ def user_is_data_manager(user):
 def user_is_pm(user):
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
 
-
-# User access decorators
-analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
-data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
-pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
-
-def has_current_policies(user):
+def _has_current_policies(user):
     if not hasattr(user, 'userpolicy'):
         return False
 
@@ -38,11 +32,36 @@ def has_current_policies(user):
     current_tos = user.userpolicy.tos_version
     return current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
 
-current_policies_required = user_passes_test(lambda user: has_current_policies(user), login_url=API_POLICY_REQUIRED_URL)
-active_required = user_passes_test(lambda user: user.is_active, login_url=API_LOGIN_REQUIRED_URL)
+
+# User access decorators
+_current_policies_required = user_passes_test(lambda user: _has_current_policies(user), login_url=API_POLICY_REQUIRED_URL)
+
+def _active_required(view_func, login_url=API_LOGIN_REQUIRED_URL):
+    return user_passes_test(lambda user: user.is_active, login_url=login_url)(view_func)
+
+def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
+    def decorator(view_func):
+        return login_required(_active_required(view_func, login_url=login_url), login_url=login_url)
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
 
 def login_and_policies_required(view_func):
-    return login_required(active_required(current_policies_required(view_func)), login_url=API_LOGIN_REQUIRED_URL)
+    return login_active_required(_current_policies_required(view_func))
+
+def _user_has_policies_and_passes_test(test_func):
+    def decorator(view_func):
+        return _active_required(_current_policies_required(user_passes_test(test_func, login_url=API_LOGIN_REQUIRED_URL)(view_func)))
+    return decorator
+
+analyst_required = _user_has_policies_and_passes_test(user_is_analyst)
+data_manager_required = _user_has_policies_and_passes_test(user_is_data_manager)
+pm_required = _user_has_policies_and_passes_test(user_is_pm)
+pm_or_data_manager_required = _user_has_policies_and_passes_test(
+    lambda user: user_is_data_manager(user) or user_is_pm(user))
+superuser_required = _user_has_policies_and_passes_test(lambda user: user .is_superuser)
+
+
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()

@@ -12,14 +12,14 @@ class DashboardPageTest(AuthenticationTestCase):
 
     def run_react_page(self, google_enabled):
         url = reverse(main_app)
-        self.check_require_login(url, login_redirect_url='/login')
+        self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
         self.assertSetEqual(set(initial_json['user'].keys()), USER_FIELDS)
-        self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
+        self.assertEqual(initial_json['user']['username'], 'test_user_no_policies')
         self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
 
         # test static assets are correctly loaded
