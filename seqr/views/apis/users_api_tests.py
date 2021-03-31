@@ -341,13 +341,13 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_forgot_password(self, *args):
-        super(AnvilUsersAPITest, self).test_forgot_password(*args)
+    def test_forgot_password(self, *args, **kwargs):
+        super(AnvilUsersAPITest, self).test_forgot_password(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self, *args):
-        super(AnvilUsersAPITest, self).test_update_policies(*args)
+    def test_update_policies(self, *args, **kwargs):
+        super(AnvilUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
@@ -393,12 +393,12 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_forgot_password(self, *args):
-        super(MixUsersAPITest, self).test_forgot_password(*args)
+    def test_forgot_password(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_forgot_password(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self, *args):
-        super(MixUsersAPITest, self).test_update_policies(*args)
+    def test_update_policies(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
