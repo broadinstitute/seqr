@@ -1,5 +1,5 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-from django.core.handlers.exception import response_for_exception, get_exception_response
+from django.core.handlers.exception import get_exception_response
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import get_resolver, get_urlconf
