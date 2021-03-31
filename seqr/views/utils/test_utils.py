@@ -5,7 +5,7 @@ from guardian.shortcuts import assign_perm
 import json
 import mock
 import re
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
@@ -85,8 +85,8 @@ class AuthenticationTestCase(TestCase):
     def check_data_manager_login(self, url):
         self._check_login(url, self.DATA_MANAGER)
 
-    def check_superuser_login(self, url):
-        self._check_login(url, self.SUPERUSER)
+    def check_superuser_login(self, url, **request_kwargs):
+        self._check_login(url, self.SUPERUSER, **request_kwargs)
 
     def login_base_user(self):
         self.client.force_login(self.no_access_user)
@@ -106,7 +106,7 @@ class AuthenticationTestCase(TestCase):
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
-    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error'):
+    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error', policy_redirect_url='/api/policy-required-error'):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests
         if the user isn't logged-in, and then authenticates a test user.
@@ -117,8 +117,10 @@ class AuthenticationTestCase(TestCase):
             permission_level (string): what level of permission this url requires
          """
         # check that it redirects if you don't login
-        next_url = '/'.join(map(quote_plus, url.split('/')))
-        login_required_url = '{}?next={}'.format(login_redirect_url, next_url)
+        parsed_url = urlparse(url)
+        next_query = quote_plus('?{}'.format(parsed_url.query)) if parsed_url.query else ''
+        next_url = 'next={}{}'.format('/'.join(map(quote_plus, parsed_url.path.split('/'))), next_query)
+        login_required_url = '{}?{}'.format(login_redirect_url, next_url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, login_required_url)
@@ -134,7 +136,7 @@ class AuthenticationTestCase(TestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/api/policy-required-error?next={}'.format(next_url))
+        self.assertEqual(response.url, '{}?{}'.format(policy_redirect_url, next_url))
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:
