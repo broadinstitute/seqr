@@ -131,6 +131,7 @@ react_app_pages = [
     'report/.*',
     'data_management/.*',
     'summary_data/.*',
+    'accept_policies',
 ]
 
 no_login_react_app_pages = [
