@@ -2,7 +2,6 @@ import json
 import logging
 import requests
 from datetime import datetime
-from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
 
@@ -19,15 +18,15 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submission
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
-    has_project_permissions
+    has_project_permissions, login_and_policies_required
 
-from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
+from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_individual_mme_matches(request, submission_guid):
     """
     Looks for matches for the given submission. Expects a single patient (MME spec) in the POST
@@ -53,7 +52,7 @@ def get_individual_mme_matches(request, submission_guid):
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def search_individual_mme_matches(request, submission_guid):
     """
     Looks for matches for the given submission.
@@ -188,7 +187,7 @@ def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
     return False
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
@@ -250,7 +249,7 @@ def update_mme_submission(request, submission_guid=None):
     return _search_matches(submission, request.user)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_mme_submission(request, submission_guid):
     """
     Create or update the submission for the given individual.
@@ -274,7 +273,7 @@ def delete_mme_submission(request, submission_guid):
     return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'deletedDate': deleted_date}}})
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_mme_result_status(request, matchmaker_result_guid):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
@@ -296,7 +295,7 @@ def update_mme_result_status(request, matchmaker_result_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def send_mme_contact_email(request, matchmaker_result_guid):
     """
     Sends the given email and updates the contacted status for the match

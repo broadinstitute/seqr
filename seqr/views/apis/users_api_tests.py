@@ -14,13 +14,14 @@ from seqr.views.apis.users_api import get_all_collaborator_options, set_password
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, USER_FIELDS
 
-from settings import SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
-
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
 USERNAME = 'test_user_collaborator'
 USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
+
+TOS_VERSION = 2.2
+PRIVACY_VERSION = 1.1
 
 class UsersAPITest(object):
     USERNAME = USERNAME
@@ -246,11 +247,15 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Connection err')
 
-    def test_update_policies(self):
-        self.assertEqual(UserPolicy.objects.filter(user=self.no_access_user).count(), 0)
+    @mock.patch('seqr.views.apis.users_api.SEQR_TOS_VERSION')
+    @mock.patch('seqr.views.apis.users_api.SEQR_PRIVACY_VERSION')
+    def test_update_policies(self, mock_privacy, mock_tos):
+        mock_privacy.resolve_expression.return_value = PRIVACY_VERSION
+        mock_tos.resolve_expression.return_value = TOS_VERSION
+        self.assertEqual(UserPolicy.objects.filter(user=self.no_policy_user).count(), 0)
 
         url = reverse(update_policies)
-        self.check_require_login(url)
+        self.check_require_login_no_policies(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -260,23 +265,21 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'currentPolicies': True})
 
-        new_policy = UserPolicy.objects.get(user=self.no_access_user)
-        self.assertEqual(new_policy.privacy_version, SEQR_PRIVACY_VERSION)
-        self.assertEqual(new_policy.tos_version, SEQR_TOS_VERSION)
+        new_policy = UserPolicy.objects.get(user=self.no_policy_user)
+        self.assertEqual(new_policy.privacy_version, PRIVACY_VERSION)
+        self.assertEqual(new_policy.tos_version, TOS_VERSION)
 
         # Test updating user with out of date policies
-        existing_policy = UserPolicy.objects.get(user=self.manager_user)
-        self.assertNotEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
-        self.assertNotEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
+        mock_privacy.resolve_expression.return_value = PRIVACY_VERSION + 1
+        mock_tos.resolve_expression.return_value = TOS_VERSION + 2
 
-        self.login_manager()
         response = self.client.post(url, content_type='application/json', data=json.dumps({'acceptedPolicies': True}))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'currentPolicies': True})
 
-        existing_policy = UserPolicy.objects.get(user=self.manager_user)
-        self.assertEqual(existing_policy.privacy_version, SEQR_PRIVACY_VERSION)
-        self.assertEqual(existing_policy.tos_version, SEQR_TOS_VERSION)
+        existing_policy = UserPolicy.objects.get(user=self.no_policy_user)
+        self.assertEqual(existing_policy.privacy_version, PRIVACY_VERSION + 1)
+        self.assertEqual(existing_policy.tos_version, TOS_VERSION + 2)
 
     def test_update_user(self):
         url = reverse(update_user)
@@ -353,13 +356,13 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_forgot_password(self, *args):
-        super(AnvilUsersAPITest, self).test_forgot_password(*args)
+    def test_forgot_password(self, *args, **kwargs):
+        super(AnvilUsersAPITest, self).test_forgot_password(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self):
-        super(AnvilUsersAPITest, self).test_update_policies()
+    def test_update_policies(self, *args, **kwargs):
+        super(AnvilUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
@@ -381,8 +384,8 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_create_project_collaborator(self, *args):
-        super(MixUsersAPITest, self).test_create_project_collaborator(*args)
+    def test_create_project_collaborator(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_create_project_collaborator(*args, **kwargs)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_not_called()
 
@@ -405,12 +408,12 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_forgot_password(self, *args):
-        super(MixUsersAPITest, self).test_forgot_password(*args)
+    def test_forgot_password(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_forgot_password(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
 
-    def test_update_policies(self):
-        super(MixUsersAPITest, self).test_update_policies()
+    def test_update_policies(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
