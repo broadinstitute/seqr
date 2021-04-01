@@ -33,29 +33,30 @@ REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path'
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_anvil_workspace_page(self, mock_logger):
-        # Requesting to load data from a workspace without an existing project
-        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-
+    def _check_login_permissions(self, url, mock_logger):
         # Test user doesn't login
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/{}/{}'
-                         .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+        self.assertEqual(response.url, '/login/google-oauth2?next={}'.format(url))
 
         # Test the user needs sufficient workspace permissions
-        self.check_require_login(url)
-
         self.login_collaborator()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.get('Content-Type'), 'text/html')
-        initial_json = self.get_initial_page_json(response)
-        self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
         mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
 
         self.login_manager()
+        return response
+
+    def test_anvil_workspace_page(self, mock_logger):
+        # Requesting to load data from a workspace without an existing project
+        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        collaborator_response = self._check_login_permissions(url, mock_logger)
+        self.assertEqual(collaborator_response.get('Content-Type'), 'text/html')
+        initial_json = self.get_initial_page_json(collaborator_response)
+        self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
+
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
@@ -99,17 +100,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-
-        # Test user doesn't login
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/{}/{}'
-                         .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
-
-        # Test the user needs sufficient workspace permissions
-        self.check_manager_login(url)
-        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+        self._check_login_permissions(url, mock_utils_logger)
 
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))

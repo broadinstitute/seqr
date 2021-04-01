@@ -64,4 +64,16 @@ def login_required_error(request):
 
     This is used to redirect AJAX HTTP handlers to the login page.
     """
-    return create_json_response({}, status=401, reason="login required")
+    return _unauthorized_error('login')
+
+
+def policies_required_error(request):
+    """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
+
+    This is used to redirect AJAX HTTP handlers to the accept policies page.
+    """
+    return _unauthorized_error('policies')
+
+
+def _unauthorized_error(error):
+    return create_json_response({'error': error} , status=401, reason="{} required".format(error))

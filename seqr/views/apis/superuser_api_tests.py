@@ -18,13 +18,13 @@ class SuperusersAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['users'][0].keys()), USER_FIELDS)
         self.assertSetEqual({user['username'] for user in response_json['users']}, {
             'test_user_manager', 'test_user_collaborator', 'test_user_no_access', 'test_user', 'test_local_user',
-            'test_superuser', 'test_data_manager', 'test_pm_user',
+            'test_superuser', 'test_data_manager', 'test_pm_user', 'test_user_inactive', 'test_user_no_policies',
         })
 
 
     def test_admin(self):
         url = 'http://localhost/admin/'
-        self.check_superuser_login(url)
+        self.check_superuser_login(url, login_redirect_url='/admin/login/', policy_redirect_url='/admin/login/')
 
         response = self.client.get(url)
         self.assertContains(response, 'Django administration', status_code=200)

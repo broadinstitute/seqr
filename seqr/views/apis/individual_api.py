@@ -5,7 +5,6 @@ import json
 import logging
 import re
 from collections import defaultdict
-from django.contrib.auth.decorators import login_required
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family
@@ -15,9 +14,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    get_project_and_check_pm_permissions
+    get_project_and_check_pm_permissions, login_and_policies_required
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
-from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +34,7 @@ class ErrorsWarningsException(Exception):
         self.warnings = warnings
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_individual_handler(request, individual_guid):
     """Updates a single field in an Individual record.
 
@@ -74,7 +72,7 @@ def update_individual_handler(request, individual_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_individual_hpo_terms(request, individual_guid):
     """Updates features fields for the given Individual
     """
@@ -98,7 +96,7 @@ def update_individual_hpo_terms(request, individual_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
 
@@ -172,7 +170,7 @@ def edit_individuals_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_individuals_handler(request, project_guid):
     """Delete one or more Individual records.
 
@@ -233,7 +231,7 @@ def delete_individuals_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
@@ -331,7 +329,7 @@ def receive_individuals_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def save_individuals_table_handler(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
@@ -373,7 +371,7 @@ AFFECTED_COLUMN = 'affected'
 FEATURES_COLUMN = 'features'
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def receive_hpo_table_handler(request, project_guid):
     """Handler for bulk update of hpo terms. This handler parses the records, but doesn't save them in the database.
     Instead, it saves them to a temporary file and sends a 'uploadedFileId' representing this file back to the client.
@@ -557,7 +555,7 @@ def _parse_individual_hpo_terms(json_records, project):
     return parsed_records, errors, warnings
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def save_hpo_table_handler(request, project_guid, upload_file_id):
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_hpo_table_handler
@@ -586,7 +584,7 @@ def save_hpo_table_handler(request, project_guid, upload_file_id):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):
     """
     Get all the HPO Terms with the given parent ID
