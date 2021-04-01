@@ -1,4 +1,3 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
 import mock
 
@@ -67,8 +66,8 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertFalse(initial_json['newUser']['currentPolicies'])
         self.assertFalse(initial_json['meta']['googleLoginEnabled'])
 
-        with self.assertRaises(ObjectDoesNotExist):
-            self.client.get('/users/set_password/invalid_pwd')
+        response = self.client.get('/users/set_password/invalid_pwd')
+        self.assertEqual(response.status_code, 404)
 
         # Even if page does not require login, include user metadata if logged in
         self.login_analyst_user()
