@@ -9,7 +9,7 @@ class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
 
-    def check_page_html(self, response,  user, google_enabled=False, user_key='user'):
+    def _check_page_html(self, response,  user, google_enabled=False, user_key='user'):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
@@ -29,12 +29,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
-        self.check_page_html(response, 'test_user_no_policies')
+        self._check_page_html(response, 'test_user_no_policies')
 
         # test with google auth enabled
         mock_oauth_key.__bool__.return_value = True
         response = self.client.get(url)
-        self.check_page_html(response, 'test_user_no_policies', google_enabled=True)
+        self._check_page_html(response, 'test_user_no_policies', google_enabled=True)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
@@ -58,7 +58,7 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(
             '/users/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
         self.assertEqual(response.status_code, 200)
-        self.check_page_html(response, 'test_user_manager', user_key='newUser')
+        self._check_page_html(response, 'test_user_manager', user_key='newUser')
 
         response = self.client.get('/users/set_password/invalid_pwd')
         self.assertEqual(response.status_code, 404)
@@ -66,4 +66,4 @@ class DashboardPageTest(AuthenticationTestCase):
         # Even if page does not require login, include user metadata if logged in
         self.login_analyst_user()
         response = self.client.get(url)
-        self.check_page_html(response, 'test_user')
+        self._check_page_html(response, 'test_user')

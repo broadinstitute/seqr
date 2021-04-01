@@ -227,7 +227,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 3,
   "fields": {
     "user_id": 12,
     "privacy_version": 2.1,
@@ -236,7 +236,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 4,
   "fields": {
     "user_id": 13,
     "privacy_version": 2.1,
@@ -245,7 +245,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 5,
   "fields": {
     "user_id": 14,
     "privacy_version": 2.1,
@@ -254,7 +254,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 6,
   "fields": {
     "user_id": 15,
     "privacy_version": 2.1,
@@ -263,7 +263,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 7,
   "fields": {
     "user_id": 16,
     "privacy_version": 2.1,
@@ -272,7 +272,7 @@
 },
 {
   "model": "seqr.userpolicy",
-  "pk": 1,
+  "pk": 8,
   "fields": {
     "user_id": 17,
     "privacy_version": 2.1,
