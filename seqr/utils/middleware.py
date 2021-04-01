@@ -1,6 +1,8 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.core.handlers.exception import get_exception_response
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
+from django.urls import get_resolver, get_urlconf
 import elasticsearch.exceptions
 from requests import HTTPError
 import json
@@ -51,16 +53,22 @@ class JsonErrorMiddleware(MiddlewareMixin):
 
     @staticmethod
     def process_exception(request, exception):
+        exception_json = {'error': _get_exception_message(exception)}
+        status = _get_exception_status_code(exception)
+        if exception.__class__ in ERROR_LOG_EXCEPTIONS:
+            exception_json['log_error'] = True
+        if DEBUG or status == 500:
+            traceback_message = traceback.format_exc()
+            exception_json['traceback'] = traceback_message
+
         if request.path.startswith('/api'):
-            exception_json = {'error': _get_exception_message(exception)}
-            status = _get_exception_status_code(exception)
-            if exception.__class__ in ERROR_LOG_EXCEPTIONS:
-                exception_json['log_error'] = True
-            if DEBUG or status == 500:
-                traceback_message = traceback.format_exc()
-                exception_json['traceback'] = traceback_message
             return create_json_response(exception_json, status=status)
-        return None
+
+        response = get_exception_response(request, get_resolver(get_urlconf()), status, exception)
+        response.data = exception_json
+        # LogRequestMiddleware will handle logging for this so do not use standard request logging
+        response._has_been_logged = True
+        return response
 
 class LogRequestMiddleware(MiddlewareMixin):
 
@@ -92,7 +100,11 @@ class LogRequestMiddleware(MiddlewareMixin):
         log_error = False
         traceback = None
         try:
-            response_json = json.loads(response.content)
+            try:
+                response_json = json.loads(response.content)
+            except ValueError:
+                response_json = response.data
+
             error = response_json.get('error')
             if response_json.get('errors'):
                 error = '; '.join(response_json['errors'])

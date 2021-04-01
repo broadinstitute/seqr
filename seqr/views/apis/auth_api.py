@@ -2,6 +2,7 @@
 Utility functions related to authentication.
 """
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
 from django.shortcuts import redirect
@@ -49,6 +50,7 @@ def login_view(request):
     return create_json_response({'success': True})
 
 
+@login_required(redirect_field_name=None)
 def logout_view(request):
     user = request.user
     remove_token(user)
