@@ -97,6 +97,19 @@ export const loadUserOptions = (analystsOnly) => {
 
 export const loadAnalystOptions = () => loadUserOptions(true)
 
+export const updateUser = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/users/update',
+      (responseJson) => {
+        dispatch({ type: UPDATE_USER, updates: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
 export const loadProject = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
   return (dispatch, getState) => {
     const project = getState().projectsByGuid[projectGuid]

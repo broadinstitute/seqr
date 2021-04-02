@@ -98,6 +98,7 @@ from seqr.views.apis.users_api import \
     delete_project_collaborator, \
     set_password, \
     update_policies, \
+    update_user, \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
@@ -239,6 +240,7 @@ api_endpoints = {
     'login': login_view,
     'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/update': update_user,
     'users/update_policies': update_policies,
 
     'users/get_options': get_all_collaborator_options,

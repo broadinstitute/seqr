@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_analyst_options, update_policies
+    get_all_analyst_options, update_policies, update_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, USER_FIELDS
 
@@ -77,7 +77,7 @@ class UsersAPITest(object):
 
         # create
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test@test.com'}))
+            'email': 'test@test.com', 'firstName': 'Test'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), len(self.LOCAL_COLLABORATOR_NAMES) + 1)
@@ -85,7 +85,7 @@ class UsersAPITest(object):
         expected_fields.update(USER_FIELDS)
         self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
-        self.assertEqual(collaborators[0]['displayName'], '')
+        self.assertEqual(collaborators[0]['displayName'], 'Test')
         self.assertFalse(collaborators[0]['isSuperuser'])
         self.assertFalse(collaborators[0]['isAnalyst'])
         self.assertFalse(collaborators[0]['isDataManager'])
@@ -97,7 +97,7 @@ class UsersAPITest(object):
         user = User.objects.get(username=username)
 
         expected_email_content = """
-    Hi there --
+    Hi there Test--
 
     Test Manager User has added you as a collaborator in seqr.
 
@@ -124,13 +124,13 @@ class UsersAPITest(object):
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'User'}))
+            'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'Invalid Name Update'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), len(self.LOCAL_COLLABORATOR_NAMES) + 1)
-        new_collab = collaborators[len(self.LOCAL_COLLABORATOR_NAMES)]
+        new_collab = next(collab for collab in collaborators if collab['email'] == 'test@test.com')
         self.assertEqual(new_collab['username'], username)
-        self.assertEqual(new_collab['displayName'], 'Test User')
+        self.assertEqual(new_collab['displayName'], 'Test')
         mock_send_mail.assert_not_called()
         mock_logger.info.assert_not_called()
 
@@ -143,9 +143,8 @@ class UsersAPITest(object):
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
-        edited_collab = collaborators[len(self.COLLABORATOR_NAMES) - 1]
-        self.assertEqual(edited_collab['username'], username)
-        self.assertEqual(edited_collab['displayName'], 'Edited Collaborator')
+        edited_collab = next(collab for collab in collaborators if collab['username'] == username)
+        self.assertNotEqual(edited_collab['displayName'], 'Edited Collaborator')
         self.assertFalse(edited_collab['isSuperuser'])
         self.assertTrue(edited_collab['hasViewPermissions'])
         self.assertEqual(edited_collab['hasEditPermissions'], can_edit)
@@ -281,6 +280,22 @@ class UsersAPITest(object):
         existing_policy = UserPolicy.objects.get(user=self.no_policy_user)
         self.assertEqual(existing_policy.privacy_version, PRIVACY_VERSION + 1)
         self.assertEqual(existing_policy.tos_version, TOS_VERSION + 2)
+
+    def test_update_user(self):
+        url = reverse(update_user)
+        self.check_require_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'Test@test.com', 'firstName': 'New', 'lastName': 'Username', 'isSuperuser': True}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), USER_FIELDS)
+        self.assertEqual(response_json['firstName'], 'New')
+        self.assertEqual(response_json['lastName'], 'Username')
+        self.assertEqual(response_json['displayName'], 'New Username')
+        self.assertEqual(response_json['email'], 'test_user_no_access@test.com')
+        self.assertFalse(response_json['isSuperuser'])
+
 
 
 # Tests for AnVIL access disabled

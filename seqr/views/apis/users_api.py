@@ -94,6 +94,14 @@ def set_password(request, username):
     return create_json_response({'success': True})
 
 
+@login_and_policies_required
+def update_user(request):
+    request_json = json.loads(request.body)
+    _update_user_from_json(request.user, request_json)
+
+    return create_json_response(_get_json_for_user(request.user))
+
+
 @login_active_required
 def update_policies(request):
     request_json = json.loads(request.body)
@@ -152,8 +160,6 @@ def _update_user_from_json(user, request_json, **kwargs):
 
 
 def _update_existing_user(user, project, request_json):
-    _update_user_from_json(user, request_json)
-
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):
         project.can_edit_group.user_set.add(user)
