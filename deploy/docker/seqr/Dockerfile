@@ -37,8 +37,6 @@ RUN apt update && apt install -y --no-install-recommends \
 ARG SEQR_REPO=https://github.com/populationgenomics/seqr
 ARG SEQR_GIT_SHA
 
-WORKDIR /seqr
-
 # update seqr repo
 RUN git clone -q $SEQR_REPO seqr && \
     cd seqr && \
@@ -48,9 +46,7 @@ RUN git clone -q $SEQR_REPO seqr && \
     cd deploy/docker/seqr && \
     cp readiness_probe entrypoint.sh / && \
     cp bin/*.sh /usr/local/bin/ && \
-    cp gitconfig /root/.gitconfig && \
-    cp config/*.py /seqr && \
-    cp bashrc /root/.bashrc
+    cp config/*.py /seqr
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
@@ -59,4 +55,5 @@ EXPOSE $SEQR_SERVICE_PORT
 
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
+WORKDIR /seqr
 ENTRYPOINT exec /bin/berglas exec -- /entrypoint.sh
