@@ -48,6 +48,8 @@ spec:
             value: sm://seqr-308602/social-auth-google-oauth2-secret-dev
           - name: DJANGO_KEY
             value: sm://seqr-308602/django-key-dev
+          - name: GSA_KEY
+            value: sm://seqr-308602/gsa-key-dev
         ports:
         - containerPort: 8000
       timeoutSeconds: 60

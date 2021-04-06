@@ -10,20 +10,10 @@ echo SHELL: $SHELL
 echo PATH: $PATH
 echo PYTHONPATH: $PYTHONPATH
 
-# init gcloud
-if [ $GCLOUD_PROJECT ]; then
-    gcloud config set project $GCLOUD_PROJECT
-fi
-
-if [ $GCLOUD_ZONE ]; then
-    gcloud config set compute/zone $GCLOUD_ZONE
-fi
-
-if [ -e "/.config/service-account-key.json" ]; then
-    # authenticate to google cloud using service account
-    cp /usr/share/zoneinfo/US/Eastern /etc/localtime
-    gcloud auth activate-service-account --key-file /.config/service-account-key.json
-    cp /.config/boto /root/.boto
+if [ $GSA_KEY ]; then
+    echo $GSA_KEY > /tmp/gsa-key.json
+    gcloud auth activate-service-account --key-file /tmp/gsa-key.json
+    rm /tmp/gsa-key.json
 fi
 
 # link to persistent disk dir with static files
