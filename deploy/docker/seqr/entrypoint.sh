@@ -38,3 +38,6 @@ fi
 
 # launch django server in background
 /usr/local/bin/start_server.sh
+
+# sleep to keep image running even if gunicorn is killed / restarted
+sleep 1000000000000
