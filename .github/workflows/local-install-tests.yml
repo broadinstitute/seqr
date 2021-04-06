@@ -4,8 +4,9 @@ name: local install tests
 on:
   push:
     branches:
-      - main
-
+    - main
+    - dev
+      
 jobs:
   local_install_test:
     runs-on: ubuntu-latest
