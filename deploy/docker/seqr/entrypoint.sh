@@ -4,8 +4,6 @@ set -x
 
 REFERENCE_DATA_DB_INIT_URL=https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz
 
-env
-
 echo SHELL: $SHELL
 echo PATH: $PATH
 echo PYTHONPATH: $PYTHONPATH
