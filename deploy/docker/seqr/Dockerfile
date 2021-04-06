@@ -55,5 +55,4 @@ EXPOSE $SEQR_SERVICE_PORT
 
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
-WORKDIR /seqr
 ENTRYPOINT exec /bin/berglas exec -- /entrypoint.sh
