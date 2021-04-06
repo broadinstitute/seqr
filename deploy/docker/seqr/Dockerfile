@@ -34,6 +34,8 @@ RUN apt update && apt install -y --no-install-recommends \
     # install gcloud tools
     curl https://sdk.cloud.google.com | bash
 
+ENV PATH $PATH:/root/google-cloud-sdk/bin
+
 ARG SEQR_REPO=https://github.com/populationgenomics/seqr
 ARG SEQR_GIT_SHA
 

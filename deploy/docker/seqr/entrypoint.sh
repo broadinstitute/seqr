@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 REFERENCE_DATA_DB_INIT_URL=https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz
 
 echo SHELL: $SHELL
@@ -28,7 +26,6 @@ if ! psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -l | grep seqrdb; then
   psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -c 'CREATE DATABASE reference_data_db';
   psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres reference_data_db <  <(curl -s $REFERENCE_DATA_DB_INIT_URL | gunzip -c -);
 
-
   psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -c 'CREATE DATABASE seqrdb';
   python -u manage.py makemigrations
   python -u manage.py migrate
@@ -41,21 +38,3 @@ fi
 
 # launch django server in background
 /usr/local/bin/start_server.sh
-
-if [ $ENABLE_DATABASE_BACKUPS ]; then
-    # set up cron database backups
-    echo 'SHELL=/bin/bash
-0 0 * * * /usr/local/bin/python /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 */4 * * * /usr/local/bin/python /seqr/manage.py run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
-0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_human_phenotype_ontology >> /var/log/cron.log 2>&1
-' | crontab -
-
-    env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
-
-    /etc/init.d/cron start
-fi
-
-
-# sleep to keep image running even if gunicorn is killed / restarted
-sleep 1000000000000
