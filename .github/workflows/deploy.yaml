@@ -38,10 +38,10 @@ jobs:
           fi
 
       - name: build image
-        run: DOCKER_BUILDKIT=1 docker build --build-arg SEQR_REPO=https://github.com/populationgenomics/seqr --build-arg SEQR_GIT_SHA=${{ github.sha }} --build-arg SEQR_SERVICE_PORT=8000 --tag $DOCKER_IMAGE:${{ github.sha }} --tag $DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE deploy/docker/seqr
+        run: DOCKER_BUILDKIT=1 docker build --build-arg SEQR_REPO=https://github.com/populationgenomics/seqr --build-arg SEQR_GIT_SHA=${{ github.sha }} --tag $DOCKER_IMAGE:${{ github.sha }} --tag $DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE deploy/docker/seqr
       
       - name: push image
         run: docker push --all-tags $DOCKER_IMAGE
       
-      - name: deploy to Cloud Run
-        run: gcloud beta run services replace --platform managed --region australia-southeast1 deploy/cloud_run/seqr_$DEPLOYMENT_TYPE.yaml
+      - name: restart seqr instances
+        run: gcloud beta compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --max-surge 3 --min-ready 20m

@@ -1,1 +1,0 @@
-curl http://localhost:${SEQR_SERVICE_PORT}/login | grep -i "html" >& /readiness_probe.log

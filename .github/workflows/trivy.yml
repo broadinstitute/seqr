@@ -1,7 +1,7 @@
 name: dsp-appsec-trivy
 on:
   schedule:
-    - cron:  '0 14 * * 1' # each Monday at 9am EST
+    - cron:  '0 22 * * 0' # each Monday at 9am AEST+10 / 10am AEDT+11
 
 jobs:
   appsec-trivy:

@@ -9,11 +9,10 @@ social-auth-core==3.3.3          # the Python social authentication package. Req
 elasticsearch==7.9.1             # elasticsearch client
 elasticsearch-dsl==7.2.1	     # elasticsearch query utilities
 gunicorn==19.10.0                # web server
-hail==0.2.62                     # provides convenient apis for working with files in google cloud storage
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
 pillow==8.1.1                    # required dependency of Djagno ImageField-type database records
-psycopg2==2.8.4                  # postgres database access
+psycopg2-binary==2.8.4           # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests
 redis==3.3.11                    # client lib for the redis in-memory database - used for caching server-side objects
