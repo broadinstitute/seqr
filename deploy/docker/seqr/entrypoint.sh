@@ -2,10 +2,6 @@
 
 REFERENCE_DATA_DB_INIT_URL=https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz
 
-echo SHELL: $SHELL
-echo PATH: $PATH
-echo PYTHONPATH: $PYTHONPATH
-
 echo $GSA_KEY > /tmp/gsa-key.json
 gcloud auth activate-service-account --key-file /tmp/gsa-key.json
 rm /tmp/gsa-key.json
