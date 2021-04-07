@@ -17,17 +17,17 @@ class CheckBamCramPathsTest(TestCase):
             file_path='gs://missing-bucket/missing_file',
         )
 
-    @mock.patch('hail.hadoop_is_file')
+    @mock.patch('seqr.management.commands.check_bam_cram_paths.does_file_exist')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
-    def test_command_with_project(self, mock_logger, mock_hadoop_is_file):
-        mock_hadoop_is_file.return_value = False
+    def test_command_with_project(self, mock_logger, mock_does_file_exist):
+        mock_does_file_exist.return_value = False
         call_command('check_bam_cram_paths', '1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self._check_results(1, mock_logger, mock_hadoop_is_file)
+        self._check_results(1, mock_logger, mock_does_file_exist)
 
-    @mock.patch('hail.hadoop_is_file')
+    @mock.patch('seqr.management.commands.check_bam_cram_paths.does_file_exist')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
-    def test_command_with_other_project(self, mock_logger, mock_hadoop_is_file):
-        mock_hadoop_is_file.return_value = False
+    def test_command_with_other_project(self, mock_logger, mock_does_file_exist):
+        mock_does_file_exist.return_value = False
         call_command('check_bam_cram_paths', '1kg project')
         self.assertEqual(IgvSample.objects.filter(file_path='').count(), 0)
         self.assertEqual(IgvSample.objects.count(), 2)
@@ -38,25 +38,25 @@ class CheckBamCramPathsTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-    @mock.patch('hail.hadoop_is_file')
+    @mock.patch('seqr.management.commands.check_bam_cram_paths.does_file_exist')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
-    def test_command(self, mock_logger, mock_hadoop_is_file):
-        mock_hadoop_is_file.return_value = False
+    def test_command(self, mock_logger, mock_does_file_exist):
+        mock_does_file_exist.return_value = False
         call_command('check_bam_cram_paths')
-        self._check_results(1, mock_logger, mock_hadoop_is_file)
+        self._check_results(1, mock_logger, mock_does_file_exist)
 
-    @mock.patch('hail.hadoop_is_file')
+    @mock.patch('seqr.management.commands.check_bam_cram_paths.does_file_exist')
     @mock.patch('seqr.management.commands.check_bam_cram_paths.logger')
-    def test_dry_run_arg(self, mock_logger, mock_hadoop_is_file):
-        mock_hadoop_is_file.return_value = False
+    def test_dry_run_arg(self, mock_logger, mock_does_file_exist):
+        mock_does_file_exist.return_value = False
         call_command('check_bam_cram_paths', '--dry-run')
-        self._check_results(0, mock_logger, mock_hadoop_is_file)
+        self._check_results(0, mock_logger, mock_does_file_exist)
 
-    def _check_results(self, num_paths_deleted, mock_logger, mock_hadoop_is_file):
+    def _check_results(self, num_paths_deleted, mock_logger, mock_does_file_exist):
         self.assertEqual(IgvSample.objects.filter(file_path='').count(), num_paths_deleted)
         self.assertEqual(IgvSample.objects.count(), 2)
 
-        mock_hadoop_is_file.assert_called_with("gs://missing-bucket/missing_file")
+        mock_does_file_exist.assert_called_with("gs://missing-bucket/missing_file")
 
         calls = [
             mock.call('Individual: NA19675_1  file not found: gs://missing-bucket/missing_file'),

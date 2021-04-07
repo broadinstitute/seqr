@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import IgvSample
+from seqr.utils.file_utils import does_file_exist
 
 import collections
-import hail as hl
 import logging
 import tqdm
 
@@ -32,7 +32,7 @@ class Command(BaseCommand):
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
         for sample in tqdm.tqdm(samples, unit=" samples"):
-            if not hl.hadoop_is_file(sample.file_path):
+            if not does_file_exist(sample.file_path):
                 individual_id = sample.individual.individual_id
                 project = sample.individual.family.project.name
                 missing_counter[project] += 1
