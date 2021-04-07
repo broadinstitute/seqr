@@ -44,4 +44,4 @@ jobs:
         run: docker push --all-tags $DOCKER_IMAGE
       
       - name: restart seqr instances
-        run: gcloud beta compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --max-surge 3 --min-ready 20m
+        run: gcloud compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --max-surge 3
