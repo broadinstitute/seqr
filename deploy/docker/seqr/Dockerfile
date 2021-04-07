@@ -46,11 +46,6 @@ RUN git clone -q $SEQR_REPO seqr && \
     # install seqr dependencies
     pip install -r requirements.txt
 
-ARG SEQR_SERVICE_PORT
-ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
-
-EXPOSE $SEQR_SERVICE_PORT
-
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
 ENTRYPOINT exec /bin/berglas exec -- /seqr/deploy/docker/seqr/entrypoint.sh
