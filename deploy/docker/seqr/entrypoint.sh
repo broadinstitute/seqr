@@ -16,10 +16,6 @@ mkdir -p /seqr_static_files/generated_files
 # launch django dev server in background
 cd /seqr
 
-# allow pg_dump and other postgres command-line tools to run without having to enter a password
-echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
-chmod 600 ~/.pgpass
-
 # init seqrdb unless it already exists
 if ! psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -l | grep seqrdb; then
 
