@@ -31,7 +31,7 @@ jobs:
       
       - name: set deployment type
         run: |
-          if [[ $GITHUB_REF == 'refs/heads/master' ]]; then
+          if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
             echo DEPLOYMENT_TYPE=prod >> $GITHUB_ENV
           else
             echo DEPLOYMENT_TYPE=dev >> $GITHUB_ENV
