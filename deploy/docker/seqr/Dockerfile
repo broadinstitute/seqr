@@ -34,6 +34,8 @@ RUN apt update && apt install -y --no-install-recommends \
     # install gcloud tools
     curl https://sdk.cloud.google.com | bash
 
+ENV PATH $PATH:/root/google-cloud-sdk/bin
+
 ARG SEQR_REPO=https://github.com/populationgenomics/seqr
 ARG SEQR_GIT_SHA
 
@@ -46,9 +48,7 @@ RUN git clone -q $SEQR_REPO seqr && \
     cd deploy/docker/seqr && \
     cp readiness_probe entrypoint.sh / && \
     cp bin/*.sh /usr/local/bin/ && \
-    cp gitconfig /root/.gitconfig && \
-    cp config/*.py ./ && \
-    cp bashrc /root/.bashrc
+    cp config/*.py /seqr
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
