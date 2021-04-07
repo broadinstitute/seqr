@@ -43,5 +43,5 @@ jobs:
       - name: push image
         run: docker push --all-tags $DOCKER_IMAGE
       
-      - name: deploy to Cloud Run
-        run: gcloud beta run services replace --platform managed --region australia-southeast1 deploy/cloud_run/seqr_$DEPLOYMENT_TYPE.yaml
+      - name: restart seqr instances
+        run: gcloud beta compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --min-ready 20m
