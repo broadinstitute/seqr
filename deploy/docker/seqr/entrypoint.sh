@@ -29,4 +29,4 @@ if ! psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -l | grep seqrdb; then
   python -u manage.py loaddata variant_searches
 fi
 
-gunicorn -w $GUNICORN_WORKER_THREADS -c /seqr/deploy/docker/seqr/config/gunicorn_config.py wsgi:application
+gunicorn -w $GUNICORN_WORKER_THREADS -c deploy/docker/seqr/config/gunicorn_config.py wsgi:application
