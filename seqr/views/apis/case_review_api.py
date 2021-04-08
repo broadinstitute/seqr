@@ -3,31 +3,29 @@ APIs used by the case review page
 """
 import json
 
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individual
-from seqr.views.utils.permissions_utils import has_case_review_permissions
+from seqr.views.utils.permissions_utils import has_case_review_permissions, login_and_policies_required
 from seqr.models import Family, Individual
-from settings import API_LOGIN_REQUIRED_URL
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def save_internal_case_review_notes(request, family_guid):
     return _update_family_case_review(family_guid, request, 'caseReviewNotes')
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def save_internal_case_review_summary(request, family_guid):
     return _update_family_case_review(family_guid, request, 'caseReviewSummary')
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_case_review_discussion(request, individual_guid):
     return _update_individual_case_review(individual_guid, request, 'caseReviewDiscussion')
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_case_review_status(request, individual_guid):
     return _update_individual_case_review(individual_guid, request, 'caseReviewStatus', additional_updates={
         'caseReviewStatusLastModifiedBy': request.user,

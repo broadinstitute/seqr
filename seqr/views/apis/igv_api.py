@@ -2,7 +2,6 @@ from collections import defaultdict
 import json
 import re
 from django.http import StreamingHttpResponse
-from django.contrib.auth.decorators import login_required, user_passes_test
 
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist
@@ -11,14 +10,11 @@ from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_data_manager, user_is_pm
-from settings import API_LOGIN_REQUIRED_URL
+    login_and_policies_required, pm_or_data_manager_required
 
 import logging
 logger = logging.getLogger(__name__)
 
-pm_or_data_manager_required = user_passes_test(
-    lambda user: user_is_data_manager(user) or user_is_pm(user), login_url=API_LOGIN_REQUIRED_URL)
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
@@ -125,7 +121,7 @@ def update_individual_igv_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def fetch_igv_track(request, project_guid, igv_track_path):
 
     get_project_and_check_permissions(project_guid, request.user)

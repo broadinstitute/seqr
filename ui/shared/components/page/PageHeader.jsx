@@ -173,7 +173,7 @@ SimplePageHeader.propTypes = {
 
 const NO_HEADER_PAGES = [
   '/dashboard', '/create_project_from_workspace', '/workspace', '/users', '/login', '/matchmaker', '/privacy_policy',
-  '/terms_of_service',
+  '/terms_of_service', '/accept_policies',
 ]
 
 const SIMPLE_HEADER_PAGES = [

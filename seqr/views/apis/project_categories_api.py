@@ -1,16 +1,15 @@
 """APIs for setting Project categories"""
 import json
-from django.contrib.auth.decorators import login_required
 
 from seqr.models import Project, ProjectCategory
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
-from seqr.views.utils.permissions_utils import check_project_permissions
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from seqr.views.utils.permissions_utils import check_project_permissions, login_and_policies_required
+from settings import ANALYST_PROJECT_CATEGORY
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_project_categories_handler(request, project_guid):
     """Update ProjectCategories for the given project.
 

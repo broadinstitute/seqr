@@ -80,7 +80,7 @@
     "react-document-title": "2.0.3",
     "react-dom": "^16.12.0",
     "react-hot-loader": "^3.0.0",
-    "react-markdown-renderer": "^1.4.0",
+    "react-markdown": "^5.0.3",
     "react-rangeslider": "^2.2.0",
     "react-redux": "^5.1.2",
     "react-router": "^4.2.0",

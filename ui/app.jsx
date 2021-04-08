@@ -17,6 +17,7 @@ import SummaryData from 'pages/SummaryData/SummaryData'
 import Login from 'pages/Login/components/Login'
 import ForgotPassword from 'pages/Login/components/ForgotPassword'
 import SetPassword from 'pages/Login/components/SetPassword'
+import AcceptPolicies from 'pages/Login/components/AcceptPolicies'
 import LandingPage from 'pages/Public/LandingPage'
 import MatchmakerDisclaimer from 'pages/Public/MatchmakerDisclaimer'
 import MatchmakerInfo from 'pages/Public/MatchmakerInfo'
@@ -66,6 +67,7 @@ ReactDOM.render(
             <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
             <Route path="/privacy_policy" component={PrivacyPolicy} />
             <Route path="/terms_of_service" component={TermsOfService} />
+            <Route path="/accept_policies" component={AcceptPolicies} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>

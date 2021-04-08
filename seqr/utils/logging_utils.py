@@ -27,6 +27,9 @@ class JsonLogFormatter(logging.Formatter):
         if getattr(record, 'traceback', None):
             log_json['traceback'] = record.traceback
 
+        if getattr(record, 'detail', None):
+            log_json['detail'] = record.detail
+
         if record.levelname == 'ERROR' and DEPLOYMENT_TYPE != 'dev':
             # Allows GCP Error to detect that this is an error log
             log_json['@type'] = 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'

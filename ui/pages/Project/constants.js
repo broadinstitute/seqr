@@ -426,3 +426,14 @@ export const SAMPLE_EXPORT_DATA = [
   { header: 'Loaded Date', field: 'loadedDate' },
   { header: 'Sample Type', field: 'sampleType' },
 ]
+
+export const TAG_FIELD_NAME = 'tags'
+
+export const TAG_FORM_FIELD = {
+  name: TAG_FIELD_NAME,
+  label: 'Tags',
+  includeCategories: true,
+  format: value => (value || []).map(({ name }) => name),
+  normalize: value => (value || []).map(name => ({ name })),
+  validate: value => (value && value.length ? undefined : 'Required'),
+}
