@@ -2,13 +2,26 @@ import logging
 import os
 import subprocess
 
+import google.cloud.storage
+
 
 logger = logging.getLogger(__name__)
+gcs_client = None
+
+ANVIL_BUCKET_PREFIX = 'fc-secure'
+ANVIL_BILLING_PROJECT = 'anvil-datastorage'
+
+def _gcs_client():
+    """Returns a lazily initialized GCS storage client."""
+    global gcs_client
+    if not gcs_client:
+        gcs_client = google.cloud.storage.Client()
+    return gcs_client
 
 
 def _run_gsutil_command(command, gs_path, gunzip=False):
     #  Anvil buckets are requester-pays and we bill them to the anvil project
-    project_arg = '-u anvil-datastorage ' if gs_path.startswith('gs://fc-secure') else ''
+    project_arg = f'-u {ANVIL_BILLING_PROJECT} ' if gs_path.startswith(f'gs://{ANVIL_BUCKET_PREFIX}') else ''
     command = 'gsutil {project_arg}{command} {gs_path}'.format(
         project_arg=project_arg, command=command, gs_path=gs_path,
     )
@@ -32,8 +45,23 @@ def does_file_exist(file_path):
 
 def file_iter(file_path, byte_range=None, raw_content=False):
     if _is_google_bucket_file_path(file_path):
-        for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content):
-            yield line
+        path_segments = file_path.split('/')
+        if len(path_segments) < 4:
+            raise ValueError(f'Invalid GCS path: "{file_path}"')
+        user_project = ANVIL_BILLING_PROJECT if path_segments[2].startswith(ANVIL_BUCKET_PREFIX) else None
+        bucket = _gcs_client().bucket(path_segments[2], user_project)
+        blob = bucket.blob('/'.join(path_segments[3:]))
+        current = byte_range[0] if byte_range else 0
+        end = byte_range[1] if byte_range else None
+        while True:
+            next = current + (1 << 20)  # 1 MB chunks
+            if end and end < next:
+                next = end
+            data = blob.download_as_bytes(start=current, end=next)
+            current += len(data)
+            yield data if raw_content else data.decode('utf-8')
+            if current < next or current == end:
+                break
     else:
         mode = 'rb' if raw_content else 'r'
         with open(file_path, mode) as f:
@@ -47,14 +75,3 @@ def file_iter(file_path, byte_range=None, raw_content=False):
             else:
                 for line in f:
                     yield line
-
-
-def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False):
-    """Iterate over lines in the given file"""
-    range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
-    process = _run_gsutil_command('cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content)
-    for line in process.stdout:
-        if not raw_content:
-            line = line.decode('utf-8')
-        yield line
-

@@ -21,4 +21,4 @@ slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.42.1                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==5.2.0                # simplified static file handling. Behind a major version due to missing Python 2 support
-
+google-cloud-storage==1.37.1     # read GCS blobs
