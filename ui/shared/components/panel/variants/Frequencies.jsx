@@ -107,8 +107,11 @@ FreqSummary.propTypes = {
 
 const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
 
-const gnomadLink = ({ fieldTitle, ...props }) =>
-  <FreqLink {...props} displayValue={fieldTitle} getPath={getGenePath} />
+const gnomadLink = ({ fieldTitle, ...props }) => {
+  const [detail, ...linkName] = fieldTitle.split(' ').reverse()
+  return <span><FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} /> {detail}</span>
+}
+
 
 gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
