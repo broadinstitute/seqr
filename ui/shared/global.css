@@ -69,5 +69,5 @@ body {
 }
 
 .ui.fullscreen.scrolling.modal {
-  left: auto !important;
+  left: auto !important; /* csslint allow: important */
 }
