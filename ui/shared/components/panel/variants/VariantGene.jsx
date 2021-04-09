@@ -253,7 +253,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
   } else {
     summaryDetail = (
       <GeneLinks>
-        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
+        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank">Decipher</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
         <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
