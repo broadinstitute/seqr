@@ -286,12 +286,6 @@ def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_pa
     run("kubectl cp '%(source_path)s' '%(dest_path)s'" % locals())
 
 
-def open_shell_in_component(component, deployment_target, shell_path='/bin/bash'):
-    """Open a command line shell in the given component"""
-
-    run_in_pod(component, shell_path, deployment_target=deployment_target, is_interactive=True)
-
-
 def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 

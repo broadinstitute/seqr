@@ -10,14 +10,12 @@ from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYAB
     DEPLOYMENT_ENVS, SECRETS
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
     show_status, wait_for, troubleshoot_component, delete_component, reset_database, delete_all, \
-    get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
-    copy_files_to_or_from_pod
+    get_component_port_pairs, check_kubernetes_context, copy_files_to_or_from_pod
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-SET_ENVIRONMENT_COMMAND = 'set-env'
 STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
 REDEPLOY_COMMAND = 'redeploy'
@@ -28,7 +26,6 @@ PORT_FORWARD_COMMAND = 'port-forward'
 PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
 COPY_TO_POD_COMMAND = 'copy-to'
 COPY_FROM_POD_COMMAND = 'copy-from'
-SHELL_COMMAND = 'shell'
 DASHBOARD_COMMAND = 'dashboard'
 DELETE_COMMAND = 'delete'
 DELETE_ALL_COMMAND = 'delete-all'
@@ -40,10 +37,6 @@ subparsers = p.add_subparsers(dest='command')
 
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
 DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_ENVS)
-
-## ENVIRONMENT_COMMAND
-sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'gcloud-dev', 'gcloud-prod', etc.)")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## LOG_COMMAND
 sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
@@ -81,11 +74,6 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
     elif command == COPY_FROM_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
         sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
-
-## SHELL_COMMAND
-sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
-sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## STATUS_COMMAND
 sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
@@ -153,13 +141,12 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 args = p.parse_args()
 
 # process command-line args
-if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
+if args.deployment_target:
     commands_that_call_init_cluster = set([
         DEPLOY_ALL_COMMAND,
     ])
 
     commands_that_dont_modify_kubernetes_state = set([
-        SHELL_COMMAND,
         PORT_FORWARD_COMMAND,
         PORT_FORWARD_AND_LOG_COMMAND,
         LOG_COMMAND,
@@ -244,13 +231,6 @@ elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
 elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
     direction = 1 if args.command == COPY_TO_POD_COMMAND else -1
     copy_files_to_or_from_pod(args.component, args.deployment_target, args.source_path, args.dest_path, direction=direction)
-
-elif args.command == SHELL_COMMAND:
-    open_shell_in_component(args.component, args.deployment_target)
-
-elif args.command == SET_ENVIRONMENT_COMMAND:
-    set_environment(args.deployment_target)
-
 
 elif args.command == STATUS_COMMAND:
     show_status()
