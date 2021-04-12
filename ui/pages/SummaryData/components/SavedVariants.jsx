@@ -46,6 +46,7 @@ const TAG_OPTIONS = [
   'Sanger validated',
   'Sanger did not confirm',
   'Confident AR one hit',
+  'Analyst high priority',
   'MatchBox (MME)',
   'Submit to Clinvar',
   'Share with KOMP',
