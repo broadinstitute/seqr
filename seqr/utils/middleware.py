@@ -43,7 +43,7 @@ def _get_transport_error_type(error):
         root_cause = error.get('root_cause')
         error_info = error.get('error')
         if (not root_cause) and isinstance(error_info, dict):
-            root_cause = error_info['error'].get('root_cause')
+            root_cause = error_info.get('root_cause')
 
         if root_cause:
             error_type = root_cause[0].get('type') or root_cause[0].get('reason')
@@ -77,7 +77,7 @@ class JsonErrorMiddleware(MiddlewareMixin):
             traceback_message = traceback.format_exc()
             exception_json['traceback'] = traceback_message
         detail = getattr(exception, 'info', None)
-        if detail:
+        if isinstance(detail, dict):
             exception_json['detail'] = detail
 
         if request.path.startswith('/api'):
