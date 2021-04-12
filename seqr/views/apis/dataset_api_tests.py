@@ -1,20 +1,18 @@
 import json
 import mock
-import subprocess
 from datetime import datetime
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from io import StringIO
 
 from seqr.models import Sample
-from seqr.views.apis.dataset_api import add_variants_dataset_handler, receive_igv_table_handler, update_individual_igv_sample
+from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase
-
 
 PROJECT_GUID = 'R0001_1kg'
 INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
+NEW_SAMPLE_TYPE_INDEX_NAME = 'test_new_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
 
 
@@ -243,6 +241,7 @@ class DatasetAPITest(object):
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertListEqual(list(response_json['samplesByGuid'].keys()), [sv_sample_guid])
         self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['datasetType'], 'SV')
+        self.assertEqual(response_json['samplesByGuid'][sv_sample_guid]['sampleType'], 'WES')
         self.assertTrue(response_json['samplesByGuid'][sv_sample_guid]['isActive'])
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
@@ -255,99 +254,41 @@ class DatasetAPITest(object):
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid}, {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
-    def test_receive_alignment_table_handler(self):
-        url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
-        self.check_data_manager_login(url)
-
-        # Send invalid requests
-        f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 or 3 columns: NA19675']})
-
-        f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
-
-        # Send valid request
-        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19675_1,gs://readviz/batch_10.dcr.bed.gz,NA19675\nNA19679,gs://readviz/NA19679.bam")
-        response = self.client.post(url, data={'f': f})
+        # Adding an index for a different sample type works additively
+        mock_random.return_value = 987654
+        urllib3_responses.add_json('/{}/_mapping'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
+            NEW_SAMPLE_TYPE_INDEX_NAME: {'mappings': {'_meta': {
+                'sampleType': 'WGS',
+                'genomeVersion': '37',
+                'sourceFilePath': 'test_data.vds',
+            }}}})
+        urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
+        }, method=urllib3_responses.POST)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': NEW_SAMPLE_TYPE_INDEX_NAME,
+            'datasetType': 'VARIANTS',
+        }))
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'uploadedFileId', 'errors', 'info', 'updates'})
-        self.assertListEqual(response_json['errors'], [])
-        self.assertListEqual(
-            response_json['info'], ['Parsed 3 rows in 2 individuals from samples.csv', 'No change detected for 1 rows'])
-        self.assertListEqual(sorted(response_json['updates'], key=lambda o: o['individualGuid']), [
-            {'individualGuid': 'I000001_na19675', 'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675'},
-            {'individualGuid': 'I000003_na19679', 'filePath': 'gs://readviz/NA19679.bam', 'sampleId': None},
-        ])
-
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.utils.file_utils.os.path.isfile')
-    def test_add_alignment_sample(self, mock_local_file_exists, mock_subprocess):
-        url = reverse(update_individual_igv_sample, args=['I000001_na19675'])
-        self.check_data_manager_login(url)
-
-        # Send invalid requests
-        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'request must contain fields: filePath')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'invalid_path.txt',
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.reason_phrase,
-            'Invalid file extension for "invalid_path.txt" - valid extensions are bam, cram, bigWig, junctions.bed.gz, dcr.bed.gz')
-
-        mock_local_file_exists.return_value = False
-        mock_subprocess.return_value.wait.return_value = 1
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675_new.cram',
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error accessing "/readviz/NA19675_new.cram"')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'gs://readviz/NA19675_new.cram',
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error accessing "gs://readviz/NA19675_new.cram"')
-
-        # Send valid request
-        mock_local_file_exists.return_value = True
-        mock_subprocess.return_value.wait.return_value = 0
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675_new.cram',
-        }))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
-            'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675_new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
-        mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675',
-        }))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-
-        self.assertSetEqual(set(response_json.keys()), {'igvSamplesByGuid', 'individualsByGuid'})
-        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        sample_guid = next(iter(response_json['igvSamplesByGuid']))
-        self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
-            'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': sample_guid,
-            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
+        self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
+        new_sample_type_sample_guid = 'S987654_NA19675_1'
+        self.assertDictEqual(response_json['familiesByGuid'], {})
+        self.assertListEqual(list(response_json['samplesByGuid'].keys()), [new_sample_type_sample_guid])
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['datasetType'], 'VARIANTS')
+        self.assertEqual(response_json['samplesByGuid'][new_sample_type_sample_guid]['sampleType'], 'WGS')
+        self.assertTrue(response_json['samplesByGuid'][new_sample_type_sample_guid]['isActive'])
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
-        self.assertSetEqual(
-            set(response_json['individualsByGuid']['I000001_na19675']['igvSampleGuids']),
-            {'S000145_na19675', sample_guid}
-        )
-        mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
+        self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
+                            set([sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid]))
+
+        # Previous variant samples should still be active
+        sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
+        self.assertEqual(len(sample_models), 3)
+        self.assertSetEqual({sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid}, {sample.guid for sample in sample_models})
+        self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
 
 # Tests for AnVIL access disabled
@@ -369,14 +310,6 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
         assert_no_anvil_calls(self)
 
-    def test_receive_alignment_table_handler(self):
-        super(AnvilDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_anvil_calls(self)
-
-    def test_add_alignment_sample(self, *args):
-        super(AnvilDatasetAPITest, self).test_add_alignment_sample(*args)
-        assert_no_anvil_calls(self)
-
 
 # Test for permissions from AnVIL and local
 class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
@@ -384,12 +317,4 @@ class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
-
-    def test_receive_alignment_table_handler(self):
-        super(MixDatasetAPITest, self).test_receive_alignment_table_handler()
-        assert_no_anvil_calls(self)
-
-    def test_add_alignment_sample(self, *args):
-        super(MixDatasetAPITest, self).test_add_alignment_sample(*args)
         assert_no_anvil_calls(self)

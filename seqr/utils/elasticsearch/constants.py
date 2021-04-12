@@ -292,6 +292,7 @@ GENOTYPE_FIELDS_CONFIG = {
     'num_exon': {},
     'defragged': {'format_value': bool},
     'sample_id': {},
+    'sample_type': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})

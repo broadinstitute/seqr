@@ -152,6 +152,25 @@ class IndividualAPITest(AuthenticationTestCase):
             {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list}
         )
 
+        # test only updating parental IDs
+        mock_update_pedigree.reset_mock()
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [{
+                'individualGuid': ID_UPDATE_GUID,
+                'familyId': '1',
+                'individualId': UPDATED_ID,
+                'maternalId': 'NA19679',
+            }]
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertSetEqual({'F000001_1'}, set(response_json['familiesByGuid']))
+        self.assertSetEqual({ID_UPDATE_GUID}, set(response_json['individualsByGuid']))
+        self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
+        self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['maternalId'], 'NA19679')
+        self.assertSetEqual({'F000001_1'}, {call_arg.args[0].guid for call_arg in mock_update_pedigree.call_args_list})
+
         # Test PM permission
         pm_required_edit_individuals_url = reverse(edit_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
         response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({

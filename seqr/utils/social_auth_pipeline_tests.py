@@ -20,6 +20,11 @@ class SocialAuthPipelineTest(TestCase):
         self.assertEqual(r.url, '/login?anvilLoginFailed=true')
         self.assertEqual(len(mock_logger.method_calls), 1)
 
+        backend = GoogleOAuth2()
+        backend.strategy.session_set('next', '/foo/bar')
+        r = validate_anvil_registration(backend, {'access_token': '', 'email': 'test@seqr.org'})
+        self.assertEqual(r.url, '/login?anvilLoginFailed=true&next=%2Ffoo%2Fbar')
+
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status=200, body=REGISTER_RESPONSE)
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
@@ -36,6 +41,11 @@ class SocialAuthPipelineTest(TestCase):
             'Google user test_user_manager@test.com is trying to login without an existing seqr account (google-oauth2).')
         self.assertEqual(r.url, '/login?googleLoginFailed=true')
         self.assertEqual(len(mock_logger.method_calls), 1)
+
+        backend = GoogleOAuth2()
+        backend.strategy.session_set('next', '/foo/bar')
+        r = validate_user_exist(backend, {'email': 'test_user_manager@test.com'})
+        self.assertEqual(r.url, '/login?googleLoginFailed=true&next=%2Ffoo%2Fbar')
 
     @mock.patch('seqr.utils.social_auth_pipeline.logger')
     def test_log_signed_in(self, mock_logger):

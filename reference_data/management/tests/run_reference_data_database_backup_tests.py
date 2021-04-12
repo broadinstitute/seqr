@@ -35,3 +35,18 @@ class RunReferenceDataDbBackupTest(TestCase):
             mock.call('gsutil mv gene_reference_data_backup.gz gs://seqr-reference-data/gene_reference_data_backup.gz')
         ]
         mock_logger.info.assert_has_calls(calls)
+
+        # test with timestamped file name
+        mock_os.reset_mock()
+        mock_os.environ.get.return_value = 'test_env_host'
+
+        call_command('run_reference_data_database_backup', '--timestamp-name')
+
+        mock_os.environ.get.assert_called_with('POSTGRES_SERVICE_HOSTNAME', 'unknown')
+
+        calls = [
+            mock.call(
+                '/usr/bin/pg_dump -U postgres --host test_env_host reference_data_db | gzip -c - > gene_reference_data_backup_2020-04-27__20-16-01.gz'),
+            mock.call('gsutil mv gene_reference_data_backup_2020-04-27__20-16-01.gz gs://seqr-reference-data/gene_reference_data_backup_2020-04-27__20-16-01.gz')
+        ]
+        mock_os.system.assert_has_calls(calls)

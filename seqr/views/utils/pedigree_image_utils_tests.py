@@ -119,14 +119,20 @@ class PedigreeImageTest(TestCase):
             ['perl', '/seqr/management/commands/HaploPainter1.043.pl', '-b', '-outformat', 'png', '-pedfile', 'temp.fam', '-family', '1', '-outfile', '/tmp/pedigree_image_123456.png'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
+        records = [
+            ['1', 'NA19675_1', 'placeholder_123456', 'NA19679', '1', '2'],
+            ['1', 'NA19679', '0', '0', '2', '1'],
+            ['1', 'placeholder_123456', '0', '0', '1', '9']
+        ]
         mock_tempfile_file.write.assert_has_calls([
-            mock.call('\t'.join(['1', 'NA19675_1', 'placeholder_123456', 'NA19679', '1', '2'])),
+            mock.call('\t'.join(records[0])),
             mock.call('\n'),
-            mock.call('\t'.join(['1', 'NA19679', '0', '0', '2', '1'])),
+            mock.call('\t'.join(records[1])),
             mock.call('\n'),
-            mock.call('\t'.join(['1', 'placeholder_123456', '0', '0', '1', '9'])),
+            mock.call('\t'.join(records[2])),
             mock.call('\n'),
         ])
         mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_called_with('Failed to generate pedigree image for family 1: Error!')
+        mock_logger.error.assert_called_with('Failed to generate pedigree image for family 1: Error!', extra={
+            'detail': {'ped_file': records}})
 

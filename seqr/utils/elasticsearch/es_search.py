@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
     GRCH38_LOCUS_FIELD
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = logging.getLogger(__name__)
@@ -597,10 +597,12 @@ class EsSearch(object):
         genotypes = {}
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
-            genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
-                for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
-            })
+            for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
+                sample = samples_by_id.get(genotype_hit['sample_id'])
+                if sample:
+                    genotype_hit['sample_type'] = sample.sample_type
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+
             if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
@@ -894,7 +896,11 @@ class EsSearch(object):
 
     @classmethod
     def _merge_duplicate_variants(cls, variant, duplicate_variant):
-        variant['genotypes'].update(duplicate_variant['genotypes'])
+        for guid, genotype in duplicate_variant['genotypes'].items():
+            if guid in variant['genotypes']:
+                variant['genotypes'][guid]['otherSample'] = {k: v for k, v in genotype.items() if k != 'otherSample'}
+            else:
+                variant['genotypes'][guid] = genotype
         variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
     def _deduplicate_compound_het_results(self, compound_het_results):
@@ -1182,21 +1188,30 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
 def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
     q = None
     if intervals:
-        interval_xpos_range = [
-            (get_xpos(interval['chrom'], interval['start']), get_xpos(interval['chrom'], interval['end']))
-            for interval in intervals
-        ]
-        range_filters = []
-        for key in ['xpos', 'xstop']:
-            range_filters += [{
-                key: {
-                    'gte': xstart,
-                    'lte': xstop,
-                }
-            } for (xstart, xstop) in interval_xpos_range]
-        q = _build_or_filter('range', range_filters)
-        for (xstart, xstop) in interval_xpos_range:
-            q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+        for interval in intervals:
+            if interval.get('offset'):
+                offset_pos = int((interval['end'] - interval['start']) * interval['offset'])
+                interval_q = Q(
+                    'range', xpos=_pos_offset_range_filter(interval['chrom'], interval['start'], offset_pos)) & Q(
+                    'range', xstop=_pos_offset_range_filter(interval['chrom'], interval['end'], offset_pos))
+            else:
+                xstart = get_xpos(interval['chrom'], interval['start'])
+                xstop = get_xpos(interval['chrom'], interval['end'])
+                range_filters = [{
+                    key: {
+                        'gte': xstart,
+                        'lte': xstop,
+                    }
+                } for key in ['xpos', 'xstop']]
+                interval_q = _build_or_filter('range', range_filters)
+                interval_q |= Q('range', xpos={'lte': xstart}) & Q('range', xstop={'gte': xstop})
+
+            if q:
+                q |= interval_q
+            else:
+                q = interval_q
+
+        logger.info(q.to_dict())
 
     filters = [
         {'geneIds': list((genes or {}).keys())},
@@ -1215,6 +1230,13 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
         return ~q
     else:
         return q
+
+
+def _pos_offset_range_filter(chrom, pos, offset):
+    return {
+        'lte': get_xpos(chrom, min(pos + offset, MAX_POS)),
+        'gte': get_xpos(chrom, max(pos - offset, MIN_POS)),
+    }
 
 
 def _pathogenicity_filter(pathogenicity):

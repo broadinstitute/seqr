@@ -92,7 +92,7 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
       <Popup
@@ -101,23 +101,50 @@ export const Alleles = React.memo(({ numAlt, cn, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {numAlt >= 0 ?
+    {genotype.numAlt >= 0 ?
       <span>
-        <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} />
+        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} />}
       </span> :
-      <span>CN: {cn === (isHemiX ? 1 : 2) ? cn : <b><i>{cn}</i></b>}</span>
+      <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>
     }
   </AlleleContainer>,
 )
 
 Alleles.propTypes = {
-  numAlt: PropTypes.number,
-  cn: PropTypes.number,
+  genotype: PropTypes.object,
   variant: PropTypes.object,
   warning: PropTypes.string,
   isHemiX: PropTypes.bool,
 }
 
+const GENOTYPE_DETAILS = [
+  { title: 'Sample Type', field: 'sampleType' },
+  {
+    title: 'Raw Alt. Alleles',
+    variantField: 'originalAltAlleles',
+    format: val => (val || []).join(', '),
+    shouldHide: (val, variant) => (val || []).length < 1 || ((val || []).length === 1 && val[0] === variant.alt),
+  },
+  { title: 'Allelic Depth', field: 'ad' },
+  { title: 'Read Depth', field: 'dp' },
+  { title: 'Genotype Quality', field: 'gq' },
+  { title: 'Allelic Balance', field: 'ab', format: val => val && val.toPrecision(2) },
+  { title: 'Filter', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
+  { title: 'Phred Likelihoods', field: 'pl' },
+  { title: 'Quality Score', field: 'qs' },
+  { title: 'Start', field: 'start' },
+  { title: 'End', field: 'end' },
+]
+
+const genotypeDetails = (genotype, variant) =>
+  GENOTYPE_DETAILS.map(({ shouldHide, title, field, variantField, format }) => {
+    const value = field ? genotype[field] : variant[variantField]
+    return value && !(shouldHide && shouldHide(value, variant)) ?
+      <div key={title}>
+        {title}:<HorizontalSpacer width={10} /><b>{format ? format(value) : value}</b>
+      </div> : null
+  })
 
 const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   if (!variant.genotypes) {
@@ -128,23 +155,6 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     return null
   }
 
-  const qualityDetails = [
-    {
-      title: 'Raw Alt. Alleles',
-      value: (variant.originalAltAlleles || []).join(', '),
-      shouldHide: (variant.originalAltAlleles || []).length < 1 ||
-      (variant.originalAltAlleles.length === 1 && variant.originalAltAlleles[0] === variant.alt),
-    },
-    { title: 'Allelic Depth', value: genotype.ad },
-    { title: 'Read Depth', value: genotype.dp },
-    { title: 'Genotype Quality', value: genotype.gq },
-    { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
-    { title: 'Filter', value: variant.genotypeFilters, shouldHide: (variant.genotypeFilters || []).length < 1 },
-    { title: 'Phred Likelihoods', value: genotype.pl },
-    { title: 'Quality Score', value: genotype.qs },
-    { title: 'Start', value: genotype.start },
-    { title: 'End', value: genotype.end },
-  ]
   const isHemiX = isHemiXVariant(variant, individual)
 
   let warning
@@ -156,6 +166,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     warning = 'Variant absent in parents'
   }
 
+  const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
+
   return (
     (genotype.numAlt >= 0 || (variant.svType && genotype.cn >= 0)) ?
       <Popup
@@ -163,18 +175,30 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
         flowing
         trigger={
           <span>
-            <Alleles cn={genotype.cn} numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} warning={warning} />
-            <VerticalSpacer width={5} />
+            {genotype.otherSample && <Popup
+              flowing
+              header="Additional Sample Type"
+              trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+              content={
+                <div>
+                  {hasConflictingNumAlt &&
+                    <div>
+                      <VerticalSpacer height={5} />
+                      <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                      <VerticalSpacer height={5} />
+                    </div>
+                  }
+                  {genotypeDetails(genotype.otherSample, variant)}
+                </div>
+              }
+            />}
+            <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
+            <VerticalSpacer height={2} />
             {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
           </span>
         }
-        content={
-          qualityDetails.map(({ shouldHide, title, value }) => {
-            return value && !shouldHide ?
-              <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
-          })
-        }
+        content={genotypeDetails(genotype, variant)}
       />
       : <b>NO CALL</b>
   )

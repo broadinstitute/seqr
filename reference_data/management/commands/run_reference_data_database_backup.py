@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--postgres-host', default=os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'unknown'))
+        parser.add_argument('--timestamp-name', action='store_true')
 
     def handle(self, *args, **options):
 
@@ -25,7 +26,8 @@ class Command(BaseCommand):
         logger.info("======== %s ======= " % timestamp)
         logger.info("=====================================")
 
-        backup_filename = 'gene_reference_data_backup.gz'
+        file_timestamp = '_{}'.format(timestamp) if options['timestamp_name'] else ''
+        backup_filename = 'gene_reference_data_backup{}.gz'.format(file_timestamp)
 
         run("/usr/bin/pg_dump -U postgres --host {postgres_host} reference_data_db | gzip -c - > {backup_filename}".format(
             postgres_host=options['postgres_host'], backup_filename=backup_filename

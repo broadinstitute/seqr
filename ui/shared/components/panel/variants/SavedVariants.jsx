@@ -4,10 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Dropdown, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getSavedVariantsIsLoading, getPairedSelectedSavedVariants,
-  getPairedFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
-  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
-  getVisibleSortedSavedVariants } from 'redux/selectors'
+import { getSavedVariantsIsLoading, getSavedVariantsLoadingError } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
   VARIANT_PAGINATION_FIELD,
@@ -18,6 +15,9 @@ import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { HorizontalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import Variants from './Variants'
+import { getPairedSelectedSavedVariants, getPairedFilteredSavedVariants, getSavedVariantTableState,
+  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
+  getVisibleSortedSavedVariants } from './selectors'
 
 const ALL_FILTER = 'ALL'
 

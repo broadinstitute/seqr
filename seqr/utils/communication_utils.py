@@ -1,8 +1,8 @@
 import logging
 from slacker import Slacker
 from settings import SLACK_TOKEN, BASE_URL
-from django.core.mail import EmailMessage
-from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +45,10 @@ def send_welcome_email(user, referrer):
     user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
-def send_load_data_email(project, data):
-    email_content = """
-    Data from AnVIL workspace "{namespace}/{name}" needs to be loaded to seqr project <a href="{base_url}/project/{guid}/project_page">{project_name}</a> (guid: {guid})
-
-    The sample IDs to load are attached.    
-    """.format(
-        namespace=project.workspace_namespace,
-        name=project.workspace_name,
-        base_url=BASE_URL,
-        guid=project.guid,
-        project_name=project.name,
+def send_html_email(email_body, **kwargs):
+    email_message = EmailMultiAlternatives(
+        body=strip_tags(email_body),
+        **kwargs,
     )
-    mail = EmailMessage(
-        subject='AnVIL data loading request',
-        body=email_content,
-        to=[dm.email for dm in User.objects.filter(is_staff=True)],
-        attachments=[('{}_sample_ids.tsv'.format(project.guid), data)])
-    mail.send()
+    email_message.attach_alternative(email_body, 'text/html')
+    email_message.send()

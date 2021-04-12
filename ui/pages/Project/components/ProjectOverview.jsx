@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid, Icon } from 'semantic-ui-react'
+import { Grid, Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
@@ -11,11 +11,12 @@ import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
-import { ButtonLink } from 'shared/components/StyledComponents'
+import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
   DATASET_TYPE_SV_CALLS,
+  ANVIL_URL,
 } from 'shared/utils/constants'
 import {
   getAnalysisStatusCounts,
@@ -128,7 +129,29 @@ const ProjectOverview = React.memo((
       ),
     }))]), [])
   if (!datasetSections.length) {
-    datasetSections.push({ title: 'Datasets', content: 'No Datasets Loaded', key: 'blank' })
+    datasetSections.push({
+      title: 'Datasets',
+      content: (
+        <div>
+          No Datasets Loaded
+          {project.workspaceName &&
+            <div>
+              <i>Where is my data?</i> <Popup
+                trigger={<HelpIcon />}
+                hoverable
+                content={
+                  <div>
+                    Loading data from AnVIL to seqr is a slow process, and generally takes a week.
+                    If you have been waiting longer than this for your data, please reach
+                    out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
+                  </div>
+                }
+              />
+            </div>
+          }
+        </div>
+      ),
+      key: 'blank' })
   }
 
   let editIndividualsButton = null
@@ -179,11 +202,16 @@ const ProjectOverview = React.memo((
         {datasetSections.map((sectionProps, i) =>
           <DetailSection
             {...sectionProps}
-            button={(datasetSections.length - 1 === i && user.isDataManager) ? <EditDatasetsButton /> : null}
+            button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
           />,
         )}
       </Grid.Column>
       <Grid.Column width={6}>
+        {project.workspaceName && user.isAnvil && <DetailSection title="AnVIL Workspace" content={
+          <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank">
+            {project.workspaceName}
+          </a>}
+        />}
         <DetailSection
           title="Analysis Status"
           content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}

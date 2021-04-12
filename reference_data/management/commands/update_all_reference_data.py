@@ -10,13 +10,14 @@ from reference_data.management.commands.update_gene_constraint import GeneConstr
 from reference_data.management.commands.update_omim import OmimReferenceDataHandler
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
 from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
-
+from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
 
 logger = logging.getLogger(__name__)
 
 REFERENCE_DATA_SOURCES = OrderedDict([
     ("dbnsfp_gene", DbNSFPReferenceDataHandler),
     ("gene_constraint", GeneConstraintReferenceDataHandler),
+    ("gene_cn_sensitivity", CNSensitivityReferenceDataHandler),
     ("primate_ai", PrimateAIReferenceDataHandler),
     ("mgi", MGIReferenceDataHandler),
     ("hpo", None),

@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
-import MarkdownRenderer from 'react-markdown-renderer'
+import ReactMarkdown from 'react-markdown'
+import markdownRenderers from 'react-markdown/lib/renderers'
 
 export const snakecaseToTitlecase = s =>
   (s ? s.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' ') : '')
@@ -14,5 +15,7 @@ export const toCamelcase = s => (s || '').split(' ').map(
   (word, i) => word && (i > 0 ? word[0].toUpperCase() : word[0].toLowerCase()) + word.slice(1),
 ).join('')
 
+const TEXT_RENDERERS = Object.keys(markdownRenderers).reduce((acc, k) => ({ ...acc, [k]: markdownRenderers.text }), {})
+
 export const stripMarkdown = s =>
-  ReactDOMServer.renderToStaticMarkup(<MarkdownRenderer markdown={s || ''} />).replace(/(<([^>]+)>)/ig, '').trim()
+  ReactDOMServer.renderToStaticMarkup(<ReactMarkdown renderers={TEXT_RENDERERS}>{s || ''}</ReactMarkdown>).trim()

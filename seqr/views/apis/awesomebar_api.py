@@ -1,16 +1,15 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q, ExpressionWrapper, BooleanField
 from django.views.decorators.http import require_GET
 
 from reference_data.models import Omim, HumanPhenotypeOntology
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.views.utils.permissions_utils import get_projects_user_can_view
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100
 
 
-def _get_matching_objects(query, projects, object_cls, filter_fields, object_fields, get_title, get_href, get_description=None, project_field=None, select_related_project=True, exclude_criteria=None):
+def _get_matching_objects(query, project_guids, object_cls, filter_fields, object_fields, get_title, get_href, get_description=None, project_field=None, select_related_project=True, exclude_criteria=None):
     """Returns objects that match the given query string, and that the user can view, for the given object criteria.
 
     Args:
@@ -36,11 +35,11 @@ def _get_matching_objects(query, projects, object_cls, filter_fields, object_fie
     """
     if project_field:
         matching_objects = getattr(object_cls, 'objects')
-        matching_objects = matching_objects.filter(Q(**{'{}__in'.format(project_field): projects}))
+        matching_objects = matching_objects.filter(Q(**{'{}__guid__in'.format(project_field): project_guids}))
         if select_related_project:
             matching_objects = matching_objects.select_related(project_field)
     else:
-        matching_objects = projects
+        matching_objects = object_cls.objects.filter(guid__in=project_guids)
 
     if exclude_criteria:
         matching_objects = matching_objects.exclude(**exclude_criteria)
@@ -62,9 +61,9 @@ def _get_matching_objects(query, projects, object_cls, filter_fields, object_fie
     return results
 
 
-def _get_matching_projects(query, projects):
+def _get_matching_projects(query, project_guids):
     return _get_matching_objects(
-        query, projects, Project,
+        query, project_guids, Project,
         filter_fields=['name'],
         object_fields=['name'],
         get_title=lambda p: p.name,
@@ -72,9 +71,9 @@ def _get_matching_projects(query, projects):
     )
 
 
-def _get_matching_families(query, projects):
+def _get_matching_families(query, project_guids):
     return _get_matching_objects(
-        query, projects, Family,
+        query, project_guids, Family,
         filter_fields=['family_id', 'display_name'],
         object_fields=['family_id', 'display_name', 'project__guid', 'project__name'],
         get_title=lambda f: f.display_name or f.family_id,
@@ -83,9 +82,9 @@ def _get_matching_families(query, projects):
         project_field='project')
 
 
-def _get_matching_analysis_groups(query, projects):
+def _get_matching_analysis_groups(query, project_guids):
     return _get_matching_objects(
-        query, projects, AnalysisGroup,
+        query, project_guids, AnalysisGroup,
         filter_fields=['name'],
         object_fields=['name', 'project__guid', 'project__name'],
         get_title=lambda f: f.name,
@@ -94,9 +93,9 @@ def _get_matching_analysis_groups(query, projects):
         project_field='project')
 
 
-def _get_matching_individuals(query, projects):
+def _get_matching_individuals(query, project_guids):
     return _get_matching_objects(
-        query, projects, Individual,
+        query, project_guids, Individual,
         filter_fields=['individual_id', 'display_name'],
         object_fields=[
             'individual_id', 'display_name', 'family__guid', 'family__display_name', 'family__family_id',
@@ -108,9 +107,9 @@ def _get_matching_individuals(query, projects):
         project_field='family__project')
 
 
-def _get_matching_project_groups(query, projects):
+def _get_matching_project_groups(query, project_guids):
     return _get_matching_objects(
-        query, projects, ProjectCategory,
+        query, project_guids, ProjectCategory,
         filter_fields=['name'],
         object_fields=['name'],
         get_title=lambda p: p.name,
@@ -121,7 +120,7 @@ def _get_matching_project_groups(query, projects):
     )
 
 
-def _get_matching_genes(query, projects):
+def _get_matching_genes(query, *args):
     """Returns genes that match the given query string, and that the user can view.
 
     Args:
@@ -149,7 +148,7 @@ def _get_matching_genes(query, projects):
     return result
 
 
-def _get_matching_omim(query, projects):
+def _get_matching_omim(query, *args):
     """Returns OMIM records that match the given query string"""
     records = Omim.objects.filter(
         Q(phenotype_mim_number__icontains=query) | Q(phenotype_description__icontains=query)
@@ -169,7 +168,7 @@ def _get_matching_omim(query, projects):
     return result
 
 
-def _get_matching_hpo_terms(query, projects):
+def _get_matching_hpo_terms(query, *args):
     """Returns OMIM records that match the given query string"""
     records = HumanPhenotypeOntology.objects.filter(
         Q(hpo_id__icontains=query) | Q(name__icontains=query)
@@ -206,7 +205,7 @@ CATEGORY_MAP.update(PROJECT_SPECIFIC_CATEGORY_MAP)
 DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 'genes']
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 @require_GET
 def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
@@ -217,11 +216,11 @@ def awesomebar_autocomplete_handler(request):
 
     categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
-    projects = get_projects_user_can_view(request.user) if any(
+    project_guids = get_project_guids_user_can_view(request.user) if any(
         category for category in categories if category in PROJECT_SPECIFIC_CATEGORY_MAP) else None
 
     results = {
-        category: {'name': _to_title_case(category), 'results': CATEGORY_MAP[category](query, projects)}
+        category: {'name': _to_title_case(category), 'results': CATEGORY_MAP[category](query, project_guids)}
         for category in categories
     }
 

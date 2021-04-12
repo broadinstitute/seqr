@@ -5,19 +5,18 @@ APIs used by the main seqr dashboard page
 import logging
 
 from django.db import models
-from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family
+from seqr.models import ProjectCategory, Sample, Family, Project
 from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
-from seqr.views.utils.permissions_utils import get_projects_user_can_view
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def dashboard_page_data(request):
     """Returns a JSON object containing information used by the dashboard page:
     ::
@@ -40,10 +39,11 @@ def dashboard_page_data(request):
 
 
 def _get_projects_json(user):
-    projects = get_projects_user_can_view(user)
-    if not projects:
+    project_guids = get_project_guids_user_can_view(user)
+    if not project_guids:
         return {}
 
+    projects = Project.objects.filter(guid__in=project_guids)
     projects_with_counts = projects.annotate(
         models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
         models.Count('family__savedvariant', distinct=True))
@@ -101,7 +101,7 @@ def _retrieve_project_categories_by_guid(project_guids):
     return project_categories_by_guid
 
 
-@login_required
+@login_and_policies_required
 def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 

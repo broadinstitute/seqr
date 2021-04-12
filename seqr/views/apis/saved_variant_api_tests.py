@@ -8,7 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS,\
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS,\
     AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
@@ -142,6 +142,11 @@ class SavedVariantAPITest(object):
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
+
+        gene_fields = {'locusListGuids'}
+        gene_fields.update(GENE_VARIANT_FIELDS)
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
@@ -426,7 +431,11 @@ class SavedVariantAPITest(object):
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
         request_body = {
-            'variant': [COMPOUND_HET_5_JSON, {'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
+            'variant': [COMPOUND_HET_5_JSON, {
+                'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G',
+                'variantGuid': 'SV0000001_2103343353_r0390_100',
+                'tagGuids': ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'], 'noteGuids': []},
+            ],
             'note': 'one_saved_one_not_saved_compount_hets_note',
             'submitToClinvar': True,
             'familyGuid': 'F000001_1',
@@ -772,7 +781,7 @@ class SavedVariantAPITest(object):
 
 # Tests for AnVIL access disabled
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'reference_data']
 
 
 def assert_no_list_ws_has_al(self, acl_call_count):
@@ -785,7 +794,7 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 
 # Test for permissions from AnVIL only
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
@@ -842,7 +851,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
 # Test for permissions from AnVIL and local
 class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
     def test_saved_variant_data(self):
         super(MixSavedVariantAPITest, self).test_saved_variant_data()

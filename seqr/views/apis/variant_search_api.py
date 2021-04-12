@@ -2,7 +2,6 @@ import json
 import jmespath
 from collections import defaultdict
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
@@ -16,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
-from seqr.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -33,9 +32,9 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     get_json_for_discovery_tags, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_projects_user_can_view, user_is_analyst
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
+    user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
@@ -110,9 +109,9 @@ def _get_or_create_results_model(search_hash, search_context, user):
                 all_families.update(project_family['familyGuids'])
             families = Family.objects.filter(guid__in=all_families)
         elif _is_all_project_family_search(search_context):
-            omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(user) if project not in omit_projects]
-            families = Family.objects.filter(project__in=projects)
+            omit_projects = [p.guid for p in ProjectCategory.objects.get(name='Demo').projects.only('guid').all()]
+            project_guids = [project_guid for project_guid in get_project_guids_user_can_view(user) if project_guid not in omit_projects]
+            families = Family.objects.filter(project__guid__in=project_guids)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:
@@ -134,7 +133,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
     return results_model
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
@@ -244,7 +243,7 @@ VARIANT_SAMPLE_DATA = [
 ]
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
@@ -252,11 +251,11 @@ def get_variant_gene_breakdown(request, search_hash):
     gene_counts = get_es_variant_gene_counts(results_model)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes(list(gene_counts.keys()), add_omim=True, add_constraints=True),
+        'genesById': get_genes_for_variant_display(list(gene_counts.keys())),
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
@@ -309,7 +308,7 @@ def _get_field_value(value, config):
     return field_value
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def search_context_handler(request):
     """Search variants.
     """
@@ -448,12 +447,12 @@ def _get_projects_details(projects, user, project_category_guid=None):
     return response
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_saved_search_handler(request):
     return create_json_response(_get_saved_searches(request.user))
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def create_saved_search_handler(request):
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)
@@ -488,7 +487,7 @@ def create_saved_search_handler(request):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     if search.created_by != request.user:
@@ -508,7 +507,7 @@ def update_saved_search_handler(request, saved_search_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     search.delete_model(request.user)

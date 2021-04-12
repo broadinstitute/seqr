@@ -9,15 +9,13 @@ import os
 import tempfile
 import openpyxl as xl
 
-from django.contrib.auth.decorators import login_required
-
-from settings import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.permissions_utils import login_and_policies_required
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def save_temp_file(request):
 
     try:

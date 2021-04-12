@@ -1,13 +1,11 @@
 import json
 import logging
-from django.contrib.auth.decorators import login_required
 
 from seqr.models import AnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
-from settings import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required
 
 
 logger = logging.getLogger(__name__)
@@ -15,7 +13,7 @@ logger = logging.getLogger(__name__)
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_analysis_group_handler(request, project_guid, analysis_group_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
@@ -59,7 +57,7 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete_model(request.user, user_can_delete=True)

@@ -97,9 +97,9 @@ export const loadUserOptions = (analystsOnly) => {
 
 export const loadAnalystOptions = () => loadUserOptions(true)
 
-export const updateUserPolicies = (values) => {
+export const updateUser = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper('/api/users/update_policies',
+    return new HttpRequestHelper('/api/users/update',
       (responseJson) => {
         dispatch({ type: UPDATE_USER, updates: responseJson })
       },

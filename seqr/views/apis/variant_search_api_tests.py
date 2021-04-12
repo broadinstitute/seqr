@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase
+    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -53,6 +53,7 @@ def _get_compound_het_es_variants(results_model, **kwargs):
     return deepcopy(COMP_HET_VARAINTS), 1
 
 
+@mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
@@ -148,6 +149,9 @@ class VariantSearchAPITest(object):
             set(response_json['genesById'].keys()),
             {'ENSG00000227232', 'ENSG00000268903', 'ENSG00000233653'}
         )
+        gene_fields = {'locusListGuids'}
+        gene_fields.update(GENE_VARIANT_FIELDS)
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
         self.assertListEqual(
             response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
         )
@@ -212,6 +216,9 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
+        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
+        gene_fields.update(GENE_FIELDS)
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
 
         # Test compound hets
         mock_get_variants.side_effect = _get_compound_het_es_variants
@@ -351,9 +358,11 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
-            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11', 'F000012_12']}],
+            'projectFamilies': [{'projectGuid': 'R0003_test', 'familyGuids': mock.ANY}],
             'totalResults': 3,
         })
+        self.assertSetEqual(
+            {'F000011_11', 'F000012_12'}, set(response_json['search']['projectFamilies'][0]['familyGuids']))
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)

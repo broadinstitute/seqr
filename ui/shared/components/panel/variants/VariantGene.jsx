@@ -13,6 +13,8 @@ import SearchResultsLink from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
+const HI_THRESHOLD = 0.84
+const TS_THRESHOLD = 0.993
 
 const INLINE_STYLE = {
   display: 'inline-block',
@@ -179,6 +181,26 @@ const GENE_DETAIL_SECTIONS = [
        observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
        loss-of-function mutations`,
   },
+  {
+    color: 'red',
+    description: 'HaploInsufficient',
+    label: 'HI',
+    showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
+    detailsDisplay: gene =>
+      `These are a score under development by the Talkowski lab that predict whether a gene is haploinsufficient based 
+      on large chromosomal microarray data set analysis. Scores >0.84 are considered to have high likelihood to be 
+      haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`,
+  },
+  {
+    color: 'red',
+    description: 'TriploSensitive',
+    label: 'TS',
+    showDetails: gene => gene.cnSensitivity.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
+    detailsDisplay: gene =>
+      `These are a score under development by the Talkowski lab that predict whether a gene is triplosensitive based on
+       large chromosomal microarray dataset analysis. Scores >0.993 are considered to have high likelihood to be 
+       triplosensitive. This gene has a score of ${gene.cnSensitivity.pts.toPrecision(4)}.`,
+  },
 ]
 
 export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containerStyle, ...labelProps }) =>
@@ -231,7 +253,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
   } else {
     summaryDetail = (
       <GeneLinks>
-        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
+        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank">Decipher</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
         <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />

@@ -5,7 +5,7 @@ import random
 
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update
 from seqr.views.utils.file_utils import parse_file
 
@@ -53,11 +53,6 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
             elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
         ))
-
-
-def validate_alignment_dataset_path(dataset_path):
-    if not does_file_exist(dataset_path):
-        raise Exception('Error accessing "{}"'.format(dataset_path))
 
 
 def load_mapping_file(mapping_file_path):

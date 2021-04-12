@@ -22,6 +22,8 @@ import TagFieldView from '../components/panel/view-fields/TagFieldView'
 import { stripMarkdown } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
 
+export const ANVIL_URL = 'https://anvil.terra.bio'
+
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'
 export const GENOME_VERSION_OPTIONS = [

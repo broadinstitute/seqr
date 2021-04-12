@@ -13,15 +13,9 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }} 
     strategy:
       matrix:
         python-version: [3.7]
-        experimental: [false]
-        # test a modern version of python, but don't fail the workflow if it's broken
-        include:
-        - python-version: 3.9
-          experimental: true
     
     services:
       # Label used to access the service container
@@ -47,9 +41,14 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v1
+      with:
+        java-version: '8' # The JDK version needed by hail
+        java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
+        architecture: x64 # (x64 or x86) - defaults to x64
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip wheel
         pip install -r requirements.txt --upgrade
         pip install -r requirements-dev.txt
     - name: Run coverage tests
@@ -70,7 +69,7 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: echo -ne "\n \n \3033[1B\nsemantic/\n" | npm install || true
+    - run: npm install || true
       working-directory: ./ui
     - run: npm test
       working-directory: ./ui

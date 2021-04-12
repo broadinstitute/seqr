@@ -3,7 +3,7 @@ import { Header, Segment, List } from 'semantic-ui-react'
 
 export default () =>
   <Segment basic padded="very">
-    <Header dividing content="Terms Of Service" subheader="Last Updated 10/27/2020" size="huge" />
+    <Header dividing content="Terms Of Service" subheader="Last Updated 3/4/2021" size="huge" />
 
     Your access to systems and networks owned by The Broad Institute, Inc. (&quot;Broad&quot;) is governed by, and
     subject to the following terms and conditions, as well as all Federal laws, including, but not limited to, the
@@ -34,6 +34,15 @@ export default () =>
       <List.Item>
         Maintain the confidentiality of your authentication credentials such as your password. Do not reveal your
         authentication credentials to anyone; a Broad employee should never ask you to reveal them.
+      </List.Item>
+      <List.Item>
+        Abide by minimum password requirements. Passwords must meet the following requirements: (1) Be at least 8
+        characters in length; (2) Be rotated every 60 days; (3) Each new password has at least 1 character changed
+        from the previous password; and (4) No passwords are reused for 24 generations.
+      </List.Item>
+      <List.Item>
+        Use multi-factor authentication and use a second factor authenticator that is both separate from the device
+        gaining access to seqr and either FIPS 140-2 validated or NSA approved.
       </List.Item>
       <List.Item>
         Report all security incidents or suspected incidents (e.g., lost passwords, improper or suspicious acts)
@@ -76,6 +85,7 @@ export default () =>
         Upload any content that contains a software virus, such as a Trojan Horse or any other computer codes, files,
         or programs that may alter, damage, or interrupt the daily function of seqr and its users.
       </List.Item>
+      <List.Item>Use portable storage devices in conjunction with the system.</List.Item>
       <List.Item>Post any material that infringes or violates the academic/intellectual rights of others.</List.Item>
       <List.Item>
         Use seqr to generate, distribute, publish, or facilitate unsolicited mass email, promotions, advertisements or

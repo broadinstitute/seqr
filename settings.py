@@ -3,6 +3,7 @@ import json
 import os
 import random
 import string
+import subprocess
 
 from ssl import create_default_context
 
@@ -64,6 +65,7 @@ ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # django-debug-toolbar settings
@@ -223,7 +225,8 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
-if os.environ.get('DEPLOYMENT_TYPE') in {'prod', 'dev'}:
+DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
+if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
@@ -251,7 +254,7 @@ else:
 
 SEQR_VERSION = 'v1.0'
 SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.0))
-SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.0))
+SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.1))
 
 BASE_URL = os.environ.get("BASE_URL", "/")
 
@@ -261,6 +264,7 @@ AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
+API_POLICY_REQUIRED_URL = '/api/policy-required-error'
 GOOGLE_LOGIN_REQUIRED_URL = '/login/google-oauth2'
 
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
@@ -320,7 +324,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/cloud-billing',
     'openid'
 ]
 
@@ -332,12 +335,11 @@ USE_UNIQUE_USER_ID = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 
-SERVICE_ACCOUNT_FOR_ANVIL = os.environ.get('SERVICE_ACCOUNT_FOR_ANVIL')
 
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
 
 SOCIAL_AUTH_PIPELINE_BASE = (
     'social_core.pipeline.social_auth.social_details',
@@ -352,9 +354,17 @@ SOCIAL_AUTH_PIPELINE_LOG = ('seqr.utils.social_auth_pipeline.log_signed_in',)
 TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECONDS', 60)
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
 
+SERVICE_ACCOUNT_FOR_ANVIL = None
+
 if TERRA_API_ROOT_URL:
+    SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
+                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0]
+    if not SERVICE_ACCOUNT_FOR_ANVIL:
+        raise Exception('Error starting seqr - gcloud auth is not properly configured')
+
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
+        'approval_prompt': 'auto', # required for successful token refresh
     }
 
     SOCIAL_AUTH_PIPELINE = ('seqr.utils.social_auth_pipeline.validate_anvil_registration',) + \

@@ -4,8 +4,6 @@ APIs used to retrieve and modify Individual fields
 import json
 import logging
 
-from django.contrib.auth.decorators import login_required
-
 from django.contrib.auth.models import User
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
@@ -15,8 +13,8 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, Individual
-from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions
-from settings import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
+    login_and_policies_required
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
 
@@ -67,7 +65,7 @@ def edit_families_handler(request, project_guid):
     return create_json_response(updated_families_by_guid)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_families_handler(request, project_guid):
     """Edit or delete one or more Individual records.
 
@@ -106,7 +104,7 @@ def delete_families_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_family_fields_handler(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -129,7 +127,7 @@ def update_family_fields_handler(request, family_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_family_assigned_analyst(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -158,7 +156,7 @@ def update_family_assigned_analyst(request, family_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_family_analysed_by(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -178,7 +176,7 @@ def update_family_analysed_by(request, family_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_family_pedigree_image(request, family_guid):
     """Updates the specified field in the Family model.
 
@@ -205,7 +203,7 @@ def update_family_pedigree_image(request, family_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to

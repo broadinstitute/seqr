@@ -2,7 +2,7 @@
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 KUBERNETES_VERSION: '1.16.15-gke.4300'
 ELASTICSEARCH_VERSION: 7.8.1
-LINKERD_VERSION: 'stable-2.9.1'
+LINKERD_VERSION: 'stable-2.10.0'
 
 DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-8'
 DEFAULT_POOL_NUM_NODES: 2
@@ -11,6 +11,8 @@ NODE_POOLS:
     num_nodes: 3
     machine_type: n1-highmem-8
     labels: nodeType=data
+#  es-loading-nodes:
+#    num_nodes: 2
 
 DISKS: postgres, seqr-static-files, es-data
 

@@ -60,10 +60,12 @@ const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props
 export const ColoredOutlineLabel = props => <BaseColoredOutlineLabel {...props} />
 
 
-export const HelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
+const BaseHelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
   cursor: pointer;
   margin-left: 5px !important;
 `
+// This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
+export const HelpIcon = props => <BaseHelpIcon {...props} />
 
 export const NoBorderTable = styled(Table)`
   border: none !important;
