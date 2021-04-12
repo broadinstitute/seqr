@@ -234,19 +234,6 @@ def port_forward(component_port_pairs=[], deployment_target=None):
     return procs
 
 
-def troubleshoot_component(component, deployment_target):
-    """Runs kubectl command to print detailed debug output for the given component.
-
-    Args:
-        component (string): component label (eg. "postgres")
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-    """
-
-    pod_name = get_pod_name(component, deployment_target=deployment_target)
-
-    run("kubectl get pods -o yaml %(pod_name)s" % locals(), verbose=True)
-
-
 def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_path, direction=1):
     """Copy file(s) to or from the given component.
 
