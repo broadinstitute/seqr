@@ -20,7 +20,6 @@ STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
 REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
-LOG_COMMAND = 'logs'
 TROUBLESHOOT_COMMAND = 'troubleshoot'
 PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
 COPY_TO_POD_COMMAND = 'copy-to'
@@ -36,14 +35,6 @@ subparsers = p.add_subparsers(dest='command')
 
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
 DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_ENVS)
-
-## LOG_COMMAND
-sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
-sp.add_argument("-f", "--stream-log", action="store_true", help="continue printing new logs - similar to tail -f")
-sp.add_argument("--previous", action="store_true", help="Prints logs from a previous instance of the container. "
-    "This is useful for debugging pods that don't start or immediately enter crash-loop.")
-sp.add_argument("components", nargs="+", help="show log", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## TROUBLESHOOT_COMMAND
 sp = subparsers.add_parser(TROUBLESHOOT_COMMAND, description="Print detailed debugging info to troubleshoot components not starting")
@@ -141,7 +132,6 @@ if args.deployment_target:
 
     commands_that_dont_modify_kubernetes_state = set([
         PORT_FORWARD_AND_LOG_COMMAND,
-        LOG_COMMAND,
         DASHBOARD_COMMAND,
     ])
 
@@ -195,7 +185,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
             os.system("sleep 10")
 
             procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target)
-            procs2 = print_log(components_to_connect_to, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
+            procs2 = print_log(components_to_connect_to, deployment_target=args.deployment_target)
             wait_for(procs1 + procs2)
 
     logger.info("==> Done")
@@ -204,15 +194,11 @@ elif args.command == REDEPLOY_COMMAND:
     components = args.components
     redeploy(args.deployment_target, components)
 
-elif args.command == LOG_COMMAND:
-    components = args.components
-    print_log(components, args.deployment_target, args.stream_log, previous=args.previous)
-
 elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
     component_port_pairs = get_component_port_pairs(args.components)
     if component_port_pairs:
         procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target)
-        procs2 = print_log(args.components, args.deployment_target, enable_stream_log=True, wait=False)
+        procs2 = print_log(args.components, args.deployment_target)
 
         wait_for(procs1 + procs2)
 

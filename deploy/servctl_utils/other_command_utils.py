@@ -126,7 +126,7 @@ def show_dashboard():
     p.wait()
 
 
-def print_log(components, deployment_target, enable_stream_log, previous=False, wait=True):
+def print_log(components, deployment_target):
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
@@ -143,20 +143,17 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     Returns:
         (list): Popen process objects for the kubectl port-forward processes.
     """
-    stream_arg = "-f" if enable_stream_log else ""
-    previous_flag = "--previous" if previous else ""
 
     procs = []
     for component_label in components:
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
 
-        if not previous:
-            wait_until_pod_is_running(component_label, deployment_target)
+        wait_until_pod_is_running(component_label, deployment_target)
 
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
-        p = run_in_background("kubectl logs %(stream_arg)s %(previous_flag)s %(pod_name)s --all-containers" % locals(), print_command=True)
+        p = run_in_background("kubectl logs -f %(pod_name)s --all-containers" % locals(), print_command=True)
         def print_command_log():
             for line in iter(p.stdout.readline, ''):
                 logger.info(line.strip('\n'))
@@ -164,9 +161,6 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
         t = Thread(target=print_command_log)
         t.start()
         procs.append(p)
-
-    if wait:
-        wait_for(procs)
 
     return procs
 
