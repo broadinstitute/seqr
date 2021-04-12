@@ -3,6 +3,8 @@ from django.urls.base import reverse
 from seqr.views.apis.superuser_api import get_all_users
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
+SUPERUSER_FIELDS = {'hasGoogleAuth'}
+SUPERUSER_FIELDS.update(USER_FIELDS)
 
 class SuperusersAPITest(AuthenticationTestCase):
     fixtures = ['users']
@@ -15,7 +17,7 @@ class SuperusersAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'users'})
-        self.assertSetEqual(set(response_json['users'][0].keys()), USER_FIELDS)
+        self.assertSetEqual(set(response_json['users'][0].keys()), SUPERUSER_FIELDS)
         self.assertSetEqual({user['username'] for user in response_json['users']}, {
             'test_user_manager', 'test_user_collaborator', 'test_user_no_access', 'test_user', 'test_local_user',
             'test_superuser', 'test_data_manager', 'test_pm_user', 'test_user_inactive', 'test_user_no_policies',
