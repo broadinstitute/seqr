@@ -3,9 +3,10 @@
 set -x -e
 
 DEPLOYMENT_TARGET=$1
+DIR=$(dirname $BASH_SOURCE)
 
 set +x
-source ./utils/load_settings.sh ${DEPLOYMENT_TARGET}
+source ${DIR}/utils/load_settings.sh ${DEPLOYMENT_TARGET}
 set -x
 
 export KUBECONFIG=~/.kube/config
