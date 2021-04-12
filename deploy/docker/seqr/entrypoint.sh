@@ -71,6 +71,7 @@ if [ $ENABLE_DATABASE_BACKUPS ]; then
 0 */4 * * * /usr/local/bin/python /seqr/manage.py run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_human_phenotype_ontology >> /var/log/cron.log 2>&1
+0 2 * * * /usr/local/bin/python /seqr/manage.py check_bam_cram_paths >> /var/log/cron.log 2>&1
 ' | crontab -
 
     env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
