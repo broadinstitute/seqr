@@ -32,10 +32,24 @@ EXCEPTION_ERROR_MAP = {
 
 EXCEPTION_MESSAGE_MAP = {
     elasticsearch.exceptions.ConnectionError: str,
-    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), e.info)
+    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info))
 }
 
 ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
+
+def _get_transport_error_type(error):
+    error_type = 'no detail'
+    if isinstance(error, dict):
+        root_cause = error.get('root_cause')
+        error_info = error.get('error')
+        if (not root_cause) and isinstance(error_info, dict):
+            root_cause = error_info['error'].get('root_cause')
+
+        if root_cause:
+            error_type = root_cause[0].get('type') or root_cause[0].get('reason')
+        elif error_info and not isinstance(error_info, dict):
+            error_type = repr(error_info)
+    return error_type
 
 def _get_exception_status_code(exception):
     status = next((code for exc, code in EXCEPTION_ERROR_MAP.items() if isinstance(exception, exc)), 500)
@@ -62,6 +76,9 @@ class JsonErrorMiddleware(MiddlewareMixin):
         if DEBUG or status == 500:
             traceback_message = traceback.format_exc()
             exception_json['traceback'] = traceback_message
+        detail = getattr(exception, 'info', None)
+        if detail:
+            exception_json['detail'] = detail
 
         if request.path.startswith('/api'):
             return create_json_response(exception_json, status=status)
@@ -101,6 +118,7 @@ class LogRequestMiddleware(MiddlewareMixin):
         error = ''
         log_error = False
         traceback = None
+        detail = None
         try:
             try:
                 response_json = json.loads(response.content)
@@ -111,6 +129,7 @@ class LogRequestMiddleware(MiddlewareMixin):
             if response_json.get('errors'):
                 error = '; '.join(response_json['errors'])
             traceback = response_json.get('traceback')
+            detail = response_json.get('detail')
             log_error = response_json.get('log_error')
         except (ValueError, AttributeError):
             pass
@@ -126,6 +145,7 @@ class LogRequestMiddleware(MiddlewareMixin):
             level = logger.info
         level(message, extra={
             'http_request_json': http_json, 'request_body': request_body, 'traceback': traceback, 'user': request.user,
+            'detail': detail,
         })
 
         return response
