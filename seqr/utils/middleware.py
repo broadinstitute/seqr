@@ -1,5 +1,6 @@
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.core.handlers.exception import get_exception_response
+from django.http import Http404
 from django.http.request import RawPostDataException
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import get_resolver, get_urlconf
@@ -20,6 +21,7 @@ logger = logging.getLogger()
 EXCEPTION_ERROR_MAP = {
     PermissionDenied: 403,
     ObjectDoesNotExist: 404,
+    Http404: 404,
     InvalidIndexException: 400,
     InvalidSearchException: 400,
     elasticsearch.exceptions.ConnectionError: 504,
