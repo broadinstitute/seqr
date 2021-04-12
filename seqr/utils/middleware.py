@@ -1,3 +1,4 @@
+from anymail.exceptions import AnymailError
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.core.handlers.exception import get_exception_response
 from django.http import Http404
@@ -28,6 +29,7 @@ EXCEPTION_ERROR_MAP = {
     elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
     TerraAPIException: lambda e: e.status_code,
+    AnymailError: lambda e: getattr(e, 'status_code', None) or 400,
 }
 
 EXCEPTION_MESSAGE_MAP = {
