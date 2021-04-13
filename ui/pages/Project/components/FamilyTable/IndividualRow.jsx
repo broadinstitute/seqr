@@ -31,6 +31,7 @@ import {
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
+  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP,
 } from '../../constants'
 import { getCurrentProject } from '../../selectors'
 
@@ -78,37 +79,6 @@ const POPULATION_MAP = {
   OTH: 'Other',
   SAS: 'South Asian',
 }
-
-const ONSET_AGE_OPTIONS = [
-  { value: 'G', text: 'Congenital onset' },
-  { value: 'E', text: 'Embryonal onset' },
-  { value: 'F', text: 'Fetal onset' },
-  { value: 'N', text: 'Neonatal onset' },
-  { value: 'I', text: 'Infantile onset' },
-  { value: 'C', text: 'Childhood onset' },
-  { value: 'J', text: 'Juvenile onset' },
-  { value: 'A', text: 'Adult onset' },
-  { value: 'Y', text: 'Young adult onset' },
-  { value: 'M', text: 'Middle age onset' },
-  { value: 'L', text: 'Late onset' },
-]
-
-const INHERITANCE_MODE_OPTIONS = [
-  { value: 'S', text: 'Sporadic' },
-  { value: 'D', text: 'Autosomal dominant inheritance' },
-  { value: 'L', text: 'Sex-limited autosomal dominant' },
-  { value: 'A', text: 'Male-limited autosomal dominant' },
-  { value: 'C', text: 'Autosomal dominant contiguous gene syndrome' },
-  { value: 'R', text: 'Autosomal recessive inheritance' },
-  { value: 'G', text: 'Gonosomal inheritance' },
-  { value: 'X', text: 'X-linked inheritance' },
-  { value: 'Z', text: 'X-linked recessive inheritance' },
-  { value: 'Y', text: 'Y-linked inheritance' },
-  { value: 'W', text: 'X-linked dominant inheritance' },
-  { value: 'F', text: 'Multifactorial inheritance' },
-  { value: 'M', text: 'Mitochondrial inheritance' },
-]
-const INHERITANCE_MODE_MAP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
 
 const AR_FIELDS = {
   arFertilityMeds: 'Fertility medications',
@@ -557,7 +527,8 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       search: true,
     },
   },
-  age: {
+  birthYear: {
+    fieldName: 'Age',
     formFields: [
       { name: 'birthYear', label: 'Birth Year', ...YEAR_SELECTOR_PROPS },
       {
@@ -603,7 +574,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     component: TagFieldView,
     tagOptions: INHERITANCE_MODE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_MAP[inheritance]).join(', '),
+    fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_LOOKUP[inheritance]).join(', '),
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -711,8 +682,9 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   candidateGenes: GENES_FIELD,
 }
 
-const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
-  ({ field, header, ...props }) => ({ field, fieldName: header, ...props, ...INDIVIDUAL_FIELD_RENDER_LOOKUP[field] }))
+const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, isEditable, isPrivate }) => (
+  { field, fieldName: header, isEditable, isPrivate, ...INDIVIDUAL_FIELD_RENDER_LOOKUP[field] }
+))
 
 const CASE_REVIEW_FIELDS = [
   {

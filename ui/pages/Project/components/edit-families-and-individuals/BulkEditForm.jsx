@@ -6,14 +6,13 @@ import { getUser } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import {
-  INDIVIDUAL_HPO_EXPORT_DATA,
   FILE_FIELD_NAME,
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_BULK_UPDATE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
 } from 'shared/utils/constants'
-import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
+import { FAMILY_BULK_EDIT_EXPORT_DATA, INDIVIDUAL_DETAIL_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsMetadata } from '../../reducers'
 import {
   getCurrentProject,
@@ -136,7 +135,7 @@ const IndividualMetadataBulkForm = React.memo(props =>
     actionDescription="edit individual's metadata"
     details="Alternately, the table can have a single row per HPO term"
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
-    optionalFields={INDIVIDUAL_HPO_EXPORT_DATA} // TODO add fields
+    optionalFields={INDIVIDUAL_DETAIL_EXPORT_DATA}
     uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
   />,
