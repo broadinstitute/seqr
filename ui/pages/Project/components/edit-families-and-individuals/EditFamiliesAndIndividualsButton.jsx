@@ -2,7 +2,7 @@ import React from 'react'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
 import Modal from 'shared/components/modal/Modal'
-import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditHPOBulkForm } from './BulkEditForm'
+import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditIndividualMetadataBulkForm } from './BulkEditForm'
 import EditIndividualsForm from './EditIndividualsForm'
 import EditFamiliesForm from './EditFamiliesForm'
 
@@ -29,8 +29,8 @@ const PANE_DETAILS = [
     formClass: EditIndividualsBulkForm,
   },
   {
-    menuItem: 'Bulk Edit HPO Terms',
-    formClass: EditHPOBulkForm,
+    menuItem: 'Bulk Edit Individual Metadata',
+    formClass: EditIndividualMetadataBulkForm,
   },
 ]
 const PANES = PANE_DETAILS.map(({ formClass, menuItem }) => ({

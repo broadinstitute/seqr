@@ -372,9 +372,10 @@ FEATURES_COLUMN = 'features'
 
 
 @login_and_policies_required
-def receive_hpo_table_handler(request, project_guid):
-    """Handler for bulk update of hpo terms. This handler parses the records, but doesn't save them in the database.
-    Instead, it saves them to a temporary file and sends a 'uploadedFileId' representing this file back to the client.
+def receive_individuals_metadata_handler(request, project_guid):
+    """Handler for bulk update of hpo terms and other individual metadata . This handler parses the records, but
+    doesn't save them in the database. Instead, it saves them to a temporary file and sends a 'uploadedFileId'
+    representing this file back to the client.
 
     Args:
         request (object): Django request object
@@ -556,9 +557,9 @@ def _parse_individual_hpo_terms(json_records, project):
 
 
 @login_and_policies_required
-def save_hpo_table_handler(request, project_guid, upload_file_id):
+def save_individuals_metadata_table_handler(request, project_guid, upload_file_id):
     """
-    Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_hpo_table_handler
+    Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
     """
     project = get_project_and_check_permissions(project_guid, request.user)
 

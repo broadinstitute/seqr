@@ -8,7 +8,7 @@ from django.urls.base import reverse
 from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
-    receive_hpo_table_handler, save_hpo_table_handler, update_individual_hpo_terms, get_hpo_terms
+    receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, get_hpo_terms
 from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
@@ -342,7 +342,7 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(save_url)
         self.assertEqual(response.status_code, 200)
 
-    def _is_expected_hpo_upload(self, response):
+    def _is_expected_individuals_metadata_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -357,7 +357,7 @@ class IndividualAPITest(AuthenticationTestCase):
         })
 
         # Save uploaded file
-        url = reverse(save_hpo_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
+        url = reverse(save_individuals_metadata_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
@@ -374,8 +374,8 @@ class IndividualAPITest(AuthenticationTestCase):
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
 
-    def test_hpo_table_handler(self):
-        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+    def test_individuals_metadata_table_handler(self):
+        url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
         # Send invalid requests
@@ -414,10 +414,10 @@ class IndividualAPITest(AuthenticationTestCase):
         rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_hpo_upload(response)
+        self._is_expected_individuals_metadata_upload(response)
 
-    def test_hpo_json_table_handler(self):
-        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+    def test_individuals_metadata_json_table_handler(self):
+        url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
         f = SimpleUploadedFile('updates.json', json.dumps([
@@ -431,10 +431,10 @@ class IndividualAPITest(AuthenticationTestCase):
                 {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
         ]).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_hpo_upload(response)
+        self._is_expected_individuals_metadata_upload(response)
 
     def test_hpo_term_number_table_handler(self):
-        url = reverse(receive_hpo_table_handler, args=['R0001_1kg'])
+        url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
         header = 'family_id,individual_id,affected,hpo_number,hpo_number'
@@ -449,7 +449,7 @@ class IndividualAPITest(AuthenticationTestCase):
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_hpo_upload(response)
+        self._is_expected_individuals_metadata_upload(response)
 
     def test_get_hpo_terms(self):
         url = reverse(get_hpo_terms, args=['HP:0011458'])

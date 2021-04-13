@@ -14,7 +14,7 @@ import {
   INDIVIDUAL_ID_EXPORT_DATA,
 } from 'shared/utils/constants'
 import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
-import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
+import { updateFamilies, updateIndividuals, updateIndividualsMetadata } from '../../reducers'
 import {
   getCurrentProject,
   getEntityExportConfig,
@@ -130,20 +130,20 @@ const mapIndividualsDispatchToProps = {
 export const EditIndividualsBulkForm = connect(mapIndividualsStateToProps, mapIndividualsDispatchToProps)(IndividualsBulkForm)
 
 
-const HPOBulkForm = React.memo(props =>
+const IndividualMetadataBulkForm = React.memo(props =>
   <EditBulkForm
-    name="hpo_terms"
-    actionDescription="edit individual's HPO terms"
+    name="individuals_metadata"
+    actionDescription="edit individual's metadata"
     details="Alternately, the table can have a single row per HPO term"
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
-    optionalFields={INDIVIDUAL_HPO_EXPORT_DATA}
+    optionalFields={INDIVIDUAL_HPO_EXPORT_DATA} // TODO add fields
     uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
   />,
 )
 
-const mapHpoDispatchToProps = {
-  onSubmit: updateIndividualsHpoTerms,
+const mapIndividualMetadataDispatchToProps = {
+  onSubmit: updateIndividualsMetadata,
 }
 
-export const EditHPOBulkForm = connect(null, mapHpoDispatchToProps)(HPOBulkForm)
+export const EditIndividualMetadataBulkForm = connect(null, mapIndividualMetadataDispatchToProps)(IndividualMetadataBulkForm)
