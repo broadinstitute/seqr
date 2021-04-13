@@ -29,7 +29,9 @@ import {
   getSamplesByGuid, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
 } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME } from '../../constants'
+import {
+  CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
+} from '../../constants'
 import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
@@ -527,7 +529,6 @@ const YEAR_SELECTOR_PROPS = {
 
 const ETHNICITY_FIELD = {
   component: ListFieldView,
-  isEditable: true,
   formFieldProps: {
     control: SearchInput,
     options: ETHNICITY_OPTIONS,
@@ -540,7 +541,6 @@ const ETHNICITY_FIELD = {
 
 const GENES_FIELD = {
   component: ListFieldView,
-  isEditable: true,
   itemDisplay: formatGene,
   itemKey: ({ gene }) => gene,
   formFieldProps: { itemComponent: GeneEntry },
@@ -549,22 +549,15 @@ const GENES_FIELD = {
   }),
 }
 
-const INDIVIDUAL_FIELDS = [
-  {
+const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
+  probandRelationship: {
     component: OptionFieldView,
-    field: 'probandRelationship',
-    fieldName: 'Relationship to Proband',
-    isEditable: true,
     tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
     formFieldProps: {
       search: true,
     },
-    isPrivate: true,
   },
-  {
-    field: 'age',
-    fieldName: 'Age',
-    isEditable: true,
+  age: {
     formFields: [
       { name: 'birthYear', label: 'Birth Year', ...YEAR_SELECTOR_PROPS },
       {
@@ -581,11 +574,8 @@ const INDIVIDUAL_FIELDS = [
       fieldValue: individual,
     }),
   },
-  {
+  onsetAge: {
     component: OptionFieldView,
-    field: 'onsetAge',
-    fieldName: 'Age of Onset',
-    isEditable: true,
     tagOptions: ONSET_AGE_OPTIONS,
     formFieldProps: {
       search: true,
@@ -594,35 +584,23 @@ const INDIVIDUAL_FIELDS = [
       isVisible: affected === AFFECTED,
     }),
   },
-  {
+  notes: {
     component: TextFieldView,
-    isEditable: true,
-    fieldName: 'Individual Notes',
-    field: 'notes',
   },
-  {
+  consanguinity: {
     component: NullableBoolFieldView,
-    field: 'consanguinity',
-    fieldName: 'Consanguinity',
-    isEditable: true,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
   },
-  {
+  affectedRelatives: {
     component: NullableBoolFieldView,
-    field: 'affectedRelatives',
-    fieldName: 'Other Affected Relatives',
-    isEditable: true,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
   },
-  {
+  expectedInheritance: {
     component: TagFieldView,
-    field: 'expectedInheritance',
-    fieldName: 'Expected Mode of Inheritance',
-    isEditable: true,
     tagOptions: INHERITANCE_MODE_OPTIONS,
     simplifiedValue: true,
     fieldDisplay: modes => modes.map(inheritance => INHERITANCE_MODE_MAP[inheritance]).join(', '),
@@ -630,10 +608,7 @@ const INDIVIDUAL_FIELDS = [
       isVisible: affected === AFFECTED,
     }),
   },
-  {
-    field: 'ar',
-    fieldName: 'Assisted Reproduction',
-    isEditable: true,
+  ar: {
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false).map(field =>
         <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
@@ -647,24 +622,12 @@ const INDIVIDUAL_FIELDS = [
       fieldValue: individual,
     }),
   },
-  {
-    field: 'maternalEthnicity',
-    fieldName: 'Maternal Ancestry',
-    ...ETHNICITY_FIELD,
-  },
-  {
-    field: 'paternalEthnicity',
-    fieldName: 'Paternal Ancestry',
-    ...ETHNICITY_FIELD,
-  },
-  {
-    fieldName: 'Imputed Population',
-    field: 'population',
+  maternalEthnicity: ETHNICITY_FIELD,
+  paternalEthnicity: ETHNICITY_FIELD,
+  population: {
     fieldDisplay: population => POPULATION_MAP[population] || population,
   },
-  {
-    fieldName: 'Sample QC Flags',
-    field: 'filterFlags',
+  filterFlags: {
     fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
       <Label
         key={flag}
@@ -675,9 +638,7 @@ const INDIVIDUAL_FIELDS = [
       />,
     ),
   },
-  {
-    fieldName: 'Population/Platform Specific Sample QC Flags',
-    field: 'popPlatformFilters',
+  popPlatformFilters: {
     fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag =>
       <Label
         key={flag}
@@ -688,9 +649,7 @@ const INDIVIDUAL_FIELDS = [
       />,
     ),
   },
-  {
-    fieldName: 'SV QC Flags',
-    field: 'svFlags',
+  svFlags: {
     fieldDisplay: filterFlags => filterFlags.map(flag =>
       <Label
         key={flag}
@@ -701,10 +660,7 @@ const INDIVIDUAL_FIELDS = [
       />,
     ),
   },
-  {
-    field: 'features',
-    fieldName: 'Features',
-    isEditable: true,
+  features: {
     fieldDisplay: individual => <HpoPanel individual={individual} />,
     formFields: [
       {
@@ -739,11 +695,8 @@ const INDIVIDUAL_FIELDS = [
       fieldValue: individual,
     }),
   },
-  {
+  disorders: {
     component: ListFieldView,
-    field: 'disorders',
-    fieldName: 'Pre-discovery OMIM disorders',
-    isEditable: true,
     formFieldProps: {
       itemComponent: AwesomebarItemSelector,
       placeholder: 'Search for OMIM disorder',
@@ -754,17 +707,12 @@ const INDIVIDUAL_FIELDS = [
       isVisible: affected === AFFECTED,
     }),
   },
-  {
-    field: 'rejectedGenes',
-    fieldName: 'Previously Tested Genes',
-    ...GENES_FIELD,
-  },
-  {
-    field: 'candidateGenes',
-    fieldName: 'Candidate Genes',
-    ...GENES_FIELD,
-  },
-]
+  rejectedGenes: GENES_FIELD,
+  candidateGenes: GENES_FIELD,
+}
+
+const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
+  ({ field, header, ...props }) => ({ field, fieldName: header, ...props, ...INDIVIDUAL_FIELD_RENDER_LOOKUP[field] }))
 
 const CASE_REVIEW_FIELDS = [
   {

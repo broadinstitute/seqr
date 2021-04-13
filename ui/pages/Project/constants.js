@@ -402,6 +402,96 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
+export const INDIVIDUAL_DETAIL_FIELDS = [
+  {
+    field: 'probandRelationship',
+    header: 'Relationship to Proband',
+    isEditable: true,
+    isPrivate: true,
+  },
+  {
+    field: 'age',
+    header: 'Age',
+    isEditable: true,
+  },
+  {
+    field: 'onsetAge',
+    header: 'Age of Onset',
+    isEditable: true,
+  },
+  {
+    isEditable: true,
+    header: 'Individual Notes',
+    field: 'notes',
+  },
+  {
+    field: 'consanguinity',
+    header: 'Consanguinity',
+    isEditable: true,
+  },
+  {
+    field: 'affectedRelatives',
+    header: 'Other Affected Relatives',
+    isEditable: true,
+  },
+  {
+    field: 'expectedInheritance',
+    header: 'Expected Mode of Inheritance',
+    isEditable: true,
+  },
+  {
+    field: 'ar',
+    header: 'Assisted Reproduction',
+    isEditable: true,
+  },
+  {
+    field: 'maternalEthnicity',
+    header: 'Maternal Ancestry',
+    isEditable: true,
+  },
+  {
+    field: 'paternalEthnicity',
+    header: 'Paternal Ancestry',
+    isEditable: true,
+  },
+  {
+    header: 'Imputed Population',
+    field: 'population',
+  },
+  {
+    header: 'Sample QC Flags',
+    field: 'filterFlags',
+  },
+  {
+    header: 'Population/Platform Specific Sample QC Flags',
+    field: 'popPlatformFilters',
+  },
+  {
+    header: 'SV QC Flags',
+    field: 'svFlags',
+  },
+  {
+    field: 'features',
+    header: 'Features',
+    isEditable: true,
+  },
+  {
+    field: 'disorders',
+    header: 'Pre-discovery OMIM disorders',
+    isEditable: true,
+  },
+  {
+    field: 'rejectedGenes',
+    header: 'Previously Tested Genes',
+    isEditable: true,
+  },
+  {
+    field: 'candidateGenes',
+    header: 'Candidate Genes',
+    isEditable: true,
+  },
+]
+
 export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
   ...FAMILY_EXPORT_DATA,
   { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
