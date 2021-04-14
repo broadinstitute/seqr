@@ -22,7 +22,7 @@ jobs:
       - name: gcloud setup
         uses: google-github-actions/setup-gcloud@master
         with:
-          project_id: seqr-308602 
+          project_id: seqr-308602
           service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
 
       - name: gcloud docker auth
@@ -37,11 +37,23 @@ jobs:
             echo DEPLOYMENT_TYPE=dev >> $GITHUB_ENV
           fi
 
+      - name: build UI
+        run: |
+          pushd ui
+          npm install
+          npm run build
+          popd
+
       - name: build image
-        run: DOCKER_BUILDKIT=1 docker build --build-arg SEQR_REPO=https://github.com/populationgenomics/seqr --build-arg SEQR_GIT_SHA=${{ github.sha }} --tag $DOCKER_IMAGE:${{ github.sha }} --tag $DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE deploy/docker/seqr
-      
+        run: |
+          DOCKER_BUILDKIT=1
+          docker build \
+            --tag $DOCKER_IMAGE:${{ github.sha }} \
+            --tag $DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE \
+            -f deploy/docker/seqr/Dockerfile \
+            .
       - name: push image
         run: docker push --all-tags $DOCKER_IMAGE
-      
+
       - name: restart seqr instances
         run: gcloud compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --max-surge 3

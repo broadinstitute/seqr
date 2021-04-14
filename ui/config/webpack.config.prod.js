@@ -238,8 +238,6 @@ module.exports = {
       'process.env.NODE_ENV': JSON.stringify('production'),
     }),
 
-    new WebpackCleanupPlugin(),
-
     new HtmlWebpackPlugin(Object.assign({}, {
       filename: 'app.html',
       chunks: ['app'],
@@ -308,4 +306,7 @@ module.exports = {
     tls: 'empty',
     child_process: 'empty',
   },
+  performance: {
+    hints: false
+  }
 };

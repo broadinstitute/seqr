@@ -5,6 +5,7 @@
 
 ui/node_modules
 ui/jest*
+ui/dist
 
 *.pyc
 *.DS_Store

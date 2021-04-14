@@ -51,6 +51,13 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install -r requirements.txt --upgrade
         pip install -r requirements-dev.txt
+    - name: Build UI
+      run: |
+        pushd ui
+        npm install
+        npm run build
+        cp dist/* ../static/
+        popd
     - name: Run coverage tests
       run: |
         coverage run --source="./matchmaker","./seqr","./reference_data" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 reference_data seqr matchmaker
