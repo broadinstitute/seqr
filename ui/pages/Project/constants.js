@@ -438,6 +438,18 @@ export const INHERITANCE_MODE_OPTIONS = [
 ]
 export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
 
+export const AR_FIELDS = {
+  arFertilityMeds: 'Fertility medications',
+  arIui: 'Intrauterine insemination',
+  arIvf: 'In vitro fertilization',
+  arIcsi: 'Intra-cytoplasmic sperm injection',
+  arSurrogacy: 'Gestational surrogacy',
+  arDonoregg: 'Donor egg',
+  arDonorsperm: 'Donor sperm',
+}
+
+const NULLABLE_BOOL_FIELD = { description: 'true, false, or blank if unknown' }
+
 export const INDIVIDUAL_DETAIL_FIELDS = [
   {
     field: 'probandRelationship',
@@ -446,9 +458,13 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     isPrivate: true,
   },
   {
-    field: 'birthYear',
-    header: 'Birth Year',
+    field: 'age',
+    header: 'Age',
     isEditable: true,
+    subFields: [
+      { field: 'birthYear', header: 'Birth Year', format: year => year || '' },
+      { field: 'deathYear', header: 'Death Year', format: year => year || '' },
+    ],
   },
   {
     field: 'onsetAge',
@@ -467,13 +483,13 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'consanguinity',
     header: 'Consanguinity',
     isEditable: true,
-    description: 'true, false, or blank if unknown',
+    ...NULLABLE_BOOL_FIELD,
   },
   {
     field: 'affectedRelatives',
     header: 'Other Affected Relatives',
     isEditable: true,
-    description: 'true, false, or blank if unknown',
+    ...NULLABLE_BOOL_FIELD,
   },
   {
     field: 'expectedInheritance',
@@ -485,7 +501,8 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
   {
     field: 'ar',
     header: 'Assisted Reproduction',
-    isEditable: true, // TODO
+    isEditable: true,
+    subFields: Object.entries(AR_FIELDS).map(([field, header]) => ({ field, header, ...NULLABLE_BOOL_FIELD })),
   },
   {
     field: 'maternalEthnicity',
@@ -547,10 +564,14 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
 
 export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
   ...INDIVIDUAL_HPO_EXPORT_DATA,
-  ...INDIVIDUAL_DETAIL_FIELDS.map(
-    ({ isEditable, isPrivate, ...field }) => ((isEditable && !isPrivate && field.field !== 'features') ? field : null),
-  ).filter(field => field),
-] // TODO add Case Review Status
+  ...INDIVIDUAL_DETAIL_FIELDS.reduce((acc, { isEditable, isPrivate, subFields, ...field }) => {
+    if (isPrivate || !isEditable || field.field === 'features') {
+      return acc
+    }
+    const fields = subFields || [field]
+    return [...acc, ...fields]
+  }, []),
+]
 
 export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
   ...FAMILY_EXPORT_DATA,

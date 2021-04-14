@@ -299,10 +299,10 @@ const BaseRadioGroup = React.memo((props) => {
     <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
-      {options.map(option =>
+      {options.map((option, i) =>
         <BaseSemanticInput
           {...baseProps}
-          {...getOptionProps(option, value, onChange)}
+          {...getOptionProps(option, value, onChange, i)}
           key={option.value}
           inline
           inputType="Radio"
@@ -337,21 +337,42 @@ export const RadioGroup = React.memo((props) => {
   return <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />
 })
 
-const getButtonRadioOptionProps = (option, value, onChange) => ({
+const getButtonRadioOptionProps = label => (option, value, onChange, i) => ({
   active: value === option.value,
   basic: value !== option.value,
   color: value === option.value ? (option.color || 'grey') : 'black',
   content: option.text,
-  label: option.label,
+  label: i === 0 ? label : option.label,
+  labelPosition: (label && i === 0) ? 'left' : undefined,
   onClick: (e) => {
     e.preventDefault()
     onChange(option.value)
   },
 })
 
-export const ButtonRadioGroup = React.memo((props) => {
-  return <BaseRadioGroup as={Button} formGroupAs={Button.Group} getOptionProps={getButtonRadioOptionProps} {...props} />
+const RadioButtonGroup = styled(({ radioLabelStyle, ...props }) => <Button.Group {...props} />)`
+  .left.labeled.button:not(:last-child) {
+    .button:last-child {
+      border-radius: 0;
+    }
+  }
+  
+  ${props => (props.radioLabelStyle ?
+    `.label {
+      ${props.radioLabelStyle}
+    }` : '')}
+  
+`
+
+export const ButtonRadioGroup = React.memo(({ label, radioLabelStyle, ...props }) => {
+  const formGroupAs = groupProps => <RadioButtonGroup radioLabelStyle={radioLabelStyle} {...groupProps} />
+  return <BaseRadioGroup as={Button} formGroupAs={formGroupAs} getOptionProps={getButtonRadioOptionProps(label)} {...props} />
 })
+
+ButtonRadioGroup.propTypes = {
+  label: PropTypes.string,
+  radioLabelStyle: PropTypes.string,
+}
 
 export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props

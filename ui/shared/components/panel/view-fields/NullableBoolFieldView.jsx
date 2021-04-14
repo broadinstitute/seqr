@@ -13,18 +13,16 @@ const OPTIONS = [
   { value: null, text: 'Unknown' },
 ]
 
-export const getNullableBoolField = ({ field, label }) => {
-  const options = [...OPTIONS]
-  if (label) {
-    options.splice(2, 1, { ...OPTIONS[2], label })
-  }
-  return {
-    name: field,
-    component: ButtonRadioGroup,
-    options,
-    format: val => (val === false ? val : (val || null)),
-  }
+export const NULLABLE_BOOL_FIELD = {
+  component: ButtonRadioGroup,
+  options: OPTIONS,
+  format: val => (val === false ? val : (val || null)),
 }
+
+const getNullableBoolField = ({ field }) => [{
+  name: field,
+  ...NULLABLE_BOOL_FIELD,
+}]
 
 const nullableBoolDisplay = (value) => {
   if (value === true) {
@@ -36,7 +34,7 @@ const nullableBoolDisplay = (value) => {
 }
 
 const NullableBoolFieldView = React.memo((props) => {
-  const fields = [getNullableBoolField(props)]
+  const fields = getNullableBoolField(props)
   return <BaseFieldView
     fieldDisplay={nullableBoolDisplay}
     formFields={fields}

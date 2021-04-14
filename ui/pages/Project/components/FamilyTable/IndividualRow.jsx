@@ -14,7 +14,7 @@ import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TagFieldView from 'shared/components/panel/view-fields/TagFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
-import NullableBoolFieldView, { getNullableBoolField } from 'shared/components/panel/view-fields/NullableBoolFieldView'
+import NullableBoolFieldView, { NULLABLE_BOOL_FIELD } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
@@ -31,7 +31,7 @@ import {
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
-  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP,
+  ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
 import { getCurrentProject } from '../../selectors'
 
@@ -78,16 +78,6 @@ const POPULATION_MAP = {
   NFE: 'European (non-Finnish)',
   OTH: 'Other',
   SAS: 'South Asian',
-}
-
-const AR_FIELDS = {
-  arFertilityMeds: 'Fertility medications',
-  arIui: 'Intrauterine insemination',
-  arIvf: 'In vitro fertilization',
-  arIcsi: 'Intra-cytoplasmic sperm injection',
-  arSurrogacy: 'Gestational surrogacy',
-  arDonoregg: 'Donor egg',
-  arDonorsperm: 'Donor sperm',
 }
 
 const ETHNICITY_OPTIONS = [
@@ -527,19 +517,16 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       search: true,
     },
   },
-  birthYear: {
-    fieldName: 'Age',
-    formFields: [
-      { name: 'birthYear', label: 'Birth Year', ...YEAR_SELECTOR_PROPS },
-      {
-        name: 'deathYear',
-        label: 'Death Year',
+  age: {
+    formFieldsLookup: {
+      birthYear: YEAR_SELECTOR_PROPS,
+      deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
         normalize: val => (val < 0 ? null : val),
         ...YEAR_SELECTOR_PROPS,
         options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
       },
-    ],
+    },
     fieldDisplay: AgeDetails,
     individualFields: individual => ({
       fieldValue: individual,
@@ -584,10 +571,8 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       field => individual[field] || individual[field] === false).map(field =>
         <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
     ),
-    formFields: Object.entries(AR_FIELDS).map(([field, label]) => ({
-      margin: '0 100px 10px 0',
-      ...getNullableBoolField({ field, label }),
-    })),
+    formFieldsLookup: Object.keys(AR_FIELDS).reduce((acc, k) => (
+      { ...acc, [k]: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD } }), {}),
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,
@@ -682,9 +667,16 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   candidateGenes: GENES_FIELD,
 }
 
-const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, isEditable, isPrivate }) => (
-  { field, fieldName: header, isEditable, isPrivate, ...INDIVIDUAL_FIELD_RENDER_LOOKUP[field] }
-))
+const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, subFields, isEditable, isPrivate }) => {
+  const { formFieldsLookup, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
+  const formattedField = { field, fieldName: header, isEditable, isPrivate, ...fieldProps }
+  if (subFields) {
+    formattedField.formFields = subFields.map(subField => (
+      { name: subField.field, label: subField.header, ...formFieldsLookup[subField.field] }
+    ))
+  }
+  return formattedField
+})
 
 const CASE_REVIEW_FIELDS = [
   {
