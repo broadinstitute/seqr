@@ -357,7 +357,6 @@ class IndividualAPITest(AuthenticationTestCase):
         })
 
         # Save uploaded file
-        # TODO add explicit tests for save separate from upload, mock file writing
         url = reverse(save_individuals_metadata_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
         response = self.client.post(url)
@@ -375,9 +374,7 @@ class IndividualAPITest(AuthenticationTestCase):
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
 
-
-    @mock.patch('seqr.views.utils.file_utils.gzip.open')
-    def test_individuals_metadata_table_handler(self, mock_open_file):
+    def test_individuals_metadata_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
@@ -417,7 +414,6 @@ class IndividualAPITest(AuthenticationTestCase):
         rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        import pdb; pdb.set_trace()
         self._is_expected_individuals_metadata_upload(response)
 
     def test_individuals_metadata_json_table_handler(self):
