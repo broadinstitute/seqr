@@ -518,12 +518,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     },
   },
   age: {
-    formFieldsLookup: {
-      birthYear: YEAR_SELECTOR_PROPS,
+    subFieldProps: YEAR_SELECTOR_PROPS,
+    subFieldsLookup: {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
         normalize: val => (val < 0 ? null : val),
-        ...YEAR_SELECTOR_PROPS,
         options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
       },
     },
@@ -571,8 +570,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       field => individual[field] || individual[field] === false).map(field =>
         <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
     ),
-    formFieldsLookup: Object.keys(AR_FIELDS).reduce((acc, k) => (
-      { ...acc, [k]: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD } }), {}),
+    subFieldProps: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD },
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,
@@ -668,11 +666,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 }
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, subFields, isEditable, isPrivate }) => {
-  const { formFieldsLookup, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
+  const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
   const formattedField = { field, fieldName: header, isEditable, isPrivate, ...fieldProps }
   if (subFields) {
     formattedField.formFields = subFields.map(subField => (
-      { name: subField.field, label: subField.header, ...formFieldsLookup[subField.field] }
+      { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
     ))
   }
   return formattedField
