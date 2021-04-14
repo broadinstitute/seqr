@@ -369,7 +369,9 @@ HPO_TERMS_ABSENT_COLUMN = 'hpo_absent'
 HPO_TERM_NUMBER_COLUMN = 'hpo_number'
 AFFECTED_COLUMN = 'affected'
 FEATURES_COLUMN = 'features'
+ABSENT_FEATURES_FIELD = 'absent_features'
 
+INDIVIDUAL_METADATA_FIELDS = {FEATURES_COLUMN, ABSENT_FEATURES_FIELD}
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
@@ -534,8 +536,8 @@ def _parse_individual_hpo_terms(json_records, project):
         else:
             parsed_records.append({
                 INDIVIDUAL_GUID_COLUMN: individual.guid,
-                HPO_TERMS_PRESENT_COLUMN: present_features,
-                HPO_TERMS_ABSENT_COLUMN: absent_features,
+                FEATURES_COLUMN: [{'id': feature} for feature in present_features],
+                ABSENT_FEATURES_FIELD: [{'id': feature} for feature in absent_features],
             })
 
     if not parsed_records:
@@ -581,10 +583,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COLUMN]]
-        update_model_from_json(individual, {
-            'features': [{'id': feature} for feature in record[HPO_TERMS_PRESENT_COLUMN]],
-            'absent_features': [{'id': feature} for feature in record[HPO_TERMS_ABSENT_COLUMN]],
-        }, user=request.user)
+        update_model_from_json(individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS}, user=request.user)
 
     return create_json_response({
         'individualsByGuid': {
