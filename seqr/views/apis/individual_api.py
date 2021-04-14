@@ -491,19 +491,27 @@ def _parse_individual_hpo_terms(json_records, project):
         all_hpo_terms.update(record[HPO_TERMS_ABSENT_COLUMN])
     hpo_terms = set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
+    has_family_ids = any(record.get(FAMILY_ID_COLUMN) for record in json_records)
+    individual_ids = [record[INDIVIDUAL_ID_COLUMN] for record in json_records]
+    if has_family_ids:
+        individual_ids += ['{}_{}'.format(record[FAMILY_ID_COLUMN], record[INDIVIDUAL_ID_COLUMN]) for record in json_records]
+    individual_lookup = defaultdict(dict)
+    for i in Individual.objects.filter(family__project=project, individual_id__in=individual_ids).prefetch_related('family'):
+        individual_lookup[i.individual_id][i.family.family_id] = i
+
     missing_individuals = []
     unchanged_individuals = []
     invalid_hpo_term_individuals = defaultdict(list)
     for record in json_records:
-        family_id = record.get(FAMILY_ID_COLUMN, None)
-        individual_id = record.get(INDIVIDUAL_ID_COLUMN)
-        individual_q = Individual.objects.filter(
-            individual_id__in=[individual_id, '{}_{}'.format(family_id, individual_id)],
-            family__project=project,
-        )
+        family_id = record.get(FAMILY_ID_COLUMN)
+        individual_id = record[INDIVIDUAL_ID_COLUMN]
+        individuals = individual_lookup[individual_id]
         if family_id:
-            individual_q = individual_q.filter(family__family_id=family_id)
-        individual = individual_q.first()
+            individual = individuals.get(family_id)
+            if not individual:
+                individual = individual_lookup['{}_{}'.format(family_id, individual_id)].get(family_id)
+        else:
+            individual = next((i for i in individuals.values()), None)
         if individual:
             present_features = []
             absent_features = []
