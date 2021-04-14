@@ -512,30 +512,31 @@ def _parse_individual_hpo_terms(json_records, project):
                 individual = individual_lookup['{}_{}'.format(family_id, individual_id)].get(family_id)
         else:
             individual = next((i for i in individuals.values()), None)
-        if individual:
-            present_features = []
-            absent_features = []
-            for feature in record[HPO_TERMS_PRESENT_COLUMN]:
-                if feature in hpo_terms:
-                    present_features.append(feature)
-                else:
-                    invalid_hpo_term_individuals[feature].append(individual_id)
-            for feature in record[HPO_TERMS_ABSENT_COLUMN]:
-                if feature in hpo_terms:
-                    absent_features.append(feature)
-                else:
-                    invalid_hpo_term_individuals[feature].append(individual_id)
-
-            if _has_same_features(individual, present_features, absent_features):
-                unchanged_individuals.append(individual_id)
-            else:
-                parsed_records.append({
-                    INDIVIDUAL_GUID_COLUMN: individual.guid,
-                    HPO_TERMS_PRESENT_COLUMN: present_features,
-                    HPO_TERMS_ABSENT_COLUMN: absent_features,
-                })
-        else:
+        if not individual:
             missing_individuals.append(individual_id)
+            continue
+
+        present_features = []
+        absent_features = []
+        for feature in record[HPO_TERMS_PRESENT_COLUMN]:
+            if feature in hpo_terms:
+                present_features.append(feature)
+            else:
+                invalid_hpo_term_individuals[feature].append(individual_id)
+        for feature in record[HPO_TERMS_ABSENT_COLUMN]:
+            if feature in hpo_terms:
+                absent_features.append(feature)
+            else:
+                invalid_hpo_term_individuals[feature].append(individual_id)
+
+        if _has_same_features(individual, present_features, absent_features):
+            unchanged_individuals.append(individual_id)
+        else:
+            parsed_records.append({
+                INDIVIDUAL_GUID_COLUMN: individual.guid,
+                HPO_TERMS_PRESENT_COLUMN: present_features,
+                HPO_TERMS_ABSENT_COLUMN: absent_features,
+            })
 
     if not parsed_records:
         errors.append('Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(
