@@ -27,6 +27,7 @@ docker system prune -f -a
 docker run --name seqr -p 80:8000 \
     -v /seqr_static_files:/seqr_static_files \
     -e DEPLOYMENT_TYPE=dev \
+    -e BASE_URL=https://seqr-dev.populationgenomics.org.au/ \
     -e POSTGRES_SERVICE_HOSTNAME=10.94.145.3 \
     -e POSTGRES_SERVICE_PORT=5432 \
     -e POSTGRES_PASSWORD=sm://seqr-308602/postgres-password \
