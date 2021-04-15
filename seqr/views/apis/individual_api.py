@@ -5,6 +5,7 @@ import json
 import logging
 import re
 from collections import defaultdict
+from datetime import datetime
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family
@@ -391,6 +392,8 @@ REJECTED_GENES_COL = 'rejected_genes'
 CANDIDATE_GENES_COL =  'candidate_genes'
 
 def _bool_value(val):
+    if isinstance(val, bool):
+        return val
     if val.lower() == 'true':
         return True
     elif val.lower() == 'false':
@@ -398,6 +401,8 @@ def _bool_value(val):
     raise ValueError
 
 def _array_value(val):
+    if isinstance(val, list):
+        return val
     return [o.strip() for o in val.split(',')]
 
 def _gene_value(val):
@@ -408,6 +413,8 @@ def _gene_value(val):
     return gene
 
 def _gene_list_value(val):
+    if isinstance(val, list):
+        return val
     seperator_escaped_val = ''.join(m.replace(',', ';') if not m.startswith('(') else m for m in re.split('(\([^)]+\))', val))
     return [_gene_value(o) for o in seperator_escaped_val.split(';')]
 
@@ -436,8 +443,52 @@ INDIVIDUAL_METADATA_FIELDS = {
     CANDIDATE_GENES_COL: _gene_list_value,
 }
 
-JSON_INDIVIDUAL_METADATA_FIELDS = set(INDIVIDUAL_METADATA_FIELDS.keys())
-JSON_INDIVIDUAL_METADATA_FIELDS.update({INDIVIDUAL_ID_COL, FAMILY_ID_COL})
+def _get_year(val):
+    return datetime.strptime(val, '%Y-%m-%d').year
+
+def _nested_val(nested_key):
+    return lambda val: val.get(nested_key)
+
+PHENOTIPS_JSON_FIELD_MAP = {
+    FAMILY_ID_COL: [(FAMILY_ID_COL, None)],
+    INDIVIDUAL_ID_COL: [(INDIVIDUAL_ID_COL, None)],
+    FEATURES_COL: [(FEATURES_COL, None)], # TODO move parsing here
+    'date_of_birth': [(BIRTH_COL, _get_year)],
+    'date_of_death': [(DEATH_COL, _get_year)],
+    'global_age_of_onset': [(ONSET_AGE_COL, lambda val: val[0]['label'])],
+    'family_history': [
+        (CONSANGUINITY_COL, _nested_val('consanguinity')),
+        (AFFECTED_REL_COL, _nested_val('affectedRelatives')),
+    ],
+    'global_mode_of_inheritance': [(EXP_INHERITANCE_COL, lambda val: [o['label'] for o in val])],
+    'prenatal_perinatal_history': [
+        (AR_FM_COL, _nested_val('assistedReproduction_fertilityMeds')),
+        (AR_IUI_COL, _nested_val('assistedReproduction_iui')),
+        (AR_IVF_COL, _nested_val('ivf')),
+        (AR_ICSI_COL, _nested_val('icsi')),
+        (AR_SURROGACY_COL, _nested_val('assistedReproduction_surrogacy')),
+        (AR_DEGG_COL, _nested_val('assistedReproduction_donoregg')),
+        (AR_DSPERM_COL, _nested_val('assistedReproduction_donorsperm')),
+    ],
+    'ethnicity': [
+        (MAT_ETHNICITY_COL, _nested_val('maternal_ethnicity')),
+        (PAT_ETHNICITY_COL, _nested_val('paternal_ethnicity')),
+    ],
+    'disorders': [(DISORDERS_COL, lambda val: [int(d['id'].lstrip('MIM:')) for d in val])],
+    'genes': [(CANDIDATE_GENES_COL, None)],
+    'rejectedGenes': [(REJECTED_GENES_COL, None)],
+}
+
+def _parse_phenotips_record(row):
+    record = {}
+    for k, formatters in PHENOTIPS_JSON_FIELD_MAP.items():
+        val = row.get(k)
+        if val:
+            for col, formatter in formatters:
+                field_val = formatter(val) if formatter else val
+                if field_val is not None:
+                    record[col] = field_val
+    return record
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
@@ -476,7 +527,7 @@ def receive_individuals_metadata_handler(request, project_guid):
 
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
-        row_dicts = [{k: v for k, v in record.items() if k in JSON_INDIVIDUAL_METADATA_FIELDS} for record in records]
+        row_dicts = [_parse_phenotips_record(record) for record in records]
         column_map = set(row_dicts[0].keys()) # TODO formatting?
     else:
         column_map = {}
@@ -517,7 +568,7 @@ def _process_hpo_records(records, filename, project):
         for row in row_dicts:
             row[HPO_TERMS_PRESENT_COL] = []
             row[HPO_TERMS_ABSENT_COL] = []
-            for feature in row.pop(FEATURES_COL):
+            for feature in row.pop(FEATURES_COL, []):
                 column = HPO_TERMS_PRESENT_COL if feature['observed'] == 'yes' else HPO_TERMS_ABSENT_COL
                 row[column].append(feature['id'])
 

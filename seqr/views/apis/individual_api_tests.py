@@ -345,7 +345,6 @@ class IndividualAPITest(AuthenticationTestCase):
     def _is_expected_individuals_metadata_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        # import pdb;pdb.set_trace()
         self.assertDictEqual(response_json, {
             'uploadedFileId': mock.ANY,
             'errors': [],
@@ -436,11 +435,16 @@ class IndividualAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
 
         f = SimpleUploadedFile('updates.json', json.dumps([
-            {'external_id': 'NA19675_1', 'sex': 'F', 'features': [
+            {'external_id': 'NA19675_1', 'sex': 'F', 'date_of_birth': '2000-01-01', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0012469', 'observed': 'no'},
-                {'id': 'HP:0004322', 'observed': 'no'}]},
-            {'external_id': 'NA19678', 'features': []},
+                {'id': 'HP:0004322', 'observed': 'no'},
+            ], 'family_history': {'affectedRelatives': True}, 'global_age_of_onset': [{'label': 'Juvenile onset'}],
+             'global_mode_of_inheritance': [{'label': 'Autosomal dominant inheritance'}, {'label': 'Sporadic'}],
+             'ethnicity': {'maternal_ethnicity': ['Finnish', 'Irish']}, 'genes': [
+                 {'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'},
+             ]},
+            {'external_id': 'NA19678', 'features': [], 'notes': {'family_history': 'history note'}},
             {'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
             {'family_id': '1', 'external_id': 'HG00731', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
