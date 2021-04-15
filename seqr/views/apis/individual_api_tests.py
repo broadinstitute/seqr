@@ -343,6 +343,8 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     def _is_expected_individuals_metadata_upload(self, response):
+        if response.status_code != 200:
+            import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -394,12 +396,6 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
-
-        header = 'family_id,individual_id,hpo_term_yes,hpo_term_no'
-        f = SimpleUploadedFile('updates.csv', header.encode('utf-8'))
-        response = self.client.post(url, data={'f': f})
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
 
         header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes'
         rows = [

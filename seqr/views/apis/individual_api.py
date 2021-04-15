@@ -364,8 +364,6 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 FAMILY_ID_COL = 'family_id'
 INDIVIDUAL_ID_COL = 'individual_id'
 INDIVIDUAL_GUID_COL = 'individual_guid'
-HPO_TERMS_PRESENT_COL = 'hpo_present'
-HPO_TERMS_ABSENT_COL = 'hpo_absent'
 HPO_TERM_NUMBER_COL = 'hpo_number'
 AFFECTED_FEATURE_COL = 'affected'
 FEATURES_COL = 'features'
@@ -419,8 +417,8 @@ def _gene_list_value(val):
 
 
 INDIVIDUAL_METADATA_FIELDS = {
-    FEATURES_COL: str,
-    ABSENT_FEATURES_COL: str,
+    FEATURES_COL: lambda val: [{'id': feature} for feature in val],
+    ABSENT_FEATURES_COL: lambda val: [{'id': feature} for feature in val],
     BIRTH_COL: int,
     DEATH_COL: int,
     ONSET_AGE_COL: lambda val: Individual.ONSET_AGE_REVERSE_LOOKUP[val],
@@ -448,10 +446,18 @@ def _get_year(val):
 def _nested_val(nested_key):
     return lambda val: val.get(nested_key)
 
+def _get_phenotips_features(observed):
+    def get_observed_features(features):
+        return [feature['id'] for feature in features if feature['observed'] == observed]
+    return get_observed_features
+
 PHENOTIPS_JSON_FIELD_MAP = {
     'family_id': [(FAMILY_ID_COL, None)],
     'external_id': [(INDIVIDUAL_ID_COL, None)],
-    FEATURES_COL: [(FEATURES_COL, None)], # TODO move parsing here
+    'features': [
+        (FEATURES_COL, _get_phenotips_features('yes')),
+        (ABSENT_FEATURES_COL, _get_phenotips_features('no')),
+    ],
     'date_of_birth': [(BIRTH_COL, _get_year)],
     'date_of_death': [(DEATH_COL, _get_year)],
     'global_age_of_onset': [(ONSET_AGE_COL, lambda val: val[0]['label'])],
@@ -527,15 +533,14 @@ def receive_individuals_metadata_handler(request, project_guid):
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
         row_dicts = [_parse_phenotips_record(record) for record in records]
-        column_map = set(row_dicts[0].keys())
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
             key = field.lower()
             if re.match("hpo.*present", key):
-                column_map[HPO_TERMS_PRESENT_COL] = i
+                column_map[FEATURES_COL] = i
             elif re.match("hpo.*absent", key):
-                column_map[HPO_TERMS_ABSENT_COL] = i
+                column_map[ABSENT_FEATURES_COL] = i
             elif re.match("hp.*number*", key):
                 if not HPO_TERM_NUMBER_COL in column_map:
                     column_map[HPO_TERM_NUMBER_COL] = []
@@ -563,36 +568,26 @@ def _process_hpo_records(records, filename, project):
         row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
                       for column, index in column_map.items()} for row in records[1:]]
 
-    if FEATURES_COL in column_map:
-        for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COL] = []
-            row[HPO_TERMS_ABSENT_COL] = []
-            for feature in row.pop(FEATURES_COL, []):
-                column = HPO_TERMS_PRESENT_COL if feature['observed'] == 'yes' else HPO_TERMS_ABSENT_COL
-                row[column].append(feature['id'])
+        if FEATURES_COL in column_map or ABSENT_FEATURES_COL in column_map:
+            for row in row_dicts:
+                row[FEATURES_COL] = _parse_hpo_terms(row.get(FEATURES_COL))
+                row[ABSENT_FEATURES_COL] = _parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
 
-        return _parse_individual_hpo_terms(row_dicts, project)
+        elif HPO_TERM_NUMBER_COL in column_map:
+            aggregate_rows = defaultdict(lambda: {FEATURES_COL: [], ABSENT_FEATURES_COL: []})
+            for row in row_dicts:
+                column = ABSENT_FEATURES_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else FEATURES_COL
+                aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
+                term = row.pop(HPO_TERM_NUMBER_COL, None)
+                if term:
+                    aggregate_entry[column].append(term.strip())
+                else:
+                    aggregate_entry[column] = []
+                aggregate_entry.update({k: v for k, v in row.items() if v})
 
-    if HPO_TERMS_PRESENT_COL in column_map or HPO_TERMS_ABSENT_COL in column_map:
-        for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COL] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COL))
-            row[HPO_TERMS_ABSENT_COL] = _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COL))
-        return _parse_individual_hpo_terms(row_dicts, project)
+            return _parse_individual_hpo_terms(list(aggregate_rows.values()), project)
 
-    if HPO_TERM_NUMBER_COL in column_map:
-        aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COL: [], HPO_TERMS_ABSENT_COL: []})
-        for row in row_dicts:
-            column = HPO_TERMS_ABSENT_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else HPO_TERMS_PRESENT_COL
-            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
-            term = row.pop(HPO_TERM_NUMBER_COL, None)
-            if term:
-                aggregate_entry[column].append(term.strip())
-            else:
-                aggregate_entry[column] = []
-            aggregate_entry.update({k: v for k, v in row.items() if v})
-        return _parse_individual_hpo_terms(list(aggregate_rows.values()), project)
-
-    raise ValueError('Invalid header, missing hpo terms columns')
+    return _parse_individual_hpo_terms(row_dicts, project)
 
 
 def _parse_hpo_terms(hpo_term_string):
@@ -602,8 +597,8 @@ def _parse_hpo_terms(hpo_term_string):
 
 
 def _has_same_features(individual, present_features, absent_features):
-    return {feature['id'] for feature in individual.features or []} == set(present_features) and \
-           {feature['id'] for feature in individual.absent_features or []} == set(absent_features)
+    return {feature['id'] for feature in individual.features or []} == set(present_features or []) and \
+           {feature['id'] for feature in individual.absent_features or []} == set(absent_features or [])
 
 
 def _parse_individual_hpo_terms(json_records, project):
@@ -613,8 +608,8 @@ def _parse_individual_hpo_terms(json_records, project):
 
     all_hpo_terms = set()
     for record in json_records:
-        all_hpo_terms.update(record[HPO_TERMS_PRESENT_COL])
-        all_hpo_terms.update(record[HPO_TERMS_ABSENT_COL])
+        all_hpo_terms.update(record.get(FEATURES_COL, []))
+        all_hpo_terms.update(record.get(ABSENT_FEATURES_COL, []))
     hpo_terms = set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
     individual_ids = [record[INDIVIDUAL_ID_COL] for record in json_records]
@@ -642,37 +637,33 @@ def _parse_individual_hpo_terms(json_records, project):
             missing_individuals.append(individual_id)
             continue
 
-        present_features = []
-        absent_features = []
-        for feature in record.pop(HPO_TERMS_PRESENT_COL):
-            if feature in hpo_terms:
-                present_features.append(feature)
-            else:
+        for feature in record.get(FEATURES_COL, []):
+            if feature not in hpo_terms:
                 invalid_hpo_term_individuals[feature].append(individual_id)
-        for feature in record.pop(HPO_TERMS_ABSENT_COL):
-            if feature in hpo_terms:
-                absent_features.append(feature)
-            else:
+                record[FEATURES_COL].remove(feature)
+        for feature in record.get(ABSENT_FEATURES_COL, []):
+            if feature not in hpo_terms:
                 invalid_hpo_term_individuals[feature].append(individual_id)
+                record[ABSENT_FEATURES_COL].remove(feature)
 
+        has_feature_columns = bool(record.get(FEATURES_COL) or record.get(ABSENT_FEATURES_COL))
+        has_same_features = has_feature_columns and _has_same_features(individual, record.get(FEATURES_COL), record.get(ABSENT_FEATURES_COL))
         update_record = {}
         for k, v in record.items():
             if not v:
                 continue
             try:
                 parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-                if parsed_val != getattr(individual, k):
+                if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val != getattr(individual, k)) or not has_same_features:
                     update_record[k] = parsed_val
             except (KeyError, ValueError):
                 invalid_values[k][v].append(individual_id)
 
-        if (not update_record) and _has_same_features(individual, present_features, absent_features):
+        if not update_record:
             unchanged_individuals.append(individual_id)
         else:
             update_record.update({
                 INDIVIDUAL_GUID_COL: individual.guid,
-                FEATURES_COL: [{'id': feature} for feature in present_features],
-                ABSENT_FEATURES_COL: [{'id': feature} for feature in absent_features],
             })
             parsed_records.append(update_record)
 
