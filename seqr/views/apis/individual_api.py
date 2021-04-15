@@ -360,18 +360,42 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-# Use column keys that align with phenotips fields to support phenotips json export format
-FAMILY_ID_COLUMN = 'family_id'
-INDIVIDUAL_ID_COLUMN = 'external_id'
-INDIVIDUAL_GUID_COLUMN = 'individual_guid'
-HPO_TERMS_PRESENT_COLUMN = 'hpo_present'
-HPO_TERMS_ABSENT_COLUMN = 'hpo_absent'
-HPO_TERM_NUMBER_COLUMN = 'hpo_number'
-AFFECTED_COLUMN = 'affected'
-FEATURES_COLUMN = 'features'
-ABSENT_FEATURES_FIELD = 'absent_features'
+# Use column keys that align with phenotips fields to support phenotips json export format TODO
+FAMILY_ID_COL = 'family_id'
+INDIVIDUAL_ID_COL = 'external_id'
+INDIVIDUAL_GUID_COL = 'individual_guid'
+HPO_TERMS_PRESENT_COL = 'hpo_present'
+HPO_TERMS_ABSENT_COL = 'hpo_absent'
+HPO_TERM_NUMBER_COL = 'hpo_number'
+AFFECTED_FEATURE_COL = 'affected'
+FEATURES_COL = 'features'
+ABSENT_FEATURES_COL = 'absent_features'
+BIRTH_COL = 'birth_year'
+DEATH_COL = 'death_year'
+ONSET_AGE_COL = 'onset_age'
+NOTES_COL = 'notes'
+CONSANGUINITY_COL = 'consanguinity'
+AFFECTED_REL_COL = 'affected_relatives'
+EXP_INHERITANCE_COL = 'expected_inheritance'
+AR_FM_COL = 'ar_fertility_meds'
+AR_IUI_COL = 'ar_iui'
+AR_IVF_COL = 'ar_ivf'
+AR_ICSI_COL = 'ar_icsi'
+AR_SURROGACY_COL = 'ar_surrogacy'
+AR_DEGG_COL = 'ar_donoregg'
+AR_DSPERM_COL = 'ar_donorsperm'
+MAT_ETHNICITY_COL = 'maternal_ethnicity'
+PAT_ETHNICITY_COL = 'paternal_ethnicity'
+DISORDERS_COL = 'disorders'
+REJECTED_GENES_COL = 'rejected_genes'
+CANDIDATE_GENES_COL =  'candidate_genes'
 
-INDIVIDUAL_METADATA_FIELDS = {FEATURES_COLUMN, ABSENT_FEATURES_FIELD}
+INDIVIDUAL_METADATA_FIELDS = {
+    FEATURES_COL, ABSENT_FEATURES_COL, BIRTH_COL, DEATH_COL, ONSET_AGE_COL, NOTES_COL,
+    CONSANGUINITY_COL, AFFECTED_REL_COL, EXP_INHERITANCE_COL, AR_FM_COL, AR_IUI_COL, AR_IVF_COL,
+    AR_ICSI_COL, AR_SURROGACY_COL, AR_DEGG_COL,AR_DSPERM_COL, MAT_ETHNICITY_COL, PAT_ETHNICITY_COL,
+    DISORDERS_COL, REJECTED_GENES_COL, CANDIDATE_GENES_COL,
+}
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
@@ -411,61 +435,71 @@ def receive_individuals_metadata_handler(request, project_guid):
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
         row_dicts = records
-        column_map = set(row_dicts[0].keys())
+        column_map = set(row_dicts[0].keys()) # TODO
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
             key = field.lower()
-            if 'family' in key or 'pedigree' in key:
-                column_map[FAMILY_ID_COLUMN] = i
-            elif 'individual' in key:
-                column_map[INDIVIDUAL_ID_COLUMN] = i
-            elif re.match("hpo.*present", key):
-                column_map[HPO_TERMS_PRESENT_COLUMN] = i
+            if re.match("hpo.*present", key):
+                column_map[HPO_TERMS_PRESENT_COL] = i
             elif re.match("hpo.*absent", key):
-                column_map[HPO_TERMS_ABSENT_COLUMN] = i
+                column_map[HPO_TERMS_ABSENT_COL] = i
             elif re.match("hp.*number*", key):
-                if not HPO_TERM_NUMBER_COLUMN in column_map:
-                    column_map[HPO_TERM_NUMBER_COLUMN] = []
-                column_map[HPO_TERM_NUMBER_COLUMN].append(i)
-            elif 'affected' in key:
-                column_map[AFFECTED_COLUMN] = i
-        if INDIVIDUAL_ID_COLUMN not in column_map:
+                if not HPO_TERM_NUMBER_COL in column_map:
+                    column_map[HPO_TERM_NUMBER_COL] = []
+                column_map[HPO_TERM_NUMBER_COL].append(i)
+            elif 'family' in key or 'pedigree' in key:
+                column_map[FAMILY_ID_COL] = i
+            else:
+                col_key = next((col for col, text in [
+                    (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_FEATURE_COL, 'affected'),
+                    (BIRTH_COL, 'birth'), (DEATH_COL, 'death'), (ONSET_AGE_COL, 'onset'),  (AR_ICSI_COL, 'relative'),
+                    (CONSANGUINITY_COL, 'consanguinity'), (EXP_INHERITANCE_COL, 'inheritance'), (AR_FM_COL, 'fertility'),
+                    (AR_IUI_COL, 'intrauterine'), (AR_IVF_COL, 'in vitro'), (AR_ICSI_COL, 'cytoplasmic'),
+                    (AR_SURROGACY_COL, 'surrogacy'), (AR_DEGG_COL, 'donor egg'), (AR_DSPERM_COL, 'donor sperm'),
+                    (MAT_ETHNICITY_COL, 'maternal ancestry'), (PAT_ETHNICITY_COL, 'paternal ancestry'),
+                    (DISORDERS_COL, 'disorders'), (REJECTED_GENES_COL, 'tested genes'),
+                    (CANDIDATE_GENES_COL, 'candidate genes')
+                ] if text in key), None)
+                if col_key:
+                    column_map[col_key] = i
+
+        if INDIVIDUAL_ID_COL not in column_map:
             raise ValueError('Invalid header, missing individual id column')
 
         row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
                       for column, index in column_map.items()} for row in records[1:]]
 
-    if FEATURES_COLUMN in column_map:
+    if FEATURES_COL in column_map:
         for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COLUMN] = []
-            row[HPO_TERMS_ABSENT_COLUMN] = []
-            for feature in row[FEATURES_COLUMN]:
-                column = HPO_TERMS_PRESENT_COLUMN if feature['observed'] == 'yes' else HPO_TERMS_ABSENT_COLUMN
+            row[HPO_TERMS_PRESENT_COL] = []
+            row[HPO_TERMS_ABSENT_COL] = []
+            for feature in row.pop(FEATURES_COL):
+                column = HPO_TERMS_PRESENT_COL if feature['observed'] == 'yes' else HPO_TERMS_ABSENT_COL
                 row[column].append(feature['id'])
 
         return _parse_individual_hpo_terms(row_dicts, project)
 
-    if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
+    if HPO_TERMS_PRESENT_COL in column_map or HPO_TERMS_ABSENT_COL in column_map:
         for row in row_dicts:
-            row[HPO_TERMS_PRESENT_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN))
-            row[HPO_TERMS_ABSENT_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN))
+            row[HPO_TERMS_PRESENT_COL] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COL))
+            row[HPO_TERMS_ABSENT_COL] = _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COL))
         return _parse_individual_hpo_terms(row_dicts, project)
 
-    if HPO_TERM_NUMBER_COLUMN in column_map:
-        aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COLUMN: [], HPO_TERMS_ABSENT_COLUMN: []})
+    if HPO_TERM_NUMBER_COL in column_map:
+        aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COL: [], HPO_TERMS_ABSENT_COL: []})
         for row in row_dicts:
-            column = HPO_TERMS_ABSENT_COLUMN if row.get(AFFECTED_COLUMN) == 'no' else HPO_TERMS_PRESENT_COLUMN
-            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))]
-            if row.get(HPO_TERM_NUMBER_COLUMN):
-                aggregate_entry[column].append(row[HPO_TERM_NUMBER_COLUMN].strip())
+            column = HPO_TERMS_ABSENT_COL if row.get(AFFECTED_FEATURE_COL) == 'no' else HPO_TERMS_PRESENT_COL
+            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
+            if row.get(HPO_TERM_NUMBER_COL):
+                aggregate_entry[column].append(row[HPO_TERM_NUMBER_COL].strip())
             else:
                 aggregate_entry[column] = []
         return _parse_individual_hpo_terms([{
-            FAMILY_ID_COLUMN: family_id,
-            INDIVIDUAL_ID_COLUMN: individual_id,
-            HPO_TERMS_PRESENT_COLUMN: features[HPO_TERMS_PRESENT_COLUMN],
-            HPO_TERMS_ABSENT_COLUMN: features[HPO_TERMS_ABSENT_COLUMN]
+            FAMILY_ID_COL: family_id,
+            INDIVIDUAL_ID_COL: individual_id,
+            HPO_TERMS_PRESENT_COL: features[HPO_TERMS_PRESENT_COL],
+            HPO_TERMS_ABSENT_COL: features[HPO_TERMS_ABSENT_COL]
         } for (family_id, individual_id), features in aggregate_rows.items()], project)
 
     raise ValueError('Invalid header, missing hpo terms columns')
@@ -474,7 +508,7 @@ def _process_hpo_records(records, filename, project):
 def _parse_hpo_terms(hpo_term_string):
     if not hpo_term_string:
         return []
-    return [hpo_term.strip().split('(')[0].strip() for hpo_term in hpo_term_string.replace(',', ';').split(';')]
+    return [hpo_term.strip() for hpo_term in re.sub(r'\(.*?\)', '', hpo_term_string).replace(',', ';').split(';')]
 
 
 def _has_same_features(individual, present_features, absent_features):
@@ -489,14 +523,13 @@ def _parse_individual_hpo_terms(json_records, project):
 
     all_hpo_terms = set()
     for record in json_records:
-        all_hpo_terms.update(record[HPO_TERMS_PRESENT_COLUMN])
-        all_hpo_terms.update(record[HPO_TERMS_ABSENT_COLUMN])
+        all_hpo_terms.update(record[HPO_TERMS_PRESENT_COL])
+        all_hpo_terms.update(record[HPO_TERMS_ABSENT_COL])
     hpo_terms = set(HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms).values_list('hpo_id', flat=True))
 
-    has_family_ids = any(record.get(FAMILY_ID_COLUMN) for record in json_records)
-    individual_ids = [record[INDIVIDUAL_ID_COLUMN] for record in json_records]
-    if has_family_ids:
-        individual_ids += ['{}_{}'.format(record[FAMILY_ID_COLUMN], record[INDIVIDUAL_ID_COLUMN]) for record in json_records]
+    individual_ids = [record[INDIVIDUAL_ID_COL] for record in json_records]
+    individual_ids += ['{}_{}'.format(record[FAMILY_ID_COL], record[INDIVIDUAL_ID_COL])
+                       for record in json_records if FAMILY_ID_COL in record]
     individual_lookup = defaultdict(dict)
     for i in Individual.objects.filter(family__project=project, individual_id__in=individual_ids).prefetch_related('family'):
         individual_lookup[i.individual_id][i.family.family_id] = i
@@ -505,8 +538,8 @@ def _parse_individual_hpo_terms(json_records, project):
     unchanged_individuals = []
     invalid_hpo_term_individuals = defaultdict(list)
     for record in json_records:
-        family_id = record.get(FAMILY_ID_COLUMN)
-        individual_id = record[INDIVIDUAL_ID_COLUMN]
+        family_id = record.pop(FAMILY_ID_COL, None)
+        individual_id = record.pop(INDIVIDUAL_ID_COL)
         individuals = individual_lookup[individual_id]
         if family_id:
             individual = individuals.get(family_id)
@@ -520,25 +553,29 @@ def _parse_individual_hpo_terms(json_records, project):
 
         present_features = []
         absent_features = []
-        for feature in record[HPO_TERMS_PRESENT_COLUMN]:
+        for feature in record.pop(HPO_TERMS_PRESENT_COL):
             if feature in hpo_terms:
                 present_features.append(feature)
             else:
                 invalid_hpo_term_individuals[feature].append(individual_id)
-        for feature in record[HPO_TERMS_ABSENT_COLUMN]:
+        for feature in record.pop(HPO_TERMS_ABSENT_COL):
             if feature in hpo_terms:
                 absent_features.append(feature)
             else:
                 invalid_hpo_term_individuals[feature].append(individual_id)
 
-        if _has_same_features(individual, present_features, absent_features):
+        # TODO INDIVIDUAL_METADATA_FIELDS
+        update_record = {k: v for k, v in record.items() if getattr(individual, k) != record[k]}
+
+        if (not update_record) and _has_same_features(individual, present_features, absent_features):
             unchanged_individuals.append(individual_id)
         else:
-            parsed_records.append({
-                INDIVIDUAL_GUID_COLUMN: individual.guid,
-                FEATURES_COLUMN: [{'id': feature} for feature in present_features],
-                ABSENT_FEATURES_FIELD: [{'id': feature} for feature in absent_features],
+            update_record.update({
+                INDIVIDUAL_GUID_COL: individual.guid,
+                FEATURES_COL: [{'id': feature} for feature in present_features],
+                ABSENT_FEATURES_COL: [{'id': feature} for feature in absent_features],
             })
+            parsed_records.append(update_record)
 
     if not parsed_records:
         errors.append('Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(
@@ -576,14 +613,15 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 
     json_records, _ = load_uploaded_file(upload_file_id)
 
-    individual_guids = [record[INDIVIDUAL_GUID_COLUMN] for record in json_records]
+    individual_guids = [record[INDIVIDUAL_GUID_COL] for record in json_records]
     individuals_by_guid = {
         i.guid: i for i in Individual.objects.filter(family__project=project, guid__in=individual_guids)
     }
 
     for record in json_records:
-        individual = individuals_by_guid[record[INDIVIDUAL_GUID_COLUMN]]
-        update_model_from_json(individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS}, user=request.user)
+        individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
+        update_model_from_json(
+            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS if k in record}, user=request.user)
 
     return create_json_response({
         'individualsByGuid': {

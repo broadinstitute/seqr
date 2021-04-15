@@ -373,6 +373,7 @@ class IndividualAPITest(AuthenticationTestCase):
             response_json['individualsByGuid']['I000001_na19675']['absentFeatures'],
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'M')
 
     def test_individuals_metadata_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
@@ -391,11 +392,11 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
 
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent'
+        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex'
         rows = [
-            '1,NA19678,,',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia)',
+            '1,NA19678,,,',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),,',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -411,7 +412,7 @@ class IndividualAPITest(AuthenticationTestCase):
             ]})
 
         # send valid request
-        rows.append('1,NA19675_1,HP:0002017,HP:0012469 (Infantile spasms);HP:0004322 (Short stature)')
+        rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
@@ -421,12 +422,12 @@ class IndividualAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
 
         f = SimpleUploadedFile('updates.json', json.dumps([
-            {'family_id': '1', 'external_id': 'NA19675_1', 'features': [
+            {'external_id': 'NA19675_1', 'sex': 'F', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'},
                 {'id': 'HP:0012469', 'observed': 'no'},
                 {'id': 'HP:0004322', 'observed': 'no'}]},
-            {'family_id': '1', 'external_id': 'NA19678', 'features': []},
-            {'family_id': '1', 'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
+            {'external_id': 'NA19678', 'features': []},
+            {'external_id': 'NA19679', 'features': [{'id': 'HP:0100258', 'observed': 'yes'}]},
             {'family_id': '1', 'external_id': 'HG00731', 'features': [
                 {'id': 'HP:0002017', 'observed': 'yes'}, {'id': 'HP:0011675', 'observed': 'no'}]},
         ]).encode('utf-8'))
@@ -437,15 +438,15 @@ class IndividualAPITest(AuthenticationTestCase):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
-        header = 'family_id,individual_id,affected,hpo_number,hpo_number'
+        header = 'family_id,individual_id,affected,hpo_number,hpo_number,sex'
         rows = [
-            '1,NA19675_1,yes,HP:0002017,',
-            '1,NA19675_1,no,HP:0012469,',
-            '1,NA19675_1,no,,HP:0004322',
-            '1,NA19678,,,',
-            '1,NA19679,yes,HP:0100258,',
-            '1,HG00731,yes,HP:0002017,',
-            '1,HG00731,no,HP:0012469,HP:0011675',
+            '1,NA19675_1,yes,HP:0002017,,F',
+            '1,NA19675_1,no,HP:0012469,,F',
+            '1,NA19675_1,no,,HP:0004322,F',
+            '1,NA19678,,,,',
+            '1,NA19679,yes,HP:0100258,,',
+            '1,HG00731,yes,HP:0002017,,',
+            '1,HG00731,no,HP:0012469,HP:0011675,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
