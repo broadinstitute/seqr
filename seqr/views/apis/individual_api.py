@@ -390,12 +390,54 @@ DISORDERS_COL = 'disorders'
 REJECTED_GENES_COL = 'rejected_genes'
 CANDIDATE_GENES_COL =  'candidate_genes'
 
+def _bool_value(val):
+    if val.lower() == 'true':
+        return True
+    elif val.lower() == 'false':
+        return False
+    raise ValueError
+
+def _array_value(val):
+    return [o.strip() for o in val.split(',')]
+
+def _gene_value(val):
+    gene_det = val.split('--')
+    gene = {'gene': gene_det[0].strip()}
+    if len(gene_det) > 1:
+        gene['comments'] = gene_det[1].strip().lstrip('(').rstrip(')')
+    return gene
+
+def _gene_list_value(val):
+    seperator_escaped_val = ''.join(m.replace(',', ';') if not m.startswith('(') else m for m in re.split('(\([^)]+\))', val))
+    return [_gene_value(o) for o in seperator_escaped_val.split(';')]
+
+
 INDIVIDUAL_METADATA_FIELDS = {
-    FEATURES_COL, ABSENT_FEATURES_COL, BIRTH_COL, DEATH_COL, ONSET_AGE_COL, NOTES_COL,
-    CONSANGUINITY_COL, AFFECTED_REL_COL, EXP_INHERITANCE_COL, AR_FM_COL, AR_IUI_COL, AR_IVF_COL,
-    AR_ICSI_COL, AR_SURROGACY_COL, AR_DEGG_COL,AR_DSPERM_COL, MAT_ETHNICITY_COL, PAT_ETHNICITY_COL,
-    DISORDERS_COL, REJECTED_GENES_COL, CANDIDATE_GENES_COL,
+    FEATURES_COL: str,
+    ABSENT_FEATURES_COL: str,
+    BIRTH_COL: int,
+    DEATH_COL: int,
+    ONSET_AGE_COL: lambda val: Individual.ONSET_AGE_REVERSE_LOOKUP[val],
+    NOTES_COL: str,
+    CONSANGUINITY_COL: _bool_value,
+    AFFECTED_REL_COL: _bool_value,
+    EXP_INHERITANCE_COL: lambda val: [Individual.INHERITANCE_REVERSE_LOOKUP[o] for o in _array_value(val)],
+    AR_FM_COL: _bool_value,
+    AR_IUI_COL: _bool_value,
+    AR_IVF_COL: _bool_value,
+    AR_ICSI_COL: _bool_value,
+    AR_SURROGACY_COL: _bool_value,
+    AR_DEGG_COL: _bool_value,
+    AR_DSPERM_COL: _bool_value,
+    MAT_ETHNICITY_COL: _array_value,
+    PAT_ETHNICITY_COL: _array_value,
+    DISORDERS_COL: _array_value,
+    REJECTED_GENES_COL: _gene_list_value,
+    CANDIDATE_GENES_COL: _gene_list_value,
 }
+
+JSON_INDIVIDUAL_METADATA_FIELDS = set(INDIVIDUAL_METADATA_FIELDS.keys())
+JSON_INDIVIDUAL_METADATA_FIELDS.update({INDIVIDUAL_ID_COL, FAMILY_ID_COL})
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
@@ -434,8 +476,8 @@ def receive_individuals_metadata_handler(request, project_guid):
 
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
-        row_dicts = records
-        column_map = set(row_dicts[0].keys()) # TODO
+        row_dicts = [{k: v for k, v in record.items() if k in JSON_INDIVIDUAL_METADATA_FIELDS} for record in records]
+        column_map = set(row_dicts[0].keys()) # TODO formatting?
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
@@ -452,8 +494,9 @@ def _process_hpo_records(records, filename, project):
                 column_map[FAMILY_ID_COL] = i
             else:
                 col_key = next((col for col, text in [
-                    (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_FEATURE_COL, 'affected'),
-                    (BIRTH_COL, 'birth'), (DEATH_COL, 'death'), (ONSET_AGE_COL, 'onset'),  (AR_ICSI_COL, 'relative'),
+                    (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_REL_COL, 'affected relative'),
+                    (AFFECTED_FEATURE_COL, 'affected'), (BIRTH_COL, 'birth'), (DEATH_COL, 'death'),
+                    (ONSET_AGE_COL, 'onset'),  (AR_ICSI_COL, 'relative'),
                     (CONSANGUINITY_COL, 'consanguinity'), (EXP_INHERITANCE_COL, 'inheritance'), (AR_FM_COL, 'fertility'),
                     (AR_IUI_COL, 'intrauterine'), (AR_IVF_COL, 'in vitro'), (AR_ICSI_COL, 'cytoplasmic'),
                     (AR_SURROGACY_COL, 'surrogacy'), (AR_DEGG_COL, 'donor egg'), (AR_DSPERM_COL, 'donor sperm'),
@@ -537,6 +580,7 @@ def _parse_individual_hpo_terms(json_records, project):
     missing_individuals = []
     unchanged_individuals = []
     invalid_hpo_term_individuals = defaultdict(list)
+    invalid_values = defaultdict(lambda: defaultdict(list))
     for record in json_records:
         family_id = record.pop(FAMILY_ID_COL, None)
         individual_id = record.pop(INDIVIDUAL_ID_COL)
@@ -564,8 +608,16 @@ def _parse_individual_hpo_terms(json_records, project):
             else:
                 invalid_hpo_term_individuals[feature].append(individual_id)
 
-        # TODO INDIVIDUAL_METADATA_FIELDS
-        update_record = {k: v for k, v in record.items() if getattr(individual, k) != record[k]}
+        update_record = {}
+        for k, v in record.items():
+            if not v:
+                continue
+            try:
+                parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
+                if parsed_val != getattr(individual, k):
+                    update_record[k] = parsed_val
+            except (KeyError, ValueError):
+                invalid_values[k][v].append(individual_id)
 
         if (not update_record) and _has_same_features(individual, present_features, absent_features):
             unchanged_individuals.append(individual_id)
@@ -590,6 +642,10 @@ def _parse_individual_hpo_terms(json_records, project):
                 '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in sorted(invalid_hpo_term_individuals.items())])
             )
         )
+    if invalid_values:
+        warnings += ['The following invalid values for "{}" will not be added: {}'.format(field, '; '.join([
+            '{} ({})'.format(val, ', '.join(individuals)) for val, individuals in errs.items()
+        ])) for field, errs in invalid_values.items()]
     if missing_individuals:
         warnings.append(
             'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
@@ -621,7 +677,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
         update_model_from_json(
-            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS if k in record}, user=request.user)
+            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user)
 
     return create_json_response({
         'individualsByGuid': {

@@ -550,14 +550,14 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'rejectedGenes',
     header: 'Previously Tested Genes',
     isEditable: true,
-    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` (${gene.comments})` : ''}`).join(', '),
+    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
     description: 'comma-separated list of genes',
   },
   {
     field: 'candidateGenes',
     header: 'Candidate Genes',
     isEditable: true,
-    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` (${gene.comments})` : ''}`).join(', '),
+    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
     description: 'comma-separated list of genes',
   },
 ]
