@@ -361,9 +361,8 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-# Use column keys that align with phenotips fields to support phenotips json export format TODO
 FAMILY_ID_COL = 'family_id'
-INDIVIDUAL_ID_COL = 'external_id'
+INDIVIDUAL_ID_COL = 'individual_id'
 INDIVIDUAL_GUID_COL = 'individual_guid'
 HPO_TERMS_PRESENT_COL = 'hpo_present'
 HPO_TERMS_ABSENT_COL = 'hpo_absent'
@@ -450,8 +449,8 @@ def _nested_val(nested_key):
     return lambda val: val.get(nested_key)
 
 PHENOTIPS_JSON_FIELD_MAP = {
-    FAMILY_ID_COL: [(FAMILY_ID_COL, None)],
-    INDIVIDUAL_ID_COL: [(INDIVIDUAL_ID_COL, None)],
+    'family_id': [(FAMILY_ID_COL, None)],
+    'external_id': [(INDIVIDUAL_ID_COL, None)],
     FEATURES_COL: [(FEATURES_COL, None)], # TODO move parsing here
     'date_of_birth': [(BIRTH_COL, _get_year)],
     'date_of_death': [(DEATH_COL, _get_year)],
@@ -528,7 +527,7 @@ def receive_individuals_metadata_handler(request, project_guid):
 def _process_hpo_records(records, filename, project):
     if filename.endswith('.json'):
         row_dicts = [_parse_phenotips_record(record) for record in records]
-        column_map = set(row_dicts[0].keys()) # TODO formatting?
+        column_map = set(row_dicts[0].keys())
     else:
         column_map = {}
         for i, field in enumerate(records[0]):
