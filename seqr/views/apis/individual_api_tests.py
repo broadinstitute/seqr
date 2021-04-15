@@ -345,6 +345,7 @@ class IndividualAPITest(AuthenticationTestCase):
     def _is_expected_individuals_metadata_upload(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        # import pdb;pdb.set_trace()
         self.assertDictEqual(response_json, {
             'uploadedFileId': mock.ANY,
             'errors': [],
@@ -374,6 +375,15 @@ class IndividualAPITest(AuthenticationTestCase):
             [{'id': 'HP:0012469', 'category': 'HP:0025031', 'label': 'Infantile spasms'}]
         )
         self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['sex'], 'M')
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['birthYear'], 2000)
+        self.assertTrue(response_json['individualsByGuid']['I000001_na19675']['affectedRelatives'])
+        self.assertEqual(response_json['individualsByGuid']['I000001_na19675']['onsetAge'], 'J')
+        self.assertListEqual(response_json['individualsByGuid']['I000001_na19675']['expectedInheritance'], ['D', 'S'])
+        self.assertListEqual(
+            response_json['individualsByGuid']['I000001_na19675']['maternalEthnicity'], ['Finnish', 'Irish'])
+        self.assertListEqual(
+            response_json['individualsByGuid']['I000001_na19675']['candidateGenes'],
+            [{'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'}])
 
     def test_individuals_metadata_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
@@ -392,11 +402,11 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing hpo terms columns'], 'warnings': []})
 
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex'
+        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes'
         rows = [
-            '1,NA19678,,,',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),,',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),',
+            '1,NA19678,,,,,no,infant,recessive,,',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -407,12 +417,16 @@ class IndividualAPITest(AuthenticationTestCase):
             ],
             'warnings': [
                 "The following HPO terms were not found in seqr's HPO data and will not be added: HP:0100258 (NA19679)",
+                'The following invalid values for "affected_relatives" will not be added: no (NA19678)',
+                'The following invalid values for "onset_age" will not be added: infant (NA19678)',
+                'The following invalid values for "expected_inheritance" will not be added: recessive (NA19678)',
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ]})
 
         # send valid request
-        rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F')
+        rows[0] = '1,NA19678,,,,,,,,,'
+        rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
@@ -438,15 +452,15 @@ class IndividualAPITest(AuthenticationTestCase):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
-        header = 'family_id,individual_id,affected,hpo_number,hpo_number,sex'
+        header = 'family_id,individual_id,affected,hpo_number,hpo_number,sex,birth,other affected relatives,onset,expected inheritance,maternal ancestry,candidate genes'
         rows = [
-            '1,NA19675_1,yes,HP:0002017,,F',
-            '1,NA19675_1,no,HP:0012469,,F',
-            '1,NA19675_1,no,,HP:0004322,F',
-            '1,NA19678,,,,',
-            '1,NA19679,yes,HP:0100258,,',
-            '1,HG00731,yes,HP:0002017,,',
-            '1,HG00731,no,HP:0012469,HP:0011675,',
+            '1,NA19675_1,yes,HP:0002017,,F,2000,true,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"',
+            '1,NA19675_1,no,HP:0012469,,,,,,,,',
+            '1,NA19675_1,no,,HP:0004322,,,,,,,',
+            '1,NA19678,,,,,,,,,,',
+            '1,NA19679,yes,HP:0100258,,,,,,,,',
+            '1,HG00731,yes,HP:0002017,,,,,,,,',
+            '1,HG00731,no,HP:0012469,HP:0011675,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})

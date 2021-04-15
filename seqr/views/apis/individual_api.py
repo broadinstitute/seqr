@@ -532,18 +532,15 @@ def _process_hpo_records(records, filename, project):
     if HPO_TERM_NUMBER_COL in column_map:
         aggregate_rows = defaultdict(lambda: {HPO_TERMS_PRESENT_COL: [], HPO_TERMS_ABSENT_COL: []})
         for row in row_dicts:
-            column = HPO_TERMS_ABSENT_COL if row.get(AFFECTED_FEATURE_COL) == 'no' else HPO_TERMS_PRESENT_COL
+            column = HPO_TERMS_ABSENT_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else HPO_TERMS_PRESENT_COL
             aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
-            if row.get(HPO_TERM_NUMBER_COL):
-                aggregate_entry[column].append(row[HPO_TERM_NUMBER_COL].strip())
+            term = row.pop(HPO_TERM_NUMBER_COL, None)
+            if term:
+                aggregate_entry[column].append(term.strip())
             else:
                 aggregate_entry[column] = []
-        return _parse_individual_hpo_terms([{
-            FAMILY_ID_COL: family_id,
-            INDIVIDUAL_ID_COL: individual_id,
-            HPO_TERMS_PRESENT_COL: features[HPO_TERMS_PRESENT_COL],
-            HPO_TERMS_ABSENT_COL: features[HPO_TERMS_ABSENT_COL]
-        } for (family_id, individual_id), features in aggregate_rows.items()], project)
+            aggregate_entry.update({k: v for k, v in row.items() if v})
+        return _parse_individual_hpo_terms(list(aggregate_rows.values()), project)
 
     raise ValueError('Invalid header, missing hpo terms columns')
 
