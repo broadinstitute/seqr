@@ -27,7 +27,7 @@ const PageHeader = React.memo(({ user }) =>
         <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email)}</b></p>
       </Menu.Item>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
-    ] : <Menu.Item as="a" href="/login" position="right">Log in</Menu.Item>}
+    ] : <Menu.Item as="a" href="/login/google-oauth2" position="right">Log in</Menu.Item>}
   </HeaderMenu>,
 )
 
