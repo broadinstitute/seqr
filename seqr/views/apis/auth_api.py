@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 def login_view(request):
+    if google_auth_enabled():
+        error = 'Password-based authentication is disabled. Please use Google authentication instead.'
+        return create_json_response({'error': error}, status=401, reason=error)
+
     request_json = json.loads(request.body)
     if not request_json.get('email'):
         error = 'Email is required'
