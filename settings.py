@@ -189,13 +189,9 @@ if not SECRET_KEY:
     try:
         SECRET_KEY = open(SECRET_FILE).read().strip()
     except IOError:
-        try:
-            SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
-            with open(SECRET_FILE, 'w') as f:
-                f.write(SECRET_KEY)
-        except IOError as e:
-            logger.error('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
-            SECRET_KEY = "-placeholder-key-"
+        SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
+        with open(SECRET_FILE, 'w') as f:
+            f.write(SECRET_KEY)
 
 ROOT_URLCONF = 'seqr.urls'
 
