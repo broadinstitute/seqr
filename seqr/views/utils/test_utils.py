@@ -106,7 +106,8 @@ class AuthenticationTestCase(TestCase):
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
-    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error', policy_redirect_url='/api/policy-required-error'):
+    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error',
+                     policy_redirect_url='/api/policy-required-error', permission_denied_error=403):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests
         if the user isn't logged-in, and then authenticates a test user.
@@ -127,8 +128,7 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.inactive_user)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json().get('error'), 'User is no longer active')
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.client.force_login(self.no_policy_user)
         if permission_level == self.NO_POLICY_USER:
@@ -148,50 +148,42 @@ class AuthenticationTestCase(TestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(request_data))
             else:
                 response = self.client.get(url)
-            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_collaborator()
         if permission_level == self.COLLABORATOR:
             return
 
         response = self.client.get(url)
-        if permission_level == self.MANAGER:
-            self.assertEqual(response.status_code, 403)
-        else:
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_analyst_user()
         if permission_level in self.ANALYST:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_pm_user()
         if permission_level in self.PM:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_data_manager_user()
         if permission_level in self.DATA_MANAGER:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.client.force_login(self.super_user)
 
