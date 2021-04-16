@@ -187,7 +187,8 @@ SECRET_KEY = os.environ.get('DJANGO_KEY')
 if not SECRET_KEY:
     SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
     try:
-        SECRET_KEY = open(SECRET_FILE).read().strip()
+        with open(SECRET_FILE) as f:
+            SECRET_KEY = f.read().strip()
     except IOError:
         SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
         with open(SECRET_FILE, 'w') as f:
