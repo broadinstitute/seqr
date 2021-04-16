@@ -659,13 +659,13 @@ def _parse_individual_hpo_terms(json_records, project):
             except (KeyError, ValueError):
                 invalid_values[k][v].append(individual_id)
 
-        if not update_record:
-            unchanged_individuals.append(individual_id)
-        else:
+        if update_record:
             update_record.update({
                 INDIVIDUAL_GUID_COL: individual.guid,
             })
             parsed_records.append(update_record)
+        else:
+            unchanged_individuals.append(individual_id)
 
     if not parsed_records:
         errors.append('Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(

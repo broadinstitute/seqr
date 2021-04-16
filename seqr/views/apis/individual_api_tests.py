@@ -343,8 +343,6 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     def _is_expected_individuals_metadata_upload(self, response):
-        if response.status_code != 200:
-            import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
