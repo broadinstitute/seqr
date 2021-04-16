@@ -497,7 +497,8 @@ def _parse_phenotips_record(row):
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
-    """Handler for bulk update of hpo terms and other individual metadata . This handler parses the records, but
+    """
+    Handler for bulk update of hpo terms and other individual metadata . This handler parses the records, but
     doesn't save them in the database. Instead, it saves them to a temporary file and sends a 'uploadedFileId'
     representing this file back to the client.
 
@@ -602,10 +603,6 @@ def _has_same_features(individual, present_features, absent_features):
 
 
 def _parse_individual_hpo_terms(json_records, project):
-    errors = []
-    warnings = []
-    parsed_records = []
-
     all_hpo_terms = set()
     for record in json_records:
         all_hpo_terms.update(record.get(FEATURES_COL, []))
@@ -619,46 +616,22 @@ def _parse_individual_hpo_terms(json_records, project):
     for i in Individual.objects.filter(family__project=project, individual_id__in=individual_ids).prefetch_related('family'):
         individual_lookup[i.individual_id][i.family.family_id] = i
 
+    parsed_records = []
     missing_individuals = []
     unchanged_individuals = []
     invalid_hpo_term_individuals = defaultdict(list)
     invalid_values = defaultdict(lambda: defaultdict(list))
     for record in json_records:
-        family_id = record.pop(FAMILY_ID_COL, None)
-        individual_id = record.pop(INDIVIDUAL_ID_COL)
-        individuals = individual_lookup[individual_id]
-        if family_id:
-            individual = individuals.get(family_id)
-            if not individual:
-                individual = individual_lookup['{}_{}'.format(family_id, individual_id)].get(family_id)
-        else:
-            individual = next((i for i in individuals.values()), None)
+        individual, individual_id = _get_record_individual(record, individual_lookup)
         if not individual:
             missing_individuals.append(individual_id)
             continue
 
-        for feature in record.get(FEATURES_COL, []):
-            if feature not in hpo_terms:
-                invalid_hpo_term_individuals[feature].append(individual_id)
-                record[FEATURES_COL].remove(feature)
-        for feature in record.get(ABSENT_FEATURES_COL, []):
-            if feature not in hpo_terms:
-                invalid_hpo_term_individuals[feature].append(individual_id)
-                record[ABSENT_FEATURES_COL].remove(feature)
+        invalid_record_terms = _remove_invalid_hpo_terms(record, hpo_terms)
+        for term in invalid_record_terms:
+            invalid_hpo_term_individuals[term].append(individual_id)
 
-        has_feature_columns = bool(record.get(FEATURES_COL) or record.get(ABSENT_FEATURES_COL))
-        has_same_features = has_feature_columns and _has_same_features(individual, record.get(FEATURES_COL), record.get(ABSENT_FEATURES_COL))
-        update_record = {}
-        for k, v in record.items():
-            if not v:
-                continue
-            try:
-                parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-                if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val != getattr(individual, k)) or not has_same_features:
-                    update_record[k] = parsed_val
-            except (KeyError, ValueError):
-                invalid_values[k][v].append(individual_id)
-
+        update_record = _get_record_updates(record, individual, invalid_values)
         if update_record:
             update_record.update({
                 INDIVIDUAL_GUID_COL: individual.guid,
@@ -667,6 +640,7 @@ def _parse_individual_hpo_terms(json_records, project):
         else:
             unchanged_individuals.append(individual_id)
 
+    errors = []
     if not parsed_records:
         errors.append('Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(
             total=len(missing_individuals) + len(unchanged_individuals),
@@ -674,10 +648,62 @@ def _parse_individual_hpo_terms(json_records, project):
             unchanged=' No changes detected for {} individuals.'.format(len(unchanged_individuals)) if unchanged_individuals else '',
         ))
 
+    warnings = _get_metadata_warnings(invalid_hpo_term_individuals, invalid_values, missing_individuals, unchanged_individuals)
+
+    return parsed_records, errors, warnings
+
+
+def _get_record_individual(record, individual_lookup):
+    family_id = record.pop(FAMILY_ID_COL, None)
+    individual_id = record.pop(INDIVIDUAL_ID_COL)
+    individuals = individual_lookup[individual_id]
+    if family_id:
+        individual = individuals.get(family_id)
+        if not individual:
+            individual = individual_lookup['{}_{}'.format(family_id, individual_id)].get(family_id)
+    else:
+        individual = next((i for i in individuals.values()), None)
+    return individual, individual_id
+
+
+def _remove_invalid_hpo_terms(record, hpo_terms):
+    invalid_terms = set()
+    for feature in record.get(FEATURES_COL, []):
+        if feature not in hpo_terms:
+            invalid_terms.add(feature)
+            record[FEATURES_COL].remove(feature)
+    for feature in record.get(ABSENT_FEATURES_COL, []):
+        if feature not in hpo_terms:
+            invalid_terms.add(feature)
+            record[ABSENT_FEATURES_COL].remove(feature)
+    return invalid_terms
+
+
+def _get_record_updates(record, individual, invalid_values):
+    has_feature_columns = bool(record.get(FEATURES_COL) or record.get(ABSENT_FEATURES_COL))
+    has_same_features = has_feature_columns and _has_same_features(individual, record.get(FEATURES_COL),
+                                                                   record.get(ABSENT_FEATURES_COL))
+    update_record = {}
+    for k, v in record.items():
+        if not v:
+            continue
+        try:
+            parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
+            if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val != getattr(individual, k)) \
+                    or not has_same_features:
+                update_record[k] = parsed_val
+        except (KeyError, ValueError):
+            invalid_values[k][v].append(individual.individual_id)
+    return update_record
+
+
+def _get_metadata_warnings(invalid_hpo_term_individuals, invalid_values, missing_individuals, unchanged_individuals):
+    warnings = []
     if invalid_hpo_term_individuals:
         warnings.append(
             "The following HPO terms were not found in seqr's HPO data and will not be added: {}".format(
-                '; '.join(['{} ({})'.format(term, ', '.join(individuals)) for term, individuals in sorted(invalid_hpo_term_individuals.items())])
+                '; '.join(['{} ({})'.format(term, ', '.join(individuals))
+                           for term, individuals in sorted(invalid_hpo_term_individuals.items())])
             )
         )
     if invalid_values:
@@ -694,8 +720,7 @@ def _parse_individual_hpo_terms(json_records, project):
             'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
                 len(unchanged_individuals), ', '.join(sorted(unchanged_individuals))
             ))
-
-    return parsed_records, errors, warnings
+    return warnings
 
 
 @login_and_policies_required
