@@ -11,7 +11,7 @@ export default () =>
       <VerticalSpacer height={20} />
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
-      <Button as={Link} to="/login" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
+      <Button as={Link} to="/login/google-oauth2" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
     </Segment>
     <Segment padded>
       <Grid columns="equal">
