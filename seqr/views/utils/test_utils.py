@@ -127,8 +127,8 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.inactive_user)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, login_required_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json().get('error'), 'User is no longer active')
 
         self.client.force_login(self.no_policy_user)
         if permission_level == self.NO_POLICY_USER:

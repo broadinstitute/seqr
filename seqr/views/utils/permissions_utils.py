@@ -34,14 +34,17 @@ def _has_current_policies(user):
 
 
 # User access decorators
-_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
+def _check_active(user):
+    if not user.is_active:
+        raise PermissionDenied('User is no longer active')
+    return True
 
-def _active_required(view_func, login_url=API_LOGIN_REQUIRED_URL):
-    return user_passes_test(lambda user: user.is_active, login_url=login_url)(view_func)
+_active_required = user_passes_test(_check_active)
+_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
 
 def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
     def decorator(view_func):
-        return login_required(_active_required(view_func, login_url=login_url), login_url=login_url)
+        return login_required(_active_required(view_func), login_url=login_url)
     if wrapped_func:
         return decorator(wrapped_func)
     return decorator
