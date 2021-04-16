@@ -183,17 +183,19 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # set the secret key
-SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
-try:
-    SECRET_KEY = open(SECRET_FILE).read().strip()
-except IOError:
+SECRET_KEY = os.environ.get('DJANGO_KEY')
+if not SECRET_KEY:
+    SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
     try:
-        SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
-        with open(SECRET_FILE, 'w') as f:
-            f.write(SECRET_KEY)
-    except IOError as e:
-        logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
-        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
+        SECRET_KEY = open(SECRET_FILE).read().strip()
+    except IOError:
+        try:
+            SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
+            with open(SECRET_FILE, 'w') as f:
+                f.write(SECRET_KEY)
+        except IOError as e:
+            logger.error('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+            SECRET_KEY = "-placeholder-key-"
 
 ROOT_URLCONF = 'seqr.urls'
 
