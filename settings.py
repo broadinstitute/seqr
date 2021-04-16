@@ -205,11 +205,11 @@ WSGI_APPLICATION = 'wsgi.application'
 WHITENOISE_ALLOW_ALL_ORIGINS = False
 
 # Email settings
-EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
-DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
+EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
+DEFAULT_FROM_EMAIL = 'seqr@populationgenomics.org.au'
 
 ANYMAIL = {
-    "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
+    'SENDGRID_API_KEY': os.environ.get('SENDGRID_API_KEY', 'sendgrid-api-key-placeholder'),
 }
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')

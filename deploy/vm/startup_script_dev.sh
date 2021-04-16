@@ -27,6 +27,7 @@ docker system prune -f -a
 docker run --name seqr -p 80:8000 \
     -v /seqr_static_files:/seqr_static_files \
     -e DEPLOYMENT_TYPE=dev \
+    -e BASE_URL=https://seqr-dev.populationgenomics.org.au/ \
     -e POSTGRES_SERVICE_HOSTNAME=10.94.145.3 \
     -e POSTGRES_SERVICE_PORT=5432 \
     -e POSTGRES_PASSWORD=sm://seqr-308602/postgres-password \
@@ -45,5 +46,6 @@ docker run --name seqr -p 80:8000 \
     -e SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID=1021400127367-nlq1ftmpmnv6k0pvupuif0erc4t71sb6.apps.googleusercontent.com \
     -e SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=sm://seqr-308602/social-auth-google-oauth2-secret-dev \
     -e DJANGO_KEY=sm://seqr-308602/django-key-dev \
+    -e SENDGRID_API_KEY=sm://seqr-308602/sendgrid-api-key \
     -e GSA_KEY=sm://seqr-308602/gsa-key-dev \
     australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-dev

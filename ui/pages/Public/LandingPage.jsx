@@ -1,5 +1,4 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -11,7 +10,7 @@ export default () =>
       <VerticalSpacer height={20} />
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
-      <Button as={Link} to="/login" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
+      <Button as="a" href="/login/google-oauth2" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
     </Segment>
     <Segment padded>
       <Grid columns="equal">

@@ -92,25 +92,6 @@ class AuthAPITest(TestCase):
     def test_login_view_with_google(self):
         url = reverse(login_view)
 
-        # send login request with a privileged account (data manage or superuser) while Google auth is enabled
-        req_values = {
-            'email': 'test_data_manager@test.com',
-            'password': 'not-a-password'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.reason_phrase, 'Privileged user must login with Google authentication.')
-
-        req_values = {
-            'email': 'test_superuser@test.com',
-            'password': 'not-a-password'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.reason_phrase, 'Privileged user must login with Google authentication.')
-
         # send login request with a non-privileged user and a correct password
         req_values = {
             'email': 'test_new_user@institute.com',
@@ -118,9 +99,8 @@ class AuthAPITest(TestCase):
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertTrue(response_json['success'])
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.reason_phrase, 'Password-based authentication is disabled. Please use Google authentication instead.')
 
     def test_logout_view(self):
         url = reverse(login_view)
