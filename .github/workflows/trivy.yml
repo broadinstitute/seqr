@@ -2,6 +2,7 @@ name: dsp-appsec-trivy
 on:
   schedule:
     - cron:  '0 22 * * 0' # each Monday at 9am AEST+10 / 10am AEDT+11
+  workflow_dispatch: {}
 
 jobs:
   appsec-trivy:
@@ -13,7 +14,7 @@ jobs:
 
       - uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
-          context: deploy/docker/seqr
+          dockerfile: deploy/docker/seqr/Dockerfile
           sarif: trivy-results.sarif
 
       - name: Upload Trivy scan results to GitHub Security tab
