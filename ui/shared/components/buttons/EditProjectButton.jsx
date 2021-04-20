@@ -14,6 +14,8 @@ const MATCHMAKER_PROJECT_FIELDS = [
   ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` })),
 ]
 
+const EDITABLE_FIELD_KEYS = ['projectGuid', ...MATCHMAKER_PROJECT_FIELDS.map(({ name }) => name)]
+
 const EditProjectButton = React.memo(props => (
   props.project && props.project.canEdit ?
     <UpdateButton
@@ -35,7 +37,9 @@ EditProjectButton.propTypes = {
 }
 
 const mapDispatchToProps = {
-  updateProject,
+  updateProject: updates => updateProject(Object.entries(updates).reduce((acc, [k, v]) => (
+    EDITABLE_FIELD_KEYS.includes(k) ? { ...acc, [k]: v } : acc
+  ), {})),
 }
 
 export default connect(null, mapDispatchToProps)(EditProjectButton)
