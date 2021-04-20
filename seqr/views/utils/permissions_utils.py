@@ -34,9 +34,9 @@ def _has_current_policies(user):
 
 
 # User access decorators
-def _require_permission(test_func, error='User has insufficient permission'):
+def _require_permission(user_permission_test_func, error='User has insufficient permission'):
     def test_user(user):
-        if not test_func(user):
+        if not user_permission_test_func(user):
             raise PermissionDenied(error)
         return True
     return test_user
@@ -54,9 +54,9 @@ def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
 def login_and_policies_required(view_func):
     return login_active_required(_current_policies_required(view_func))
 
-def _user_has_policies_and_passes_test(test_func):
+def _user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):
-        return login_and_policies_required(user_passes_test(_require_permission(test_func))(view_func))
+        return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
     return decorator
 
 analyst_required = _user_has_policies_and_passes_test(user_is_analyst)
