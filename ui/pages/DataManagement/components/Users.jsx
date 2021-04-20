@@ -11,9 +11,14 @@ import { loadAllUsers } from '../reducers'
 
 
 const CheckIcon = () => <Icon color="green" name="check circle" />
+const XIcon = () => <Icon color="red" name="times circle" />
+
+const hasFieldColumn = (name, content) => (
+  { name, content, noFormatExport: true, format: val => (val[name] ? <CheckIcon /> : <XIcon />) }
+)
 
 const hasPrivilegeColumn = (name, content) => (
-  { name, content, format: val => (val[name] && val.isActive && <CheckIcon />) }
+  { name, content, noFormatExport: true, format: val => (val[name] && val.isActive && <CheckIcon />) }
 )
 
 const COLUMNS = [
@@ -22,15 +27,12 @@ const COLUMNS = [
   { name: 'username', content: 'Username' },
   { name: 'dateJoined', content: 'Date Joined', format: ({ dateJoined }) => (dateJoined || '').slice(0, 10) },
   { name: 'lastLogin', content: 'Last Login', format: ({ lastLogin }) => (lastLogin || '').slice(0, 10) },
+  hasFieldColumn('hasGoogleAuth', 'OAuth?'),
   hasPrivilegeColumn('isAnalyst', 'Analyst?'),
   hasPrivilegeColumn('isPm', 'PM?'),
   hasPrivilegeColumn('isDataManager', 'Data Manager?'),
   hasPrivilegeColumn('isSuperuser', 'Superuser?'),
-  {
-    name: 'isActive',
-    content: 'Active?',
-    format: val => (val.isActive ? <CheckIcon /> : <Icon color="red" name="times circle" />),
-  },
+  hasFieldColumn('isActive', 'Active?'),
 ]
 
 const HIJAK_COLUMNS = [
@@ -59,6 +61,8 @@ const Users = React.memo(({ users, loading, load, hijak }) =>
       data={users}
       columns={hijak ? HIJAK_COLUMNS : COLUMNS}
       getRowFilterVal={getUserFilterVal}
+      downloadFileName="users"
+      downloadAlign="1em"
     />
   </DataLoader>,
 )
