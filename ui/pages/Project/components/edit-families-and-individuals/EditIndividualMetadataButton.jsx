@@ -1,18 +1,18 @@
 import React from 'react'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import Modal from 'shared/components/modal/Modal'
-import { EditHPOBulkForm } from './BulkEditForm'
+import { EditIndividualMetadataBulkForm } from './BulkEditForm'
 
-const MODAL_NAME = 'editIndividualsHpoTerms'
+const MODAL_NAME = 'editIndividualsMetadata'
 
 export default React.memo(() => (
   <Modal
     modalName={MODAL_NAME}
-    title="Bulk Edit HPO Terms"
+    title="Bulk Edit Individual Metadata"
     size="large"
     trigger={<ButtonLink>Edit Individuals</ButtonLink>}
   >
-    <EditHPOBulkForm modalName={MODAL_NAME} />
+    <EditIndividualMetadataBulkForm modalName={MODAL_NAME} />
   </Modal>
 
 ))
