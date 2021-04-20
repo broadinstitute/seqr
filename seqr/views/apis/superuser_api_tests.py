@@ -26,7 +26,8 @@ class SuperusersAPITest(AuthenticationTestCase):
 
     def test_admin(self):
         url = 'http://localhost/admin/'
-        self.check_superuser_login(url, login_redirect_url='/admin/login/', policy_redirect_url='/admin/login/')
+        self.check_superuser_login(url, login_redirect_url='/admin/login/', policy_redirect_url='/admin/login/',
+                                   permission_denied_error=302)
 
         response = self.client.get(url)
         self.assertContains(response, 'Django administration', status_code=200)
