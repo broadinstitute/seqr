@@ -669,6 +669,7 @@ class VariantTagType(ModelWithGUID):
 class VariantTag(ModelWithGUID):
     saved_variants = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
+    metadata = models.TextField(null=True)
 
     # context in which a variant tag was saved
     search_hash = models.CharField(max_length=50, null=True)
