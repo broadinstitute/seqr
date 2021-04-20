@@ -446,7 +446,7 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response)
 
-    def test_hpo_term_number_table_handler(self):
+    def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
 
