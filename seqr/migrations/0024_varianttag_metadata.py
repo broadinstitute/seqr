@@ -24,13 +24,6 @@ def _bulk_update_tags(tag_type, json, tag_model_q):
     return tag_models
 
 
-def _update_tag_metadata(tag_type, meta_name, tag_model_q, tags_by_saved_variant, new_tag_type=None):
-    tag_models = _bulk_update_tags(tag_type, {'metadata': meta_name}, tag_model_q)
-    for tag in tag_models:
-        tags_by_saved_variant[new_tag_type or tag_type][
-            ','.join(map(str, tag.saved_variants.order_by('id').values_list('id', flat=True)))].append(tag)
-
-
 def merge_project_sanger_tags(apps, schema_editor):
     VariantTagType = apps.get_model("seqr", "VariantTagType")
     VariantTag = apps.get_model("seqr", "VariantTag")
@@ -72,23 +65,21 @@ def update_validation_tag_types(apps, schema_editor):
 
     sanger_tag_types = VariantTagType.objects.using(db_alias).filter(project__isnull=True, name__in=SANGER_TAGS.keys())
     if not sanger_tag_types:
-        logger.info('No sanger tags found, skipping validation tag migration') # TODO all funcs
+        logger.info('No sanger tags found, skipping validation tag migration')
         return
 
     tag_type_map = {}
-    tags_by_saved_variant = defaultdict(lambda: defaultdict(list)) # TODO remove
     for tag_type in sanger_tag_types:
         new_name = SANGER_TAGS[tag_type.name]
         _update_tag_type(tag_type, {'name': new_name, 'description': None})
-        _update_tag_metadata(tag_type, 'Sanger', variant_tag_q, tags_by_saved_variant)
+        _bulk_update_tags(tag_type, {'metadata': 'Sanger'}, variant_tag_q)
         tag_type_map[new_name] = tag_type
 
     validation_tag_types = VariantTagType.objects.using(db_alias).filter(project__isnull=True, name__in=VALIDATION_TAGS.keys())
     for tag_type in validation_tag_types:
         new_name, meta_name = VALIDATION_TAGS[tag_type.name]
         new_tag_type = tag_type_map[new_name]
-        _update_tag_metadata(tag_type, meta_name, variant_tag_q, tags_by_saved_variant, new_tag_type=new_tag_type)
-        _bulk_update_tags(tag_type, {'variant_tag_type': new_tag_type}, variant_tag_q)
+        _bulk_update_tags(tag_type, {'variant_tag_type': new_tag_type, 'metadata': meta_name}, variant_tag_q)
 
 
 def revert_validation_tag_types(apps, schema_editor):
@@ -112,8 +103,9 @@ def remove_unused_validation_tag_types(apps, schema_editor):
     VariantTagType = apps.get_model("seqr", "VariantTagType")
     db_alias = schema_editor.connection.alias
     tag_types = VariantTagType.objects.using(db_alias).filter(project__isnull=True, name__in=VALIDATION_TAGS.keys())
-    log_model_bulk_update(logger, tag_types, user=None, update_type='delete')
-    tag_types.delete()
+    if tag_types:
+        log_model_bulk_update(logger, tag_types, user=None, update_type='delete')
+        tag_types.delete()
 
 
 def create_validation_tags(apps, schema_editor):
@@ -130,6 +122,9 @@ def merge_duplicate_tags(apps, schema_editor):
 
     updated_tags = VariantTag.objects.using(db_alias).filter(variant_tag_type__name__in=SANGER_TAGS.values()).annotate(
         group_id=Concat('variant_tag_type__guid', StringAgg('saved_variants__guid', ',', ordering='saved_variants__guid')))
+    if not updated_tags:
+        logger.info('No updated tags found, skipping validation tag merging')
+        return
 
     grouped_tags = defaultdict(list)
     for tag in updated_tags:
@@ -166,7 +161,7 @@ def split_duplicate_tags(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    # atomic = False
+    atomic = False
 
     dependencies = [
         ('seqr', '0023_auto_20210304_2315'),
