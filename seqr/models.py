@@ -682,7 +682,7 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        json_fields = ['guid', 'search_hash', 'last_modified_date', 'created_by']
+        json_fields = ['guid', 'search_hash', 'metadata', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
