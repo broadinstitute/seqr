@@ -44,17 +44,21 @@ MetadataField.propTypes = {
   error: PropTypes.bool,
 }
 
-export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst }) => {
+export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata }) => {
   return (
     <span>
       {displayFieldValues.map((tag) => {
-        const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
+        let content = tag.name || tag.text
+        if (displayMetadata && tag.metadata) {
+          content = `${content}: ${tag.metadata}`
+        }
+        const label = <ColoredLabel size="small" color={tag.color} horizontal content={content} />
         const annotation = tagAnnotation && tagAnnotation(tag)
         return (
           <span key={tag.tagGuid || tag.name}>
             <HorizontalSpacer width={5} />
             {displayAnnotationFirst && annotation}
-            {popup ? popup(tag)(label) : label}
+            {popup ? popup(tag)(label, displayMetadata) : label}
             {!displayAnnotationFirst && annotation}
           </span>
         )
@@ -68,9 +72,10 @@ TagFieldDisplay.propTypes = {
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   displayAnnotationFirst: PropTypes.bool,
+  displayMetadata: PropTypes.bool,
 }
 
-const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, validate, ...props }) => {
+const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, validate, displayMetadata, ...props }) => {
   const fieldValues = (initialValues || {})[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -118,7 +123,7 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
-      <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} />
+      <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} displayMetadata={displayMetadata} />
     }
     {...props}
   />
@@ -131,6 +136,7 @@ TagFieldView.propTypes = {
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   editMetadata: PropTypes.bool,
+  displayMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   simplifiedValue: PropTypes.bool,
