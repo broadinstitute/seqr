@@ -23,10 +23,11 @@ def _bulk_update_tags(tag_type, json, tag_model_q):
     return tag_models
 
 
-def _change_tag_type(old_tag_type, new_tag_type, tag_model_q):
+def _change_tag_type(old_tag_type, new_tag_type, tag_model_q, delete=True):
     _bulk_update_tags(old_tag_type, {'variant_tag_type': new_tag_type}, tag_model_q)
-    log_model_update(logger, old_tag_type, user=None, update_type='delete')
-    old_tag_type.delete()
+    if delete:
+        log_model_update(logger, old_tag_type, user=None, update_type='delete')
+        old_tag_type.delete()
 
 
 def _update_tag_metadata(tag_type, meta_name, tag_model_q, tags_by_saved_variant, new_tag_type=None):
@@ -57,6 +58,7 @@ SANGER_TAGS = {
     'Sanger did not confirm': 'Validation did not confirm',
     'Sanger troubleshooting': 'Validation troubleshooting',
 }
+REVERSE_SANGER_TAGS = {v: k for k, v in SANGER_TAGS.items()}
 
 VALIDATION_TAGS = {
     'Test segregation': ('Send for validation', 'Segregation'),
@@ -105,6 +107,36 @@ def update_validation_tags(apps, schema_editor):
             tag.delete()
 
 
+def split_validation_tags(apps, schema_editor):
+    VariantTagType = apps.get_model("seqr", "VariantTagType")
+    VariantTag = apps.get_model("seqr", "VariantTag")
+    db_alias = schema_editor.connection.alias
+
+    duplicate_tags = VariantTag.objects.using(db_alias).filter(metadata__contains=',')
+    logger.info('Splitting {} sets of tags'.format(len(duplicate_tags)))
+    for tag in duplicate_tags:
+        meta_names = tag.metadata.split(', ')
+        tag.metadata = meta_names[0]
+        tag.save()
+        for meta_name in meta_names[1:]:
+            tag.pk = None # creates a new object with the same properties as the original model
+            tag.guid = tag.guid[:18] + meta_name
+            tag.metadata = meta_name
+            tag.save()
+
+    sanger_tag_type_lookup = {
+        t.name: t for t in VariantTagType.objects.using(db_alias).filter(
+        project__isnull=True, name__in=SANGER_TAGS.values())}
+
+    for old_tag_name, (new_tag_name, meta_name) in VALIDATION_TAGS.items():
+        tag_type = VariantTagType.objects.using(db_alias).create(name=old_tag_name, guid=old_tag_name)
+        tags_q = VariantTag.objects.using(db_alias).filter(metadata=meta_name)
+        _change_tag_type(sanger_tag_type_lookup[new_tag_name], tag_type, tags_q, delete=False)
+
+    for name, tag_type in sanger_tag_type_lookup.items():
+        _update_tag_type(tag_type, {'name': REVERSE_SANGER_TAGS[name]})
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -118,5 +150,5 @@ class Migration(migrations.Migration):
             field=models.TextField(null=True),
         ),
         migrations.RunPython(merge_project_sanger_tags, reverse_code=migrations.RunPython.noop),
-        migrations.RunPython(update_validation_tags, reverse_code=migrations.RunPython.noop), # TODO reverse
+        migrations.RunPython(update_validation_tags, reverse_code=split_validation_tags),
     ]
