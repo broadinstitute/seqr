@@ -6,7 +6,7 @@ import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
-import { LargeMultiselect } from '../../form/Inputs'
+import { LargeMultiselect, Multiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
@@ -17,10 +17,30 @@ const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
   label, .label {
     white-space: nowrap;
   }
+  
+  .fluid.selection.dropdown {
+    width: 100% !important;
+  } 
 `
+
+const MultiselectField = ({ input, ...props }) => <Multiselect {...input} {...props} />
+
+MultiselectField.propTypes = {
+  input: PropTypes.object,
+}
 
 const METADATA_FIELD_PROPS = {
   [NOTES_CATEGORY]: { width: 16, maxLength: 50, placeholder: 'Enter up to 50 characters' },
+  Collaboration: {
+    width: 16,
+    component: MultiselectField,
+    fluid: true,
+    allowAdditions: true,
+    addValueOptions: true,
+    options: ['Sanger', 'Segregation', 'SV'].map(value => ({ value })),
+    format: val => (val || '').split(', ').filter(v => v),
+    normalize: val => (val || []).join(', '),
+  },
 }
 
 const MetadataField = React.memo(({ value, name, error }) => {
