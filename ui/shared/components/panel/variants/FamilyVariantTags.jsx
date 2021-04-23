@@ -269,7 +269,6 @@ const FamilyVariantTags = React.memo((
                 variantTagNotes={variantTagNotes}
                 variantId={variantId}
                 tagOptions={projectFunctionalTagTypes}
-                editMetadata
                 onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
               />
             </span>

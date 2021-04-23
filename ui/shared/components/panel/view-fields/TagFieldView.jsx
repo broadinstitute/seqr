@@ -19,11 +19,16 @@ const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
   }
 `
 
+const METADATA_FIELD_PROPS = {
+  [NOTES_CATEGORY]: { width: 16, maxLength: 50, placeholder: 'Enter up to 50 characters' },
+}
 
 const MetadataField = React.memo(({ value, name, error }) => {
+  if (!value.metadataTitle) {
+    return null
+  }
   const label = <ColoredOutlineLabel color={value.color} content={value.name} size="large" pointing="right" basic />
-  const fieldProps = value.category === NOTES_CATEGORY ?
-    { width: 16, maxLength: 50, label: 'Notes', placeholder: 'Enter up to 50 characters' } : { width: 4, type: 'number', min: 0 }
+  const fieldProps = METADATA_FIELD_PROPS[value.category] || { width: 4, type: 'number', min: 0 }
   return (
     <MetadataFormGroup>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
@@ -75,7 +80,7 @@ TagFieldDisplay.propTypes = {
   displayMetadata: PropTypes.bool,
 }
 
-const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, validate, displayMetadata, ...props }) => {
+const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props }) => {
   const fieldValues = (initialValues || {})[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -107,11 +112,11 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     formFieldProps.validate = validate
   }
 
-  const additionalFields = editMetadata ? [{
+  const additionalFields = tagOptions.some(({ metadataTitle }) => metadataTitle) ? [{
     name: field,
     key: 'test',
     isArrayField: true,
-    validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
+    validate: (val) => { return (!val || !val.metadataTitle || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
     component: MetadataField,
   }] : []
 
@@ -135,7 +140,6 @@ TagFieldView.propTypes = {
   initialValues: PropTypes.object,
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
-  editMetadata: PropTypes.bool,
   displayMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
