@@ -653,6 +653,7 @@ class VariantTagType(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
     order = models.FloatField(null=True)
+    metadata_title = models.CharField(max_length=20, null=True)
 
     def __unicode__(self):
         return self.name.strip()
@@ -663,7 +664,7 @@ class VariantTagType(ModelWithGUID):
     class Meta:
         unique_together = ('project', 'name', 'color')
 
-        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order']
+        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order', 'metadata_title']
 
 
 class VariantTag(ModelWithGUID):

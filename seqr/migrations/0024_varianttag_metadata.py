@@ -71,7 +71,7 @@ def update_validation_tag_types(apps, schema_editor):
     tag_type_map = {}
     for tag_type in sanger_tag_types:
         new_name = SANGER_TAGS[tag_type.name]
-        _update_tag_type(tag_type, {'name': new_name, 'description': None})
+        _update_tag_type(tag_type, {'name': new_name, 'description': None, 'metadata_title': 'Test Type(s)'})
         _bulk_update_tags(tag_type, {'metadata': 'Sanger'}, variant_tag_q)
         tag_type_map[new_name] = tag_type
 
@@ -172,6 +172,11 @@ class Migration(migrations.Migration):
             model_name='varianttag',
             name='metadata',
             field=models.TextField(null=True),
+        ),
+        migrations.AddField(
+            model_name='varianttagtype',
+            name='metadata_title',
+            field=models.CharField(max_length=20, null=True),
         ),
         migrations.RunPython(merge_project_sanger_tags, reverse_code=migrations.RunPython.noop),
         migrations.RunPython(update_validation_tag_types, reverse_code=revert_validation_tag_types),
