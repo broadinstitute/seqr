@@ -115,6 +115,14 @@ def delete_index(request):
 
     return create_json_response({'indices': updated_indices})
 
+
+@data_manager_required
+def elasticsearch_mapping(request):
+    return create_json_response({
+        'data': 'Simple data'
+    })
+
+
 @data_manager_required
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file'].strip()
