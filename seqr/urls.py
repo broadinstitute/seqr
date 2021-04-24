@@ -271,7 +271,7 @@ api_endpoints = {
     'data_management/get_all_users': get_all_users,
 
     'data_management/elasticsearch_mapping': elasticsearch_mapping,
-    'data_management/elasticsearch_index_data': elasticsearch_index_data,
+    'data_management/elasticsearch_index_data/(?P<index_name>[^/]+)': elasticsearch_index_data,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
