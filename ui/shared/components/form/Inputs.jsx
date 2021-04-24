@@ -266,7 +266,7 @@ const getElasticSearchIndicies = async () => {
   const url = 'localhost:9200'
 
   // Get all keys from Elasticsearch
-  let response = await fetch(`${url}/_mapping`)
+  let response = await fetch('/api/data_management/elasticsearch_mapping')
   let data = await response.json()
 
   // Include only index names that are not from ElasticSearch (the ones that start with dot)
