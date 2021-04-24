@@ -274,7 +274,7 @@ const getElasticSearchIndicies = async () => {
   /* eslint-disable no-await-in-loop */
   for (let indexNameIdx = 0; indexNameIdx < indexNames.length; indexNameIdx++) {
     const indexName = indexNames[indexNameIdx]
-    response = await fetch(`/api/data_management/elasticsearch_mapping&index_name=${indexName}`)
+    response = await fetch(`/api/data_management/elasticsearch_index_data/${indexName}`)
     data = await response.json()
 
     /* eslint-disable no-loop-func */

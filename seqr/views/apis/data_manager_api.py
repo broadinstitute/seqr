@@ -122,8 +122,7 @@ def elasticsearch_mapping(request):
     return create_json_response(json.loads(response.content))
 
 @data_manager_required
-def elasticsearch_index_data(request):
-    index_name = request.GET.get('index_name')
+def elasticsearch_index_data(request, index_name):
     response = requests.get(f"http://localhost:9200/{index_name}")
     return create_json_response(json.loads(response.content))
 
