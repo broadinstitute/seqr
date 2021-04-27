@@ -165,10 +165,19 @@ export class AddableSelect extends React.PureComponent {
   static propTypes = {
     options: PropTypes.array,
     allowAdditions: PropTypes.bool,
+    addValueOptions: PropTypes.bool,
+    value: PropTypes.any,
   }
 
-  state = {
-    options: this.props.options,
+  constructor(props) {
+    super(props)
+
+    let { options } = props
+    if (props.addValueOptions && props.value) {
+      const valueOptions = props.value.filter(val => !props.options.some(({ value }) => value === val)).map(value => ({ value }))
+      options = [...options, ...valueOptions]
+    }
+    this.state = { options }
   }
 
   handleAddition = (e, { value }) => {
@@ -182,8 +191,9 @@ export class AddableSelect extends React.PureComponent {
   }
 
   render() {
+    const { addValueOptions, ...props } = this.props
     return <Select
-      {...this.props}
+      {...props}
       options={this.state.options}
       allowAdditions={this.props.allowAdditions !== false}
       onAddItem={this.handleAddition}

@@ -322,18 +322,8 @@ def _get_json_for_variant_tag_types(project):
         family__project=project, varianttag__variant_tag_type__guid__in=discovery_tag_type_guids,
     ), add_details=True)
 
-    project_functional_tags = []
-    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
-        project_functional_tags += [{
-            'category': category,
-            'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title'),
-            'color': json.loads(tag_json)['color'],
-            'description': json.loads(tag_json).get('description'),
-        } for name, tag_json in tags]
-
     return {
-        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
+        'variantTagTypes': project_variant_tags,
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }
