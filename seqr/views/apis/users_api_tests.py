@@ -101,11 +101,10 @@ class UsersAPITest(object):
 
     Test Manager User has added you as a collaborator in seqr.
 
-    Please click this link to set up your account:
-    /users/set_password/{password_token}
+    {setup_message}
 
     Thanks!
-    """.format(password_token=user.password)
+    """.format(setup_message=self.EMAIL_SETUP_MESSAGE.format(password_token=user.password))
         mock_send_mail.assert_called_with(
             'Set up your seqr account',
             expected_email_content,
@@ -309,6 +308,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
+    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /users/set_password/{password_token}'
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
@@ -370,6 +370,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     USERNAME = 'test_local_user'
+    EMAIL_SETUP_MESSAGE = 'Please make sure this account is registered in AnVIL by signing in to https://anvil.terra.bio/ and registering. Once you are registered in AnVIL, you will be able to access seqr at /'
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
