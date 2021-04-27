@@ -46,15 +46,10 @@ class EsSearch(object):
         self._family_individual_affected_status = {}
         self._skipped_sample_count = defaultdict(int)
         if inheritance_search:
-            custom_affected_filter = (inheritance_search.get('filter') or {}).get('affected') or {}
             for index, family_samples in list(self.samples_by_family_index.items()):
                 index_skipped_families = []
                 for family_guid, samples_by_id in family_samples.items():
-                    individual_affected_status = {}
-                    for sample in samples_by_id.values():
-                        indiv = sample.individual
-                        affected = custom_affected_filter.get(indiv.guid) or indiv.affected
-                        individual_affected_status[indiv.guid] = affected
+                    individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_search.get('filter') or {})
 
                     has_affected_samples = any(
                         aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
@@ -1074,6 +1069,16 @@ def _liftover_grch37_to_grch38():
         except Exception as e:
             logger.error('ERROR: Unable to set up liftover. {}'.format(e))
     return LIFTOVER_GRCH37_TO_GRCH38
+
+
+def _get_family_affected_status(samples_by_id, inheritance_filter):
+    individual_affected_status = inheritance_filter.get('affected') or {}
+    affected_status = {}
+    for sample in samples_by_id.values():
+        indiv = sample.individual
+        affected_status[indiv.guid] = individual_affected_status.get(indiv.guid) or indiv.affected
+
+    return affected_status
 
 
 def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
