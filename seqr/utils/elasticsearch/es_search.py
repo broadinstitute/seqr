@@ -29,7 +29,7 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False,
+    def __init__(self, families, previous_search_results=None, inheritance_search=None,
                  return_all_queried_families=False):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
@@ -43,18 +43,30 @@ class EsSearch(object):
             raise InvalidSearchException('No es index found for families {}'.format(
                 ', '.join([f.family_id for f in families])))
 
+        self._family_individual_affected_status = {}
         self._skipped_sample_count = defaultdict(int)
-        if skip_unaffected_families:
+        if inheritance_search:
+            custom_affected_filter = (inheritance_search.get('filter') or {}).get('affected') or {}
             for index, family_samples in list(self.samples_by_family_index.items()):
                 index_skipped_families = []
                 for family_guid, samples_by_id in family_samples.items():
-                    affected_samples = [
-                        s for s in samples_by_id.values() if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED
-                    ]
-                    if not affected_samples:
+                    individual_affected_status = {}
+                    for sample in samples_by_id.values():
+                        indiv = sample.individual
+                        affected = custom_affected_filter.get(indiv.guid) or indiv.affected
+                        individual_affected_status[indiv.guid] = affected
+
+                    has_affected_samples = any(
+                        aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
+                    )
+                    if not has_affected_samples:
                         index_skipped_families.append(family_guid)
 
-                        self._skipped_sample_count[index] += len(samples_by_id) - len(affected_samples)
+                        self._skipped_sample_count[index] += len(samples_by_id)
+
+                    if family_guid not in self._family_individual_affected_status:
+                        self._family_individual_affected_status[family_guid] = {}
+                    self._family_individual_affected_status[family_guid].update(individual_affected_status)
 
                 for family_guid in index_skipped_families:
                     del self.samples_by_family_index[index][family_guid]
@@ -89,7 +101,6 @@ class EsSearch(object):
         self._filtered_variant_ids = None
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
-        self._family_individual_affected_status = {}
 
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
@@ -240,15 +251,6 @@ class EsSearch(object):
 
         if skip_genotype_filter:
             return
-
-        if inheritance_filter or inheritance_mode:
-            for index in self._indices:
-                family_samples_by_id = self.samples_by_family_index[index]
-                affected_status = _get_family_affected_status(family_samples_by_id, inheritance_filter)
-                for family_guid, family_affected_status in affected_status.items():
-                    if family_guid not in self._family_individual_affected_status:
-                        self._family_individual_affected_status[family_guid] = {}
-                    self._family_individual_affected_status[family_guid].update(family_affected_status)
 
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
@@ -1072,18 +1074,6 @@ def _liftover_grch37_to_grch38():
         except Exception as e:
             logger.error('ERROR: Unable to set up liftover. {}'.format(e))
     return LIFTOVER_GRCH37_TO_GRCH38
-
-
-def _get_family_affected_status(family_samples_by_id, inheritance_filter):
-    individual_affected_status = inheritance_filter.get('affected') or {}
-    affected_status = {}
-    for family_guid, samples_by_id in family_samples_by_id.items():
-        affected_status[family_guid] = {}
-        for sample in samples_by_id.values():
-            indiv = sample.individual
-            affected_status[family_guid][indiv.guid] = individual_affected_status.get(indiv.guid) or indiv.affected
-
-    return affected_status
 
 
 def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
