@@ -27,6 +27,7 @@ def _post_to_slack(channel, message):
 
 
 def send_welcome_email(user, referrer):
+    # TODO change template
     email_content = """
     Hi there {full_name}--
 

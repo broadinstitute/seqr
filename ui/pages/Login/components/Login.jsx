@@ -16,6 +16,8 @@ const FIELDS = [
   { name: 'password', label: 'Password', type: 'password', validate: validators.required },
 ]
 
+const GOGGLE_SETUP_URL = 'https://support.terra.bio/hc/en-us/articles/360029186611-Setting-up-a-Google-account-with-a-non-Google-email'
+
 const Login = ({ onSubmit, googleLoginEnabled, location }) => {
   const loginForm =
     <UserForm
@@ -32,13 +34,15 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) => {
     </span>
 
   const loginPanels = [{
-    title: { content: <span>Or, <a>sign in with Username/ Password</a></span>, icon: 'sign-in' },
+    title: { content: <span>Or, <a>sign in with Email/ Password</a></span>, icon: 'sign-in' },
     content: {
       content: (
         <div>
           <Message warning>
-            Signing in to seqr with your username/ password will be deprecated. {registerMessage}, which will
-            enable you to use the above &quot;Sign in with Google&quot; option
+            Signing in to seqr with your email/ password will be deprecated. {registerMessage}, which will
+            enable you to use the above &quot;Sign in with Google&quot; option. If the email associated with your
+            account is not managed by google, follow <a href={GOGGLE_SETUP_URL} target="_blank">these instructions </a>
+            to register the email with google before registering with AnVIL.
           </Message>
           {loginForm}
         </div>
