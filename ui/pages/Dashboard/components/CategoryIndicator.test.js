@@ -13,7 +13,7 @@ test('shallow-render with categories without crashing', () => {
    */
 
   const props = {
-    project: getVisibleProjects(STATE1).find(({ guid }) => guid === 'R0237_1000_genomes_demo'),
+    project: getVisibleProjects(STATE1).find(({ projectGuid }) => projectGuid === 'R0237_1000_genomes_demo'),
   }
 
   shallow(<CategoryIndicator {...props} />)
@@ -25,7 +25,7 @@ test('shallow-render without categories without crashing', () => {
    */
 
   const props = {
-    project: getVisibleProjects(STATE1).find(({ guid }) => guid === 'R0202_tutorial'),
+    project: getVisibleProjects(STATE1).find(({ projectGuid }) => projectGuid === 'R0202_tutorial'),
   }
 
   shallow(<CategoryIndicator {...props} />)
