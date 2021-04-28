@@ -241,6 +241,7 @@ class Family(ModelWithGUID):
         ('S_kgfp', 'Solved - known gene for phenotype'),
         ('S_kgdp', 'Solved - gene linked to different phenotype'),
         ('S_ng', 'Solved - novel gene'),
+        ('ES', 'External solve'),
         ('Sc_kgfp', 'Strong candidate - known gene for phenotype'),
         ('Sc_kgdp', 'Strong candidate - gene linked to different phenotype'),
         ('Sc_ng', 'Strong candidate - novel gene'),
