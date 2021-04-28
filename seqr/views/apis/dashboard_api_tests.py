@@ -21,7 +21,7 @@ PROJECT_EXPORT_HEADER = [
     'RNA Samples',
     'Solved - known gene for phenotype',
     'Solved - gene linked to different phenotype',
-    'Solved - novel gene', 'Strong candidate - known gene for phenotype',
+    'Solved - novel gene', 'External solve', 'Strong candidate - known gene for phenotype',
     'Strong candidate - gene linked to different phenotype',
     'Strong candidate - novel gene',
     'Reviewed, currently pursuing candidates',
@@ -120,7 +120,7 @@ class DashboardPageTest(object):
              '1000 genomes project description with uni\u00e7\u00f8de',
              'CMG, c\u00e5teg\u00f8ry with uni\u00e7\u00f8de',
              '2017-03-12 19:27:08.156000+00:00', '11', '14', '4', '14', '0', '0', '0', '0', '0', '0', '0', '0', '0',
-             '0', '0', '0', '11'],
+             '0', '0', '0', '0', '11'],
         )
 
         response = self.client.get('{}?file_format=xls'.format(url))
@@ -145,7 +145,7 @@ class DashboardPageTest(object):
             'solved_-_novel_gene': '0', 'reviewed,_currently_pursuing_candidates': '0',
             'solved_-_gene_linked_to_different_phenotype': '0', 'reviewed,_no_clear_candidate': '0',
             'strong_candidate_-_novel_gene': '0', 'strong_candidate_-_known_gene_for_phenotype': '0',
-            'waiting_for_data': '11'
+            'external_solve': '0', 'waiting_for_data': '11'
         })
 
         response = self.client.get('{}?file_format=csv'.format(url))
