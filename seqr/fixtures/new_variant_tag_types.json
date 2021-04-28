@@ -3,16 +3,16 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_multi_nucleotide_variant",
-        "created_date": "2020-11-17T00:00:00.000Z",
+        "guid": "VTT_returned",
+        "created_date": "2021-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Multi-Nucleotide Variant",
+        "name": "Returned",
         "category": "Collaboration",
-        "description": "MNV",
-        "color": "#c283ce",
-        "order": 15.5
+        "description": "",
+        "color": "#52caae",
+        "order": 16.5
     }
 }
 ]
