@@ -45,11 +45,11 @@ const ProjectTableContainer = styled.div`
 
 const COLUMNS = [
   {
-    name: 'projectCategoryGuids',
+    name: 'projectCategories',
     width: 1,
     format: project => <CategoryIndicator project={project} />,
     downloadColumn: 'Categories',
-    noFormatExport: true, //TODO
+    noFormatExport: true,
   },
   {
     name: 'name',

@@ -172,7 +172,7 @@ class DataTable extends React.PureComponent {
       sortedData = sortedData.slice((activePage - 1) * rowsPerPage, activePage * rowsPerPage)
     }
 
-    const processedColumns = columns.map(({ formFieldProps, ...columnProps }) => (
+    const processedColumns = columns.map(({ formFieldProps, downloadColumn, ...columnProps }) => (
       formFieldProps ?
         {
           ...columnProps,
