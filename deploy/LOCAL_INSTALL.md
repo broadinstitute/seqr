@@ -78,7 +78,7 @@ The steps below describe how to annotate a callset and then load it into your on
 1. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh38/your-callset.vcf.gz`
 
 1. if you haven't already, upload the reference data you downloaded above to your own google bucket -
-   for example, `gs://your-bucket/reference_data/GRCh38/all_reference_data/combined_reference_data_grch37.ht`
+   for example, `gs://your-bucket/reference_data/GRCh38/all_reference_data/combined_reference_data_grch38.ht`
 
 1. start an elasticsearch container.
    ```
