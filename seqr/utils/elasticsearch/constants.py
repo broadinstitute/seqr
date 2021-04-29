@@ -182,7 +182,7 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "doc.containsKey('svType') ? 4.5 : doc['mainTranscript_major_consequence_rank'].value"
+               'source': "doc.containsKey('svType') ? 4.5 : (doc['mainTranscript_major_consequence_rank'].empty ? 1000 : doc['mainTranscript_major_consequence_rank'].value)"
             }
         }
     }],
