@@ -69,7 +69,11 @@ export const getPairedSelectedSavedVariants = createSelector(
 
       if (variantCompoundHetGuids.length) {
         const unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
-        acc.push([variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])])
+        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort((a, b) =>
+          // sorts manual variants to top of list, as manual variants are missing all populations
+          (a.populations ? 1 : 0) - (b.populations ? 1 : 0),
+        )
+        acc.push(compHet)
         seenCompoundHets.push(variant.variantGuid, ...unseenGuids)
         return acc
       }

@@ -50,9 +50,7 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_main_transcript, \
     update_saved_variant_json
 
-from seqr.views.apis.dashboard_api import \
-    dashboard_page_data, \
-    export_projects_table_handler
+from seqr.views.apis.dashboard_api import dashboard_page_data
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -163,7 +161,6 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
     'dashboard': dashboard_page_data,
-    'dashboard/export_projects_table': export_projects_table_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
 

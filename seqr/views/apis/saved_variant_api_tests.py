@@ -94,7 +94,7 @@ CREATE_VARIANT_JSON = {
 CREATE_VARIANT_REQUEST_BODY = {
     'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
     'familyGuid': 'F000001_1',
-    'tags': [{'name': 'Review'}],
+    'tags': [{'name': 'Review', 'metadata': 'a note'}],
     'note': '',
     'functionalData': [],
     'variant': CREATE_VARIANT_JSON,
@@ -201,6 +201,7 @@ class SavedVariantAPITest(object):
             'category': 'CMG Discovery Tags',
             'color': '#03441E',
             'searchHash': None,
+            'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
         }])
@@ -235,11 +236,14 @@ class SavedVariantAPITest(object):
         })
         response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
-        tags = [response_json['variantTagsByGuid'][tag_guid] for tag_guid in response_variant_json.pop('tagGuids')]
+        tag_guids = response_variant_json.pop('tagGuids')
+        self.assertEqual(len(tag_guids), 1)
+        tag = response_json['variantTagsByGuid'][tag_guids[0]]
         self.assertDictEqual(variant_json, response_variant_json)
 
-        self.assertListEqual(["Review"], [vt['name'] for vt in tags])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
+        self.assertEqual('Review', tag['name'])
+        self.assertEqual('a note', tag['metadata'])
+        self.assertEqual('Review', VariantTag.objects.get(saved_variants__guid=variant_guid).variant_tag_type.name)
 
         # creating again without specifying the guid should not error and should not create a duplicate
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
@@ -580,20 +584,24 @@ class SavedVariantAPITest(object):
         update_variant_tags_url = reverse(update_variant_tags_handler, args=[VARIANT_GUID])
         self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
+        review_guid = 'VT1708633_2103343353_r0390_100'
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
-            'tags': [{'tagGuid': 'VT1708633_2103343353_r0390_100', 'name': 'Review'}, {'name': 'Excluded'}],
+            'tags': [
+                {'tagGuid': review_guid, 'name': 'Review', 'metadata': 'An updated note'},
+                {'name': 'Excluded', 'metadata': 'Bad fit'}],
             'familyGuid': 'F000001_1'
         }))
         self.assertEqual(response.status_code, 200)
 
         tags = response.json()['variantTagsByGuid']
-        self.assertEqual(len(tags), 2)
+        self.assertEqual(len(tags), 3)
         self.assertIsNone(tags.pop('VT1726961_2103343353_r0390_100'))
-        excluded_guid = next(iter(tags))
+        excluded_guid = next(tag for tag in tags if tag != review_guid)
         self.assertEqual('Excluded', tags[excluded_guid]['name'])
+        self.assertEqual('Bad fit', tags[excluded_guid]['metadata'])
+        self.assertEqual('An updated note', tags[review_guid]['metadata'])
         self.assertSetEqual(
-            {excluded_guid, 'VT1708633_2103343353_r0390_100'},
-            set(response.json()['savedVariantsByGuid'][VARIANT_GUID]['tagGuids'])
+            {excluded_guid, review_guid}, set(response.json()['savedVariantsByGuid'][VARIANT_GUID]['tagGuids'])
         )
         self.assertSetEqual(
             {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in

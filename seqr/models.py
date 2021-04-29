@@ -241,6 +241,7 @@ class Family(ModelWithGUID):
         ('S_kgfp', 'Solved - known gene for phenotype'),
         ('S_kgdp', 'Solved - gene linked to different phenotype'),
         ('S_ng', 'Solved - novel gene'),
+        ('ES', 'External solve'),
         ('Sc_kgfp', 'Strong candidate - known gene for phenotype'),
         ('Sc_kgdp', 'Strong candidate - gene linked to different phenotype'),
         ('Sc_ng', 'Strong candidate - novel gene'),
@@ -653,6 +654,7 @@ class VariantTagType(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
     order = models.FloatField(null=True)
+    metadata_title = models.CharField(max_length=20, null=True)
 
     def __unicode__(self):
         return self.name.strip()
@@ -663,12 +665,13 @@ class VariantTagType(ModelWithGUID):
     class Meta:
         unique_together = ('project', 'name', 'color')
 
-        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order']
+        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order', 'metadata_title']
 
 
 class VariantTag(ModelWithGUID):
     saved_variants = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
+    metadata = models.TextField(null=True)
 
     # context in which a variant tag was saved
     search_hash = models.CharField(max_length=50, null=True)
@@ -681,7 +684,7 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        json_fields = ['guid', 'search_hash', 'last_modified_date', 'created_by']
+        json_fields = ['guid', 'search_hash', 'metadata', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):

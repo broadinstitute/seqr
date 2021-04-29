@@ -77,15 +77,18 @@ const missingParentVariant = variant => (parentGuid) => {
 const isHemiUPDVariant = (numAlt, variant, individual) =>
   numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant))
 
-const Allele = React.memo(({ isAlt, variant }) => {
-  const allele = isAlt ? variant.alt : variant.ref
-  let alleleText = allele.substring(0, 3)
-  if (allele.length > 3) {
-    alleleText += '...'
-  }
-
-  return isAlt ? <b><i>{alleleText}</i></b> : alleleText
-})
+const Allele = styled.div.attrs(({ isAlt, variant }) => ({ children: isAlt ? variant.alt : variant.ref }))`
+  display: inline-block;
+  max-width: 50px;
+  width: 40%;
+  height: 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: ${props => props.textAlign};
+  ${props => (props.isAlt ? `
+    font-style: italic;
+    font-weight: 400;` : '')}
+`
 
 Allele.propTypes = {
   isAlt: PropTypes.bool,
@@ -103,8 +106,8 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
     }
     {genotype.numAlt >= 0 ?
       <span>
-        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} />
-        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} />}
+        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
+        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </span> :
       <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>
     }
