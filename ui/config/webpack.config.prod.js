@@ -169,12 +169,12 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
-                  minimize: true,
+                  modules: true,
+                  // minimize: true, remove minimize option, use postcss-loader with cssnano or use optimize-cssnano-plugin plugin
                   sourceMap: true,
-                  discardComments: {
-                    removeAll: true,
-
-                  },
+                  // discardComments: {
+                  //   removeAll: true,
+                  // },
                 },
               },
               {
@@ -195,8 +195,9 @@ module.exports = {
                       flexbox: 'no-2009',
                     }),
                     cssnano({
+                      preset: ['default', {
                       discardComments: {removeAll: true},
-                    }),
+                    }]}),
                   ],
                 },
               }
