@@ -1,7 +1,7 @@
 /* eslint-disable global-require */
 
 const autoprefixer = require('autoprefixer');
-const cssnano = require('cssnano');
+const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -168,13 +168,7 @@ module.exports = {
               {
                 loader: require.resolve('css-loader'),
                 options: {
-                  importLoaders: 1,
-                  modules: true,
-                  // minimize: true, remove minimize option, use postcss-loader with cssnano or use optimize-cssnano-plugin plugin
                   sourceMap: true,
-                  // discardComments: {
-                  //   removeAll: true,
-                  // },
                 },
               },
               {
@@ -194,10 +188,6 @@ module.exports = {
                       ],
                       flexbox: 'no-2009',
                     }),
-                    cssnano({
-                      preset: ['default', {
-                      discardComments: {removeAll: true},
-                    }]}),
                   ],
                 },
               }
@@ -248,6 +238,13 @@ module.exports = {
 
     // This helps ensure the builds are consistent if source hasn't changed:
     new webpack.optimize.OccurrenceOrderPlugin(),
+
+    new OptimizeCssAssetsPlugin({
+      // cssProcessor: require('cssnano'),
+      cssProcessorPluginOptions: {
+        preset: ['default', { discardComments: { removeAll: true } }],
+      },
+    }),
 
     new MiniCssExtractPlugin({
       filename: cssFilename,
