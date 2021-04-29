@@ -39,6 +39,8 @@ open http://localhost     # open the seqr landing page in your browser. Log in t
    
 #### Annotating and loading VCF callsets 
 
+##### Initial Setup
+
 Before loading data to seqr, you first need to download reference files provided by the seqr team.
 This is a one-time setup requirment - for all subsequent loading jobs you should re-use the downloaded files
 
@@ -128,7 +130,6 @@ The steps below describe how to annotate a callset and then load it into your on
         --es-host elasticsearch  \
         --es-index your-callset-name
    ``` 
-  
   
   
 ##### Option #2: annotate and load on-prem
