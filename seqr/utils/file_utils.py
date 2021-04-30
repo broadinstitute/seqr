@@ -6,6 +6,11 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
+def _run_command(command):
+    logger.info('==> {}'.format(command))
+    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+
+
 def _run_gsutil_command(command, gs_path, gunzip=False):
     #  Anvil buckets are requester-pays and we bill them to the anvil project
     project_arg = '-u anvil-datastorage ' if gs_path.startswith('gs://fc-secure') else ''
@@ -15,8 +20,7 @@ def _run_gsutil_command(command, gs_path, gunzip=False):
     if gunzip:
         command += " | gunzip -c -q - "
 
-    logger.info('==> {}'.format(command))
-    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    return _run_command(command)
 
 
 def _is_google_bucket_file_path(file_path):
@@ -34,25 +38,20 @@ def file_iter(file_path, byte_range=None, raw_content=False):
     if _is_google_bucket_file_path(file_path):
         for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content):
             yield line
+    elif byte_range:
+        command = 'dd skip={offset} count={size} bs=1 if={file_path}'.format(
+            offset=byte_range[0],
+            size=byte_range[1]-byte_range[0],
+            file_path=file_path,
+        )
+        process = _run_command(command)
+        for line in process.stdout:
+            yield line
     else:
         mode = 'rb' if raw_content else 'r'
         with open(file_path, mode) as f:
-            if byte_range:
-                f.seek(byte_range[0])
-                # for line in f.read(byte_range[1] - byte_range[0]):
-                #     yield line
-                # yield f.read(byte_range[1] - byte_range[0])
-                while f.tell() < byte_range[1]:
-                    yield f.read(1)
-                # print('Done reading')
-                # for line in f:
-                #     if f.tell() < byte_range[1]:
-                #         yield line
-                #     else:
-                #         break
-            else:
-                for line in f:
-                    yield line
+            for line in f:
+                yield line
 
 
 def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False):
