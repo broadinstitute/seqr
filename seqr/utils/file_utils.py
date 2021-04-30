@@ -39,11 +39,17 @@ def file_iter(file_path, byte_range=None, raw_content=False):
         with open(file_path, mode) as f:
             if byte_range:
                 f.seek(byte_range[0])
-                for line in f:
-                    if f.tell() < byte_range[1]:
-                        yield line
-                    else:
-                        break
+                # for line in f.read(byte_range[1] - byte_range[0]):
+                #     yield line
+                # yield f.read(byte_range[1] - byte_range[0])
+                while f.tell() < byte_range[1]:
+                    yield f.read(1)
+                # print('Done reading')
+                # for line in f:
+                #     if f.tell() < byte_range[1]:
+                #         yield line
+                #     else:
+                #         break
             else:
                 for line in f:
                     yield line
