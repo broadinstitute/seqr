@@ -131,13 +131,13 @@ class IgvAPITest(AuthenticationTestCase):
         mock_local_file_exists.return_value = True
         mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675_new.cram',
+            'filePath': '/readviz/NA19675.new.cram',
         }))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675_new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
-        mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
+            'filePath': '/readviz/NA19675.new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
+        mock_local_file_exists.assert_called_with('/readviz/NA19675.new.cram')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675',
