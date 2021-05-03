@@ -154,6 +154,10 @@ class EsSearch(object):
         if XPOS_SORT_KEY not in self._sort:
             self._sort.append(XPOS_SORT_KEY)
 
+        # always final sort on variant ID to keep different variants at the same position grouped properly
+        if 'variantId' not in self._sort:
+            self._sort.append('variantId')
+
         self._search = self._search.sort(*self._sort)
 
     def filter(self, new_filter):
