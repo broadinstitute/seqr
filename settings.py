@@ -71,7 +71,7 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", "'unsafe-inline'")  # TODO remove unsafe-inline
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:') # TODO data: is insecure
-CSP_DEFAULT_SRC = ("'self'", "'unsafe-eval'", "'unsafe-inline'") # TODO remove
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", "'unsafe-inline'") # TODO remove remove unsafe-inline
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
