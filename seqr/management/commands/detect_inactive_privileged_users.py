@@ -39,7 +39,7 @@ class Command(BaseCommand):
             days_login = (now - user.last_login.replace(tzinfo=None)).days
             email_content = WARNING_TEMPLATE.format(user.get_full_name(), days_login, 90 - days_login)
             try:
-                user.email_user('Warning: seqr account inactivation', email_content)
+                user.email_user('Warning: seqr account deactivation', email_content)
             except AnymailError as e:
                 logger.error('Unable to send email: {}'.format(e))
 
