@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -67,6 +68,10 @@ CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", "'unsafe-inline'")  # TODO remove unsafe-inline
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:') # TODO data: is insecure
+CSP_DEFAULT_SRC = ("'self'", "'unsafe-eval'", "'unsafe-inline'") # TODO remove
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
