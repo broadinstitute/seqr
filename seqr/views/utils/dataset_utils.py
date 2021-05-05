@@ -11,20 +11,18 @@ from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
 
-SAMPLE_FIELDS_MAP = {
-    Sample.DATASET_TYPE_VARIANT_CALLS: 'samples_num_alt_1',
-    Sample.DATASET_TYPE_SV_CALLS: 'samples',
-}
+SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 
 
-def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+def get_elasticsearch_index_samples(elasticsearch_index):
     es_client = get_es_client()
 
-    index_metadata = get_index_metadata(elasticsearch_index, es_client).get(elasticsearch_index)
+    index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True).get(elasticsearch_index)
 
+    sample_field = next((field for field in SAMPLE_FIELDS_LIST if field in index_metadata['fields'].keys()))
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
-    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=SAMPLE_FIELDS_MAP[dataset_type], size=10000))
+    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=sample_field, size=10000))
     response = s.execute()
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 

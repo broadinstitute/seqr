@@ -14,6 +14,13 @@ INDEX_NAME = 'test_index'
 SV_INDEX_NAME = 'test_new_sv_index'
 NEW_SAMPLE_TYPE_INDEX_NAME = 'test_new_index'
 ADD_DATASET_PAYLOAD = json.dumps({'elasticsearchIndex': INDEX_NAME, 'datasetType': 'VARIANTS'})
+MAPPING_PROPS_NO_SAMPLES = {
+    "samples_num_alt_1": {"type": "keyword"},
+}
+MAPPING_PROPS_WITH_SAMPLES = {
+    "samples": {"type": "keyword"},
+    "samples_num_alt_1": {"type": "keyword"},
+}
 
 
 class DatasetAPITest(object):
@@ -45,7 +52,7 @@ class DatasetAPITest(object):
 
         mock_random.return_value = 98765432101234567890
 
-        urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {}}})
+        urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {"properties": MAPPING_PROPS_NO_SAMPLES}}})
         urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {
             'aggregations': {'sample_ids': {'buckets': []}}
         }, method=urllib3_responses.POST)
@@ -83,7 +90,7 @@ class DatasetAPITest(object):
                 'sampleType': 'NOT_A_TYPE',
                 'genomeVersion': '37',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}})
+            }, "properties": MAPPING_PROPS_NO_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Sample type not supported: NOT_A_TYPE']})
@@ -93,7 +100,7 @@ class DatasetAPITest(object):
                 'sampleType': 'WES',
                 'genomeVersion': '38',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}})
+            }, "properties": MAPPING_PROPS_NO_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 38 but this project uses version 37']})
@@ -103,7 +110,7 @@ class DatasetAPITest(object):
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'invalidpath.txt',
-            }}}})
+            }, "properties": MAPPING_PROPS_NO_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
@@ -114,7 +121,7 @@ class DatasetAPITest(object):
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
                 'datasetType': 'SV',
-            }}}})
+            }, "properties": MAPPING_PROPS_WITH_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has dataset type SV but expects VARIANTS']})
@@ -124,7 +131,7 @@ class DatasetAPITest(object):
                 'sampleType': 'WES',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
-            }}}})
+            }, "properties": MAPPING_PROPS_NO_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
@@ -171,7 +178,7 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 200)
         mock_open.assert_called_with('mapping.csv', 'r')
         mock_redis.return_value.get.assert_called_with('index_metadata__test_index')
-        mock_redis.return_value.set.assert_not_called()
+        mock_redis.return_value.set.assert_called_with('index_metadata__test_index', '{"test_index": {"sampleType": "WES", "genomeVersion": "37", "sourceFilePath": "test_data.vds", "fields": {"samples_num_alt_1": "keyword"}}}')
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
@@ -220,7 +227,7 @@ class DatasetAPITest(object):
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.bed',
                 'datasetType': 'SV',
-            }}}})
+            }, "properties": MAPPING_PROPS_WITH_SAMPLES}}})
         urllib3_responses.add_json('/{}/_search?size=0'.format(SV_INDEX_NAME), {
             'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
         }, method=urllib3_responses.POST)
@@ -261,7 +268,7 @@ class DatasetAPITest(object):
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
-            }}}})
+            }, "properties": MAPPING_PROPS_NO_SAMPLES}}})
         urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
             'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
         }, method=urllib3_responses.POST)
