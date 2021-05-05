@@ -69,9 +69,10 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", "'unsafe-inline'")  # TODO remove unsafe-inline
-CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:') # TODO data: is insecure
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", "'unsafe-inline'") # TODO remove remove unsafe-inline
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", "'unsafe-inline'") # TODO remove unsafe-inline
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
+CSP_INCLUDE_NONCE_IN = ['script-src']
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False

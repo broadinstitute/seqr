@@ -47,6 +47,10 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         "window.initialJSON=null",
         "window.initialJSON=" + json.dumps(initial_json, default=DjangoJSONEncoder().default)
     )
+    html = html.replace(
+        '<script type="text/javascript">',
+        '<script type="text/javascript" nonce="{}">'.format(request.csp_nonce)
+    )
 
     if request.get_host() == 'localhost:3000':
         html = re.sub(r'static/app(-.*)js', 'app.js', html)
