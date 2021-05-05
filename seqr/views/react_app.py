@@ -47,6 +47,11 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         "window.initialJSON=null",
         "window.initialJSON=" + json.dumps(initial_json, default=DjangoJSONEncoder().default)
     )
+    #  __webpack_nonce__ is used by styled-components to correctly set nonce for those components
+    html = html.replace(
+        'window.__webpack_nonce__=null',
+        'window.__webpack_nonce__="{}"'.format(request.csp_nonce),
+    )
     html = html.replace(
         '<script type="text/javascript">',
         '<script type="text/javascript" nonce="{}">'.format(request.csp_nonce)
