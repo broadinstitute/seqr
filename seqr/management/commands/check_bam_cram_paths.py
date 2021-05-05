@@ -61,8 +61,8 @@ class Command(BaseCommand):
             )
             slack_message = ""
             for project_name, missing_paths_list in project_name_to_missing_paths.items():
-                slack_message.append("In project {}\n".format(project_name))
-                slack_message.append("\n".join([
+                slack_message += "In project {}\n".format(project_name)
+                slack_message += "\n".join([
                     "  {}   {}".format(individual_id, path) for individual_id, path in missing_paths_list
-                ]))
+                ])
                 safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
