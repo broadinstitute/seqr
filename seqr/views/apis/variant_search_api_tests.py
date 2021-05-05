@@ -32,6 +32,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'category': 'CMG Discovery Tags',
     'color': '#03441E',
     'searchHash': None,
+    'metadata': None,
     'lastModifiedDate': '2018-05-29T16:32:51.449Z',
     'createdBy': None,
 }]
@@ -111,15 +112,20 @@ class VariantSearchAPITest(object):
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], "TransportError: N/A - 'search_phase_execution_exception' - {'error': 'Invalid'}")
+        self.assertEqual(response.json()['error'], "TransportError: N/A - 'search_phase_execution_exception' - 'Invalid'")
+        self.assertEqual(response.json()['detail'], {'error': 'Invalid'})
         mock_error_logger.assert_not_called()
 
-        mock_get_variants.side_effect = TransportError('401', 'search_phase_execution_exception', {'error': 'Invalid'})
+        error_info_json = {'error': {'root_cause': [{'type': 'response_handler_failure_transport_exception'}]}}
+        mock_get_variants.side_effect = TransportError('401', 'search_phase_execution_exception', error_info_json)
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()['error'], "TransportError: 401 - 'search_phase_execution_exception' - {'error': 'Invalid'}")
+        self.assertEqual(
+            response.json()['error'],
+            "TransportError: 401 - 'search_phase_execution_exception' - response_handler_failure_transport_exception")
+        self.assertEqual(response.json()['detail'], error_info_json)
         mock_error_logger.assert_not_called()
 
         mock_get_variants.side_effect = _get_es_variants

@@ -44,7 +44,7 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
-export const taggedByPopup = (tag, title) => trigger =>
+export const taggedByPopup = (tag, title) => (trigger, hideMetadata) =>
   <Popup
     position="top right"
     size="tiny"
@@ -56,7 +56,7 @@ export const taggedByPopup = (tag, title) => trigger =>
       <div>
         {tag.createdBy || 'unknown user'}
         {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
-        {tag.metadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
+        {tag.metadata && !hideMetadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
         {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
       </div>
     }
@@ -255,6 +255,7 @@ const FamilyVariantTags = React.memo((
               variantTagNotes={variantTagNotes}
               variantId={variantId}
               tagOptions={projectTagTypes}
+              displayMetadata
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
@@ -268,7 +269,6 @@ const FamilyVariantTags = React.memo((
                 variantTagNotes={variantTagNotes}
                 variantId={variantId}
                 tagOptions={projectFunctionalTagTypes}
-                editMetadata
                 onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
               />
             </span>

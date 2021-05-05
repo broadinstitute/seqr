@@ -30,8 +30,8 @@ from seqr.views.apis.individual_api import \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
-    receive_hpo_table_handler, \
-    save_hpo_table_handler
+    receive_individuals_metadata_handler, \
+    save_individuals_metadata_table_handler
 
 from seqr.views.apis.case_review_api import \
     update_case_review_discussion, \
@@ -50,9 +50,7 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_main_transcript, \
     update_saved_variant_json
 
-from seqr.views.apis.dashboard_api import \
-    dashboard_page_data, \
-    export_projects_table_handler
+from seqr.views.apis.dashboard_api import dashboard_page_data
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -163,7 +161,6 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
     'dashboard': dashboard_page_data,
-    'dashboard/export_projects_table': export_projects_table_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
 
@@ -186,8 +183,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
-    'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
-    'project/(?P<project_guid>[^/]+)/save_hpo_terms_table/(?P<upload_file_id>[^/]+)': save_hpo_table_handler,
+    'project/(?P<project_guid>[^/]+)/upload_individuals_metadata_table': receive_individuals_metadata_handler,
+    'project/(?P<project_guid>[^/]+)/save_individuals_metadata_table/(?P<upload_file_id>[^/]+)': save_individuals_metadata_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,

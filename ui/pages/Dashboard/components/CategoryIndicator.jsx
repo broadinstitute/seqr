@@ -1,12 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 import styled from 'styled-components'
 import { Icon } from 'semantic-ui-react'
 
-import { getProjectCategoriesByGuid } from 'redux/selectors'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 const getColor = categoryNames => (
@@ -17,11 +15,9 @@ const ComputedColoredIcon = styled(({ categoryNames, ...props }) => <Icon {...pr
   color: ${props => getColor(props.categoryNames)} !important;
 `
 
-const CategoryIndicator = React.memo(({ project, projectCategoriesByGuid }) => {
-  const categoryNames = project.projectCategoryGuids.map(guid => (projectCategoriesByGuid[guid] && projectCategoriesByGuid[guid].name) || guid)
-
-  const popup = categoryNames.length > 0 ? {
-    content: categoryNames.map(name => <div key={name}>{name}</div>),
+const CategoryIndicator = React.memo(({ project }) => {
+  const popup = project.projectCategories.length > 0 ? {
+    content: project.projectCategories.map(name => <div key={name}>{name}</div>),
     header: 'Categories',
     position: 'top center',
     size: 'small',
@@ -32,7 +28,7 @@ const CategoryIndicator = React.memo(({ project, projectCategoriesByGuid }) => {
       project={project}
       trigger={
         <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-          <ComputedColoredIcon name={`${categoryNames.length === 0 ? 'outline ' : ''}star`} categoryNames={categoryNames} />
+          <ComputedColoredIcon name={`${project.projectCategories.length === 0 ? 'outline ' : ''}star`} categoryNames={project.projectCategories} />
         </a>
       }
       popup={popup}
@@ -43,12 +39,7 @@ const CategoryIndicator = React.memo(({ project, projectCategoriesByGuid }) => {
 
 CategoryIndicator.propTypes = {
   project: PropTypes.object.isRequired,
-  projectCategoriesByGuid: PropTypes.object.isRequired,
 }
 
-export { CategoryIndicator as CategoryIndicatorComponent }
-
-const mapStateToProps = state => ({ projectCategoriesByGuid: getProjectCategoriesByGuid(state) })
-
-export default connect(mapStateToProps)(CategoryIndicator)
+export default CategoryIndicator
 

@@ -951,14 +951,13 @@ class EsUtilsTest(TestCase):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
 
-    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, index=INDEX_NAME, **kwargs):
         executed_search = urllib3_responses.call_request_json()
         searched_indices = get_indices_from_url(urllib3_responses.calls[-1].request.url)
         self.assertListEqual(sorted(searched_indices.split(',')), sorted(index.split(',')))
         self.assertSameSearch(
             executed_search,
-            dict(filters=filters, start_index=start_index, size=size, sort=sort, gene_aggs=gene_aggs,
-                 gene_count_aggs=gene_count_aggs)
+            dict(filters=filters, start_index=start_index, size=size, **kwargs)
         )
 
     def assertExecutedSearches(self, searches):
@@ -981,14 +980,14 @@ class EsUtilsTest(TestCase):
                 }
             }
 
-        if expected_search_params.get('sort'):
-            expected_search['sort'] = expected_search_params['sort']
+        if not expected_search_params.get('unsorted'):
+            expected_search['sort'] = expected_search_params.get('sort') or ['xpos', 'variantId']
 
         if expected_search_params.get('gene_aggs'):
             expected_search['aggs'] = {
                 'genes': {'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 1001}, 'aggs': {
                     'vars_by_gene': {
-                        'top_hits': {'sort': expected_search_params['sort'], '_source': mock.ANY, 'size': 100}
+                        'top_hits': {'sort': expected_search['sort'], '_source': mock.ANY, 'size': 100}
                     }
                 }}}
         elif expected_search_params.get('gene_count_aggs'):
@@ -996,6 +995,7 @@ class EsUtilsTest(TestCase):
                 'terms': {'field': 'mainTranscript_gene_id', 'size': 1001},
                 'aggs': expected_search_params['gene_count_aggs']
             }}
+            del expected_search['sort']
         else:
             expected_search['_source'] = mock.ANY
 
@@ -1026,6 +1026,7 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=3,
+            unsorted=True,
         )
 
     @urllib3_responses.activate
@@ -1034,7 +1035,7 @@ class EsUtilsTest(TestCase):
         get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
-            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
     @urllib3_responses.activate
@@ -1044,7 +1045,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         variant = get_single_es_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
@@ -1057,7 +1058,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]),
+            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         with self.assertRaises(InvalidSearchException) as cm:
@@ -1086,9 +1087,19 @@ class EsUtilsTest(TestCase):
             str(cm.exception), 'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
 
-        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.search['inheritance']['filter'] = {'affected': {'I000007_na20870': 'N'}}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000003_3'])
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Inheritance based search is disabled in families with no data loaded for affected individuals',
+        )
+
+        search_model.search['inheritance']['filter'] = {}
+        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
         error = 'Unable to search against dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
@@ -1180,20 +1191,20 @@ class EsUtilsTest(TestCase):
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
         self.assertTrue('index_metadata__{},{}'.format(INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
 
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'])
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY])
 
         # does not save non-consecutive pages
         variants, total_results = get_es_variants(results_model, page=3, num_results=2)
         self.assertEqual(total_results, 5)
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=2)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=2)
 
         # test pagination
         variants, total_results = get_es_variants(results_model, page=2, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 5)
         self.assertCachedResults(results_model, {'all_results': PARSED_VARIANTS + PARSED_VARIANTS, 'total_results': 5})
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=2, size=2)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=2, size=2)
 
         # test does not re-fetch page
         urllib3_responses.reset()
@@ -1211,7 +1222,7 @@ class EsUtilsTest(TestCase):
 
         mock_max_variants.__int__.return_value = 100
         variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
@@ -1482,7 +1493,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
@@ -1524,7 +1535,7 @@ class EsUtilsTest(TestCase):
                 ],
                 '_name': 'F000002_2'
             }}
-        ], sort=['xpos'], index=SV_INDEX_NAME)
+        ], index=SV_INDEX_NAME)
 
     @urllib3_responses.activate
     def test_multi_dataset_get_es_variants(self):
@@ -1544,8 +1555,8 @@ class EsUtilsTest(TestCase):
             ]
         }}
         self.assertExecutedSearches([
-            dict(filters=[path_filter], start_index=0, size=5, sort=['xpos'], index=SV_INDEX_NAME),
-            dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, sort=['xpos'], index=INDEX_NAME),
+            dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
+            dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
     @urllib3_responses.activate
@@ -1572,7 +1583,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             filters=[ANNOTATION_QUERY, COMPOUND_HET_INHERITANCE_QUERY],
             gene_aggs=True,
-            sort=['xpos'],
             start_index=0,
             size=1
         )
@@ -1610,7 +1620,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
             gene_aggs=True,
-            sort=['xpos'],
             start_index=0,
             size=1
         )
@@ -1641,7 +1650,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
             gene_aggs=True,
-            sort=['xpos'],
             start_index=0,
             size=1
         )
@@ -1679,12 +1687,11 @@ class EsUtilsTest(TestCase):
             dict(
                 filters=[pass_filter_query, ANNOTATION_QUERY, COMPOUND_HET_INHERITANCE_QUERY],
                 gene_aggs=True,
-                sort=['xpos'],
                 start_index=0,
                 size=1
             ),
             dict(
-                filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos'],
+                filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2,
             ),
         ])
 
@@ -1707,7 +1714,7 @@ class EsUtilsTest(TestCase):
             'total_results': 5,
         })
 
-        self.assertExecutedSearches([dict(filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
+        self.assertExecutedSearches([dict(filters=[pass_filter_query, ANNOTATION_QUERY, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4)])
 
         urllib3_responses.reset()
         get_es_variants(results_model, page=2, num_results=2)
@@ -1763,7 +1770,7 @@ class EsUtilsTest(TestCase):
                             }
                         }]
                     }}
-                ], start_index=0, size=10, sort=['xpos'], index=SV_INDEX_NAME,
+                ], start_index=0, size=10, index=SV_INDEX_NAME,
             ),
             dict(
                 filters=[{'bool': {
@@ -1787,7 +1794,6 @@ class EsUtilsTest(TestCase):
                     }},
                  ],
                 gene_aggs=True,
-                sort=['xpos'],
                 start_index=0,
                 size=1,
                 index=','.join([INDEX_NAME, SV_INDEX_NAME]),
@@ -1797,7 +1803,6 @@ class EsUtilsTest(TestCase):
                     {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
                 ],
                 gene_aggs=True,
-                sort=['xpos'],
                 start_index=0,
                 size=1
             ),
@@ -1854,7 +1859,7 @@ class EsUtilsTest(TestCase):
                             ]
                         }
                     }
-                ], start_index=0, size=10, sort=['xpos'],
+                ], start_index=0, size=10,
             ),
         ])
 
@@ -1911,7 +1916,7 @@ class EsUtilsTest(TestCase):
                             }
                         }]
                     }}
-                ], start_index=0, size=10, sort=['xpos'], index=SV_INDEX_NAME,
+                ], start_index=0, size=10, index=SV_INDEX_NAME,
             ),
             dict(
                 filters=[annotation_secondary_query, {'bool': {
@@ -1935,7 +1940,6 @@ class EsUtilsTest(TestCase):
                     }},
                  ],
                 gene_aggs=True,
-                sort=['xpos'],
                 start_index=0,
                 size=1,
                 index=','.join([INDEX_NAME, SV_INDEX_NAME]),
@@ -1946,7 +1950,6 @@ class EsUtilsTest(TestCase):
                     {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
                 ],
                 gene_aggs=True,
-                sort=['xpos'],
                 start_index=0,
                 size=1
             ),
@@ -1965,7 +1968,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=['xpos'])
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY])
 
     @urllib3_responses.activate
     def test_all_samples_any_affected_get_es_variants(self):
@@ -1989,7 +1992,7 @@ class EsUtilsTest(TestCase):
                     {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
-        ], sort=['xpos'])
+        ])
 
     @urllib3_responses.activate
     def test_multi_project_get_es_variants(self):
@@ -2046,12 +2049,12 @@ class EsUtilsTest(TestCase):
                     ],
                     '_name': 'F000011_11'
                 }}
-            ], start_index=0, size=2, sort=['xpos'], index=SECOND_INDEX_NAME)
+            ], start_index=0, size=2, index=SECOND_INDEX_NAME)
         project_1_search = dict(
             filters=[
                 ANNOTATION_QUERY,
                 RECESSIVE_INHERITANCE_QUERY,
-            ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
+            ], start_index=0, size=2, index=INDEX_NAME)
         self.assertExecutedSearches([
             dict(
                 filters=[
@@ -2067,12 +2070,12 @@ class EsUtilsTest(TestCase):
                         ]
                     }}
                 ],
-                gene_aggs=True, sort=['xpos'], start_index=0, size=1, index=SECOND_INDEX_NAME,
+                gene_aggs=True, start_index=0, size=1, index=SECOND_INDEX_NAME,
             ),
             project_2_search,
             dict(
                 filters=[ANNOTATION_QUERY, COMPOUND_HET_INHERITANCE_QUERY],
-                gene_aggs=True, sort=['xpos'], start_index=0, size=1, index=INDEX_NAME,
+                gene_aggs=True, start_index=0, size=1, index=INDEX_NAME,
             ),
             project_1_search,
         ])
@@ -2139,7 +2142,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[ANNOTATION_QUERY],
-            sort=['xpos'],
             size=4,
         )
 
@@ -2158,7 +2160,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[ANNOTATION_QUERY],
-            sort=['xpos'],
             size=5,
             start_index=3,
         )
@@ -2169,7 +2170,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[ANNOTATION_QUERY],
-            sort=['xpos'],
             size=8,
         )
 
@@ -2199,7 +2199,7 @@ class EsUtilsTest(TestCase):
                             {'terms': {'samples': ['NA20885']}},
                         ]
                     }}
-                ], start_index=0, size=2, sort=['xpos'], index=SECOND_INDEX_NAME),
+                ], start_index=0, size=2, index=SECOND_INDEX_NAME),
             dict(
                 filters=[
                     ANNOTATION_QUERY,
@@ -2210,7 +2210,7 @@ class EsUtilsTest(TestCase):
                             {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                         ]
                     }},
-                ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
+                ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
     @urllib3_responses.activate
@@ -2227,7 +2227,6 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
-            sort=['xpos'],
             size=4,
         )
 
@@ -2303,7 +2302,6 @@ class EsUtilsTest(TestCase):
                 {'terms': {'variantId': ['2-103343363-GAGA-G']}},
                 ANNOTATION_QUERY,
             ],
-            sort=['xpos'],
             size=2,
         )
 
@@ -2326,7 +2324,6 @@ class EsUtilsTest(TestCase):
                 {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}},
                 ANNOTATION_QUERY,
             ],
-            sort=['xpos'],
             size=3,
         )
         mock_liftover.assert_called_with('hg38', 'hg19')
@@ -2343,7 +2340,6 @@ class EsUtilsTest(TestCase):
                 {'terms': {'variantId': ['2-103343363-GAGA-G']}},
                 ANNOTATION_QUERY,
             ],
-            sort=['xpos'],
             size=2,
         )
 
@@ -2358,7 +2354,6 @@ class EsUtilsTest(TestCase):
                 {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343373-GAGA-G']}},
                 ANNOTATION_QUERY,
             ],
-            sort=['xpos'],
             size=3,
         )
         mock_liftover.assert_called_with('hg19', 'hg38')
@@ -2377,7 +2372,7 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_ALIAS, sort=['xpos'], size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, size=6)
         self.assertDictEqual(urllib3_responses.call_request_json(index=0), {
             'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
@@ -2583,26 +2578,24 @@ class EsUtilsTest(TestCase):
             'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
         })
 
-    @urllib3_responses.activate
     def test_get_family_affected_status(self):
-        setup_responses()
-        samples_by_id = {'F000002_2': {
+        samples_by_id = {
             sample_id: Sample.objects.get(sample_id=sample_id, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
             for sample_id in ['HG00731', 'HG00732', 'HG00733']
-        }}
+        }
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
         custom_multi_affected = {'I000005_hg00732': 'A'}
 
         self.assertDictEqual(_get_family_affected_status(samples_by_id, {}), {
-            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'}})
+            'I000004_hg00731': 'A', 'I000005_hg00732': 'N', 'I000006_hg00733': 'N'})
 
         custom_affected_status = _get_family_affected_status(samples_by_id, {'affected': custom_affected})
         self.assertDictEqual(custom_affected_status, {
-            'F000002_2': {'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+            'I000004_hg00731': 'N', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'})
 
         custom_affected_status = _get_family_affected_status(samples_by_id, {'affected': custom_multi_affected})
         self.assertDictEqual(custom_affected_status, {
-            'F000002_2': {'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'}})
+            'I000004_hg00731': 'A', 'I000005_hg00732': 'A', 'I000006_hg00733': 'N'})
 
     @urllib3_responses.activate
     def test_sort(self):
@@ -2615,7 +2608,7 @@ class EsUtilsTest(TestCase):
 
         variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
-            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double'}}, 'xpos'])
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double'}}, 'xpos', 'variantId'])
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 
@@ -2629,7 +2622,7 @@ class EsUtilsTest(TestCase):
                         'source': mock.ANY,
                     }
                 }
-            }, 'xpos'])
+            }, 'xpos', 'variantId'])
         self.assertEqual(variants[0]['_sort'][0], 0.00012925741614425127)
         self.assertEqual(variants[1]['_sort'][0], maxsize)
 
@@ -2646,7 +2639,7 @@ class EsUtilsTest(TestCase):
                         'source': mock.ANY,
                     }
                 }
-            }, 'xpos'])
+            }, 'xpos', 'variantId'])
 
     @urllib3_responses.activate
     def test_deduplicate_variants(self):
@@ -2690,14 +2683,14 @@ class EsUtilsTest(TestCase):
             annotation_query = {'terms': {'transcriptConsequenceTerms': [next(iter(annotations.values()))[0]]}}
             if expected_comp_het_filter:
                 self.assertExecutedSearches([
-                    dict(sort=['xpos'], gene_aggs=True, start_index=0, size=1, index=index, filters=[
+                    dict(gene_aggs=True, start_index=0, size=1, index=index, filters=[
                         annotation_query, {'bool': {'_name': 'F000002_2', 'must': [expected_comp_het_filter]}}
                     ]),
-                    dict(sort=['xpos'], start_index=0, size=2, index=index, filters=[
+                    dict(start_index=0, size=2, index=index, filters=[
                         annotation_query,  {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}])
                 ])
             else:
-                self.assertExecutedSearch(sort=['xpos'], index=index, filters=[
+                self.assertExecutedSearch(index=index, filters=[
                     annotation_query, {'bool': {'_name': 'F000002_2', 'must': [expected_filter]}}], **kwargs)
 
         # custom genotype

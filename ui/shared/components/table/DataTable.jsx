@@ -15,7 +15,7 @@ const TableContainer = styled.div`
 const RightAligned = styled.span`
   position: absolute;
   right: 20px;
-  top: ${props => (props.topAlign || '30px')});
+  top: ${props => (props.topAlign || '30px')};
 `
 
 const StyledDataTable = styled(Table)`
@@ -172,7 +172,7 @@ class DataTable extends React.PureComponent {
       sortedData = sortedData.slice((activePage - 1) * rowsPerPage, activePage * rowsPerPage)
     }
 
-    const processedColumns = columns.map(({ formFieldProps, ...columnProps }) => (
+    const processedColumns = columns.map(({ formFieldProps, downloadColumn, ...columnProps }) => (
       formFieldProps ?
         {
           ...columnProps,

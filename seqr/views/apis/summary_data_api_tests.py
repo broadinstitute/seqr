@@ -71,7 +71,7 @@ class SummaryDataAPITest(object):
         self.check_analyst_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 

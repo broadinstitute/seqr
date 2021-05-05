@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Icon } from 'semantic-ui-react'
+import { Popup, Icon, Header } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
@@ -49,9 +49,17 @@ const IndividualCell = styled.div`
   }
 `
 
-const AlleleContainer = styled.span`
-  color: black;
-  font-size: 1.2em;
+const AlleleContainer = styled(Header).attrs({ size: 'medium' })`
+  &.ui.header {
+    font-weight: 300;
+    white-space: nowrap;
+    .content {
+      width: 100%;
+    }
+    &.ui.header>.icon {
+      font-size: 1em;
+     }
+  }
 `
 
 const PAR_REGIONS = {
@@ -77,15 +85,18 @@ const missingParentVariant = variant => (parentGuid) => {
 const isHemiUPDVariant = (numAlt, variant, individual) =>
   numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant))
 
-const Allele = React.memo(({ isAlt, variant }) => {
-  const allele = isAlt ? variant.alt : variant.ref
-  let alleleText = allele.substring(0, 3)
-  if (allele.length > 3) {
-    alleleText += '...'
-  }
-
-  return isAlt ? <b><i>{alleleText}</i></b> : alleleText
-})
+const Allele = styled.div.attrs(({ isAlt, variant }) => ({ children: isAlt ? variant.alt : variant.ref }))`
+  display: inline-block;
+  max-width: 50px;
+  width: 40%;
+  height: 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: ${props => props.textAlign};
+  ${props => (props.isAlt ? `
+    font-style: italic;
+    font-weight: 400;` : '')}
+`
 
 Allele.propTypes = {
   isAlt: PropTypes.bool,
@@ -102,11 +113,11 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
       />
     }
     {genotype.numAlt >= 0 ?
-      <span>
-        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} />
-        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} />}
-      </span> :
-      <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>
+      <Header.Content>
+        <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
+        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+      </Header.Content> :
+      <Header.Content>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</Header.Content>
     }
   </AlleleContainer>,
 )
@@ -144,7 +155,7 @@ const genotypeDetails = (genotype, variant) =>
       <div key={title}>
         {title}:<HorizontalSpacer width={10} /><b>{format ? format(value) : value}</b>
       </div> : null
-  })
+  }).filter(val => val)
 
 const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   if (!variant.genotypes) {
@@ -153,6 +164,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   const genotype = variant.genotypes[individual.individualGuid]
   if (!genotype) {
     return null
+  }
+
+  if (genotype.numAlt < 0 || (variant.svType && genotype.cn < 0)) {
+    return <b>NO CALL</b>
   }
 
   const isHemiX = isHemiXVariant(variant, individual)
@@ -167,41 +182,35 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
+  const details = genotypeDetails(genotype, variant)
 
-  return (
-    (genotype.numAlt >= 0 || (variant.svType && genotype.cn >= 0)) ?
-      <Popup
-        position="top center"
+  const content = (
+    <span>
+      {genotype.otherSample && <Popup
         flowing
-        trigger={
-          <span>
-            {genotype.otherSample && <Popup
-              flowing
-              header="Additional Sample Type"
-              trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-              content={
-                <div>
-                  {hasConflictingNumAlt &&
-                    <div>
-                      <VerticalSpacer height={5} />
-                      <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                      <VerticalSpacer height={5} />
-                    </div>
-                  }
-                  {genotypeDetails(genotype.otherSample, variant)}
-                </div>
-              }
-            />}
-            <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
-            <VerticalSpacer height={2} />
-            {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
-            {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
-          </span>
+        header="Additional Sample Type"
+        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+        content={
+          <div>
+            {hasConflictingNumAlt &&
+              <div>
+                <VerticalSpacer height={5} />
+                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                <VerticalSpacer height={5} />
+              </div>
+            }
+            {genotypeDetails(genotype.otherSample, variant)}
+          </div>
         }
-        content={genotypeDetails(genotype, variant)}
-      />
-      : <b>NO CALL</b>
+      />}
+      <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
+      <VerticalSpacer height={2} />
+      {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
+      {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
+    </span>
   )
+
+  return details.length ? <Popup position="top center" flowing trigger={content} content={details} /> : content
 })
 
 Genotype.propTypes = {

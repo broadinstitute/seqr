@@ -101,11 +101,10 @@ class UsersAPITest(object):
 
     Test Manager User has added you as a collaborator in seqr.
 
-    Please click this link to set up your account:
-    /users/set_password/{password_token}
+    {setup_message}
 
     Thanks!
-    """.format(password_token=user.password)
+    """.format(setup_message=self.EMAIL_SETUP_MESSAGE.format(password_token=user.password))
         mock_send_mail.assert_called_with(
             'Set up your seqr account',
             expected_email_content,
@@ -133,6 +132,13 @@ class UsersAPITest(object):
         self.assertEqual(new_collab['displayName'], 'Test')
         mock_send_mail.assert_not_called()
         mock_logger.info.assert_not_called()
+
+        # Test email failure
+        mock_send_mail.side_effect = AnymailError('Connection err')
+        response = self.client.post(create_url, content_type='application/json', data=json.dumps({
+            'email': 'Test_new@test.com'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Connection err')
 
     def _test_update_user(self, username, can_edit=True, check_access=True):
         update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, username])
@@ -245,7 +251,7 @@ class UsersAPITest(object):
             'email': 'test_user@broadinstitute.org'
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Connection err')
+        self.assertEqual(response.json()['error'], 'Connection err')
 
     @mock.patch('seqr.views.apis.users_api.SEQR_TOS_VERSION')
     @mock.patch('seqr.views.apis.users_api.SEQR_PRIVACY_VERSION')
@@ -297,21 +303,12 @@ class UsersAPITest(object):
         self.assertFalse(response_json['isSuperuser'])
 
 
-
 # Tests for AnVIL access disabled
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
-
-def assert_has_anvil_calls(self):
-    calls = [
-        mock.call(self.no_access_user),
-        mock.call(self.collaborator_user),
-    ]
-    self.mock_list_workspaces.assert_has_calls(calls)
-    self.mock_get_ws_acl.assert_not_called()
-    self.mock_get_ws_access_level.assert_not_called()
+    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /users/set_password/{password_token}'
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
@@ -373,6 +370,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     USERNAME = 'test_local_user'
+    EMAIL_SETUP_MESSAGE = 'Please make sure this account is registered in AnVIL by signing in to https://anvil.terra.bio/ and registering. Once you are registered in AnVIL, you will be able to access seqr at /'
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()

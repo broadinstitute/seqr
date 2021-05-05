@@ -6,7 +6,7 @@ import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
-import { LargeMultiselect } from '../../form/Inputs'
+import { LargeMultiselect, Multiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
@@ -17,13 +17,39 @@ const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
   label, .label {
     white-space: nowrap;
   }
+  
+  .fluid.selection.dropdown {
+    width: 100% !important;
+  } 
 `
 
+const MultiselectField = ({ input, ...props }) => <Multiselect {...input} {...props} />
+
+MultiselectField.propTypes = {
+  input: PropTypes.object,
+}
+
+const METADATA_FIELD_PROPS = {
+  [NOTES_CATEGORY]: { width: 16, maxLength: 50, placeholder: 'Enter up to 50 characters' },
+  Collaboration: {
+    width: 16,
+    component: MultiselectField,
+    fluid: true,
+    allowAdditions: true,
+    addValueOptions: true,
+    options: ['Sanger', 'Segregation', 'SV', 'Splicing'].map(value => ({ value })),
+    placeholder: 'Select test types or add your own',
+    format: val => (val || '').split(', ').filter(v => v),
+    normalize: val => (val || []).join(', '),
+  },
+}
 
 const MetadataField = React.memo(({ value, name, error }) => {
+  if (!value.metadataTitle) {
+    return null
+  }
   const label = <ColoredOutlineLabel color={value.color} content={value.name} size="large" pointing="right" basic />
-  const fieldProps = value.category === NOTES_CATEGORY ?
-    { width: 16, maxLength: 50, label: 'Notes', placeholder: 'Enter up to 50 characters' } : { width: 4, type: 'number', min: 0 }
+  const fieldProps = METADATA_FIELD_PROPS[value.category] || { width: 4, type: 'number', min: 0 }
   return (
     <MetadataFormGroup>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
@@ -44,17 +70,21 @@ MetadataField.propTypes = {
   error: PropTypes.bool,
 }
 
-export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst }) => {
+export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata }) => {
   return (
     <span>
       {displayFieldValues.map((tag) => {
-        const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
+        let content = tag.name || tag.text
+        if (displayMetadata && tag.metadata) {
+          content = `${content}: ${tag.metadata}`
+        }
+        const label = <ColoredLabel size="small" color={tag.color} horizontal content={content} />
         const annotation = tagAnnotation && tagAnnotation(tag)
         return (
           <span key={tag.tagGuid || tag.name}>
             <HorizontalSpacer width={5} />
             {displayAnnotationFirst && annotation}
-            {popup ? popup(tag)(label) : label}
+            {popup ? popup(tag)(label, displayMetadata) : label}
             {!displayAnnotationFirst && annotation}
           </span>
         )
@@ -68,9 +98,10 @@ TagFieldDisplay.propTypes = {
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   displayAnnotationFirst: PropTypes.bool,
+  displayMetadata: PropTypes.bool,
 }
 
-const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, validate, ...props }) => {
+const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props }) => {
   const fieldValues = (initialValues || {})[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -102,11 +133,11 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     formFieldProps.validate = validate
   }
 
-  const additionalFields = editMetadata ? [{
+  const additionalFields = tagOptions.some(({ metadataTitle }) => metadataTitle) ? [{
     name: field,
     key: 'test',
     isArrayField: true,
-    validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
+    validate: (val) => { return (!val || !val.metadataTitle || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
     component: MetadataField,
   }] : []
 
@@ -118,7 +149,7 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
-      <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} />
+      <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} displayMetadata={displayMetadata} />
     }
     {...props}
   />
@@ -130,7 +161,7 @@ TagFieldView.propTypes = {
   initialValues: PropTypes.object,
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
-  editMetadata: PropTypes.bool,
+  displayMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   simplifiedValue: PropTypes.bool,

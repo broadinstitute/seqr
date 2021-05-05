@@ -1,6 +1,6 @@
 coverage==5.1
 django-compressor==2.1.1
-django-debug-toolbar==3.2                      # https://github.com/jazzband/django-debug-toolbar
+django-debug-toolbar==3.2.1                      # https://github.com/jazzband/django-debug-toolbar
 mock                                            # mock objects for unit tests
 responses==0.10.15                               # mock HTTP responses for unit tests
 urllib3-mock==0.3.3                             # mock urllib3 for tests

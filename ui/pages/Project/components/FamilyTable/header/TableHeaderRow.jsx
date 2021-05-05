@@ -109,7 +109,7 @@ const TableHeaderRow = React.memo((
         <OverflowHeaderCell width={16} textAlign="right">
           <ReduxFormWrapper
             onSubmit={dispatchUpdateFamiliesTable}
-            form={`edit${tableName}FamiliesTable`}
+            form={`edit${tableName || ''}FamiliesTable`}
             initialValues={familiesTableState}
             closeOnSuccess={false}
             submitOnChange

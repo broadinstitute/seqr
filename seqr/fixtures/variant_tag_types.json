@@ -216,11 +216,27 @@
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Send for Sanger validation",
+        "name": "Send for validation",
         "category": "Collaboration",
         "description": "",
         "color": "#f1af5f",
         "order": 12.0
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_validation_in_progress",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Validation in progress",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#33a02c",
+        "order": 12.5
     }
 },
 {
@@ -232,9 +248,9 @@
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Sanger validated",
+        "name": "Validated",
         "category": "Collaboration",
-        "description": "Confirmed by Sanger sequencing",
+        "description": "",
         "color": "#b2df8a",
         "order": 13.0
     }
@@ -248,7 +264,7 @@
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Sanger did not confirm",
+        "name": "Validation did not confirm",
         "category": "Collaboration",
         "description": "",
         "color": "#823a3a",
@@ -264,106 +280,11 @@
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Sanger troubleshooting",
+        "name": "Validation troubleshooting",
         "category": "Collaboration",
         "description": "",
         "color": "#9e064b",
         "order": 14.5
-    }
-},
-    {
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_test_segregation",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Test segregation",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#c17110",
-        "order": 14.6
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_segregation _validated",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Segregation validated",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#799a5b",
-        "order": 14.7
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_segregation_did_not_confir",
-        "created_date": "2018-04-27T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Segregation did not confirm",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#b44b4b",
-        "order": 14.8
-    }
-}, {
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_validate_sv",
-        "created_date": "2020-08-05T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "Validate SV",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#4ECDC4",
-        "order": 14.91
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_sv_validated",
-        "created_date": "2020-08-05T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "SV validated",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#D4E09B",
-        "order": 14.92
-    }
-},
-{
-    "model": "seqr.varianttagtype",
-    "pk": null,
-    "fields": {
-        "guid": "VTT_sv_did_not_confirm",
-        "created_date": "2020-08-05T00:00:00.000Z",
-        "created_by": null,
-        "last_modified_date": null,
-        "project": null,
-        "name": "SV did not confirm",
-        "category": "Collaboration",
-        "description": "",
-        "color": "#FF6B6B",
-        "order": 14.93
     }
 },
 {
@@ -412,6 +333,22 @@
         "description": "To mark a variant that is viewed by the analyst as a likely disease-causing variant but further review is needed by a clinician and/or collaborator. These tags should be transitioned to more appropriate tags prior to progress reporting.",
         "color": "#e46b2e",
         "order": 16.0
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_returned",
+        "created_date": "2021-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Returned",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#52caae",
+        "order": 16.5
     }
 },
 {
