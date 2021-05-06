@@ -150,6 +150,8 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     for component_label in components:
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
+        elif component_label == "postgres":
+            continue  # TODO
 
         if not previous:
             wait_until_pod_is_running(component_label, deployment_target)
@@ -216,6 +218,8 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
     for component_label, port in component_port_pairs:
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
+        elif component_label == 'postgres':
+            continue # TODO
 
         wait_until_pod_is_running(component_label, deployment_target)
 

@@ -250,25 +250,60 @@ def deploy_linkerd(settings):
 def deploy_postgres(settings):
     print_separator("postgres")
 
-    docker_build("postgres", settings)
+    with open('deploy/secrets/gcloud/postgres/{}/password'.format(settings['DEPLOY_TO'])) as f:
+        password = f.read()
 
-    restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
-    reset_db = settings.get("RESET_DB")
+    # create network for private IP connection
+    network = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
+    run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
+    run('gcloud compute networks create {}'.format(network), errors_to_ignore=['already exists'])
+    run(' '.join([
+        'gcloud compute addresses create',
+        'google-managed-services-{}'.format(network), '--addresses', settings['POSTGRES_NETWORK_IP'],
+        '--network', network, '--global', '--purpose VPC_PEERING',
+    ]), errors_to_ignore=['already exists'])
+    run(' '.join([
+        'gcloud compute networks peerings create', 'servicenetworking-{}'.format(network),
+        '--network', network, '--peer-network servicenetworking',
+    ]), errors_to_ignore=['already exists'])
 
-    if reset_db or restore_seqr_db_from_backup:
-        # Since pgdata is stored on a persistent volume, redeploying does not get rid of it. If any existing pgdata is
-        # present, even if the databases are empty, postgres will not fully re-initialize the database. This is
-        # good if you want to keep the data across a deployment, but problematic if you actually need to rest and
-        # reinitialize the db. Therefore, when the database needs to be fully reinitialized, delete pgdata
-        run_in_pod(get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"]),
-                   "rm -rf /var/lib/postgresql/data/pgdata", verbose=True)
+    run(' '.join([
+        'gcloud beta sql instances create',
+        'postgres-{}'.format(settings['DEPLOYMENT_TYPE']),
+        '--database-version=POSTGRES_{}'.format(settings['POSTGRES_VERSION']),
+        '--root-password={}'.format(password),
+        '--network=projects/{}/global/networks/{}'.format(settings['GCLOUD_PROJECT'], network),
+        '--project={}'.format(settings['GCLOUD_PROJECT']),
+        '--zone={}'.format(settings['GCLOUD_ZONE']),
+        '--availability-type=regional',
+        '--cpu=4', '--memory=26',
+        '--no-assign-ip',
+        '--backup',
+        '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',
+        '--require-ssl',
+        '--retained-backups-count=30',
+        '--storage-auto-increase',
+    ]) % settings, verbose=False, errors_to_ignore=['already exists'])
 
-    deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
-
-    if restore_seqr_db_from_backup:
-        postgres_pod_name = get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"])
-        _restore_seqr_db_from_backup(
-            postgres_pod_name, restore_seqr_db_from_backup, settings.get("RESTORE_REFERENCE_DB_FROM_BACKUP"))
+    # docker_build("postgres", settings) # TODO delete all docker and kubernetes config and update local install
+    #
+    # restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
+    # reset_db = settings.get("RESET_DB")
+    #
+    # if reset_db or restore_seqr_db_from_backup: # TODO do  via gcloud?
+    #     # Since pgdata is stored on a persistent volume, redeploying does not get rid of it. If any existing pgdata is
+    #     # present, even if the databases are empty, postgres will not fully re-initialize the database. This is
+    #     # good if you want to keep the data across a deployment, but problematic if you actually need to rest and
+    #     # reinitialize the db. Therefore, when the database needs to be fully reinitialized, delete pgdata
+    #     run_in_pod(get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"]),
+    #                "rm -rf /var/lib/postgresql/data/pgdata", verbose=True)
+    #
+    # deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
+    #
+    # if restore_seqr_db_from_backup:
+    #     postgres_pod_name = get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"])
+    #     _restore_seqr_db_from_backup(
+    #         postgres_pod_name, restore_seqr_db_from_backup, settings.get("RESTORE_REFERENCE_DB_FROM_BACKUP"))
 
 
 def deploy_redis(settings):
@@ -302,7 +337,7 @@ def deploy_seqr(settings):
     reset_db = settings.get("RESET_DB")
 
     deployment_target = settings["DEPLOY_TO"]
-    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
+    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target) # TODO find and remove any other pod references
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
