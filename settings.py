@@ -69,12 +69,12 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src-elem']
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
 IGV_CSS_HASH = "'sha256-D1ouVPg7bXVEm/f4h9NNmEBwWO5vkjlDOIHPeV3tFPg='"
 CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS_HASH)
-CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
-CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src-elem']
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False

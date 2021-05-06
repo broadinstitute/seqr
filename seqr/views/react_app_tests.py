@@ -17,10 +17,14 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(initial_json[user_key]['username'], user)
         self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
 
+        nonce = self.get_initial_page_window('__webpack_nonce__', response)
+        self.assertIn('nonce-{}'.format(nonce), response.get('Content-Security-Policy'))
+
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
         self.assertRegex(content, r'static/app(-.*)js')
         self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
+        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 2)
 
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
     def test_react_page(self, mock_oauth_key):
