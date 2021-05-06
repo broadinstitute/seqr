@@ -235,8 +235,8 @@ api_endpoints = {
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
     'login': login_view,
-    'users/forgot_password': forgot_password,
-    'users/(?P<username>[^/]+)/set_password': set_password,
+    # 'users/forgot_password': forgot_password,
+    # 'users/(?P<username>[^/]+)/set_password': set_password,
     'users/update_policies': update_policies,
 
     'users/get_options': get_all_collaborator_options,

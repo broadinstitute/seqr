@@ -60,8 +60,10 @@ ReactDOM.render(
             <Route path="/report" component={Report} />
             <Route path="/summary_data" component={SummaryData} />
             <Route path="/login" component={Login} />
+            {/* 2021-05-07 mfranklin: Disable password reset
             <Route path="/users/forgot_password" component={ForgotPassword} />
-            <Route path="/users/set_password/:userToken" component={SetPassword} />
+            <Route path="/users/set_password/:userToken" component={SetPassword} /> 
+            */}
             <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
             <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
             <Route path="/privacy_policy" component={PrivacyPolicy} />
