@@ -29,20 +29,19 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
           Sign in with Google
         </Button>
         {queryString.parse(location.search).anvilLoginFailed &&
-          <Message visible error>
-            Unable to authorize the selected Google user. Please register your account in AnVIL by signing in and
+        <Message visible error>
+          Unable to authorize the selected Google user. Please register your account in AnVIL by signing in and
           registering at <a href={ANVIL_URL} target="_blank">anvil.terra.bio</a>
-          </Message>}
+        </Message> }
         {queryString.parse(location.search).googleLoginFailed &&
-          <Message visible error>
-            No seqr account found for the selected Google user
-        </Message>}
+        <Message visible error>
+          No seqr account found for the selected Google user
+        </Message> }
         <Divider horizontal>Or</Divider>
       </div>
     }
     submitButtonText="Log In"
-  >
-  </UserFormLayout>
+  />
 
 Login.propTypes = {
   onSubmit: PropTypes.func,
