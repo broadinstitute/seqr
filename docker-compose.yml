@@ -2,7 +2,8 @@ version: '2.4'
 
 services:
   postgres:
-    image: gcr.io/seqr-project/postgres:gcloud-prod
+    image: postgres:12.6
+    command: postgres -c listen_addresses='*'
     environment:
       - PGPORT=5433
       - POSTGRES_PASSWORD=docker-compose-postgres-password

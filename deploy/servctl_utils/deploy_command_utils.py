@@ -287,9 +287,7 @@ def deploy_postgres(settings):
         '--retained-backups-count=30',
         '--storage-auto-increase',
     ]) % settings, errors_to_ignore=['already exists'])
-    #
-    # # docker_build("postgres", settings) # TODO delete all docker and kubernetes config and update local install
-    #
+
     seqr_db_backup = settings.get('RESTORE_SEQR_DB_FROM_BACKUP')
     reference_data_db_backup = settings.get('RESTORE_REFERENCE_DB_FROM_BACKUP')
     reset_db = settings.get('RESET_DB')
@@ -307,7 +305,7 @@ def deploy_postgres(settings):
         errors_to_ignore=['already exists'])
 
     # deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
-    # # TODO find and remove any other pod references in other functions
+    # # TODO find and remove any other pod references in other functions, delete/ update kubernetes config
 
     if seqr_db_backup:
         run(' '.join([
