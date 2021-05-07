@@ -304,8 +304,7 @@ def deploy_postgres(settings):
     run('gcloud sql databases create reference_data_db --instance={}'.format(sql_instance_name),
         errors_to_ignore=['already exists'])
 
-    # deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
-    # # TODO find and remove any other pod references in other functions, delete/ update kubernetes config
+    # deploy_pod("postgres", settings, wait_until_pod_is_ready=True) TODO delete/ update kubernetes config
 
     if seqr_db_backup:
         run(' '.join([

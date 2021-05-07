@@ -25,7 +25,7 @@ COMPONENT_PORTS = {
 
     "redis":           [6379],
 
-    "postgres":        [5432],
+    "postgres":        [5432], # TODO remove if will not work for port_forward/ print_log
     "seqr":            [8000],
     "pipeline-runner": [30005],
 
@@ -259,7 +259,7 @@ def troubleshoot_component(component, deployment_target):
     """Runs kubectl command to print detailed debug output for the given component.
 
     Args:
-        component (string): component label (eg. "postgres")
+        component (string): component label (eg. "seqr")
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
 
@@ -272,7 +272,7 @@ def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_pa
     """Copy file(s) to or from the given component.
 
     Args:
-        component (string): component label (eg. "postgres")
+        component (string): component label (eg. "seqr")
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         source_path (string): source file path. If copying files to the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
         dest_path (string): destination file path. If copying files from the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
@@ -303,6 +303,7 @@ def delete_component(component, deployment_target=None):
         component (string): component to delete (eg. 'postgres' or 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
+    # TODO delete postgres
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
     elif component == 'elasticsearch':
