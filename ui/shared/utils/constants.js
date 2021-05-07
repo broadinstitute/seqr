@@ -551,6 +551,42 @@ const ORDERED_VEP_CONSEQUENCES = [
     group: VEP_GROUP_SV,
   },
   {
+    description: 'A translocation variant',
+    text: 'Translocation',
+    value: 'BND',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A copy number polymorphism variant',
+    text: 'Copy Number Polymorphism',
+    value: 'CNV',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A Complex SV',
+    text: 'Complex SV',
+    value: 'CPX',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A reciprocal chromosomal translocation',
+    text: 'Reciprocal chromosomal translocation',
+    value: 'CTX',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A large insertion',
+    text: 'Insertion',
+    value: 'INS',
+    group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A large inversion',
+    text: 'Inversion',
+    value: 'INV',
+    group: VEP_GROUP_SV,
+  },
+  {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
     text: 'Stop lost',
     value: 'stop_lost',
