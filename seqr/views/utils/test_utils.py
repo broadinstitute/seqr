@@ -10,7 +10,7 @@ from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
-WINDOW_REGEX_TEMPLATE = '\window\.{key}=(?P<value>[^)<]+)'
+WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
