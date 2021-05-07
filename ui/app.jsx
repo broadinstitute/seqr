@@ -15,8 +15,6 @@ import DataManagement from 'pages/DataManagement/DataManagement'
 import Report from 'pages/Report/Report'
 import SummaryData from 'pages/SummaryData/SummaryData'
 import Login from 'pages/Login/components/Login'
-import ForgotPassword from 'pages/Login/components/ForgotPassword'
-import SetPassword from 'pages/Login/components/SetPassword'
 import LandingPage from 'pages/Public/LandingPage'
 import MatchmakerDisclaimer from 'pages/Public/MatchmakerDisclaimer'
 import MatchmakerInfo from 'pages/Public/MatchmakerInfo'
@@ -60,8 +58,6 @@ ReactDOM.render(
             <Route path="/report" component={Report} />
             <Route path="/summary_data" component={SummaryData} />
             <Route path="/login" component={Login} />
-            <Route path="/users/forgot_password" component={ForgotPassword} />
-            <Route path="/users/set_password/:userToken" component={SetPassword} />
             <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
             <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
             <Route path="/privacy_policy" component={PrivacyPolicy} />
