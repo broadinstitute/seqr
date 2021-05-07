@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
+# TODO delete
 class Command(BaseCommand):
     help = 'Run database backups.'
 

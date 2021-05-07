@@ -336,22 +336,6 @@ def delete_component(component, deployment_target=None):
     run("kubectl get pods" % locals(), verbose=True)
 
 
-def reset_database(database=[], deployment_target=None):
-    """Runs kubectl commands to delete and reset the given database(s).
-
-    Args:
-        component (list): one more database labels - "seqrdb"
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-    """
-    if "seqrdb" in database:
-        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
-        if not postgres_pod_name:
-            logger.error("postgres pod must be running")
-        else:
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
-
-
 def delete_all(deployment_target):
     """Runs kubectl and gcloud commands to delete the given cluster and all objects in it.
 

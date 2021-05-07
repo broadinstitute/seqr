@@ -255,21 +255,24 @@ def deploy_postgres(settings):
 
     # create network for private IP connection
     network = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
-    run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
-    run('gcloud compute networks create {}'.format(network), errors_to_ignore=['already exists'])
-    run(' '.join([
-        'gcloud compute addresses create',
-        'google-managed-services-{}'.format(network), '--addresses', settings['POSTGRES_NETWORK_IP'],
-        '--network', network, '--global', '--purpose VPC_PEERING',
-    ]), errors_to_ignore=['already exists'])
-    run(' '.join([
-        'gcloud compute networks peerings create', 'servicenetworking-{}'.format(network),
-        '--network', network, '--peer-network servicenetworking',
-    ]), errors_to_ignore=['already exists'])
+    has_network =  run('gcloud compute networks describe {}'.format(network),
+                       errors_to_ignore=['not found'], verbose=False)
+    if not has_network:
+        run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
+        run('gcloud compute networks create {}'.format(network))
+        run(' '.join([
+            'gcloud compute addresses create',
+            'google-managed-services-{}'.format(network), '--addresses', settings['POSTGRES_NETWORK_IP'],
+            '--network', network, '--prefix-length 8', '--global', '--purpose VPC_PEERING',
+        ]))
+        run(' '.join([
+            'gcloud compute networks peerings create', 'servicenetworking-{}'.format(network),
+            '--network', network, '--peer-network servicenetworking',
+        ]))
 
+    sql_instance_name = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
     run(' '.join([
-        'gcloud beta sql instances create',
-        'postgres-{}'.format(settings['DEPLOYMENT_TYPE']),
+        'gcloud beta sql instances create', sql_instance_name,
         '--database-version=POSTGRES_{}'.format(settings['POSTGRES_VERSION']),
         '--root-password={}'.format(password),
         '--network=projects/{}/global/networks/{}'.format(settings['GCLOUD_PROJECT'], network),
@@ -283,27 +286,39 @@ def deploy_postgres(settings):
         '--require-ssl',
         '--retained-backups-count=30',
         '--storage-auto-increase',
-    ]) % settings, verbose=False, errors_to_ignore=['already exists'])
+    ]) % settings, errors_to_ignore=['already exists'])
+    #
+    # # docker_build("postgres", settings) # TODO delete all docker and kubernetes config and update local install
+    #
+    seqr_db_backup = settings.get('RESTORE_SEQR_DB_FROM_BACKUP')
+    reference_data_db_backup = settings.get('RESTORE_REFERENCE_DB_FROM_BACKUP')
+    reset_db = settings.get('RESET_DB')
 
-    # docker_build("postgres", settings) # TODO delete all docker and kubernetes config and update local install
-    #
-    # restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
-    # reset_db = settings.get("RESET_DB")
-    #
-    # if reset_db or restore_seqr_db_from_backup: # TODO do  via gcloud?
-    #     # Since pgdata is stored on a persistent volume, redeploying does not get rid of it. If any existing pgdata is
-    #     # present, even if the databases are empty, postgres will not fully re-initialize the database. This is
-    #     # good if you want to keep the data across a deployment, but problematic if you actually need to rest and
-    #     # reinitialize the db. Therefore, when the database needs to be fully reinitialized, delete pgdata
-    #     run_in_pod(get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"]),
-    #                "rm -rf /var/lib/postgresql/data/pgdata", verbose=True)
-    #
+    if reset_db or seqr_db_backup:
+        run('gcloud sql databases delete seqrdb --instance={} --quiet'.format(sql_instance_name),
+            errors_to_ignore=['does not exist'])
+    if reset_db or reference_data_db_backup:
+        run('gcloud sql databases delete reference_data_db --instance={} --quiet'.format(sql_instance_name),
+            errors_to_ignore=['does not exist'])
+
+    run('gcloud sql databases create seqrdb --instance={}'.format(sql_instance_name),
+        errors_to_ignore=['already exists'])
+    run('gcloud sql databases create reference_data_db --instance={}'.format(sql_instance_name),
+        errors_to_ignore=['already exists'])
+
     # deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
-    #
-    # if restore_seqr_db_from_backup:
-    #     postgres_pod_name = get_pod_name("postgres", deployment_target=settings["DEPLOY_TO"])
-    #     _restore_seqr_db_from_backup(
-    #         postgres_pod_name, restore_seqr_db_from_backup, settings.get("RESTORE_REFERENCE_DB_FROM_BACKUP"))
+    # # TODO find and remove any other pod references in other functions
+
+    if seqr_db_backup:
+        run(' '.join([
+            'gcloud sql import sql', sql_instance_name, seqr_db_backup, '--database=seqrdb', '--user=postgres',
+            ' --quiet',
+        ]))
+    if reference_data_db_backup:
+        run(' '.join([
+            'gcloud sql import sql', sql_instance_name, reference_data_db_backup, '--database=reference_data_db',
+            '--user=postgres', ' --quiet',
+        ]))
 
 
 def deploy_redis(settings):
@@ -333,35 +348,8 @@ def deploy_seqr(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
-    reset_db = settings.get("RESET_DB")
-
-    deployment_target = settings["DEPLOY_TO"]
-    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target) # TODO find and remove any other pod references
-
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
-    elif reset_db or restore_seqr_db_from_backup:
-        seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-        if seqr_pod_name:
-            sleep_until_pod_is_running("seqr", deployment_target=deployment_target)
-
-            run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh", verbose=True)
-
-    if reset_db:
-        _drop_seqr_db(postgres_pod_name)
-    if restore_seqr_db_from_backup:
-        _drop_seqr_db(postgres_pod_name)
-        _restore_seqr_db_from_backup(postgres_pod_name, restore_seqr_db_from_backup)
-    else:
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'",
-                   errors_to_ignore=["already exists"],
-                   verbose=True,
-                   )
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'",
-                   errors_to_ignore=["already exists"],
-                   verbose=True,
-                   )
 
     deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
 
@@ -377,36 +365,6 @@ def redeploy_seqr(deployment_target):
     run_in_pod(seqr_pod_name, 'git pull', verbose=True)
     run_in_pod(seqr_pod_name, './manage.py migrate', verbose=True)
     run_in_pod(seqr_pod_name, '/usr/local/bin/restart_server.sh')
-
-
-def _drop_seqr_db(postgres_pod_name):
-    run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
-               errors_to_ignore=["does not exist"],
-               verbose=True,
-               )
-    run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database reference_data_db'",
-               errors_to_ignore=["does not exist"],
-               verbose=True,
-               )
-
-
-def _restore_seqr_db_from_backup(postgres_pod_name, seqrdb_backup, reference_data_backup=None):
-    run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'", verbose=True)
-    run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database reference_data_db'", verbose=True)
-    run("kubectl cp '{backup}' {postgres_pod_name}:/root/$(basename {backup})".format(
-        postgres_pod_name=postgres_pod_name, backup=seqrdb_backup), verbose=True)
-    run_in_pod(
-        postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename {backup})".format(
-            backup=seqrdb_backup), verbose=True)
-    run_in_pod(postgres_pod_name, "rm /root/$(basename {backup})".format(backup=seqrdb_backup, verbose=True))
-
-    if reference_data_backup:
-        run("kubectl cp '{backup}' {postgres_pod_name}:/root/$(basename {backup})".format(
-            postgres_pod_name=postgres_pod_name, backup=reference_data_backup), verbose=True)
-        run_in_pod(
-            postgres_pod_name, "/root/restore_database_backup.sh postgres reference_data_db /root/$(basename {backup})".format(
-                backup=reference_data_backup), verbose=True)
-        run_in_pod(postgres_pod_name, "rm /root/$(basename {backup})".format(backup=reference_data_backup, verbose=True))
 
 
 def deploy_kibana(settings):
