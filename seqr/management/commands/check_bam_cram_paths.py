@@ -6,7 +6,7 @@ import logging
 import tqdm
 
 from seqr.models import IgvSample
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils import communication_utils
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
@@ -55,10 +55,11 @@ class Command(BaseCommand):
                 logger.info('   {} in {}'.format(c, project_name))
 
             # post to slack
-            slack_message = 'Found {} broken bam/cram path(s)\n'.format(sum(missing_counter.values()))
-            for project_name, missing_paths_list in project_name_to_missing_paths.items():
-                slack_message += "\nIn project {}:\n".format(project_name)
-                slack_message += "\n".join([
-                    "  {}   {}".format(individual_id, path) for individual_id, path in missing_paths_list
-                ])
-            safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)
+            if not options.get('dry_run'):
+                slack_message = 'Found {} broken bam/cram path(s)\n'.format(sum(missing_counter.values()))
+                for project_name, missing_paths_list in project_name_to_missing_paths.items():
+                    slack_message += "\nIn project {}:\n".format(project_name)
+                    slack_message += "\n".join([
+                        "  {}   {}".format(individual_id, path) for individual_id, path in missing_paths_list
+                    ])
+                communication_utils.safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)

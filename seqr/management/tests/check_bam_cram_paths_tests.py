@@ -53,12 +53,10 @@ class CheckBamCramPathsTest(TestCase):
         mock_hadoop_is_file.return_value = False
         call_command('check_bam_cram_paths', '--dry-run')
         self._check_results(0, mock_logger, mock_safe_post_to_slack, mock_hadoop_is_file)
-        mock_safe_post_to_slack.assert_not_called()
 
     def _check_results(self, num_paths_deleted, mock_logger, mock_safe_post_to_slack, mock_hadoop_is_file):
         self.assertEqual(IgvSample.objects.filter(file_path='').count(), num_paths_deleted)
         self.assertEqual(IgvSample.objects.count(), 2)
-
         mock_hadoop_is_file.assert_called_with("gs://missing-bucket/missing_file")
 
         calls = [
@@ -70,5 +68,10 @@ class CheckBamCramPathsTest(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        self.assertEqual(mock_safe_post_to_slack.call_count, 1)
-        mock_safe_post_to_slack.assert_called_with(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, 'TODO ...')
+        if num_paths_deleted == 0:
+            mock_safe_post_to_slack.assert_not_called()
+        else:
+            self.assertEqual(mock_safe_post_to_slack.call_count, 1)
+            mock_safe_post_to_slack.assert_called_with(
+                SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+                "Found 1 broken bam/cram path(s)\n\nIn project 1kg project nåme with uniçøde:\n  NA19675_1   gs://missing-bucket/missing_file")
