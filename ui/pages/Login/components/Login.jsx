@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import queryString from 'query-string'
 import { connect } from 'react-redux'
-import { Link } from 'react-router-dom'
 import { Divider, Message, Button, Icon } from 'semantic-ui-react'
 
 import { getGoogleLoginEnabled } from 'redux/selectors'
@@ -42,9 +41,7 @@ const Login = ({ onSubmit, googleLoginEnabled, location }) =>
       </div>
     }
     submitButtonText="Log In"
-  >
-    <Link to="/users/forgot_password">Forgot Password?</Link>
-  </UserFormLayout>
+  />
 
 Login.propTypes = {
   onSubmit: PropTypes.func,
