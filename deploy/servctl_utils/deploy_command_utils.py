@@ -266,8 +266,9 @@ def deploy_postgres(settings):
             '--network', network, '--prefix-length 8', '--global', '--purpose VPC_PEERING',
         ]))
         run(' '.join([
-            'gcloud compute networks peerings create', 'servicenetworking-{}'.format(network),
-            '--network', network, '--peer-network servicenetworking',
+            'gcloud services vpc-peerings connect', '--service servicenetworking.googleapis.com',
+            '--ranges', 'google-managed-services-{}'.format(network), '--network', network,
+            '--project', settings['GCLOUD_PROJECT'],
         ]))
 
     sql_instance_name = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
