@@ -1,4 +1,4 @@
-FROM google/cloud-sdk:335.0.0
+FROM google/cloud-sdk:latest
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
