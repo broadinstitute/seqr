@@ -1,17 +1,20 @@
-FROM google/cloud-sdk:latest
+FROM python:3.7-slim-buster
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
-ENV PATH $PATH:/root/google-cloud-sdk/bin
 EXPOSE $SEQR_SERVICE_PORT
 
 WORKDIR /app/seqr
 COPY requirements.txt /app/seqr/
 
-# install commmon utilities
 RUN apt update && apt install -y --no-install-recommends \
+    apt-transport-https ca-certificates curl gnupg \
     # install dependencies of the HaploPainter.pl script used to generate static pedigree images
     libgtk2-perl libdbi-perl libtk-perl libsort-naturally-perl && \
+    # Google Cloud SDK
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
+    apt update && apt install -y google-cloud-sdk && \
     apt clean && rm -rf /var/lib/apt/lists/* && \
     pip install -r /app/seqr/requirements.txt
 
