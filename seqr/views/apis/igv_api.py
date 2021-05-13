@@ -95,8 +95,7 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        suffix = '.'.join(file_path.split('.')[1:])
-        sample_type = SAMPLE_TYPE_MAP.get(suffix)
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP.items() if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
