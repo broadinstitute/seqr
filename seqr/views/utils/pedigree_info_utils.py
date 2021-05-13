@@ -492,7 +492,7 @@ def _get_rgp_dsm_family_notes(row):
                 is_deceased, yes='deceased', no='living', unknown='unknown deceased status',
                 default='unspecified deceased status'),
             _bool_condition_val(
-                DC.STORED_DNA_KEY, 'sample available', 'sample not available', 'unknown sample availability')
+                parent_values[DC.STORED_DNA_KEY], 'sample available', 'sample not available', 'unknown sample availability')
             if is_deceased == DC.YES_VAL else None,
         ]
 
@@ -577,7 +577,7 @@ def _get_rgp_dsm_family_notes(row):
         website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
         info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
         physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'None',
-        doctors=', '.join([DC.DOCTOR_TYPE_MAP[doc.strip()] for doc in row[DC.DOCTOR_TYPES_COLUMN].split(',')]),
+        doctors=', '.join([DC.DOCTOR_TYPE_MAP[doc.strip()] for doc in row[DC.DOCTOR_TYPES_COLUMN].split(',') if doc]),
         other_doctors=': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if DC.OTHER in row[DC.DOCTOR_TYPES_COLUMN] else '',
         testing=testing,
         biopses='None' if (DC.NONE in row[DC.BIOPSY_COLUMN] or not row[DC.BIOPSY_COLUMN]) else ', '.join([
