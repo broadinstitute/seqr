@@ -166,7 +166,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     return null
   }
 
-  if (genotype.numAlt < 0 || (variant.svType && genotype.cn < 0)) {
+  if (genotype.numAlt < 0 && (variant.svType && genotype.cn < 0)) {
     return <b>NO CALL</b>
   }
 
