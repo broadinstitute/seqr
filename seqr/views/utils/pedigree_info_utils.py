@@ -402,7 +402,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 def _parse_rgp_dsm_export_format(rows):
     pedigree_rows = []
     for row in rows:
-        family_id = 'RGP_{}'.format(row[DSMConstants.FAMILY_ID_COLUMN]) # TODO
+        family_id = 'RGP_{}'.format(row[DSMConstants.FAMILY_ID_COLUMN]) # TODO this may change
         maternal_id = '{}_1'.format(family_id)
         paternal_id = '{}_2'.format(family_id)
 
@@ -438,16 +438,21 @@ def _get_rgp_dsm_family_notes(row):
 
     DC = DSMConstants
 
-    def _get_column_val(column):
-        val_code = row[column].split(':')[0] # TODO can probably remove
-        return val_code
-
     def _get_detailed_yes_no(column, detail_column):
         val = row[column]
         formatted_val = val.title()
         if val == DC.YES_VAL and row[detail_column]:
             formatted_val = '{}; {}'.format(formatted_val, row[detail_column])
         return formatted_val
+
+    def _bool_condition_val(column_val, yes, no, default, unknown=None):
+        if column_val == DC.YES_VAL:
+            return yes
+        elif column_val == DC.NO_VAL:
+            return no
+        elif unknown and column_val == DC.UNSURE:
+            return unknown
+        return default
 
     def _test_summary(test):
         test = test.strip()
@@ -471,63 +476,53 @@ def _get_rgp_dsm_family_notes(row):
         )
 
     def _parent_summary(parent):
-        col_config = DC.get_parent_detail_columns(parent)
+        parent_values = {
+            field: row['{}_{}'.format(parent, field)] for field in DC.PARENT_DETAIL_FIELDS
+        }
 
-        def _bool_condition_val(column, yes, no, default, unknown=None):
-            column_val = _get_column_val(col_config[column])
-            if column_val == DC.YES:
-                return yes
-            elif column_val == DC.NO:
-                return no
-            elif unknown and column_val == DC.DONT_KNOW:
-                return unknown
-            return default
+        is_affected = parent_values[DC.AFFECTED_KEY]
+        can_participate = parent_values[DC.CAN_PARTICIPATE_KEY] == DC.YES_VAL
+        is_deceased = parent_values[DC.DECEASED_KEY]
 
-        parent_details = [_bool_condition_val(DC.AFFECTED_KEY, 'affected', 'unaffected', 'unknown affected status')]
-        if _get_column_val(col_config[DC.AFFECTED_KEY]) == DC.YES:
-            parent_details.append('onset age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
-        can_participate = _get_column_val(col_config[DC.CAN_PARTICIPATE_KEY]) == DC.YES
-        parent_details.append('available' if can_participate else 'unavailable')
-        if not can_participate:
-            parent_details.append(_bool_condition_val(DC.DECEASED_KEY, yes='deceased', no='living', unknown='unknown deceased status', default='unspecified deceased status'))
-        if row[col_config[DC.DECEASED_KEY]] and _get_column_val(col_config[DC.DECEASED_KEY]) == DC.YES:
-            parent_details.append(_bool_condition_val(DC.STORED_DNA_KEY, 'sample available', 'sample not available', 'unknown sample availability'))
+        parent_details = [
+            _bool_condition_val(is_affected, 'affected', 'unaffected', 'unknown affected status'),
+            'onset age {}'.format(parent_values[DC.PARENT_AGE_KEY]) if is_affected == DC.YES_VAL else None,
+            'available' if can_participate else 'unavailable',
+            None if can_participate else _bool_condition_val(
+                is_deceased, yes='deceased', no='living', unknown='unknown deceased status',
+                default='unspecified deceased status'),
+            _bool_condition_val(
+                DC.STORED_DNA_KEY, 'sample available', 'sample not available', 'unknown sample availability')
+            if is_deceased == DC.YES_VAL else None,
+        ]
 
-        return ', '.join(parent_details)
+        return ', '.join(filter(lambda x: x, parent_details))
+
+    def _relative_summary(relative, relative_type, all_affected):
+        relative_values = {
+            field: relative.get('{}_{}'.format(relative_type, field)) for field in DC.RELATIVE_DETAIL_FIELDS
+        }
+        sex_map = DC.RELATIVE_SEX_MAP[relative_type]
+
+        return ', '.join([
+            sex_map.get(relative_values[DC.SEX_KEY]) or sex_map['Other'],
+            'age {}'.format(relative_values[DC.AGE_KEY]),
+            'affected' if all_affected else _bool_condition_val(
+                relative_values[DC.SAME_CONDITION_KEY], 'affected', 'unaffected', 'unspecified affected status'),
+            _bool_condition_val(relative_values[DC.CAN_PARTICIPATE_KEY], 'available', 'unavailable', 'unspecified availability'),
+        ])
 
     def _relative_list_summary(relative, all_affected=False):
-        col_config = DC.RELATIVE_DETAIL_COLUMNS[relative]
-        sex_map = DC.RELATIVE_SEX_MAP[relative]
-
-        if _get_column_val(col_config[DC.NO_RELATIVES_KEY]) == DC.YES:
+        if row[DC.NO_RELATIVES_COLUMNS[relative]] == DC.YES_VAL:
             return 'None'
-
-        def _bool_condition_val(val, display, unknown_display):
-            val = val or ''
-            if val.upper() == 'YES':
-                return display
-            elif val.upper() == 'NO':
-                return 'un{}'.format(display)
-            return 'unspecified {}'.format(unknown_display)
-
-        relatives = [', '.join([
-            sex_map.get(rel['sex']) or sex_map['Other'],
-            'age {}'.format(rel['age']),
-            'affected' if all_affected else _bool_condition_val(rel['sameCondition'], 'affected', 'affected status'),
-            _bool_condition_val(rel['ableToParticipate'], 'available', 'availability'),
-        ]) for rel in json.loads(row[col_config[DC.RELATIVES_LIST_KEY]] or '[]') or []]
 
         divider = '\n{tab}{tab}'.format(tab=DC.TAB)
         return '{divider}{relatives}'.format(
             divider=divider,
-            relatives=divider.join(relatives),
+            relatives=divider.join([
+            _relative_summary(rel, relative, all_affected)
+             for rel in json.loads(row[DC.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]),
         )
-
-    sample_availability = 'availability unknown'
-    if row[DC.SAMPLE_AVAILABILITY_COLUMN] == DC.YES_VAL:
-        sample_availability = 'available'
-    elif row[DC.SAMPLE_AVAILABILITY_COLUMN] == DC.NO_VAL:
-        sample_availability = 'not available'
 
     tests = row[DC.TESTS_COLUMN]
     if DC.NONE in tests or not tests:
@@ -570,7 +565,8 @@ def _get_rgp_dsm_family_notes(row):
         age='Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
-            sample_availability=sample_availability,
+            sample_availability=_bool_condition_val(
+                row[DC.SAMPLE_AVAILABILITY_COLUMN], 'available', 'not available', 'availability unknown'),
         ) if row[DC.DECEASED_COLUMN] == DC.YES_VAL else row[DC.AGE_COLUMN],
         age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
         race=', '.join([race.strip().title() for race in row[DC.RACE_COLUMN].split(',')]),
@@ -693,12 +689,9 @@ class DSMConstants:
 
     YES_VAL = 'YES'
     NO_VAL = 'NO'
+    UNSURE = 'UNSURE'
     OTHER = 'OTHER'
     NONE = 'NONE'
-    # TODO can probably delete
-    YES = '1'
-    NO = '2'
-    DONT_KNOW = '3'
 
     FAMILY_ID_COLUMN = 'FAMILY_ID' # TODO
     SEX_COLUMN = 'PATIENT_SEX'
@@ -807,35 +800,38 @@ class DSMConstants:
         WGS_TEST: 'Whole genome sequencing',
     }
 
-    # TODO
-    MOTHER = 'MOM'
-    FATHER = 'DAD'
+    MOTHER = 'MOTHER'
+    FATHER = 'FATHER'
     AFFECTED_KEY = 'SAME_CONDITION'
     PARENT_AGE_KEY = 'CONDITION_AGE'
-    CAN_PARTICIPATE_KEY = 'ABLE_TO_PARTICIPATE'
+    CAN_PARTICIPATE_KEY = 'CAN_PARTICIPATE'
     DECEASED_KEY = 'DECEASED'
-    STORED_DNA_KEY = 'STORED_DNA'
+    STORED_DNA_KEY = 'DECEASED_DNA'
     PARENT_DETAIL_FIELDS = [AFFECTED_KEY, PARENT_AGE_KEY, CAN_PARTICIPATE_KEY, DECEASED_KEY, STORED_DNA_KEY]
 
-    # TODO
-    SIBLINGS = 'SIBLINGS'
-    CHILDREN = 'CHILDREN'
-    OTHER_RELATIVES = 'RELATIVES'
-    NO_RELATIVES_KEY = 'NO_RELATIVES'
-    RELATIVES_LIST_KEY = 'RELATIVES_LIST'
-    RELATIVE_DETAIL_COLUMNS = {
-        SIBLINGS: {NO_RELATIVES_KEY: 'NO_SIBLINGS', RELATIVES_LIST_KEY: 'SIBLING_LIST'},
-        CHILDREN: {NO_RELATIVES_KEY: 'NO_CHILDREN', RELATIVES_LIST_KEY: 'CHILD_LIST'},
-        OTHER_RELATIVES: {NO_RELATIVES_KEY: 'NO_RELATIVE_AFFECTED', RELATIVES_LIST_KEY: 'RELATIVE_LIST'},
+    SIBLINGS = 'SIBLING'
+    CHILDREN = 'CHILD'
+    OTHER_RELATIVES = 'RELATIVE'
+    SEX_KEY = 'SEX'
+    AGE_KEY = 'AGE'
+    CAN_PARTICIPATE_KEY = 'CAN_PARTICIPATE'
+    SAME_CONDITION_KEY = 'SAME_CONDITION'
+    RELATIVE_DETAIL_FIELDS = [SEX_KEY, AGE_KEY, CAN_PARTICIPATE_KEY, SAME_CONDITION_KEY]
+
+    NO_RELATIVES_COLUMNS = {
+        SIBLINGS: 'NO_SIBLINGS',
+        CHILDREN: 'NO_CHILDREN',
+        OTHER_RELATIVES: 'NO_RELATIVE_AFFECTED',
     }
 
-    # TODO
+    RELATIVES_LIST_COLUMNS = {
+        SIBLINGS: 'SIBLING',
+        CHILDREN: 'CHILD',
+        OTHER_RELATIVES: 'RELATIVE',
+    }
+
     RELATIVE_SEX_MAP = {
-        SIBLINGS: {'Male': 'Brother', 'Female': 'Sister', 'Other': 'Sibling (unspecified sex)'},
-        CHILDREN: {'Male': 'Son', 'Female': 'Daughter', 'Other': 'Child (unspecified sex)'},
-        OTHER_RELATIVES: {'Male': 'Male', 'Female': 'Female', 'Other': 'unspecified sex'},
+        SIBLINGS: {'MALE': 'Brother', 'FEMALE': 'Sister', 'Other': 'Sibling (unspecified sex)'},
+        CHILDREN: {'MALE': 'Son', 'FEMALE': 'Daughter', 'Other': 'Child (unspecified sex)'},
+        OTHER_RELATIVES: {'MALE': 'Male', 'FEMALE': 'Female', 'Other': 'unspecified sex'},
     }
-
-    @classmethod
-    def get_parent_detail_columns(cls, parent):
-        return {key: '{}_{}'.format(key, parent) for key in cls.PARENT_DETAIL_FIELDS}
