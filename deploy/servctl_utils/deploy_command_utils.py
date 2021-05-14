@@ -258,7 +258,6 @@ def deploy_postgres(settings):
     has_network =  run('gcloud compute networks describe {}'.format(network),
                        errors_to_ignore=['not found'], verbose=False)
     if not has_network:
-        run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
         run('gcloud compute networks create {}'.format(network))
         run(' '.join([
             'gcloud compute addresses create',
@@ -587,6 +586,8 @@ def _init_cluster_gcloud(settings):
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
+
+    run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
 
     _init_gcloud_disks(settings)
 
