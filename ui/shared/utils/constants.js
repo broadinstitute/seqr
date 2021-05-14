@@ -563,14 +563,14 @@ const ORDERED_VEP_CONSEQUENCES = [
     group: VEP_GROUP_SV,
   },
   {
-    description: 'A Complex SV',
+    description: 'A Complex Structural Variant',
     text: 'Complex SV',
     value: 'CPX',
     group: VEP_GROUP_SV,
   },
   {
     description: 'A reciprocal chromosomal translocation',
-    text: 'Reciprocal chromosomal translocation',
+    text: 'Reciprocal Translocation',
     value: 'CTX',
     group: VEP_GROUP_SV,
   },
