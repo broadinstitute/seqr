@@ -94,6 +94,7 @@ const IGV_OPTIONS = {
   showCenterGuide: true,
   showCursorTrackingGuide: true,
   showCommandBar: true,
+  genomeList: '/api/igv_genomes',
 }
 
 const getTrackOptions = (type, sample, individual) => {
