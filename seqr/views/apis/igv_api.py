@@ -1,7 +1,8 @@
 from collections import defaultdict
 import json
 import re
-from django.http import StreamingHttpResponse
+import requests
+from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist
@@ -149,3 +150,13 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
+
+def igv_genomes_proxy(request):
+    # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
+    # using this server-side proxy
+    genome_response = requests.get('https://s3.amazonaws.com/igv.org.genomes/genomes.json')
+    proxy_response = HttpResponse(
+        content=genome_response.content,
+        status=genome_response.status_code,
+    )
+    return proxy_response
