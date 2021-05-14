@@ -253,34 +253,16 @@ def deploy_postgres(settings):
     with open('deploy/secrets/gcloud/postgres/{}/password'.format(settings['DEPLOY_TO'])) as f:
         password = f.read()
 
-    # create network for private IP connection
-    network = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
-    has_network =  run('gcloud compute networks describe {}'.format(network),
-                       errors_to_ignore=['not found'], verbose=False)
-    if not has_network:
-        run('gcloud compute networks create {}'.format(network))
-        run(' '.join([
-            'gcloud compute addresses create',
-            'google-managed-services-{}'.format(network), '--addresses', settings['POSTGRES_NETWORK_IP'],
-            '--network', network, '--prefix-length 8', '--global', '--purpose VPC_PEERING',
-        ]))
-        run(' '.join([
-            'gcloud services vpc-peerings connect', '--service servicenetworking.googleapis.com',
-            '--ranges', 'google-managed-services-{}'.format(network), '--network', network,
-            '--project', settings['GCLOUD_PROJECT'],
-        ]))
-
     sql_instance_name = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
     run(' '.join([
         'gcloud beta sql instances create', sql_instance_name,
         '--database-version=POSTGRES_{}'.format(settings['POSTGRES_VERSION']),
         '--root-password={}'.format(password),
-        '--network=projects/{}/global/networks/{}'.format(settings['GCLOUD_PROJECT'], network),
         '--project={}'.format(settings['GCLOUD_PROJECT']),
         '--zone={}'.format(settings['GCLOUD_ZONE']),
         '--availability-type=regional',
         '--cpu=4', '--memory=26',
-        '--no-assign-ip',
+        '--assign-ip',
         '--backup',
         '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',
         '--require-ssl',
@@ -586,8 +568,6 @@ def _init_cluster_gcloud(settings):
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
-
-    run('gcloud services enable servicenetworking.googleapis.com --project={}'.format(settings['GCLOUD_PROJECT']))
 
     _init_gcloud_disks(settings)
 
