@@ -12,11 +12,11 @@ export default () =>
 
     Please make sure you review this Policy before using the seqr platform. If you have any
     questions about this Policy, please contact us at
-    <a href="mailto:seqr@populationgenomics.org.au">seqr@populationgenomics.org.au </a> <br />
+    <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> <br />
 
     <List ordered>
       <List.Item>
-        <b>Who is Garvan?</b>
+        <b>Who is Garvan? </b>
         The Garvan Institute of Medical Research brings together clinicians with world-leading basic
         and translational researchers. We are patient-focused — our researchers break down barriers between
         traditional scientific disciplines to find solutions to disease. Garvan’s researchers have
@@ -37,7 +37,7 @@ export default () =>
         of your information. <br />
       </List.Item>
       <List.Item>
-        <b>What is the purpose and scope of this Policy?</b>
+        <b>What is the purpose and scope of this Policy? </b>
         This Policy describes the Personal Information we collect from users of the Platform,
         the purposes for collecting that information, how we use that information, and with
         whom we share that information. Please note that this Policy only applies to
@@ -45,7 +45,7 @@ export default () =>
         Genomic Data about Research Participants that may be contributed by users to the Platform. <br />
       </List.Item>
       <List.Item>
-        <b>Does this Policy Apply to Genomic Data Uploaded to the Platform?</b>
+        <b>Does this Policy Apply to Genomic Data Uploaded to the Platform? </b>
         This Policy only applies to information that we collect about users of the Platform,
         and does not apply to Genomic Data contributed by users to the Platform. While the
         Platform also allows users to view and contribute Genomic Data for research purposes,
@@ -59,14 +59,14 @@ export default () =>
         in for more information, including contact information. <br />
       </List.Item>
       <List.Item>
-        <b>If I use the Platform, am I agreeing to this Policy?</b>
+        <b>If I use the Platform, am I agreeing to this Policy? </b>
         Yes. However, your use of the Platform is entirely voluntary and you have certain
         rights to control use of your information as described below. If you decide to
         use the Platform, you are agreeing that we can use your information as described
         in this Policy. <br />
       </List.Item>
       <List.Item>
-        <b>How do we collect information from you?</b>
+        <b>How do we collect information from you? </b>
         We collect information about you in two ways. The first is information you
         voluntarily provide to us when you choose to do any of the following, none of
         which is required:
@@ -102,7 +102,7 @@ export default () =>
         and passwords to control access to our computer system.  <br />
       </List.Item>
       <List.Item>
-        <b>What kind of information do we collect?</b>
+        <b>What kind of information do we collect? </b>
         We collect various types of information:
         <List as="ul">
           <List.Item as="li">
@@ -131,7 +131,7 @@ export default () =>
         </List>
       </List.Item>
       <List.Item>
-        <b>Do we use cookies and other tracking technologies?</b>
+        <b>Do we use cookies and other tracking technologies? </b>
         Yes. We use cookies for various purposes, such as to make it easier for you to navigate
         our Platform, to enable a faster log-in process, or to allow us to track your activities
         on our Platform. There are two types of cookies: session and persistent cookies.
@@ -156,7 +156,7 @@ export default () =>
             at the Platform.
           </List.Item>
         </List>
-        <b>Disabling cookies.</b>
+        <b>Disabling cookies. </b>
         Most web browsers automatically accept cookies, but if you prefer, you
         can edit your browser options to block them in the future. The Help portion of the toolbar
         on most browsers will tell you how to prevent your computer from accepting new cookies,
@@ -164,7 +164,7 @@ export default () =>
         cookies altogether. Visitors to our Site who disable cookies may not be able to browse
         certain areas of the Site or use the Platform. <br />
 
-        <b>Tracking Technologies.</b>
+        <b>Tracking Technologies. </b>
         We use automated devices and applications, such as Google Analytics,
         to evaluate usage of our Platform. We also may use other analytic means to evaluate our Services.
         We use these tools to help us improve our Platform, performance, and user experiences. We may
@@ -173,7 +173,7 @@ export default () =>
         technologies to perform their services. We do not share your Personal Information with these third parties. <br />
       </List.Item>
       <List.Item>
-        <b>How do we use your information?</b>
+        <b>How do we use your information? </b>
         We use your information, including your Personal Information, for various purposes:
         <List as="ul">
           <List.Item as="li">
@@ -197,7 +197,7 @@ export default () =>
         </List>
       </List.Item>
       <List.Item>
-        <b>With whom do we share your information?</b>
+        <b>With whom do we share your information? </b>
         We may need to share your information, including your Personal Information, with third parties.
         The following are the categories of third parties with whom we may share your Personal Information:
         <List as="ul">
@@ -262,14 +262,14 @@ export default () =>
         </List>
       </List.Item>
       <List.Item>
-        <b>Can other users see my Personal Information?</b>
+        <b>Can other users see my Personal Information? </b>
         The Platform allows you to interact with other users. Therefore, any information that you post to
         the Platform, including your contact information, will be visible to other users. Although we
         expect users to only use such information in connection with the Platform, we cannot assure you
         that such other users will not disclose or use your information outside of the Platform. <br />
       </List.Item>
       <List.Item>
-        <b>What rights do I have with respect to my information?</b>
+        <b>What rights do I have with respect to my information? </b>
         Users can update their seqr profile at any time. All users can also contact us to request access to,
         a copy of, correction, or deletion of their Personal Information by contacting us at
         <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>
@@ -281,7 +281,7 @@ export default () =>
         is used as part of a published study. <br />
       </List.Item>
       <List.Item>
-        <b>What kind of security does seqr use to protect my information?</b>
+        <b>What kind of security does seqr use to protect my information? </b>
         We use reasonable security to protect the Personal Information we collect from users,
         including using our good faith efforts to adhere to Garvan’s Privacy Policy and with
         Australian Privacy Principles. However, we cannot guarantee the security of information
@@ -291,13 +291,13 @@ export default () =>
         or suspected unauthorized use of your account. <br />
       </List.Item>
       <List.Item>
-        <b>Do you collect information from children?</b>
+        <b>Do you collect information from children? </b>
         We do not collect information directly from children under the age of majority. If we discover
         that a child under the age of majority has provided us with Personal Information, we will delete
         such information from our systems. <br />
       </List.Item>
       <List.Item>
-        <b>Is there any transfer of Personal Information from one country to another?</b>
+        <b>Is there any transfer of Personal Information from one country to another? </b>
         We store the information you provide on servers in Australia. If you are a user of the Platform,
         you agree to the transfer of your Personal Information to Australia and acknowledge that
         the laws in Australia may offer less protection to your Personal Information than the laws
@@ -305,14 +305,14 @@ export default () =>
         <br />
       </List.Item>
       <List.Item>
-        <b>Will your personal information be sent overseas?</b>
+        <b>Will your personal information be sent overseas? </b>
         Garvan does not disclose your personal information to overseas recipients. We may however
         store some personal information on servers owned by companies based in the United States of America.
         Our contractual arrangements comply with the requirements of the Privacy Act and we take reasonable
         steps to ensure those companies do not breach Australian privacy laws in relation to your personal information. <br />
       </List.Item>
       <List.Item>
-        <b>What should you do if you have a complaint about the handling of your personal information?</b>
+        <b>What should you do if you have a complaint about the handling of your personal information? </b>
         If you have any questions or concerns about this Privacy Policy or how your personal information has been handled by Garvan,
         please contact us via <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> or
         <a href="mailto:privacy@garvan.org.au"> privacy@garvan.org.au </a> <br />
@@ -324,7 +324,7 @@ export default () =>
         be found online at www.oaic.gov.au. <br />
       </List.Item>
       <List.Item>
-        <b>Will you update or change this Policy?</b>
+        <b>Will you update or change this Policy? </b>
         Yes, we may need to update or change this Policy for various reasons, such as to comply with changes in the law,
         or to cover new features or services provided through the Platform. If we update or change this Policy we will
         post the changes to the Policy on the Platform and in the App. To make sure you are aware of any updates or changes,
@@ -335,7 +335,7 @@ export default () =>
         that appears at the top of this page. <br />
       </List.Item>
       <List.Item>
-        <b>HIPAA, Protected Health Information and Clinical Compliance Features.</b>
+        <b>HIPAA, Protected Health Information and Clinical Compliance Features. </b>
         In general, we are not a Covered Entity or Business Associate as such terms are defined in the
         Health Insurance Portability and Accountability Act of 1996, as amended, and its related regulations
         (collectively, &quot;HIPAA&quot;) and, therefore, are not generally subject to the requirements of HIPAA with
@@ -343,7 +343,7 @@ export default () =>
         health information subject to HIPAA (&quot;PHI&quot;). <br />
       </List.Item>
       <List.Item>
-        <b>Notice to Residents of the European Union.</b>
+        <b>Notice to Residents of the European Union. </b>
         This section outlines certain additional information that we are obligated to provide to data subjects
         of the European Union as well as certain rights such data subjects have with respect to the processing
         of their Personal Information, pursuant to applicable local laws. Capitalized terms not otherwise defined
@@ -461,11 +461,11 @@ export default () =>
 
     <br /><br />
 
-    <b>Submitting Requests:</b>
+    <b>Submitting Requests: </b>
     <br />
     <p>
       EU data subject can submit requests by contacting us at
-      <a href="mailto:seqr@populationgenomics.org.au">seqr@populationgenomics.org.au</a>.
+      <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au</a>.
       We will respond to all such requests within 30 days of our receipt of the request, unless there are extenuating
       circumstances, in which event we may take up to 60 days to respond. We will inform you if we expect our response
       to take longer than 30 days. Please note, however, that certain Personal Information may be exempt from such

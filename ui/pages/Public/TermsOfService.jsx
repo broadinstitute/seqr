@@ -48,39 +48,39 @@ export default () =>
     <Header content="Terms and Conditions" size="medium" />
     <List ordered>
       <List.Item>
-        <b>Who we are and how to contact us or the Centre for Population Genomics and seqr.</b>
+        <b>Who we are and how to contact us or the Centre for Population Genomics and seqr. </b>
         seqr, <a href="https://seqr.populationgenomics.org.au/"> https://seqr.populationgenomics.org.au/ </a>
         is an analysis platform (Site) operated by Garvan (we, us and our). <br />
         To contact us, please email <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> directly. <br />
       </List.Item>
 
       <List.Item>
-        <b>By using our Site you accept these terms.</b>
+        <b>By using our Site you accept these terms. </b>
         By using our Site, you confirm that you accept these terms of use and that you agree to comply with them.
         If you do not agree to these terms, you must not use our Site. <br />
       </List.Item>
       <List.Item>
-        <b>We may make changes to these terms.</b>
+        <b>We may make changes to these terms. </b>
         We maintain the right to modify these terms from time to time and may do so by posting
         notice of such modifications on this page. Any modification made is effective immediately
         upon posting the modification (unless otherwise stated). Every time you wish to use our Site,
         please check these terms to ensure you understand the terms that apply at that time. <br />
       </List.Item>
       <List.Item>
-        <b>Our site uses cookies.</b>
+        <b>Our site uses cookies. </b>
         Our Site uses cookies to enable sign on and other essential features when signed in,
         and to provide statistics to our development team regarding how the site is used.
         For more information, see our Privacy Policy. <br />
       </List.Item>
       <List.Item>
-        <b>We may suspend or withdraw our Site.</b>
+        <b>We may suspend or withdraw our Site. </b>
         We do not guarantee that our Site, or any content on it, will always be available, uninterrupted
         or be error-free. We may suspend or withdraw or restrict the availability of all or any part of
         our Site for business and operational reasons. We will try to give you reasonable notice of any
         suspension or withdrawal. <br />
       </List.Item>
       <List.Item>
-        <b>Your account.</b>
+        <b>Your account. </b>
         Once you are provided with a user account, password or any other piece of information as part
         of our security procedures, you must maintain the confidentiality of your authentication
         credentials. You must not disclose it to any third party. <br />
@@ -91,7 +91,7 @@ export default () =>
         Your level of access to our Site is limited to ensure your access is no more than
         necessary to perform your legitimate tasks or assigned duties. If you believe you
         are being granted access that you should not have, you must immediately notify
-        <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>. <br />
+        <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au</a>. <br />
 
         Some users of our Site may have the ability to grant access to projects and the
         data contained within them. These users are responsible for ensuring that
@@ -109,10 +109,10 @@ export default () =>
 
         If you know or suspect that anyone other than you is privy to your authentication credentials
         or password, or if you do not understand any of these requirements, you must promptly notify
-        us at <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>. <br />
+        us at <a href="mailto:seqr@populationgenomics.org.au">seqr@populationgenomics.org.au</a>. <br />
       </List.Item>
       <List.Item>
-        <b>Do not rely on information on this Site.</b>
+        <b>Do not rely on information on this Site. </b>
         This Site is provided on an &quot;as is&quot; and &quot;as available&quot; basis, and we make no representations or
         warranties, express or implied, regarding the operation or availability of the Site. <br />
 
@@ -122,7 +122,7 @@ export default () =>
         may be obtained from our Site. <br />
       </List.Item>
       <List.Item>
-        <b>We are not responsible for websites we link to.</b>
+        <b>We are not responsible for websites we link to. </b>
         Where our Site contains links to other sites and resources provided by third parties, these links are
         provided for your information only. The listing of links does not imply a direct association between
         the Garvan and the operators of the outside resource links. Such links should not be interpreted as
@@ -131,7 +131,7 @@ export default () =>
         own risk and subject to the terms and conditions of use for those websites. <br />
       </List.Item>
       <List.Item>
-        <b>Content standards.</b>
+        <b>Content standards. </b>
         By accessing our Site, you expressly consent to monitoring of your actions and all content stored
         within our Site. We reserve the right to delete, move, or edit any data, which we consider to be
         unacceptable or inappropriate. <br />
@@ -157,7 +157,7 @@ export default () =>
       </List.Item>
 
       <List.Item>
-        <b>Limitation of liability.</b>
+        <b>Limitation of liability. </b>
         In no event will we, our affiliates or their licensors, service providers, employees, agents,
         officers or directors be liable for damages of any kind, under any legal theory, arising out
         of or in connection with your use, or inability to use, our Site, any websites linked to it,
@@ -182,19 +182,19 @@ export default () =>
         and any use of the Site&apos;s content, services and products other than as expressly authorised in these terms. <br />
       </List.Item>
       <List.Item>
-        <b>We are not responsible for viruses.</b>
+        <b>We are not responsible for viruses. </b>
         We do not guarantee that our Site will be secure or free from bugs or viruses or any other type of
         malicious code or software. <br />
 
         You are responsible for configuring your technology to access our Site. You should use your own antivirus software. <br />
       </List.Item>
       <List.Item>
-        <b>Australian law applies to disputes.</b>
+        <b>Australian law applies to disputes. </b>
         These terms of use, their subject matter and their formation, are governed by Australian law.
         You and we both agree that the courts in Australia will have exclusive jurisdiction. <br />
       </List.Item>
       <List.Item>
-        <b>Prohibited uses of our Site.</b>
+        <b>Prohibited uses of our Site. </b>
         You may use the Site only for lawful purposes and in accordance with these terms.
         You agree not to use the Site:
         <List as="ul">
@@ -281,7 +281,7 @@ export default () =>
         your right to use our Site will cease immediately. <br />
       </List.Item>
       <List.Item>
-        <b>Other terms and conditions.</b>
+        <b>Other terms and conditions. </b>
         Additional terms and conditions may also apply to specific portions, services or features of the
         Site. All such additional terms and conditions are incorporated by this reference into these terms.
       </List.Item>
