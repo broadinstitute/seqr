@@ -621,6 +621,11 @@ MAPPING_FIELDS = [
     'topmed_AN',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
+    'gnomad_svs_AC',
+    'gnomad_svs_Hom',
+    'gnomad_svs_Hemi',
+    'gnomad_svs_AF',
+    'gnomad_svs_AN',
 ]
 SV_MAPPING_FIELDS = [
     'start',
