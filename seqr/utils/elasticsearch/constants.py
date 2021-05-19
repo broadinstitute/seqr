@@ -99,6 +99,9 @@ POPULATIONS = {
     'gnomad_genomes': {
         'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
+    'gnomad_genome_svs': {
+        'filter_AF': ['gnomad_svs_AF'],
+    },
 }
 POPULATION_FIELD_CONFIGS = {
     'AF': {'format_value': float},

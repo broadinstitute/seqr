@@ -186,9 +186,15 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
       <Form.Group widths="equal">
         <Form.Field width={2} />
-        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
+        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents.slice(0, 6)}
         <Form.Field width={2} />
       </Form.Group>
+      {fieldComponents.length > 6 && !fieldLayout &&
+      <Form.Group widths="six equal">
+        <Form.Field width={2} />
+        {fieldComponents.slice(6)}
+        <Form.Field width={2} />
+      </Form.Group>}
     </FormSection>
   )
 })
