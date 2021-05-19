@@ -328,7 +328,7 @@ export const FREQUENCIES = [
     name: 'gnomad_svs',
     label: 'gnomAD genome SVs',
     homHemi: false,
-    labelHelp: 'Filter by allele count (AC) among gnomAD genomes, or by the allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites) of an overlapping event in gnomad',
+    labelHelp: 'Filter by site frequency (AF) among gnomad SVs',
   },
   {
     name: THIS_CALLSET_FREQUENCY,

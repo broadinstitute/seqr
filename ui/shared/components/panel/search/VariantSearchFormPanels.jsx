@@ -122,6 +122,12 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ) : null,
 ].filter(fields => fields)
 
+const freqFieldLayout = fieldComponents => [
+  <Grid.Row className="field">{[fieldComponents[0], fieldComponents[6]]}</Grid.Row>,
+  <Grid.Row className="field">{[fieldComponents[1], fieldComponents[7]]}</Grid.Row>,
+  ...fieldComponents.slice(2, 6),
+]
+
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
@@ -142,6 +148,7 @@ export const FREQUENCY_PANEL = {
   },
   fields: FREQUENCIES,
   fieldProps: { control: FrequencyFilter, format: val => val || {} },
+  fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
 }
 
@@ -186,15 +193,9 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
       <Form.Group widths="equal">
         <Form.Field width={2} />
-        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents.slice(0, 6)}
+        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
         <Form.Field width={2} />
       </Form.Group>
-      {fieldComponents.length > 6 && !fieldLayout &&
-      <Form.Group widths="six equal">
-        <Form.Field width={2} />
-        {fieldComponents.slice(6)}
-        <Form.Field width={2} />
-      </Form.Group>}
     </FormSection>
   )
 })

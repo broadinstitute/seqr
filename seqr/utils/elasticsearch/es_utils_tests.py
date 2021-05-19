@@ -626,6 +626,7 @@ MAPPING_FIELDS = [
     'gnomad_svs_Hemi',
     'gnomad_svs_AF',
     'gnomad_svs_AN',
+    'gnomad_svs_filter_AF',
 ]
 SV_MAPPING_FIELDS = [
     'start',
