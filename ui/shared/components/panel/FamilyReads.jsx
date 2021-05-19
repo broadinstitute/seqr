@@ -16,7 +16,7 @@ import IGV from '../graph/IGV'
 import { ButtonLink } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import { getLocus } from './variants/Annotations'
-import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP, GENOME_VERSION_38 } from '../../utils/constants'
+import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../utils/constants'
 
 const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'
@@ -98,45 +98,66 @@ const IGV_OPTIONS = {
 
 const BASE_REFERENCE_URL = '/api/igv_genomes'
 
-const REFERENCE_LOOKUP = {
-  GRCh37: {
-    fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta',
-    cytobandURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-    aliasURL: 'https://s3.amazonaws.com/igv.org.genomes/hg19/hg19_alias.tab',
-    // 'tracks': [
-    //   {
-    //     'name': 'Refseq Genes',
-    //     'format': 'refgene',
-    //     'url': 'https://s3.amazonaws.com/igv.org.genomes/hg19/ncbiRefGene.txt.gz',
-    //     'indexed': false,
-    //     'visibilityWindow': -1,
-    //     'removable': false,
-    //     'order': 1000000
-    //   }
-    // ]
+const REFERENCE_URLS = [
+  {
+    key: 'fastaURL',
+    baseUrl: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq`,
+    path: {
+      37: 'hg19/hg19.fasta',
+      38: 'hg38/hg38.fa',
+    },
   },
-  GRCh38: {
-    id: 'hg38',
-    fastaURL: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq/hg38/hg38.fa`,
-    cytobandURL: `${BASE_REFERENCE_URL}/org.genomes/hg38/annotations/cytoBandIdeo.txt.gz`,
-    aliasURL: `${BASE_REFERENCE_URL}/org.genomes/hg38/hg38_alias.tab`,
-    tracks: [
-      {
-        url: 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
-        name: 'Gencode v27',
-        order: 1000,
-      },
-      {
-        name: 'Refseq',
-        format: 'refgene',
-        url: `${BASE_REFERENCE_URL}/org.genomes/hg38/ncbiRefGene.txt.gz`,
-        indexed: false,
-        visibilityWindow: -1,
-        order: 1001,
-      }
-    ]
+  {
+    key: 'cytobandURL',
+    baseUrl: BASE_REFERENCE_URL,
+    path: {
+      37: 'broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
+      38: 'org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
+    },
   },
-}
+  {
+    key: 'aliasURL',
+    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
+    path: {
+      37: 'hg19/hg19_alias.tab',
+      38: 'hg38/hg38_alias.tab',
+    },
+  },
+]
+
+const REFERENCE_TRACKS = [
+  {
+    name: 'Gencode v27',
+    baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
+    path: {
+      37: 'GRCh37/gencode/gencode.v27.lift37.annotation.sorted.gtf.gz',
+      38: 'GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
+    },
+    order: 1000,
+  },
+  {
+    name: 'Refseq',
+    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
+    path: {
+      37: 'hg19/ncbiRefGene.txt.gz',
+      38: 'hg38/ncbiRefGene.txt.gz',
+    },
+    format: 'refgene',
+    indexed: false,
+    visibilityWindow: -1,
+    order: 1001,
+  },
+]
+
+const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
+  ...acc,
+  [genome]: {
+    id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
+    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, ...track }) => ({ url: `${baseUrl}/${path[genome]}`, ...track })),
+    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
+  },
+}), {})
+
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
@@ -288,25 +309,17 @@ ReadButtons.propTypes = {
 
 
 const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes }) => {
-  const genomeBuild = GENOME_VERSION_LOOKUP[project.genomeVersion]
-  const genomeDisplay = GENOME_VERSION_DISPLAY_LOOKUP[genomeBuild]
-
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
     100,
   )
 
+  // TODO selector?
   const tracks = getIgvTracks(variant, igvSampleIndividuals, individualsByGuid, sampleTypes)
 
-  // tracks.push({
-  //   url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${project.genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
-  //   name: `gencode ${genomeDisplay}v27`,
-  //   displayMode: 'SQUISHED',
-  // })
-
   return (
-    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[genomeBuild]} locus={locus} {...IGV_OPTIONS} />
+    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
   )
 })
 
