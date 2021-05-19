@@ -558,7 +558,7 @@ const ORDERED_VEP_CONSEQUENCES = [
   },
   {
     description: 'A copy number polymorphism variant',
-    text: 'Copy Number Polymorphism',
+    text: 'Copy Number',
     value: 'CNV',
     group: VEP_GROUP_SV,
   },
