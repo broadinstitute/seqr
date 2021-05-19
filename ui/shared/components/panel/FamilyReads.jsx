@@ -130,7 +130,7 @@ const REFERENCE_TRACKS = [
     name: 'Gencode v27',
     baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
     path: {
-      37: 'GRCh37/gencode/gencode.v27.lift37.annotation.sorted.gtf.gz',
+      37: 'GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
       38: 'GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
     },
     order: 1000,
@@ -171,7 +171,7 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
-const getIgvTracks = (variant, igvSampleIndividuals, individualsByGuid, sampleTypes) => {
+const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -315,8 +315,7 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
     100,
   )
 
-  // TODO selector?
-  const tracks = getIgvTracks(variant, igvSampleIndividuals, individualsByGuid, sampleTypes)
+  const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
