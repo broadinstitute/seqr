@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -67,6 +68,14 @@ CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src-elem']
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
+CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com') # used by IGV
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
+# IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
+IGV_CSS_HASH = "'sha256-D1ouVPg7bXVEm/f4h9NNmEBwWO5vkjlDOIHPeV3tFPg='"
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS_HASH)
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -315,6 +324,8 @@ MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
+
+SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
 
 #########################################################
 #  Social auth specific settings
