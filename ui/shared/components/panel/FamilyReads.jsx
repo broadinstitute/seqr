@@ -94,7 +94,48 @@ const IGV_OPTIONS = {
   showCenterGuide: true,
   showCursorTrackingGuide: true,
   showCommandBar: true,
-  genomeList: '/api/igv_genomes',
+}
+
+const BASE_REFERENCE_URL = '/api/igv_genomes'
+
+const REFERENCE_LOOKUP = {
+  GRCh37: {
+    fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta',
+    cytobandURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
+    aliasURL: 'https://s3.amazonaws.com/igv.org.genomes/hg19/hg19_alias.tab',
+    // 'tracks': [
+    //   {
+    //     'name': 'Refseq Genes',
+    //     'format': 'refgene',
+    //     'url': 'https://s3.amazonaws.com/igv.org.genomes/hg19/ncbiRefGene.txt.gz',
+    //     'indexed': false,
+    //     'visibilityWindow': -1,
+    //     'removable': false,
+    //     'order': 1000000
+    //   }
+    // ]
+  },
+  GRCh38: {
+    id: 'hg38',
+    fastaURL: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq/hg38/hg38.fa`,
+    cytobandURL: `${BASE_REFERENCE_URL}/org.genomes/hg38/annotations/cytoBandIdeo.txt.gz`,
+    aliasURL: `${BASE_REFERENCE_URL}/org.genomes/hg38/hg38_alias.tab`,
+    tracks: [
+      {
+        url: 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
+        name: 'Gencode v27',
+        order: 1000,
+      },
+      {
+        name: 'Refseq',
+        format: 'refgene',
+        url: `${BASE_REFERENCE_URL}/org.genomes/hg38/ncbiRefGene.txt.gz`,
+        indexed: false,
+        visibilityWindow: -1,
+        order: 1001,
+      }
+    ]
+  },
 }
 
 const getTrackOptions = (type, sample, individual) => {
@@ -257,14 +298,15 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
   )
 
   const tracks = getIgvTracks(variant, igvSampleIndividuals, individualsByGuid, sampleTypes)
-  tracks.push({
-    url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${project.genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
-    name: `gencode ${genomeDisplay}v27`,
-    displayMode: 'SQUISHED',
-  })
+
+  // tracks.push({
+  //   url: `https://storage.googleapis.com/seqr-reference-data/${genomeBuild}/gencode/gencode.v27${project.genomeVersion === GENOME_VERSION_38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
+  //   name: `gencode ${genomeDisplay}v27`,
+  //   displayMode: 'SQUISHED',
+  // })
 
   return (
-    <IGV tracks={tracks} genome={genomeDisplay} locus={locus} {...IGV_OPTIONS} />
+    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[genomeBuild]} locus={locus} {...IGV_OPTIONS} />
   )
 })
 
