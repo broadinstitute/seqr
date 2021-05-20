@@ -122,10 +122,12 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ) : null,
 ].filter(fields => fields)
 
+//Layout the frequency filter fields into 6 columns. The last two columns will have two rows.
 const freqFieldLayout = fieldComponents => [
-  <Grid.Row className="field">{[fieldComponents[0], fieldComponents[6]]}</Grid.Row>,
-  <Grid.Row className="field">{[fieldComponents[1], fieldComponents[7]]}</Grid.Row>,
-  ...fieldComponents.slice(2, 6),
+  ...fieldComponents.slice(0, 4),
+  //group components 4 and 6 in a column, 5 and 7 in another column
+  <Grid.Row className="field" key={fieldComponents[4].key}>{[fieldComponents[4], fieldComponents[6]]}</Grid.Row>,
+  <Grid.Row className="field" key={fieldComponents[5].key}>{[fieldComponents[5], fieldComponents[7]]}</Grid.Row>,
 ]
 
 export const ANNOTATION_PANEL = {
