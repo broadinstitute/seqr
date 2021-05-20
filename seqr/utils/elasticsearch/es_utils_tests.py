@@ -1493,7 +1493,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
@@ -2608,7 +2608,7 @@ class EsUtilsTest(TestCase):
 
         variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
-            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double'}}, 'xpos', 'variantId'])
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 
