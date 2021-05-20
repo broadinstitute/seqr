@@ -169,12 +169,12 @@ class IgvAPITest(AuthenticationTestCase):
 
     @responses.activate
     def test_igv_genomes_proxyy(self):
-        url_path = 'org.genomes/foo?guery=true'
+        url_path = 'org.genomes/foo?query=true'
         url = reverse(igv_genomes_proxy, args=[url_path])
 
         expected_body = {'genes': ['GENE1', 'GENE2']}
         responses.add(
-            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?guery=true', match_querystring=True,
+            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
             content_type='application/json', body=json.dumps(expected_body))
 
         response = self.client.get(url)
@@ -185,7 +185,7 @@ class IgvAPITest(AuthenticationTestCase):
         # test with range header proxy
         expected_content = 'test file content'
         responses.replace(
-            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?guery=true', match_querystring=True,
+            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
             body=expected_content)
 
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
