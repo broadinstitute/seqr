@@ -1,9 +1,11 @@
 import json
 import mock
+import responses
 import subprocess
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
-from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample
+from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
+    igv_genomes_proxy
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -165,3 +167,15 @@ class IgvAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 200)
 
+    @responses.activate
+    def test_igv_genomes_proxyy(self):
+        url = reverse(igv_genomes_proxy)
+
+        expected_body = {'genes': ['GENE1', 'GENE2']}
+        responses.add(
+            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/genomes.json', status=200,
+            content_type='application/json', body=json.dumps(expected_body))
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(json.loads(response.content), expected_body)

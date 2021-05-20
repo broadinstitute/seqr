@@ -70,7 +70,7 @@
     "pk": 12,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-03-12T23:09:54.180Z",
         "is_superuser": false,
         "username": "test_user_collaborator",
         "first_name": "Test Collaborator User",
@@ -122,7 +122,7 @@
     "pk": 15,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-03-12T23:09:54.180Z",
         "is_superuser": true,
         "username": "test_superuser",
         "first_name": "Test Superuser",
@@ -140,7 +140,7 @@
     "pk": 16,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-05-12T23:09:54.180Z",
         "is_superuser": false,
         "username": "test_data_manager",
         "first_name": "Test Data Manager",
@@ -176,13 +176,13 @@
     "pk": 18,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCyrtyrty+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-03-12T23:09:54.180Z",
         "is_superuser": false,
         "username": "test_user_inactive",
         "first_name": "Test Inactive User",
         "last_name": "",
         "email": "test_user_inactive@test.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": false,
         "date_joined": "2017-03-12T23:09:54.180Z",
         "groups": [],
