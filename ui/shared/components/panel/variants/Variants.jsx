@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Popup, Label, Button, Header } from 'semantic-ui-react'
+import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -158,12 +158,28 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
       <StyledCompoundHetRows stackable columns="equal">
         {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
-      {mainVariants && <Grid.Column width={1} />}
       {mainVariants &&
-        <Grid.Column width={15}>
-          <StyledCompoundHetRows stackable columns="equal">
-            {compHetRows(variants, mainGeneId, props)}
-          </StyledCompoundHetRows>
+        <Grid.Column width={16}>
+          <Tab
+            menu={{ fluid: true, vertical: true, secondary: true, pointing: true }}
+            grid={{ paneWidth: 15, tabWidth: 1 }}
+            renderActiveOnly={false}
+            panes={[
+              { menuItem: { key: 'sow', icon: 'plus' }, pane: {
+                key: 'variants', attached: false, basic: true,
+                content: (
+                  <StyledCompoundHetRows stackable columns="equal">
+                    {compHetRows(variants, mainGeneId, props)}
+                  </StyledCompoundHetRows>
+                ),
+              }},
+              { menuItem: { key: 'hide', icon: 'minus' }, pane: {
+                key: 'collapsed', attached: false, basic: true, padded: true,
+                  content: `Collapsing ${variants.length} nested variants`,
+              }
+              },
+            ]}
+          />
         </Grid.Column>
       }
     </StyledVariantRow>
