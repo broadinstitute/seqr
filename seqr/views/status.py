@@ -39,7 +39,7 @@ def status_view(request):
 
     # Test kibana connection
     try:
-        resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status')
+        resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status', timeout=3, retries=3)
         if resp.status >= 400:
             raise ValueError('Error {}: {}'.format(resp.status, resp.reason))
     except Exception as e:
