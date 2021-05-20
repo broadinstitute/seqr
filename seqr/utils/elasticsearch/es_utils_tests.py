@@ -1493,7 +1493,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
