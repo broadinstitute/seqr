@@ -151,10 +151,15 @@ def _stream_file(request, path):
     resp['Accept-Ranges'] = 'bytes'
     return resp
 
-def igv_genomes_proxy(request):
+def igv_genomes_proxy(request, file_path):
     # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
     # using this server-side proxy
-    genome_response = requests.get('https://s3.amazonaws.com/igv.org.genomes/genomes.json')
+    headers = {}
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        headers['Range'] = range_header
+
+    genome_response = requests.get('https://s3.amazonaws.com/igv.{}'.format(file_path), headers=headers)
     proxy_response = HttpResponse(
         content=genome_response.content,
         status=genome_response.status_code,
