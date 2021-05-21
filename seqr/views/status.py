@@ -1,7 +1,7 @@
 from django.db import connections
 import logging
 import redis
-import requests
+from urllib3.connectionpool import connection_from_url
 
 from settings import SEQR_VERSION, KIBANA_SERVER, REDIS_SERVICE_HOSTNAME, DATABASES
 from seqr.utils.elasticsearch.utils import get_es_client
@@ -39,7 +39,9 @@ def status_view(request):
 
     # Test kibana connection
     try:
-        requests.head('http://{}/status'.format(KIBANA_SERVER), timeout=3).raise_for_status()
+        resp = connection_from_url('http://{}'.format(KIBANA_SERVER)).urlopen('HEAD', '/status', timeout=3, retries=3)
+        if resp.status >= 400:
+            raise ValueError('Error {}: {}'.format(resp.status, resp.reason))
     except Exception as e:
         dependent_services_ok = False
         logger.error('Kibana connection error: {}'.format(str(e)))
