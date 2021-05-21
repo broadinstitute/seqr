@@ -18,26 +18,38 @@ class StatusTest(TestCase):
 
         mock_db_connections.__getitem__.return_value.cursor.side_effect = Exception('No connection')
         mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
-        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'version': 'v1.0', 'dependent_services_ok': False})
+        self.assertDictEqual(
+            response.json(), {'version': 'v1.0', 'dependent_services_ok': False, 'secondary_services_ok': False})
         mock_logger.error.assert_has_calls([
             mock.call('Database "default" connection error: No connection'),
             mock.call('Database "reference_data" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
             mock.call('Elasticsearch connection error: No response from elasticsearch ping'),
-            mock.call('Kibana connection error: Error 500: Internal Server Error'),
+            mock.call('Kibana connection error: Connection refused: HEAD /status'),
         ])
 
         mock_logger.reset_mock()
         mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
         urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
+        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(), {'version': 'v1.0', 'dependent_services_ok': True, 'secondary_services_ok': False})
+        mock_logger.error.assert_has_calls([
+            mock.call('Kibana connection error: Error 500: Internal Server Error'),
+        ])
+
+        mock_logger.reset_mock()
         urllib3_responses.replace_json('/status', {'success': True}, method=urllib3_responses.HEAD, status=200)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'version': 'v1.0', 'dependent_services_ok': True})
+        self.assertDictEqual(
+            response.json(), {'version': 'v1.0', 'dependent_services_ok': True, 'secondary_services_ok': True})
         mock_logger.error.assert_not_called()
