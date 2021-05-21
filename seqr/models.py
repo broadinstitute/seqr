@@ -647,14 +647,14 @@ class VariantTagType(ModelWithGUID):
         '#8F754F',
         '#383838',
     """
-    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
+    project = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE)
 
     name = models.TextField()
     category = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
     order = models.FloatField(null=True)
-    metadata_title = models.CharField(max_length=20, null=True)
+    metadata_title = models.CharField(max_length=20, null=True, blank=True)
 
     def __unicode__(self):
         return self.name.strip()
