@@ -2,7 +2,6 @@ from django.test import TestCase
 from django.urls.base import reverse
 import mock
 from requests import HTTPError
-import responses
 
 from seqr.views.status import status_view
 from seqr.views.utils.test_utils import urllib3_responses
@@ -13,14 +12,13 @@ class StatusTest(TestCase):
     @mock.patch('seqr.views.status.redis.StrictRedis')
     @mock.patch('seqr.views.status.connections')
     @mock.patch('seqr.views.status.logger')
-    @responses.activate
     @urllib3_responses.activate
     def test_status(self, mock_logger, mock_db_connections, mock_redis):
         url = reverse(status_view)
 
         mock_db_connections.__getitem__.return_value.cursor.side_effect = Exception('No connection')
         mock_redis.return_value.ping.side_effect = HTTPError('Bad connection')
-        responses.add(responses.HEAD, 'http://localhost:5601/status', status=500)
+        urllib3_responses.add(urllib3_responses.HEAD, '/status', status=500)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
@@ -30,14 +28,14 @@ class StatusTest(TestCase):
             mock.call('Database "reference_data" connection error: No connection'),
             mock.call('Redis connection error: Bad connection'),
             mock.call('Elasticsearch connection error: No response from elasticsearch ping'),
-            mock.call('Kibana connection error: 500 Server Error: Internal Server Error for url: http://localhost:5601/status'),
+            mock.call('Kibana connection error: Error 500: Internal Server Error'),
         ])
 
         mock_logger.reset_mock()
         mock_db_connections.__getitem__.return_value.cursor.side_effect = None
         mock_redis.return_value.ping.side_effect = None
-        urllib3_responses.add(responses.HEAD, '/', status=200)
-        responses.replace(responses.HEAD, 'http://localhost:5601/status', status=200)
+        urllib3_responses.add(urllib3_responses.HEAD, '/', status=200)
+        urllib3_responses.replace_json('/status', {'success': True}, method=urllib3_responses.HEAD, status=200)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
