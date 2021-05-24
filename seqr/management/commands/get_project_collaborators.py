@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         projects = Project.objects.filter(name__in=args ) if args else Project.objects.all()
-        projects = projects.prefetch_related('can_view_group__user_set', 'can_edit_group__user_set')
+        projects = projects.order_by('name').prefetch_related('can_view_group__user_set', 'can_edit_group__user_set')
 
         rows = []
         for project in tqdm.tqdm(projects, unit=" samples"):
