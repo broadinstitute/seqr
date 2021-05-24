@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 def status_view(request):
     """Status endpoint for monitoring app availability."""
     dependent_services_ok = True
+    secondary_services_ok = True
 
     # Test database connection
     for db_connection_key in DATABASES.keys():
@@ -26,7 +27,7 @@ def status_view(request):
     try:
         redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3).ping()
     except Exception as e:
-        dependent_services_ok = False
+        secondary_services_ok = False
         logger.error('Redis connection error: {}'.format(str(e)))
 
     # Test elasticsearch connection
@@ -43,11 +44,11 @@ def status_view(request):
         if resp.status >= 400:
             raise ValueError('Error {}: {}'.format(resp.status, resp.reason))
     except Exception as e:
-        dependent_services_ok = False
+        secondary_services_ok = False
         logger.error('Kibana connection error: {}'.format(str(e)))
 
 
     return create_json_response(
-        {'version': SEQR_VERSION, 'dependent_services_ok': dependent_services_ok},
+        {'version': SEQR_VERSION, 'dependent_services_ok': dependent_services_ok, 'secondary_services_ok': secondary_services_ok},
         status= 200 if dependent_services_ok else 400
     )
