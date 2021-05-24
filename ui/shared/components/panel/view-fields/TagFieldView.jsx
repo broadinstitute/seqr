@@ -31,7 +31,8 @@ MultiselectField.propTypes = {
 
 const METADATA_FIELD_PROPS = {
   [NOTES_CATEGORY]: { width: 16, maxLength: 50, placeholder: 'Enter up to 50 characters' },
-  Collaboration: {
+  Collaboration: { width: 16, maxLength: 50, placeholder: 'Brief reason for excluding. Enter up to 50 characters' },
+  'Test Type(s)': {
     width: 16,
     component: MultiselectField,
     fluid: true,
@@ -49,7 +50,7 @@ const MetadataField = React.memo(({ value, name, error }) => {
     return null
   }
   const label = <ColoredOutlineLabel color={value.color} content={value.name} size="large" pointing="right" basic />
-  const fieldProps = METADATA_FIELD_PROPS[value.category] || { width: 4, type: 'number', min: 0 }
+  const fieldProps = METADATA_FIELD_PROPS[value.metadataTitle] || METADATA_FIELD_PROPS[value.category] || { width: 4, type: 'number', min: 0 }
   return (
     <MetadataFormGroup>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
