@@ -16,7 +16,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD
+    GRCH38_LOCUS_FIELD, CPX_INTERVALS_FIELD_KEY
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
@@ -141,6 +141,15 @@ class EsSearch(object):
             for key, val_func in self._sort[0]['_script']['script']['params'].items():
                 if callable(val_func):
                     self._sort[0]['_script']['script']['params'][key] = val_func()
+
+        # Add unmapped_type
+        if main_sort_dict and 'unmapped_type' in list(main_sort_dict.values())[0]:
+            sort_field = list(main_sort_dict.keys())[0]
+            field_type = next((
+                metadata['fields'][sort_field] for metadata in self.index_metadata.values()
+                if metadata['fields'].get(sort_field)
+            ), 'float')
+            self._sort[0][sort_field]['unmapped_type'] = field_type
 
         if XPOS_SORT_KEY not in self._sort:
             self._sort.append(XPOS_SORT_KEY)
@@ -674,6 +683,8 @@ class EsSearch(object):
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
+        cpx_internvals = [{k: v for k, v in interval.to_dict().items()} for interval in hit.get(CPX_INTERVALS_FIELD_KEY, [])]
+
         result.update({
             'familyGuids': sorted(family_guids),
             'genotypes': genotypes,
@@ -687,6 +698,7 @@ class EsSearch(object):
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
             ),
             'transcripts': dict(transcripts),
+            'cpxIntervals': cpx_internvals,
         })
         return result
 

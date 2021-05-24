@@ -3,7 +3,7 @@ from seqr.models import Individual
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
-MAX_INDEX_NAME_LENGTH = 4000
+MAX_INDEX_NAME_LENGTH = 7500
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -231,13 +231,14 @@ PREDICTOR_SORT_FIELDS = {
     'primate_ai': 'primate_ai_score',
 }
 SORT_FIELDS.update({
-    sort: [{sort_field: {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}]
+    sort: [{sort_field: {'order': 'desc', 'unmapped_type': True}}]
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
+CPX_INTERVALS_FIELD_KEY = 'cpx_intervals'
 HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
@@ -262,6 +263,7 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    'sv_type_detail': {'response_key': 'svTypeDetail'},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -299,7 +301,7 @@ GENOTYPE_FIELDS_CONFIG = {
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})
 
 QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
-                    [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
+                    [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY, CPX_INTERVALS_FIELD_KEY] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
 for pop_config in POPULATIONS.values():

@@ -222,7 +222,7 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -258,6 +258,7 @@ const Annotations = React.memo(({ variant }) => {
           <Transcripts variant={variant} />
         </Modal>
       }
+      {svTypeDetail}
       {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
       {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
