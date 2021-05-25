@@ -648,6 +648,8 @@ SV_MAPPING_FIELDS = [
     'num_exon',
     'svType',
     'StrVCTVRE_score',
+    'sv_type_detail',
+    'cpx_intervals',
 ]
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom',

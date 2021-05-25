@@ -719,6 +719,7 @@ PARSED_VARIANTS = [
         'chrom': '1',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
+        'cpxIntervals': [],
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
@@ -758,6 +759,7 @@ PARSED_VARIANTS = [
         'xpos': 1248367227,
         'end': None,
         'svType': None,
+        'svTypeDetail': None,
         'numExon': None,
         '_sort': [1248367227],
     },
@@ -766,6 +768,7 @@ PARSED_VARIANTS = [
         'chrom': '2',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
+        'cpxIntervals': [],
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
@@ -818,6 +821,7 @@ PARSED_VARIANTS = [
         'xpos': 2103343353,
         'end': None,
         'svType': None,
+        'svTypeDetail': None,
         'numExon': None,
         '_sort': [2103343353],
     },
@@ -826,6 +830,7 @@ PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
     'familyGuids': ['F000002_2'],
+    'cpxIntervals': [],
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
@@ -881,6 +886,7 @@ PARSED_SV_VARIANT = {
     'xpos': 1049045487,
     'end': 49045899,
     'svType': 'DEL',
+    'svTypeDetail': None,
     'numExon': 2,
     '_sort': [1049045387],
 }

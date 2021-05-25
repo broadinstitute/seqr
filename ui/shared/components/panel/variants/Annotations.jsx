@@ -180,6 +180,23 @@ const mapStateToProps = state => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
+const CpxIntervalLocusList = React.memo(({ variant }) => {
+  const { cpxIntervals } = variant
+  if (!cpxIntervals) {
+    return null
+  }
+
+  return cpxIntervals.map(({ chrom, start, end, type }, i) =>
+    // eslint-disable-next-line react/no-array-index-key
+    <div key={i}>
+      {type} {chrom}:{start}-{end}
+    </div>)
+})
+
+CpxIntervalLocusList.propTypes = {
+  variant: PropTypes.object,
+}
+
 const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, familiesByGuid, variant }) => {
   if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
@@ -308,6 +325,7 @@ const Annotations = React.memo(({ variant }) => {
         )
       }
       <VerticalSpacer height={5} />
+      <CpxIntervalLocusList variant={variant} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
