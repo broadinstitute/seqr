@@ -310,8 +310,8 @@ const Annotations = React.memo(({ variant }) => {
           : <div>hg19: liftover failed</div>
         )
       }
-      {cpxIntervals && <VerticalSpacer height={5} />}
-      {cpxIntervals.map(e => <div key={e}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)}
+      {cpxIntervals &&
+      [<VerticalSpacer height={5} />, ...cpxIntervals.map(e => <div key={e}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />
