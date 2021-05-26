@@ -180,23 +180,6 @@ const mapStateToProps = state => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const CpxIntervalLocusList = React.memo(({ variant }) => {
-  const { cpxIntervals } = variant
-  if (!cpxIntervals) {
-    return null
-  }
-
-  return cpxIntervals.map(({ chrom, start, end, type }, i) =>
-    // eslint-disable-next-line react/no-array-index-key
-    <div key={i}>
-      {type} {chrom}:{start}-{end}
-    </div>)
-})
-
-CpxIntervalLocusList.propTypes = {
-  variant: PropTypes.object,
-}
-
 const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, familiesByGuid, variant }) => {
   if (!locusListIntervalsByProject || locusListIntervalsByProject.length < 1) {
     return null
@@ -239,7 +222,7 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -327,8 +310,9 @@ const Annotations = React.memo(({ variant }) => {
           : <div>hg19: liftover failed</div>
         )
       }
+      {cpxIntervals && <VerticalSpacer height={5} />}
+      {cpxIntervals.map(e => <div key={e}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)}
       <VerticalSpacer height={5} />
-      <CpxIntervalLocusList variant={variant} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />

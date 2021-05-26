@@ -117,12 +117,10 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </Header.Content> :
-      <Header.Content>CN:
-        {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}
+      <Header.Content>
+        {genotype.cn && <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>}
         {variant.svType &&
-        <span>
-          ,{genotype.numAlt > 0 ? ' X' : ' -'}/{isHemiX || genotype.numAlt < 2 ? '-' : 'X'}
-        </span>}
+        <span>,{genotype.numAlt > 0 ? ' X' : ' -'}/{isHemiX || genotype.numAlt < 2 ? '-' : 'X'}</span>}
       </Header.Content>
     }
   </AlleleContainer>,
@@ -172,7 +170,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     return null
   }
 
-  if ((!variant.svType && genotype.numAlt < 0) || (variant.svType && genotype.cn < 0)) { // The second condition needs updates
+  if ((!variant.svType && genotype.numAlt < 0) || (variant.svType && genotype.cn < 0) ||
+      (variant.svType && !genotype.cn && genotype.numAlt < 0)) {
     return <b>NO CALL</b>
   }
 
