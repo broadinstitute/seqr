@@ -30,19 +30,22 @@ logger = logging.getLogger(__name__)
 def elasticsearch_status(request):
     client = get_es_client()
 
-    disk_fields = ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent']
-    disk_status = [{
-        _to_camel_case(field.replace('.', '_')): disk[field] for field in disk_fields
-    } for disk in client.cat.allocation(format="json", h=','.join(disk_fields))]
+    disk_status = {
+        disk['node']: disk for disk in
+        _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
+    }
 
-    index_fields = ['index', 'docs.count', 'store.size', 'creation.date.string']
-    indices = [{
-        _to_camel_case(field.replace('.', '_')): index[field] for field in index_fields
-    } for index in client.cat.indices(format="json", h=','.join(index_fields))
-        if all(not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log'])]
+    for node in  _get_es_meta(
+            client, 'nodes', ['name', 'heap.percent'], filter_rows=lambda node: node['name'] in disk_status):
+        disk_status[node.pop('name')].update(node)
+
+    indices = _get_es_meta(
+        client, 'indices', ['index', 'docs.count', 'store.size', 'creation.date.string'],
+        filter_rows=lambda index: all(
+            not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log']))
 
     aliases = defaultdict(list)
-    for alias in client.cat.aliases(format="json", h='alias,index'):
+    for alias in _get_es_meta(client, 'aliases', ['alias', 'index']):
         aliases[alias['alias']].append(alias['index'])
 
     index_metadata = get_index_metadata('_all', client, use_cache=False)
@@ -77,10 +80,17 @@ def elasticsearch_status(request):
 
     return create_json_response({
         'indices': indices,
-        'diskStats': disk_status,
+        'diskStats': list(disk_status.values()),
         'elasticsearchHost': ELASTICSEARCH_SERVER,
         'errors': errors,
     })
+
+
+def _get_es_meta(client, meta_type, fields, filter_rows=None):
+    return [{
+        _to_camel_case(field.replace('.', '_')): o[field] for field in fields
+    } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
+        if filter_rows is None or filter_rows(o)]
 
 
 @data_manager_required
