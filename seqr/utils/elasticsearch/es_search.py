@@ -562,7 +562,6 @@ class EsSearch(object):
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
         is_sv = self.index_metadata[index_name].get('datasetType') == Sample.DATASET_TYPE_SV_CALLS
-        is_wgs = self.index_metadata[index_name].get('sampleType') == Sample.SAMPLE_TYPE_WGS
 
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
@@ -676,9 +675,6 @@ class EsSearch(object):
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
         cpx_internvals = [{k: v for k, v in interval.to_dict().items()} for interval in hit.get(CPX_INTERVALS_FIELD_KEY, [])]
-
-        if is_sv and is_wgs:
-            result.update({'alt': 'X', 'ref': '-'})
 
         result.update({
             'familyGuids': sorted(family_guids),

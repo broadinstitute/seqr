@@ -155,6 +155,7 @@ const POPULATIONS = [
     fieldTitle: 'gnomAD SVs',
     precision: 3,
     urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_sv_r2_1' },
   },
 ]
 

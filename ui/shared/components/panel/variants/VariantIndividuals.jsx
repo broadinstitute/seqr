@@ -112,12 +112,18 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {genotype.numAlt >= 0 ?
+    {!variant.svType && genotype.numAlt >= 0 ?
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </Header.Content> :
-      <Header.Content>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</Header.Content>
+      <Header.Content>CN:
+        {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}
+        {variant.svType &&
+        <span>
+          ,{genotype.numAlt > 0 ? ' X' : ' -'}/{isHemiX || genotype.numAlt < 2 ? '-' : 'X'}
+        </span>}
+      </Header.Content>
     }
   </AlleleContainer>,
 )
@@ -205,7 +211,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
       />}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
-      {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
+      {genotype.gq || genotype.qs || '-'}{!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
     </span>
   )

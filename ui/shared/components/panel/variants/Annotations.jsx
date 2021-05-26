@@ -258,6 +258,8 @@ const Annotations = React.memo(({ variant }) => {
     hoverable: true,
   }
 
+  const consequences = [...new Set(Object.values(variant.transcripts).flat().map(trans => trans.majorConsequence))]
+
   return (
     <div>
       { (mainTranscript.majorConsequence || svType) &&
@@ -268,6 +270,7 @@ const Annotations = React.memo(({ variant }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
+              {svType && `:${svTypeDetail}`}
             </ButtonLink>
           }
           popup={transcriptPopupProps}
@@ -275,7 +278,6 @@ const Annotations = React.memo(({ variant }) => {
           <Transcripts variant={variant} />
         </Modal>
       }
-      {svTypeDetail}
       {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
       {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
@@ -287,6 +289,7 @@ const Annotations = React.memo(({ variant }) => {
           />
         </span>
       }
+      {svType && <div>{consequences.join(', ')}</div>}
       { mainTranscript.hgvsc &&
         <div>
           <b>HGVS.C</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsc} />
