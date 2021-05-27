@@ -719,7 +719,7 @@ PARSED_VARIANTS = [
         'chrom': '1',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
-        'cpxIntervals': [],
+        'cpxIntervals': None,
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
@@ -768,7 +768,7 @@ PARSED_VARIANTS = [
         'chrom': '2',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
-        'cpxIntervals': [],
+        'cpxIntervals': None,
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
@@ -830,7 +830,8 @@ PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
     'familyGuids': ['F000002_2'],
-    'cpxIntervals': [],
+    'cpxIntervals': [{'chrom': '1', 'end': 3000, 'start': 1000, 'type': 'DUP'},
+                     {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INS'}],
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
@@ -859,7 +860,7 @@ PARSED_SV_VARIANT = {
         'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None},
-        'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None},
+        'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0},
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,

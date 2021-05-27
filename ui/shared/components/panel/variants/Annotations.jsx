@@ -241,8 +241,6 @@ const Annotations = React.memo(({ variant }) => {
     hoverable: true,
   }
 
-  const consequences = [...new Set(Object.values(variant.transcripts).flat().map(trans => trans.majorConsequence))]
-
   return (
     <div>
       { (mainTranscript.majorConsequence || svType) &&
@@ -272,7 +270,6 @@ const Annotations = React.memo(({ variant }) => {
           />
         </span>
       }
-      {svType && <div>{consequences.join(', ')}</div>}
       { mainTranscript.hgvsc &&
         <div>
           <b>HGVS.C</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsc} />
@@ -310,8 +307,9 @@ const Annotations = React.memo(({ variant }) => {
           : <div>hg19: liftover failed</div>
         )
       }
-      {cpxIntervals &&
-      [<VerticalSpacer height={5} />, ...cpxIntervals.map(e => <div key={e}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
+      {cpxIntervals && cpxIntervals.lenght > 0 &&
+      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e =>
+        <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />

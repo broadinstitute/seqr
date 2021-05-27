@@ -386,6 +386,8 @@ ES_SV_VARIANT = {
           'gene_id': 'ENSG00000228198'
         },
       ],
+      'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
+                        {'type': 'INS', 'chrom': '20', 'start': 11000, 'end': 13000}],
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
@@ -642,8 +644,6 @@ SV_MAPPING_FIELDS = [
     'num_exon',
     'svType',
     'StrVCTVRE_score',
-]
-GENOME_SV_MAPPING_FIELDS = [
     'sv_type_detail',
     'cpx_intervals',
     'gnomad_svs_AC',
@@ -659,7 +659,6 @@ SOURCE_FIELDS = {
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
-SOURCE_FIELDS.update(GENOME_SV_MAPPING_FIELDS)
 SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
 FIELD_TYPE_MAP = {
@@ -1560,6 +1559,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
+        self.maxDiff = None
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
@@ -1977,6 +1977,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
+        self.maxDiff = None
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 

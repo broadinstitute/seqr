@@ -112,15 +112,20 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {!variant.svType && genotype.numAlt >= 0 ?
+    {variant.svType ?
+      <Header.Content>
+        {Number.isInteger(genotype.cn) &&
+        <span>CN:
+          {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}&nbsp;
+        </span>}
+        {Number.isInteger(genotype.numAlt) &&
+        <span>
+          {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
+        </span>}
+      </Header.Content> :
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-      </Header.Content> :
-      <Header.Content>
-        {genotype.cn && <span>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</span>}
-        {variant.svType &&
-        <span>,{genotype.numAlt > 0 ? ' X' : ' -'}/{isHemiX || genotype.numAlt < 2 ? '-' : 'X'}</span>}
       </Header.Content>
     }
   </AlleleContainer>,
@@ -170,8 +175,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     return null
   }
 
-  if ((!variant.svType && genotype.numAlt < 0) || (variant.svType && genotype.cn < 0) ||
-      (variant.svType && !genotype.cn && genotype.numAlt < 0)) {
+  const isNoCall = variant.svType ?
+    (!Number.isInteger(genotype.cn) && (!Number.isInteger(genotype.numAlt) || genotype.numAlt < 0)) :
+    genotype.numAlt < 0
+  if (isNoCall) {
     return <b>NO CALL</b>
   }
 

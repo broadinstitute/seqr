@@ -16,7 +16,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD, CPX_INTERVALS_FIELD_KEY
+    GRCH38_LOCUS_FIELD
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
@@ -674,8 +674,6 @@ class EsSearch(object):
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
-        cpx_internvals = [{k: v for k, v in interval.to_dict().items()} for interval in hit.get(CPX_INTERVALS_FIELD_KEY, [])]
-
         result.update({
             'familyGuids': sorted(family_guids),
             'genotypes': genotypes,
@@ -689,7 +687,6 @@ class EsSearch(object):
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
             ),
             'transcripts': dict(transcripts),
-            'cpxIntervals': cpx_internvals,
         })
         return result
 
