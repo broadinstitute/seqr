@@ -10,7 +10,7 @@ import time
 from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
     wait_for_resource, get_resource_name
 from deploy.servctl_utils.yaml_settings_utils import load_settings
-from deploy.servctl_utils.shell_utils import wait_for, run_in_background, run
+from deploy.servctl_utils.shell_utils import run_in_background, run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)
@@ -96,26 +96,6 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
             sys.exit(-1)
 
     return kubectl_current_context
-
-
-def show_status():
-    """Print status of various docker and kubernetes subsystems"""
-
-    #run("docker info")
-    #run("docker images")
-    run("kubectl cluster-info", ignore_all_errors=True)
-    #run("kubectl config view | grep 'username\|password'", ignore_all_errors=True)
-
-    logger.info("==> Node IPs - for connecting to Kibana and elasticsearch via NodePorts 30002 and 30001:")
-    run("kubectl describe nodes  | grep 'Name:\|ExternalIP'", ignore_all_errors=True)
-    logger.info("==> elasticearch client IPs that hail can export to:")
-    run("kubectl describe svc elasticsearch  | grep 'Name:\|Endpoints'", ignore_all_errors=True)
-
-    run("kubectl get nodes", ignore_all_errors=True)
-    run("kubectl get deployments --all-namespaces", ignore_all_errors=True)
-    run("kubectl get services --all-namespaces", ignore_all_errors=True)
-    run("kubectl get pods --all-namespaces", ignore_all_errors=True)
-    run("kubectl config current-context", ignore_all_errors=True)
 
 
 def show_dashboard():

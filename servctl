@@ -9,14 +9,13 @@ import sys
 from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
     DEPLOYMENT_ENVS, SECRETS
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
-    show_status, wait_for, delete_component, reset_database, delete_all, \
+    wait_for, delete_component, reset_database, delete_all, \
     get_component_port_pairs, check_kubernetes_context, copy_files_to_or_from_pod
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
 REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
@@ -46,10 +45,6 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
     elif command == COPY_FROM_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
         sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
-
-## STATUS_COMMAND
-sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
-sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## DASHBOARD_COMMAND
 sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
@@ -184,9 +179,6 @@ elif args.command == REDEPLOY_COMMAND:
 elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
     direction = 1 if args.command == COPY_TO_POD_COMMAND else -1
     copy_files_to_or_from_pod(args.component, args.deployment_target, args.source_path, args.dest_path, direction=direction)
-
-elif args.command == STATUS_COMMAND:
-    show_status()
 
 elif args.command == DASHBOARD_COMMAND:
     show_dashboard()
