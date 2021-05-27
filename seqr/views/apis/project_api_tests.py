@@ -109,7 +109,8 @@ class ProjectAPITest(object):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
-            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'numTagsPerFamily'}
+            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'numTagsPerFamily',
+             'metadataTitle'}
         )
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',

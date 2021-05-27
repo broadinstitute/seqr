@@ -1,7 +1,8 @@
 from collections import defaultdict
 import json
 import re
-from django.http import StreamingHttpResponse
+import requests
+from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist
@@ -95,8 +96,7 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        suffix = '.'.join(file_path.split('.')[1:])
-        sample_type = SAMPLE_TYPE_MAP.get(suffix)
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP.items() if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
@@ -150,3 +150,18 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
+
+def igv_genomes_proxy(request, file_path):
+    # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
+    # using this server-side proxy
+    headers = {}
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        headers['Range'] = range_header
+
+    genome_response = requests.get('https://s3.amazonaws.com/igv.{}'.format(file_path), headers=headers)
+    proxy_response = HttpResponse(
+        content=genome_response.content,
+        status=genome_response.status_code,
+    )
+    return proxy_response

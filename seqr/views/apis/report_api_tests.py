@@ -213,7 +213,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.check_analyst_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
@@ -232,7 +232,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.check_analyst_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
@@ -250,7 +250,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.check_analyst_login(non_project_url)
 
         response = self.client.get(non_project_url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
@@ -304,7 +304,8 @@ class ReportAPITest(AuthenticationTestCase):
         self.check_analyst_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'User has insufficient permission')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
@@ -401,7 +402,8 @@ class ReportAPITest(AuthenticationTestCase):
         self.check_analyst_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'User has insufficient permission')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 

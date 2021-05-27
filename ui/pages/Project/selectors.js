@@ -413,10 +413,10 @@ export const getMmeDefaultContactEmail = createSelector(
     const { geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId } = mmeSubmissionsByGuid[submissionGuid]
     const { familyGuid } = individualsByGuid[individualGuid]
 
-    const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
-
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
-      ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
+      ({ geneId }) => (genesById[geneId] || {}).geneSymbol))]
+
+    const geneName = (geneVariants || []).map(({ geneId }) => (genesById[geneId] || {}).geneSymbol).find(geneSymbol => geneSymbol && submittedGenes.includes(geneSymbol))
 
     const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, end, genomeVersion }) => {
       const savedVariant = Object.values(savedVariants).find(
@@ -455,7 +455,7 @@ export const getMmeDefaultContactEmail = createSelector(
       patientId: patient.id,
       to: contacts.filter(val => val).join(','),
       subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection (${submissionId})`,
-      body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(submissionGeneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
+      body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(submissionGeneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes.join(', ')}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
     }
   },
 )

@@ -8,7 +8,6 @@ import { Popup, Icon } from 'semantic-ui-react'
 
 import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser, getGoogleLoginEnabled } from 'redux/selectors'
-import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
@@ -22,10 +21,6 @@ import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getVisibleProjects } from '../selectors'
 
-
-const RightAligned = styled.span`
-  float: right;
-`
 
 const ProjectTableContainer = styled.div`
   th {
@@ -48,13 +43,13 @@ const ProjectTableContainer = styled.div`
   }
 `
 
-const PROJECT_EXPORT_URLS = [{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]
-
 const COLUMNS = [
   {
-    name: 'projectCategoryGuids',
+    name: 'projectCategories',
     width: 1,
     format: project => <CategoryIndicator project={project} />,
+    downloadColumn: 'Categories',
+    noFormatExport: true,
   },
   {
     name: 'name',
@@ -67,18 +62,22 @@ const COLUMNS = [
         { project.description }
       </div>
     ),
+    noFormatExport: true,
   },
   {
     name: 'anvil',
     width: 1,
     content: 'AnVIL',
-    format: project => (project.workspaceName ?
-      <Popup
-        content={`AnVIL workspace: ${project.workspaceNamespace}/${project.workspaceName}`}
-        position="top center"
-        trigger={<Icon name="fire" />}
-      /> : null
-    ),
+    format: (project, isExport) => {
+      if (!project.workspaceName) {
+        return null
+      }
+      const workspace = `${project.workspaceNamespace}/${project.workspaceName}`
+      return (
+        isExport ? workspace :
+        <Popup content={`AnVIL workspace: ${workspace}`} position="top center" trigger={<Icon name="fire" />} />
+      )
+    },
   },
   {
     name: 'createdDate',
@@ -86,17 +85,20 @@ const COLUMNS = [
     content: 'Created',
     textAlign: 'right',
     format: project => new Timeago().format(project.createdDate),
+    noFormatExport: true,
   },
   {
     name: 'numFamilies',
     width: 1,
     content: 'Fam.',
+    downloadColumn: 'Families',
     textAlign: 'right',
   },
   {
     name: 'numIndividuals',
     width: 1,
     content: 'Indiv.',
+    downloadColumn: 'Individuals',
     textAlign: 'right',
   },
   {
@@ -104,15 +106,25 @@ const COLUMNS = [
     width: 1,
     content: 'Samples',
     textAlign: 'right',
-    format: project => project.sampleTypeCounts && Object.entries(project.sampleTypeCounts).map(
-      ([sampleType, numSamples], i) => {
-        const color = (sampleType === SAMPLE_TYPE_EXOME && '#73AB3D') || (sampleType === SAMPLE_TYPE_GENOME && '#4682b4') || 'black'
-        return (
-          <div key={sampleType}>
-            <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
-            {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
-          </div>)
-      }),
+    format: (project, isExport) => {
+      if (!project.sampleTypeCounts) {
+        return null
+      }
+      if (isExport) {
+        return Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples]) =>
+          `${sampleType}: ${numSamples}`,
+        ).join(', ')
+      }
+      return Object.entries(project.sampleTypeCounts).map(
+        ([sampleType, numSamples], i) => {
+          const color = (sampleType === SAMPLE_TYPE_EXOME && '#73AB3D') || (sampleType === SAMPLE_TYPE_GENOME && '#4682b4') || 'black'
+          return (
+            <div key={sampleType}>
+              <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
+              {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
+            </div>)
+        })
+    },
   },
   {
     name: 'numVariantTags',
@@ -124,25 +136,31 @@ const COLUMNS = [
     name: 'analysisStatusCounts',
     width: 1,
     content: 'Analysis',
+    downloadColumn: 'Analysis Status',
     textAlign: 'right',
-    format: project => project.analysisStatusCounts && (
-      <HorizontalStackedBar
-        title="Family Analysis Status"
-        data={FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
-          (acc, d) => (
-            project.analysisStatusCounts[d.value] ?
-              [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
-              acc
-          ), [])}
-        height={12}
-      />
-    ),
+    format: (project, isExport) => {
+      if (!project.analysisStatusCounts) {
+        return null
+      }
+      const statusData = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+        (acc, d) => (
+          project.analysisStatusCounts[d.value] ?
+            [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
+            acc
+        ), [])
+      if (isExport) {
+        return statusData.map(({ name, count }) => `${name}: ${count}`).join(', ')
+      }
+      return <HorizontalStackedBar title="Family Analysis Status" data={statusData} height={12} />
+    },
   },
   {
-    name: 'edit',
+    name: 'canEdit',
     width: 1,
     textAlign: 'right',
     format: project => project.canEdit && <ProjectEllipsisMenu project={project} />,
+    downloadColumn: 'Can Edit',
+    noFormatExport: true,
   },
 ]
 
@@ -153,6 +171,7 @@ SUPERUSER_COLUMNS.splice(3, 0, {
   content: 'Last Accessed',
   textAlign: 'right',
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
+  noFormatExport: true,
 })
 
 const COLUMNS_NO_ANVIL = [...COLUMNS]
@@ -175,10 +194,6 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
       <HorizontalSpacer width={10} />
       <InlineHeader size="medium" content="Projects:" />
       <FilterSelector />
-      <RightAligned>
-        <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
-        <HorizontalSpacer width={45} />
-      </RightAligned>
       <VerticalSpacer height={10} />
       <DataTable
         striped
@@ -191,6 +206,8 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         data={visibleProjects}
         columns={getColumns(googleLoginEnabled, user.isAnvil, user.isSuperuser)}
         footer={user.isPm ? <CreateProjectButton /> : null}
+        downloadTableType="Projects"
+        downloadFileName="projects"
       />
     </ProjectTableContainer>
   </DataLoader>,

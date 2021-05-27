@@ -3,7 +3,7 @@ from seqr.models import Individual
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
-MAX_INDEX_NAME_LENGTH = 7500
+MAX_INDEX_NAME_LENGTH = 4000
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -182,7 +182,7 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "doc.containsKey('svType') ? 4.5 : doc['mainTranscript_major_consequence_rank'].value"
+               'source': "doc.containsKey('svType') ? 4.5 : (doc['mainTranscript_major_consequence_rank'].empty ? 1000 : doc['mainTranscript_major_consequence_rank'].value)"
             }
         }
     }],
@@ -230,7 +230,7 @@ PREDICTOR_SORT_FIELDS = {
     'primate_ai': 'primate_ai_score',
 }
 SORT_FIELDS.update({
-    sort: [{sort_field: {'order': 'desc', 'unmapped_type': True}}]
+    sort: [{sort_field: {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}]
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 

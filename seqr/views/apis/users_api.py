@@ -2,7 +2,6 @@ from requests.utils import quote
 
 import json
 import logging
-from anymail.exceptions import AnymailError
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
@@ -65,10 +64,7 @@ def forgot_password(request):
         password_token=quote(user.password, safe=''),
     )
 
-    try:
-        user.email_user('Reset your seqr password', email_content, fail_silently=False)
-    except AnymailError as e:
-        return create_json_response({}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+    user.email_user('Reset your seqr password', email_content, fail_silently=False)
 
     return create_json_response({'success': True})
 
@@ -142,10 +138,7 @@ def create_project_collaborator(request, project_guid):
     )
     logger.info('Created user {} (local)'.format(request_json['email']), extra={'user': request.user})
 
-    try:
-        send_welcome_email(user, request.user)
-    except AnymailError as e:
-        return create_json_response({'error': str(e)}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+    send_welcome_email(user, request.user)
 
     project.can_view_group.user_set.add(user)
 
