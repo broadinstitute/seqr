@@ -742,7 +742,7 @@ PARSED_VARIANTS = [
             'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753},
             'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-            'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0},
+            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None},
         },
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
@@ -803,7 +803,7 @@ PARSED_VARIANTS = [
             'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0, 'filter_af': 0.00016269686320447742},
             'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-            'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0},
+            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None},
         },
         'pos': 103343353,
         'predictions': {

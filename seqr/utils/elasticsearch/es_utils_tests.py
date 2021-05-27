@@ -621,12 +621,6 @@ MAPPING_FIELDS = [
     'topmed_AN',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
-    'gnomad_svs_AC',
-    'gnomad_svs_Hom',
-    'gnomad_svs_Hemi',
-    'gnomad_svs_AF',
-    'gnomad_svs_AN',
-    'gnomad_svs_filter_AF',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -648,14 +642,24 @@ SV_MAPPING_FIELDS = [
     'num_exon',
     'svType',
     'StrVCTVRE_score',
+]
+GENOME_SV_MAPPING_FIELDS = [
     'sv_type_detail',
     'cpx_intervals',
+    'gnomad_svs_AC',
+    'gnomad_svs_Hom',
+    'gnomad_svs_Hemi',
+    'gnomad_svs_AF',
+    'gnomad_svs_AN',
+    'gnomad_svs_filter_AF',
 ]
+
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
+SOURCE_FIELDS.update(GENOME_SV_MAPPING_FIELDS)
 SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
 
 FIELD_TYPE_MAP = {
@@ -1973,6 +1977,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
+        self.maxDiff = None
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
