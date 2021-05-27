@@ -98,14 +98,6 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
     return kubectl_current_context
 
 
-def show_dashboard():
-    """Opens the kubernetes dashboard in a new browser window."""
-
-    p = run_in_background('kubectl proxy')
-    run('open http://localhost:8001/ui')
-    p.wait()
-
-
 def print_log(components, deployment_target):
     """Executes kubernetes command to print logs for the given pod.
 
