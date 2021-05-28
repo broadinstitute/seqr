@@ -11,7 +11,7 @@ assignees: ''
 A clear and concise description of what the bug is, and what you instead expect to be happening
 
 **Link to page(s) where bug is occurring**
-https://seqr.broadinstitute.org/...
+https://seqr.populationgenomics.org.au/...
 
 **Scope of the bug**
 Are you experiencing this issue in all projects? Within specific families within one project?
