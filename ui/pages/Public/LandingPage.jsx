@@ -61,7 +61,7 @@ export default () =>
             <List.Item>
               The <a target="_blank" href="http://github.com/broadinstitute/seqr"><b>source code</b></a> is available on
               github. Please use the &nbsp;
-              <a target="_blank" href="http://github.com/broadinstitute/seqr/issues"><b>github issues page</b></a> to
+              <a target="_blank" href="http://github.com/populationgenomics/seqr/issues"><b>github issues page</b></a> to
               submit bug reports or feature requests
             </List.Item>
           </List>

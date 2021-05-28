@@ -26,7 +26,7 @@ const Footer = React.memo(({ version }) =>
         <TableHeaderCell collapsing><Link to="/terms_of_service">Terms of Service</Link></TableHeaderCell>
         <TableHeaderCell>
           For bug reports or feature requests please submit  &nbsp;
-          <a href="https://github.com/broadinstitute/seqr/issues">Github Issues</a>
+          <a href="https://github.com/populationgenomics/seqr/issues">Github Issues</a>
         </TableHeaderCell>
         <TableHeaderCell collapsing textAlign="right">
           If you have questions or feedback, &nbsp;
