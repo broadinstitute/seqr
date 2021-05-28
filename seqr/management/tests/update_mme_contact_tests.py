@@ -17,7 +17,7 @@ class TransferFamiliesTest(TestCase):
         self.assertEqual(str(err.exception), 'Error: the following arguments are required: email')
 
         call_command(
-            'update_mme_contact', 'UDNCC@hms.harvard.edu', '--replace-email', 'seqr+test_user@populationgenomics.org.au',
+            'update_mme_contact', 'seqr+udncc@populationgenomics.org.au', '--replace-email', 'seqr+test_user@populationgenomics.org.au',
         )
         mock_logger.assert_has_calls([
             mock.call('Updating 1 submissions'),
@@ -25,7 +25,7 @@ class TransferFamiliesTest(TestCase):
         ])
         self.assertEqual(
             MatchmakerSubmission.objects.get(id=3).contact_href,
-            'mailto:seqr+test_user@populationgenomics.org.au,matchmaker@phenomecentral.org',
+            'mailto:seqr+test_user@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au',
         )
 
         mock_logger.reset_mock()
@@ -34,6 +34,6 @@ class TransferFamiliesTest(TestCase):
             mock.call('Updating 2 submissions'),
             mock.call('Done'),
         ])
-        self.assertEqual( MatchmakerSubmission.objects.get(id=3).contact_href, 'mailto:matchmaker@phenomecentral.org')
+        self.assertEqual( MatchmakerSubmission.objects.get(id=3).contact_href, 'mailto:matchmaker+phenomecentral@populationgenomics.org.au')
         self.assertEqual(MatchmakerSubmission.objects.get(id=1).contact_href, 'mailto:matchmaker@populationgenomics.org.au')
 

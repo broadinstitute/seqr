@@ -164,7 +164,7 @@ class ExternalAPITest(TestCase):
                 'id': 'P0004515',
                 'label': 'P0004515',
                 'contact': {
-                    'href': 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org',
+                    'href': 'mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au',
                     'name': 'Baylor UDN Clinical Site',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -230,7 +230,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
             matches='{}\n{}'.format(match1, match2),
-            emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org, seqr+test_user@populationgenomics.org.au'
+            emails='seqr+udncc@populationgenomics.org.au, matchmaker+phenomecentral@populationgenomics.org.au, seqr+test_user@populationgenomics.org.au'
         ))
 
         mock_email.assert_has_calls([
@@ -243,8 +243,8 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
             mock.call().send(),
             mock.call(
                 subject='Received new MME match',
-                body=message_template.format(matches=match2, emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org'),
-                to=['UDNCC@hms.harvard.edu', 'matchmaker@phenomecentral.org'],
+                body=message_template.format(matches=match2, emails='seqr+udncc@populationgenomics.org.au, matchmaker+phenomecentral@populationgenomics.org.au'),
+                to=['seqr+udncc@populationgenomics.org.au', 'matchmaker+phenomecentral@populationgenomics.org.au'],
                 from_email='matchmaker@populationgenomics.org.au',
             ),
             mock.call().send()])
