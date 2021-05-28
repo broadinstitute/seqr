@@ -55,7 +55,7 @@ export default () =>
             <List.Item>
               To get updates about seqr, &nbsp;
               <a target="_blank" href="http://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join">
-                <b>join the Broad Institute's mailing list</b>
+                <b>join the Broad Institute&apos;s mailing list</b>
               </a>
             </List.Item>
             <List.Item>
