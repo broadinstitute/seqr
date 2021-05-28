@@ -328,7 +328,7 @@ export const STATE_WITH_2_FAMILIES = {
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
           displayName: '',
-          email: 'test1@broadinstitute.org',
+          email: 'seqr+test1@populationgenomics.org.au',
           firstName: '',
           hasEditPermissions: true,
           hasViewPermissions: true,
@@ -341,7 +341,7 @@ export const STATE_WITH_2_FAMILIES = {
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
           displayName: '',
-          email: 'test2@broadinstitute.org',
+          email: 'seqr+test2@populationgenomics.org.au',
           firstName: '',
           hasEditPermissions: true,
           hasViewPermissions: true,
@@ -965,7 +965,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test_user1': {
       displayName: '',
-      email: 'test1@broadinstitute.org',
+      email: 'seqr+test1@populationgenomics.org.au',
       firstName: '',
       isAnalyst: false,
       lastName: '',
@@ -973,7 +973,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test_user2': {
       displayName: '',
-      email: 'test2@broadinstitute.org',
+      email: 'seqr+test2@populationgenomics.org.au',
       firstName: '',
       isAnalyst: true,
       lastName: '',
