@@ -55,11 +55,11 @@ export default () =>
             <List.Item>
               To get updates about seqr, &nbsp;
               <a target="_blank" href="http://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join">
-                <b>join our mailing list</b>
+                <b>join the Broad Institute's mailing list</b>
               </a>
             </List.Item>
             <List.Item>
-              The <a target="_blank" href="http://github.com/broadinstitute/seqr"><b>source code</b></a> is available on
+              The <a target="_blank" href="http://github.com/populationgenomics/seqr"><b>source code</b></a> is available on
               github. Please use the &nbsp;
               <a target="_blank" href="http://github.com/populationgenomics/seqr/issues"><b>github issues page</b></a> to
               submit bug reports or feature requests
