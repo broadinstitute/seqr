@@ -230,7 +230,7 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
             matches='{}\n{}'.format(match1, match2),
-            emails='seqr+udncc@populationgenomics.org.au, matchmaker+phenomecentral@populationgenomics.org.au, seqr+test_user@populationgenomics.org.au'
+            emails='matchmaker+phenomecentral@populationgenomics.org.au, seqr+test_user@populationgenomics.org.au, seqr+udncc@populationgenomics.org.au'
         ))
 
         mock_email.assert_has_calls([
