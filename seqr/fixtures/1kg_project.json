@@ -1912,7 +1912,7 @@
         "submission_id": "NA19675_1_01",
         "label": "NA19675_1",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org",
+        "contact_href": "mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au",
         "features": [
             {
                 "id": "HP:0001252",

@@ -200,7 +200,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [
                 {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
@@ -319,7 +319,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [
                 {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
@@ -360,7 +360,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
                 'contact': {
-                    'href': 'mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -423,7 +423,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         mock_email.assert_called_with(
             subject='New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
             body=message,
-            to=['test_user@broadinstitute.org'],
+            to=['seqr+test_user@populationgenomics.org.au'],
             from_email='matchmaker@populationgenomics.org.au')
         mock_email.return_value.send.assert_called()
 
@@ -779,7 +779,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [],
             'geneVariants': [{'geneId': 'ENSG00000235249'}],
