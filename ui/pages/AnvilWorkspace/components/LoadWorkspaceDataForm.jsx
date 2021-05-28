@@ -120,9 +120,9 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
     />
     <p>
       Need help? please submit &nbsp;
-      <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
+      <a href="https://github.com/populationgenomics/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
       , &nbsp; or &nbsp;
-      <a href="mailto:seqr@broadinstitute.org" target="_blank">
+      <a href="mailto:seqr@populationgenomics.org.au" target="_blank">
         Email Us
       </a>
     </p>

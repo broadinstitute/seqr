@@ -21,7 +21,7 @@ RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
 SUBMISSION_DATA = {
     'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-    'contactHref': 'mailto:test@broadinstitute.org',
+    'contactHref': 'mailto:seqr+test@populationgenomics.org.au',
     'contactName': 'PI',
     'phenotypes': [
         {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -58,7 +58,7 @@ PARSED_RESULT = {
             {'gene': {'id': 'DDX11L1'}},
         ],
         'contact': {
-            'href': 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org',
+            'href': 'mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au',
             'name': 'Baylor UDN Clinical Site'
         },
         'id': 'P0004515',
@@ -200,7 +200,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [
                 {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
@@ -319,7 +319,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [
                 {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
@@ -360,7 +360,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -423,8 +423,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         mock_email.assert_called_with(
             subject='New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
             body=message,
-            to=['test_user@broadinstitute.org'],
-            from_email='matchmaker@broadinstitute.org')
+            to=['seqr+test_user@populationgenomics.org.au'],
+            from_email='matchmaker@populationgenomics.org.au')
         mock_email.return_value.send.assert_called()
 
         # Test new result model created
@@ -487,7 +487,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
             'contactName': 'PI',
-            'contactHref': 'mailto:test@broadinstitute.org',
+            'contactHref': 'mailto:seqr+test@populationgenomics.org.au',
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -533,7 +533,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'patient': {
                 'id': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'label': 'HG00733',
-                'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
+                'contact': {'href': 'mailto:seqr+test@populationgenomics.org.au', 'name': 'PI',
                             'institution': 'Broad Center for Mendelian Genomics'},
                 'sex': 'FEMALE',
                 'species': 'NCBITaxon:9606',
@@ -573,7 +573,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         url = reverse(update_mme_submission, args=[new_submission_guid])
         update_body = {
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au',
             'contactName': 'Test Name',
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
@@ -624,7 +624,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                     }
                 ],
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics'
                 },
@@ -682,7 +682,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
             'contactName': 'Test Name',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au',
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
@@ -714,7 +714,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'patient': {
                 'id': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'label': 'HG00733',
-                'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Test Name',
+                'contact': {'href': 'mailto:matchmaker@populationgenomics.org.au', 'name': 'Test Name',
                             'institution': 'Broad Center for Mendelian Genomics'},
                 'species': 'NCBITaxon:9606',
                 'sex': 'FEMALE',
@@ -779,7 +779,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
             'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+            'contactHref': 'mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [],
             'geneVariants': [{'geneId': 'ENSG00000235249'}],
@@ -849,7 +849,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             subject='some email subject',
             body='some email content',
             to=['test@test.com', 'other_test@gmail.com'],
-            from_email='matchmaker@broadinstitute.org')
+            from_email='matchmaker@populationgenomics.org.au')
         mock_email.return_value.send.assert_called()
 
         mock_email.return_value.send.side_effect = EmailException()

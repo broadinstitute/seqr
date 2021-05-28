@@ -406,7 +406,7 @@ export const getMmeDefaultContactEmail = createSelector(
 
     const contacts = [
       patient.contact.href.replace('mailto:', ''),
-      contactHref.replace('mailto:', '').replace('matchmaker@broadinstitute.org,', ''),
+      contactHref.replace('mailto:', '').replace('matchmaker@populationgenomics.org.au,', ''),
       user.email,
     ]
     return {

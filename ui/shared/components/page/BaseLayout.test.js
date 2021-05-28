@@ -14,7 +14,7 @@ test('shallow-render without crashing', () => {
   const props = {
     user: {
       date_joined: '2015-02-19T20:22:50.633Z',
-      email: 'test@broadinstitute.org',
+      email: 'seqr+test@populationgenomics.org.au',
       first_name: '',
       id: 1,
       is_active: true,

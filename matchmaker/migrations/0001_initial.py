@@ -165,7 +165,7 @@ class Migration(migrations.Migration):
                 ('submission_id', models.CharField(db_index=True, max_length=255, unique=True)),
                 ('label', models.CharField(blank=True, max_length=255, null=True)),
                 ('contact_name', models.TextField(default='Samantha Baxter')),
-                ('contact_href', models.TextField(default='mailto:matchmaker@broadinstitute.org')),
+                ('contact_href', models.TextField(default='mailto:matchmaker@populationgenomics.org.au')),
                 ('features', django.contrib.postgres.fields.jsonb.JSONField(null=True)),
                 ('genomic_features', django.contrib.postgres.fields.jsonb.JSONField(null=True)),
                 ('deleted_date', models.DateTimeField(null=True)),
