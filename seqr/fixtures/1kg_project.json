@@ -17,7 +17,7 @@
 	"is_mme_enabled": true,
     "has_case_review": true,
 	"mme_primary_data_owner": "PI",
-    "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@populationgenomics.org.au",
+    "mme_contact_url": "mailto:seqr+test@populationgenomics.org.au,matchmaker@populationgenomics.org.au",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -54,7 +54,7 @@
     "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-    "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
+    "mme_contact_url": "mailto:seqr-test@gmail.com,seqr+test@populationgenomics.org.au",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },

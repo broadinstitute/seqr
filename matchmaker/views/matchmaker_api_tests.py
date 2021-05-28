@@ -21,7 +21,7 @@ RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
 SUBMISSION_DATA = {
     'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-    'contactHref': 'mailto:test@broadinstitute.org',
+    'contactHref': 'mailto:seqr+test@populationgenomics.org.au',
     'contactName': 'PI',
     'phenotypes': [
         {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -487,7 +487,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
             'contactName': 'PI',
-            'contactHref': 'mailto:test@broadinstitute.org',
+            'contactHref': 'mailto:seqr+test@populationgenomics.org.au',
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -533,7 +533,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'patient': {
                 'id': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'label': 'HG00733',
-                'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
+                'contact': {'href': 'mailto:seqr+test@populationgenomics.org.au', 'name': 'PI',
                             'institution': 'Broad Center for Mendelian Genomics'},
                 'sex': 'FEMALE',
                 'species': 'NCBITaxon:9606',

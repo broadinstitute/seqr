@@ -136,7 +136,7 @@ export const STATE1 = {
   },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
-    email: 'test@broadinstitute.org',
+    email: 'seqr+test@populationgenomics.org.au',
     first_name: '',
     id: 1,
     is_active: true,
@@ -320,7 +320,7 @@ export const STATE_WITH_2_FAMILIES = {
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       mmeContactInstitution: 'Broad',
-      mmeContactUrl: 'test@broadinstitute.org',
+      mmeContactUrl: 'seqr+test@populationgenomics.org.au',
       name: '1000 Genomes Demo',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
@@ -362,7 +362,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
-    email: 'test@broadinstitute.org',
+    email: 'seqr+test@populationgenomics.org.au',
     first_name: '',
     id: 1,
     is_active: true,
@@ -957,7 +957,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test': {
       displayName: '',
-      email: 'test@broadinstitute.org',
+      email: 'seqr+test@populationgenomics.org.au',
       firName: '',
       isAnalyst: true,
       last_name: '',
