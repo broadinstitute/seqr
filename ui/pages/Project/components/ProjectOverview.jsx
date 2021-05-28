@@ -143,7 +143,7 @@ const ProjectOverview = React.memo((
                   <div>
                     Loading data from AnVIL to seqr is a slow process, and generally takes a week.
                     If you have been waiting longer than this for your data, please reach
-                    out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
+                    out to <a href="mailto:seqr@populationgenomics.org.au">seqr@populationgenomics.org.au</a>
                   </div>
                 }
               />

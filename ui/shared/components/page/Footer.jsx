@@ -31,7 +31,7 @@ const Footer = React.memo(({ version }) =>
         <TableHeaderCell collapsing textAlign="right">
           If you have questions or feedback, &nbsp;
           <a
-            href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org"
+            href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@populationgenomics.org.au"
             target="_blank"
           >
             Contact Us

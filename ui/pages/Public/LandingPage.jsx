@@ -50,7 +50,7 @@ export default () =>
           <List bulleted>
             <List.Item>
               If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@broadinstitute.org"><b>contact us</b></a>
+              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
             </List.Item>
             <List.Item>
               To get updates about seqr, &nbsp;
