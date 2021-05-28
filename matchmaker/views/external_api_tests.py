@@ -116,7 +116,7 @@ class ExternalAPITest(TestCase):
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au,test_user@broadinstitute.org',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -238,14 +238,14 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
                 subject='Received new MME match',
                 body=message_template.format(matches=match1, emails='test_user@broadinstitute.org'),
                 to=['test_user@broadinstitute.org'],
-                from_email='matchmaker@broadinstitute.org',
+                from_email='matchmaker@populationgenomics.org.au',
             ),
             mock.call().send(),
             mock.call(
                 subject='Received new MME match',
                 body=message_template.format(matches=match2, emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org'),
                 to=['UDNCC@hms.harvard.edu', 'matchmaker@phenomecentral.org'],
-                from_email='matchmaker@broadinstitute.org',
+                from_email='matchmaker@populationgenomics.org.au',
             ),
             mock.call().send()])
 

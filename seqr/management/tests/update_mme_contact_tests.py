@@ -35,5 +35,5 @@ class TransferFamiliesTest(TestCase):
             mock.call('Done'),
         ])
         self.assertEqual( MatchmakerSubmission.objects.get(id=3).contact_href, 'mailto:matchmaker@phenomecentral.org')
-        self.assertEqual(MatchmakerSubmission.objects.get(id=1).contact_href, 'mailto:matchmaker@broadinstitute.org')
+        self.assertEqual(MatchmakerSubmission.objects.get(id=1).contact_href, 'mailto:matchmaker@populationgenomics.org.au')
 

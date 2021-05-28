@@ -29,7 +29,7 @@ export default () =>
         </Grid.Row>
         <Grid.Row>
           <Grid.Column>
-            Please contact us at <a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a>.
+            Please contact us at <a href="mailto:matchmaker@populationgenomics.org.au">matchmaker@broad</a>.
           </Grid.Column>
         </Grid.Row>
       </Grid>
