@@ -59,7 +59,7 @@ export default () =>
         <Grid.Column width={10}>
           <List ordered>
             <List.Item>
-              This instance is available for collaborators within the &nbsp;
+              This instance is available for collaborators of the &nbsp;
               <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor> with data pre-loaded into projects.
               If you are interested in collaborating with our group, please &nbsp;
               <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>.
