@@ -402,7 +402,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 def _parse_rgp_dsm_export_format(rows):
     pedigree_rows = []
     for row in rows:
-        family_id = 'RGP_{}'.format(row[DSMConstants.FAMILY_ID_COLUMN]) # TODO this may change
+        family_id = 'RGP_{}'.format(row[DSMConstants.FAMILY_ID_COLUMN])
         maternal_id = '{}_1'.format(family_id)
         paternal_id = '{}_2'.format(family_id)
 
@@ -693,7 +693,7 @@ class DSMConstants:
     OTHER = 'OTHER'
     NONE = 'NONE'
 
-    FAMILY_ID_COLUMN = 'FAMILY_ID' # TODO
+    FAMILY_ID_COLUMN = 'familyId'
     SEX_COLUMN = 'PATIENT_SEX'
     AGE_COLUMN = 'PATIENT_AGE'
     AGE_OF_ONSET_COLUMN = 'CONDITION_AGE'
