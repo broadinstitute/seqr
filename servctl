@@ -7,7 +7,7 @@ import os
 import sys
 
 from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
-    DEPLOYMENT_ENVS
+    DEPLOYMENT_ENVS, SECRETS
 from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
     show_status, wait_for, troubleshoot_component, delete_component, reset_database, delete_all, \
     get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
@@ -143,7 +143,9 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
                          "which to restore the reference data database.", type=_check_restore_db_file)
 
     if command_name == DEPLOY_COMMAND:
-        sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=COMPONENT_ARG_CHOICES)
+        choices = set(SECRETS.keys())
+        choices.update(COMPONENT_ARG_CHOICES)
+        sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=choices)
 
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
 

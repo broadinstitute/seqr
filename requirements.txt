@@ -1,5 +1,6 @@
-Django==3.1.6                    # core server-side framework. Behind a major version due to missing Python 2 support               # core server-side framework. Behind a major version due to missing Python 2 support
+Django==3.1.10                   # core server-side framework
 django-anymail==8.2              # for sending emails using cloud-based mail service providers
+django-csp==3.7                  # for setting CSP headers
 django-guardian==2.3.0           # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.5.0       # allows CORS requests for client-side development
@@ -11,7 +12,7 @@ elasticsearch-dsl==7.2.1	     # elasticsearch query utilities
 gunicorn==19.10.0                # web server
 jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
-pillow==8.1.1                    # required dependency of Djagno ImageField-type database records
+pillow==8.2.0                    # required dependency of Djagno ImageField-type database records
 psycopg2-binary==2.8.4           # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests

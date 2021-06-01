@@ -1,25 +1,26 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import MarkdownRenderer from 'react-markdown-renderer'
+import ReactMarkdown from 'react-markdown'
+import styled from 'styled-components'
 
 import RichTextEditor from '../../form/RichTextEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
 
-const MARKDOWN_OPTIONS = { breaks: true, linkTarget: '_blank' }
-const INLINE_STYLE = { display: 'inline-block' }
+const MarkdownContainer = styled.div`
+  display: ${props => (props.inline ? 'inline-block' : 'block')}; 
+  white-space: pre-wrap;
+`
 
 const TextFieldView = React.memo((props) => {
   const { textPopup, textAnnotation, fieldValidator, additionalEditFields = [], ...baseProps } = props
   const fields = [{ name: props.field, component: RichTextEditor, validate: fieldValidator }, ...additionalEditFields]
   return <BaseFieldView
     fieldDisplay={(initialText) => {
-      const style = props.textAnnotation ? INLINE_STYLE : {}
-      const markdown = <MarkdownRenderer
-        markdown={initialText || ''}
-        options={MARKDOWN_OPTIONS}
-        style={style}
-      />
+      const markdown =
+        <MarkdownContainer inline={!!textAnnotation}>
+          <ReactMarkdown linkTarget="_blank">{initialText || ''}</ReactMarkdown>
+        </MarkdownContainer>
       return (
         <span>
           {textPopup ? textPopup(markdown) : markdown}

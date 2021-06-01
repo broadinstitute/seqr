@@ -156,7 +156,7 @@ def _send_load_data_email(project, updated_individuals, data_path, user):
     send_html_email(
         email_content,
         subject='AnVIL data loading request',
-        to=sorted([dm.email for dm in User.objects.filter(is_staff=True)]),
+        to=sorted([dm.email for dm in User.objects.filter(is_staff=True, is_active=True)]),
         attachments=[(
             '{}_sample_ids.tsv'.format(project.guid),
             '\n'.join([individual.individual_id for individual in updated_individuals])

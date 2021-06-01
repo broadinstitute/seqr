@@ -4,7 +4,6 @@ APIs for updating project metadata, as well as creating or deleting projects
 
 import json
 import logging
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -19,8 +18,9 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+    check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions, \
+    login_and_policies_required
+from settings import ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def create_project_handler(request):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_project_handler(request, project_guid):
     """Update project metadata - including one or more of these fields: name, description
 
@@ -104,7 +104,7 @@ def update_project_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_project_handler(request, project_guid):
     """Delete project - request handler.
 
@@ -121,7 +121,7 @@ def delete_project_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def project_page_data(request, project_guid):
     """Returns a JSON object containing information used by the project page:
     ::
@@ -322,18 +322,8 @@ def _get_json_for_variant_tag_types(project):
         family__project=project, varianttag__variant_tag_type__guid__in=discovery_tag_type_guids,
     ), add_details=True)
 
-    project_functional_tags = []
-    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
-        project_functional_tags += [{
-            'category': category,
-            'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title'),
-            'color': json.loads(tag_json)['color'],
-            'description': json.loads(tag_json).get('description'),
-        } for name, tag_json in tags]
-
     return {
-        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
+        'variantTagTypes': project_variant_tags,
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }

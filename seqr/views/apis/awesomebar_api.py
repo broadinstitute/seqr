@@ -1,16 +1,15 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q, ExpressionWrapper, BooleanField
 from django.views.decorators.http import require_GET
 
 from reference_data.models import Omim, HumanPhenotypeOntology
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.views.utils.permissions_utils import get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -206,7 +205,7 @@ CATEGORY_MAP.update(PROJECT_SPECIFIC_CATEGORY_MAP)
 DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 'genes']
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 @require_GET
 def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""

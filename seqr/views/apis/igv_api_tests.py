@@ -1,9 +1,11 @@
 import json
 import mock
+import responses
 import subprocess
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
-from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample
+from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
+    igv_genomes_proxy
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -27,23 +29,27 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True)
 
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.igv_api.file_iter')
-    def test_proxy_local_to_igv(self, mock_file_iter):
-        mock_file_iter.return_value = STREAMING_READS_CONTENT
+    def test_proxy_local_to_igv(self, mock_file_iter, mock_subprocess):
+        mock_subprocess.return_value.stdout = STREAMING_READS_CONTENT
+        mock_file_iter.return_value.__enter__.return_value.__iter__.return_value = STREAMING_READS_CONTENT
 
         url = reverse(fetch_igv_track, args=[PROJECT_GUID, '/project_A/sample_1.bam.bai'])
         self.check_collaborator_login(url)
-        response = self.client.get(url, HTTP_RANGE='bytes=100-200')
+        response = self.client.get(url, HTTP_RANGE='bytes=100-250')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('/project_A/sample_1.bai', byte_range=(100, 200), raw_content=True)
+        mock_subprocess.assert_called_with(
+            'dd skip=100 count=150 bs=1 if=/project_A/sample_1.bai',
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        mock_file_iter.assert_not_called()
 
         # test no byte range
-        mock_file_iter.reset_mock()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('/project_A/sample_1.bai', raw_content=True)
+        mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])
@@ -117,13 +123,13 @@ class IgvAPITest(AuthenticationTestCase):
         mock_local_file_exists.return_value = True
         mock_subprocess.return_value.wait.return_value = 0
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'filePath': '/readviz/NA19675_new.cram',
+            'filePath': '/readviz/NA19675.new.cram',
         }))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675_new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
-        mock_local_file_exists.assert_called_with('/readviz/NA19675_new.cram')
+            'filePath': '/readviz/NA19675.new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
+        mock_local_file_exists.assert_called_with('/readviz/NA19675.new.cram')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675',
@@ -151,3 +157,28 @@ class IgvAPITest(AuthenticationTestCase):
         }))
         self.assertEqual(response.status_code, 200)
 
+    @responses.activate
+    def test_igv_genomes_proxyy(self):
+        url_path = 'org.genomes/foo?query=true'
+        url = reverse(igv_genomes_proxy, args=[url_path])
+
+        expected_body = {'genes': ['GENE1', 'GENE2']}
+        responses.add(
+            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
+            content_type='application/json', body=json.dumps(expected_body))
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(json.loads(response.content), expected_body)
+        self.assertIsNone(responses.calls[0].request.headers.get('Range'))
+
+        # test with range header proxy
+        expected_content = 'test file content'
+        responses.replace(
+            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
+            body=expected_content)
+
+        response = self.client.get(url, HTTP_RANGE='bytes=100-200')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), expected_content)
+        self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')

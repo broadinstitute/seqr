@@ -613,7 +613,7 @@ def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
         display_data = json.loads(tag.get_functional_data_tag_display())
         tag_json.update({
             'name': tag_json.pop('functionalDataTag'),
-            'metadataTitle': display_data.get('metadata_title'),
+            'metadataTitle': display_data.get('metadata_title', 'Notes'),
             'color': display_data['color'],
         })
         if add_variant_guids:
@@ -631,7 +631,7 @@ def get_json_for_variant_functional_data_tag_types():
         functional_tag_types += [{
             'category': category,
             'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'metadataTitle': json.loads(tag_json).get('metadata_title', 'Notes'),
             'color': json.loads(tag_json)['color'],
             'description': json.loads(tag_json).get('description'),
         } for name, tag_json in tags]

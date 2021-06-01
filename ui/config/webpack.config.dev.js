@@ -143,7 +143,15 @@ module.exports = {
           {
             test: /\.css$/,
             use: [
-              require.resolve('style-loader'),
+              {
+                loader: require.resolve('style-loader'),
+                options: {
+                  insert: (styleElement) => {
+                    styleElement.setAttribute('nonce', window.__webpack_nonce__)
+                    document.querySelector('head').appendChild(styleElement)
+                  },
+                },
+              },
               {
                 loader: require.resolve('css-loader'),
                 options: {

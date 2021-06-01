@@ -69,7 +69,6 @@ const EDIT_FIELDS = [
     component: RadioGroup,
     options: [{ value: false, text: 'Collaborator' }, { value: true, text: 'Manager' }],
   },
-  ...USER_NAME_FIELDS,
 ]
 
 

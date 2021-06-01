@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Popup, Label, Button, Header } from 'semantic-ui-react'
+import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -18,7 +18,7 @@ import { VerticalSpacer } from '../../Spacers'
 const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
    ${(props => props.isCompoundHet) ? // eslint-disable-line  no-constant-condition
-    '{ margin-top: 0em !important; margin-left: 1em !important; }' :
+    '{ margin-top: 0em !important; }' :
     '{ margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }'}
   }
   
@@ -39,7 +39,7 @@ const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) =>
 `
 
 const StyledCompoundHetRows = styled(Grid)`
-  margin-left: 0em !important;
+  margin-left: 1em !important;
   margin-right: 1em !important;
   margin-top: 0em !important;
   margin-bottom: 0 !important;
@@ -49,6 +49,19 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   padding: 0.2em !important;
   box-shadow: none !important;
   z-index: 10 !important;
+`
+
+const NestedVariantTab = styled(Tab).attrs({
+  menu: { fluid: true, vertical: true, secondary: true, pointing: true },
+  grid: { paneWidth: 15, tabWidth: 1 },
+  renderActiveOnly: false,
+})`
+  .segment.tab {
+    margin: 0;
+    &:first-child {
+      padding: 0;
+    }
+  }
 `
 
 const tagFamily = tag =>
@@ -124,37 +137,60 @@ Variant.propTypes = {
 
 const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />
 
+const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet =>
+  <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
+)
+
+const nestedVariantPanes = (variants, mainGeneId, props) => ([
+  {
+    menuIcon: 'plus',
+    content: (
+      <StyledCompoundHetRows stackable columns="equal">
+        {compHetRows(variants, mainGeneId, props)}
+      </StyledCompoundHetRows>
+    ),
+  },
+  { menuIcon: 'minus', content: `Collapsing ${variants.length} nested variants` },
+].map(({ menuIcon, content }, i) => ({
+  menuItem: { key: menuIcon, icon: menuIcon },
+  pane: { key: `pane${i}`, attached: false, basic: true, content },
+})))
+
 const CompoundHets = React.memo(({ variants, ...props }) => {
-  const sharedGeneIds = Object.keys(variants[0].transcripts).filter(geneId => geneId in variants[1].transcripts)
+  const sharedGeneIds = variants.slice(1).reduce((acc, v) =>
+    acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}))
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
-    const mainGene1 = getVariantMainGeneId(variants[0])
-    if (sharedGeneIds.includes(mainGene1)) {
-      mainGeneId = mainGene1
-    } else {
-      const mainGene2 = getVariantMainGeneId(variants[1])
-      if (sharedGeneIds.includes(mainGene2)) {
-        mainGeneId = mainGene2
-      }
+    const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
+    if (mainSharedGene) {
+      mainGeneId = mainSharedGene
     }
   }
+
+  // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
+  // display associated variants nested under the manual variant
+  const mainVariants = (variants.length > 2 && !variants[0].populations) && variants.splice(0, 1)
+  const allVariants = [...(mainVariants || []), ...variants]
 
   return (
     <StyledVariantRow>
       <VerticalSpacer height={16} />
-      {variants[0].familyGuids.map(familyGuid =>
+      {allVariants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variants} />
+          <FamilyVariantTags familyGuid={familyGuid} variant={allVariants} />
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
-        {mainGeneId && <VariantGene geneId={mainGeneId} variant={variants[0]} areCompoundHets />}
+        {mainGeneId && <VariantGene geneId={mainGeneId} variant={allVariants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
-        {variants.map(compoundHet =>
-          <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
-        )}
+        {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
+      {mainVariants &&
+        <Grid.Column width={16}>
+          <NestedVariantTab panes={nestedVariantPanes(variants, mainGeneId, props)} />
+        </Grid.Column>
+      }
     </StyledVariantRow>
   )
 })

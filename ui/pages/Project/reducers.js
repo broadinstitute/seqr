@@ -143,9 +143,9 @@ export const updateIndividuals = (values) => {
   }
 }
 
-export const updateIndividualsHpoTerms = ({ uploadedFileId }) => {
+export const updateIndividualsMetadata = ({ uploadedFileId }) => {
   return (dispatch, getState) => {
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/save_hpo_terms_table/${uploadedFileId}`,
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },

@@ -1,8 +1,8 @@
 from collections import defaultdict
 import json
 import re
-from django.http import StreamingHttpResponse
-from django.contrib.auth.decorators import login_required, user_passes_test
+import requests
+from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist
@@ -11,14 +11,11 @@ from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_data_manager, user_is_pm
-from settings import API_LOGIN_REQUIRED_URL
+    login_and_policies_required, pm_or_data_manager_required
 
 import logging
 logger = logging.getLogger(__name__)
 
-pm_or_data_manager_required = user_passes_test(
-    lambda user: user_is_data_manager(user) or user_is_pm(user), login_url=API_LOGIN_REQUIRED_URL)
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
@@ -99,8 +96,7 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        suffix = '.'.join(file_path.split('.')[1:])
-        sample_type = SAMPLE_TYPE_MAP.get(suffix)
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP.items() if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
@@ -125,7 +121,7 @@ def update_individual_igv_sample(request, individual_guid):
         return create_json_response({'error': error}, status=400, reason=error)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def fetch_igv_track(request, project_guid, igv_track_path):
 
     get_project_and_check_permissions(project_guid, request.user)
@@ -154,3 +150,18 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
+
+def igv_genomes_proxy(request, file_path):
+    # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
+    # using this server-side proxy
+    headers = {}
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        headers['Range'] = range_header
+
+    genome_response = requests.get('https://s3.amazonaws.com/igv.{}'.format(file_path), headers=headers)
+    proxy_response = HttpResponse(
+        content=genome_response.content,
+        status=genome_response.status_code,
+    )
+    return proxy_response
