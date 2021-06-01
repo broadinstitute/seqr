@@ -5,6 +5,7 @@ import json
 import logging
 import tempfile
 import openpyxl as xl
+from datetime import date
 from django.contrib.auth.models import User
 
 from settings import PM_USER_GROUP
@@ -148,6 +149,7 @@ def _convert_fam_file_rows_to_json(rows):
 
         # parse
         for key, value in row_dict.items():
+            full_key = key
             key = key.lower()
             value = (value or '').strip()
             if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
@@ -159,6 +161,10 @@ def _convert_fam_file_rows_to_json(rows):
                     json_record[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = value
                 else:
                     json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
+            elif full_key in {
+                JsonConstants.MATERNAL_ETHNICITY, JsonConstants.PATERNAL_ETHNICITY, JsonConstants.BIRTH_YEAR,
+                JsonConstants.DEATH_YEAR, JsonConstants.ONSET_AGE, JsonConstants.AFFECTED_RELATIVES}:
+                json_record[full_key] = json.loads(value)
             elif "father" in key or "paternal" in key:
                 json_record[JsonConstants.PATERNAL_ID_COLUMN] = value if value != "." else ""
             elif "mother" in key or "maternal" in key:
@@ -411,11 +417,10 @@ def _parse_rgp_dsm_export_format(rows):
             JsonConstants.INDIVIDUAL_ID_COLUMN: '{}_3'.format(family_id),
             JsonConstants.MATERNAL_ID_COLUMN: maternal_id,
             JsonConstants.PATERNAL_ID_COLUMN: paternal_id,
-            JsonConstants.SEX_COLUMN: row[DSMConstants.SEX_COLUMN],
             JsonConstants.AFFECTED_COLUMN: 'A',
-            JsonConstants.FAMILY_NOTES_COLUMN: _get_rgp_dsm_family_notes(row),
         }
-        # TODO add other structured fields
+        proband_row.update(_get_rgp_dsm_proband_fields(row))
+
         mother_row = {
             JsonConstants.FAMILY_ID_COLUMN: family_id,
             JsonConstants.INDIVIDUAL_ID_COLUMN: maternal_id,
@@ -431,6 +436,53 @@ def _parse_rgp_dsm_export_format(rows):
         pedigree_rows += [mother_row, father_row, proband_row]
 
     return pedigree_rows
+
+
+def _get_rgp_dsm_proband_fields(row):
+    DC = DSMConstants
+
+    try:
+        age = int(row[DC.AGE_COLUMN])
+        birth_year = date.today().year - age
+    except ValueError:
+        birth_year = None
+
+    death_year = None
+    if row[DC.DECEASED_COLUMN] == DC.YES_VAL:
+        try:
+            age = int(row[DC.DECEASED_AGE_COLUMN])
+            death_year = birth_year + age
+        except (ValueError, TypeError):
+            death_year = 0
+
+    try:
+        onset_age_val = int(row[DC.AGE_OF_ONSET_COLUMN])
+        onset_age = next(age for cutoff, age in [
+            (2, 'I'), # Infantile onset
+            (13, 'C'), # Childhood onset
+            (20, 'J'), # Juvenile onset
+            (200, 'A')# Adult onset
+        ] if onset_age_val < cutoff)
+    except (ValueError, TypeError):
+        onset_age = None
+
+    affected_relatives = any(
+        row['{}_{}'.format(parent, DC.AFFECTED_KEY)] == DC.YES_VAL for parent in [DC.MOTHER, DC.FATHER]
+    ) or bool(_get_rgp_dsm_relative_list(row, DC.OTHER_RELATIVES)) or any(
+        any(rel for rel in _get_rgp_dsm_relative_list(row, relative) or []
+            if rel['{}_{}'.format(relative, DC.SAME_CONDITION_KEY)] == DC.YES_VAL)
+        for relative in [DC.SIBLINGS, DC.CHILDREN])
+
+    return {
+        JsonConstants.SEX_COLUMN: row[DC.SEX_COLUMN],
+        JsonConstants.FAMILY_NOTES_COLUMN: _get_rgp_dsm_family_notes(row),
+        JsonConstants.MATERNAL_ETHNICITY: json.dumps(_get_rgp_dsm_parent_ethnicity(row, DC.MOTHER)),
+        JsonConstants.PATERNAL_ETHNICITY: json.dumps(_get_rgp_dsm_parent_ethnicity(row, DC.FATHER)),
+        JsonConstants.BIRTH_YEAR: json.dumps(birth_year),
+        JsonConstants.DEATH_YEAR: json.dumps(death_year),
+        JsonConstants.ONSET_AGE: json.dumps(onset_age),
+        JsonConstants.AFFECTED_RELATIVES: json.dumps(affected_relatives),
+    }
 
 
 def _get_rgp_dsm_family_notes(row):
@@ -513,15 +565,14 @@ def _get_rgp_dsm_family_notes(row):
         ])
 
     def _relative_list_summary(relative, all_affected=False):
-        if row[DC.NO_RELATIVES_COLUMNS[relative]] == DC.YES_VAL:
+        relative_list = _get_rgp_dsm_relative_list(row, relative)
+        if relative_list is None:
             return 'None'
 
         divider = '\n{tab}{tab}'.format(tab=DC.TAB)
         return '{divider}{relatives}'.format(
             divider=divider,
-            relatives=divider.join([
-            _relative_summary(rel, relative, all_affected)
-             for rel in json.loads(row[DC.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]),
+            relatives=divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list]),
         )
 
     tests = row[DC.TESTS_COLUMN]
@@ -561,7 +612,7 @@ def _get_rgp_dsm_family_notes(row):
         tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if row[DC.RELATIONSHIP_COLUMN] == DC.OTHER else '',
-        relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.UNKNOWN_SEX],
+        relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.PREFER_NOT_ANSWER],
         age='Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
@@ -569,8 +620,8 @@ def _get_rgp_dsm_family_notes(row):
                 row[DC.SAMPLE_AVAILABILITY_COLUMN], 'available', 'not available', 'availability unknown'),
         ) if row[DC.DECEASED_COLUMN] == DC.YES_VAL else row[DC.AGE_COLUMN],
         age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
-        race=', '.join([race.strip().title() for race in row[DC.RACE_COLUMN].split(',')]),
-        ethnicity=row[DC.ETHNICITY_COLUMN].replace('_', ' ').title() or 'Prefer Not To Answer',
+        race=', '.join(_get_dsm_races(row[DC.RACE_COLUMN])),
+        ethnicity=_get_dsm_ethnicity(row[DC.ETHNICITY_COLUMN]) or 'Prefer Not To Answer',
         description=row[DC.DESCRIPTION_COLUMN],
         clinical_diagnoses=_get_detailed_yes_no(DC.CLINICAL_DIAGNOSES_COLUMN, DC.CLINICAL_DIAGNOSES_SPECIFY_COLUMN),
         genetic_diagnoses=_get_detailed_yes_no(DC.GENETIC_DIAGNOSES_COLUMN, DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN),
@@ -595,6 +646,25 @@ def _get_rgp_dsm_family_notes(row):
         relatives=_relative_list_summary(DC.OTHER_RELATIVES, all_affected=True),
     )
 
+def _get_rgp_dsm_relative_list(row, relative):
+    if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES_VAL:
+        return None
+
+    return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]
+
+def _get_dsm_races(race_string):
+    return [race.strip().title() for race in race_string.split(',') if race]
+
+def _get_dsm_ethnicity(ethnicity):
+    return ethnicity.replace('_', ' ').title()
+
+def _get_rgp_dsm_parent_ethnicity(row, parent):
+    races = _get_dsm_races(row['{}_{}'.format(parent, DSMConstants.RACE_COLUMN)])
+    ethnicity = row['{}_{}'.format(parent, DSMConstants.ETHNICITY_COLUMN)]
+    if ethnicity and ethnicity not in {DSMConstants.UNKNOWN, DSMConstants.PREFER_NOT_ANSWER}:
+        races.append(_get_dsm_ethnicity(ethnicity))
+    return races or None
+
 
 class JsonConstants:
     FAMILY_ID_COLUMN = 'familyId'
@@ -609,6 +679,12 @@ class JsonConstants:
     FAMILY_NOTES_COLUMN = 'familyNotes'
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
     PROBAND_RELATIONSHIP = 'probandRelationship'
+    MATERNAL_ETHNICITY = 'maternalEthnicity'
+    PATERNAL_ETHNICITY = 'paternalEthnicity'
+    BIRTH_YEAR = 'birthYear'
+    DEATH_YEAR = 'deathYear'
+    ONSET_AGE = 'onsetAge'
+    AFFECTED_RELATIVES = 'affectedRelatives'
 
 
 class MergedPedigreeSampleManifestConstants:
@@ -687,11 +763,13 @@ class MergedPedigreeSampleManifestConstants:
 class DSMConstants:
     TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
 
-    YES_VAL = 'YES'
+    YES_VAL = 'YES' # TODO remove VAL
     NO_VAL = 'NO'
     UNSURE = 'UNSURE'
+    UNKNOWN = 'UNKNOWN'
     OTHER = 'OTHER'
     NONE = 'NONE'
+    PREFER_NOT_ANSWER = 'PREFER_NOT_ANSWER'
 
     FAMILY_ID_COLUMN = 'familyId'
     SEX_COLUMN = 'PATIENT_SEX'
@@ -722,7 +800,6 @@ class DSMConstants:
     HAS_OTHER_STUDIES_COLUMN = 'OTHER_STUDIES'
     OTHER_STUDIES_COLUMN = 'OTHER_STUDIES_DESCRIBE'
     EXPECTING_RESULTS_COLUMN = 'EXPECT_RESULTS'
-    # TODO add new columns? participant_guid participant_hruid MOTHER_RACE MOTHER_ETHNICITY FATHER_RACE FATHER_ETHNICITY
 
     DOCTOR_TYPE_MAP = {
         'CLIN_GEN': 'Clinical geneticist',
@@ -740,19 +817,18 @@ class DSMConstants:
 
     MALE_SEX = 'MALE'
     FEMALE_SEX = 'FEMALE'
-    UNKNOWN_SEX = 'PREFER_NOT_ANSWER'
     RELATIONSHIP_MAP = {
-        'MYSELF': {MALE_SEX: 'Myself (male)', FEMALE_SEX: 'Myself (female)', UNKNOWN_SEX: 'Myself (unspecified sex)'},
-        'CHILD': {MALE_SEX: 'Son', FEMALE_SEX: 'Daughter', UNKNOWN_SEX: 'Child (unspecified sex)'},
-        'SIBLING': {MALE_SEX: 'Brother', FEMALE_SEX: 'Sister', UNKNOWN_SEX: 'Sibling (unspecified sex)'},
-        'COUSIN': {MALE_SEX: 'Cousin (male)', FEMALE_SEX: 'Cousin (female)', UNKNOWN_SEX: 'Cousin (unspecified sex)'},
-        'NIECE_NEPHEW': {MALE_SEX: 'Nephew', FEMALE_SEX: 'Niece', UNKNOWN_SEX: 'Niece or nephew (unspecified sex)'},
-        OTHER: {MALE_SEX: ' (male)', FEMALE_SEX: ' (female)', UNKNOWN_SEX: ' (unspecified sex)'},
-        'MINOR_CHILD': {MALE_SEX: 'Minor Son', FEMALE_SEX: 'Minor Daughter', UNKNOWN_SEX: 'Minor Child (unspecified sex)'},
+        'MYSELF': {MALE_SEX: 'Myself (male)', FEMALE_SEX: 'Myself (female)', PREFER_NOT_ANSWER: 'Myself (unspecified sex)'},
+        'CHILD': {MALE_SEX: 'Son', FEMALE_SEX: 'Daughter', PREFER_NOT_ANSWER: 'Child (unspecified sex)'},
+        'SIBLING': {MALE_SEX: 'Brother', FEMALE_SEX: 'Sister', PREFER_NOT_ANSWER: 'Sibling (unspecified sex)'},
+        'COUSIN': {MALE_SEX: 'Cousin (male)', FEMALE_SEX: 'Cousin (female)', PREFER_NOT_ANSWER: 'Cousin (unspecified sex)'},
+        'NIECE_NEPHEW': {MALE_SEX: 'Nephew', FEMALE_SEX: 'Niece', PREFER_NOT_ANSWER: 'Niece or nephew (unspecified sex)'},
+        OTHER: {MALE_SEX: ' (male)', FEMALE_SEX: ' (female)', PREFER_NOT_ANSWER: ' (unspecified sex)'},
+        'MINOR_CHILD': {MALE_SEX: 'Minor Son', FEMALE_SEX: 'Minor Daughter', PREFER_NOT_ANSWER: 'Minor Child (unspecified sex)'},
         'ADULT_CHILD': {
             MALE_SEX: 'Adult Son - unable to provide consent',
             FEMALE_SEX: 'Adult Daughter - unable to provide consent',
-            UNKNOWN_SEX: 'Adult Child (unspecified sex) - unable to provide consent',
+            PREFER_NOT_ANSWER: 'Adult Child (unspecified sex) - unable to provide consent',
         },
     }
 
