@@ -448,7 +448,7 @@ def _get_rgp_dsm_proband_fields(row):
         birth_year = None
 
     death_year = None
-    if row[DC.DECEASED_COLUMN] == DC.YES_VAL:
+    if row[DC.DECEASED_COLUMN] == DC.YES:
         try:
             age = int(row[DC.DECEASED_AGE_COLUMN])
             death_year = birth_year + age
@@ -467,10 +467,10 @@ def _get_rgp_dsm_proband_fields(row):
         onset_age = None
 
     affected_relatives = any(
-        row['{}_{}'.format(parent, DC.AFFECTED_KEY)] == DC.YES_VAL for parent in [DC.MOTHER, DC.FATHER]
+        row['{}_{}'.format(parent, DC.AFFECTED_KEY)] == DC.YES for parent in [DC.MOTHER, DC.FATHER]
     ) or bool(_get_rgp_dsm_relative_list(row, DC.OTHER_RELATIVES)) or any(
         any(rel for rel in _get_rgp_dsm_relative_list(row, relative) or []
-            if rel['{}_{}'.format(relative, DC.SAME_CONDITION_KEY)] == DC.YES_VAL)
+            if rel['{}_{}'.format(relative, DC.SAME_CONDITION_KEY)] == DC.YES)
         for relative in [DC.SIBLINGS, DC.CHILDREN])
 
     return {
@@ -493,14 +493,14 @@ def _get_rgp_dsm_family_notes(row):
     def _get_detailed_yes_no(column, detail_column):
         val = row[column]
         formatted_val = val.title()
-        if val == DC.YES_VAL and row[detail_column]:
+        if val == DC.YES and row[detail_column]:
             formatted_val = '{}; {}'.format(formatted_val, row[detail_column])
         return formatted_val
 
     def _bool_condition_val(column_val, yes, no, default, unknown=None):
-        if column_val == DC.YES_VAL:
+        if column_val == DC.YES:
             return yes
-        elif column_val == DC.NO_VAL:
+        elif column_val == DC.NO:
             return no
         elif unknown and column_val == DC.UNSURE:
             return unknown
@@ -533,19 +533,19 @@ def _get_rgp_dsm_family_notes(row):
         }
 
         is_affected = parent_values[DC.AFFECTED_KEY]
-        can_participate = parent_values[DC.CAN_PARTICIPATE_KEY] == DC.YES_VAL
+        can_participate = parent_values[DC.CAN_PARTICIPATE_KEY] == DC.YES
         is_deceased = parent_values[DC.DECEASED_KEY]
 
         parent_details = [
             _bool_condition_val(is_affected, 'affected', 'unaffected', 'unknown affected status'),
-            'onset age {}'.format(parent_values[DC.PARENT_AGE_KEY]) if is_affected == DC.YES_VAL else None,
+            'onset age {}'.format(parent_values[DC.PARENT_AGE_KEY]) if is_affected == DC.YES else None,
             'available' if can_participate else 'unavailable',
             None if can_participate else _bool_condition_val(
                 is_deceased, yes='deceased', no='living', unknown='unknown deceased status',
                 default='unspecified deceased status'),
             _bool_condition_val(
                 parent_values[DC.STORED_DNA_KEY], 'sample available', 'sample not available', 'unknown sample availability')
-            if is_deceased == DC.YES_VAL else None,
+            if is_deceased == DC.YES else None,
         ]
 
         return ', '.join(filter(lambda x: x, parent_details))
@@ -618,7 +618,7 @@ def _get_rgp_dsm_family_notes(row):
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
             sample_availability=_bool_condition_val(
                 row[DC.SAMPLE_AVAILABILITY_COLUMN], 'available', 'not available', 'availability unknown'),
-        ) if row[DC.DECEASED_COLUMN] == DC.YES_VAL else row[DC.AGE_COLUMN],
+        ) if row[DC.DECEASED_COLUMN] == DC.YES else row[DC.AGE_COLUMN],
         age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
         race=', '.join(_get_dsm_races(row[DC.RACE_COLUMN])),
         ethnicity=_get_dsm_ethnicity(row[DC.ETHNICITY_COLUMN]) or 'Prefer Not To Answer',
@@ -638,7 +638,7 @@ def _get_rgp_dsm_family_notes(row):
         studies='Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
             study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=(row[DC.EXPECTING_RESULTS_COLUMN] or 'Unspecified').title(),
-        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES_VAL else 'No',
+        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
         mother=_parent_summary(DC.MOTHER),
         father=_parent_summary(DC.FATHER),
         siblings=_relative_list_summary(DC.SIBLINGS),
@@ -647,7 +647,7 @@ def _get_rgp_dsm_family_notes(row):
     )
 
 def _get_rgp_dsm_relative_list(row, relative):
-    if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES_VAL:
+    if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
         return None
 
     return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]
@@ -763,8 +763,8 @@ class MergedPedigreeSampleManifestConstants:
 class DSMConstants:
     TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
 
-    YES_VAL = 'YES' # TODO remove VAL
-    NO_VAL = 'NO'
+    YES = 'YES'
+    NO = 'NO'
     UNSURE = 'UNSURE'
     UNKNOWN = 'UNKNOWN'
     OTHER = 'OTHER'
