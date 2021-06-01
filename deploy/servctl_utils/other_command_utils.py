@@ -1,5 +1,4 @@
 import collections
-from threading import Thread
 
 import logging
 import os
@@ -7,55 +6,14 @@ import subprocess
 import sys
 import time
 
-from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running, is_pod_running, \
+from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, is_pod_running, \
     wait_for_resource, get_resource_name
 from deploy.servctl_utils.yaml_settings_utils import load_settings
-from deploy.servctl_utils.shell_utils import run_in_background, run
+from deploy.servctl_utils.shell_utils import run
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-COMPONENT_PORTS = {
-    "cockpit":         [9090],
-
-    "elasticsearch":   [9200],
-    "kibana":          [5601],
-
-    "redis":           [6379],
-
-    "postgres":        [5432],
-    "seqr":            [8000],
-    "pipeline-runner": [30005],
-
-    'kube-scan':       [8080],
-    #"nginx":           [80, 443],
-}
-
-
-COMPONENTS_TO_OPEN_IN_BROWSER = set([
-    "cockpit",
-    "elasticsearch",
-    "kibana",
-    "seqr",
-    "pipeline-runner",  # python notebook
-])
-
-
-def get_component_port_pairs(components=[]):
-    """Uses the PORTS dictionary to return a list of (<component name>, <port>) pairs (For example:
-    [('postgres', 5432), ('seqr', 8000), ('seqr', 3000), ... ])
-
-    Args:
-        components (list): optional list of component names. If not specified, all components will be included.
-    Returns:
-        list of components
-    """
-    if not components:
-        components = list(COMPONENT_PORTS.keys())
-
-    return [(component, port) for component in components for port in COMPONENT_PORTS.get(component, [])]
 
 
 def check_kubernetes_context(deployment_target, set_if_different=False):
@@ -98,45 +56,6 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
     return kubectl_current_context
 
 
-def print_log(components, deployment_target):
-    """Executes kubernetes command to print logs for the given pod.
-
-    Args:
-        components (list): one or more kubernetes pod labels (eg. 'postgres' or 'nginx').
-            If more than one is specified, logs will be printed from all components in parallel.
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev", etc.
-        enable_stream_log (bool): whether to continuously stream the log instead of just printing
-            the log up to now.
-        previous (bool): Prints logs from a previous instance of the container. This is useful for debugging pods that
-            don't start or immediately enter crash-loop.
-        wait (bool): If False, this method will return without waiting for the log streaming process
-            to finish printing all logs.
-
-    Returns:
-        (list): Popen process objects for the kubectl port-forward processes.
-    """
-
-    procs = []
-    for component_label in components:
-        if component_label == "kube-scan":
-            continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
-
-        wait_until_pod_is_running(component_label, deployment_target)
-
-        pod_name = get_pod_name(component_label, deployment_target=deployment_target)
-
-        p = run_in_background("kubectl logs -f %(pod_name)s --all-containers" % locals(), print_command=True)
-        def print_command_log():
-            for line in iter(p.stdout.readline, ''):
-                logger.info(line.strip('\n'))
-
-        t = Thread(target=print_command_log)
-        t.start()
-        procs.append(p)
-
-    return procs
-
-
 def set_environment(deployment_target):
     """Configure the shell environment to point to the given deployment_target using 'gcloud config set-context' and other commands.
 
@@ -159,51 +78,6 @@ def set_environment(deployment_target):
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
-
-
-def port_forward(component_port_pairs=[], deployment_target=None):
-    """Executes kubectl command to set up port forwarding between localhost and the given pod.
-    While this is running, connecting to localhost:<port> will be the same as connecting to that port
-    from the pod's internal network.
-
-    Args:
-        component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
-            pod, along with the port to forward to that pod (eg. ('postgres', 5432))
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-        wait (bool): Whether to block indefinitely as long as the forwarding process is running.
-        open_browser (bool): If component_port_pairs includes components that have an http server
-            (eg. "seqr" or "postgres"), then open a web browser window to the forwarded port.
-    Returns:
-        (list): Popen process objects for the kubectl port-forward processes.
-    """
-    procs = []
-    for component_label, port in component_port_pairs:
-        if component_label == "kube-scan":
-            continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
-
-        wait_until_pod_is_running(component_label, deployment_target)
-
-        logger.info("Forwarding port %s for %s" % (port, component_label))
-        if component_label == 'elasticsearch':
-            pod_name = 'service/elasticsearch-es-http'
-        elif component_label == 'kibana':
-            pod_name = 'service/kibana-kb-http'
-        else:
-            pod_name = get_pod_name(component_label, deployment_target=deployment_target)
-
-        command = 'kubectl port-forward {pod_name} {port}'.format(pod_name=pod_name, port=port)
-
-        p = run_in_background(command)
-
-        if component_label in COMPONENTS_TO_OPEN_IN_BROWSER:
-            url = "http://localhost:%s" % port
-
-            time.sleep(3)
-            os.system("open " + url)
-
-        procs.append(p)
-
-    return procs
 
 
 def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_path, direction=1):

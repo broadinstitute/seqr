@@ -8,10 +8,8 @@ import sys
 
 from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
     DEPLOYMENT_ENVS, SECRETS
-from deploy.servctl_utils.shell_utils import wait_for
-from deploy.servctl_utils.other_command_utils import print_log, port_forward, \
-    delete_component, reset_database, delete_all, \
-    get_component_port_pairs, check_kubernetes_context, copy_files_to_or_from_pod
+from deploy.servctl_utils.other_command_utils import delete_component, reset_database, delete_all, \
+    check_kubernetes_context, copy_files_to_or_from_pod
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -136,33 +134,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     deploy(args.deployment_target, components=components_to_deploy, runtime_settings=runtime_settings)
 
     logger.info("==> Deployed " + ", ".join(components_to_deploy))
-
-    if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
-        if args.command == DEPLOY_ALL_COMMAND:
-            if "seqr" in components_to_deploy:
-                components_to_connect_to = ["seqr"]
-            elif "es-kibana" in components_to_deploy:
-                components_to_connect_to = ["es-kibana"]
-            else:
-                components_to_connect_to = []
-        elif components_to_deploy[0] == 'secrets':
-            components_to_connect_to = ['secrets']
-        else:
-            components_to_connect_to = components_to_deploy
-
-        component_port_pairs = get_component_port_pairs(components_to_connect_to)
-        if component_port_pairs:
-            logger.info("=============")
-            print_los_for_components = [pair[0] for pair in component_port_pairs]
-            logger.info("tail %s logs ..." % components_to_connect_to)
-            os.system("sleep 10")
-
-            # TODO use kubectl_helpers
-            procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target)
-            procs2 = print_log(components_to_connect_to, deployment_target=args.deployment_target)
-            wait_for(procs1 + procs2)
-
-    logger.info("==> Done")
 
 elif args.command == REDEPLOY_COMMAND:
     components = args.components
