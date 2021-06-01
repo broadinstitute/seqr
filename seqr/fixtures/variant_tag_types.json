@@ -219,6 +219,7 @@
         "name": "Send for validation",
         "category": "Collaboration",
         "description": "",
+        "metadata_title": "Test Type(s)",
         "color": "#f1af5f",
         "order": 12.0
     }
@@ -235,6 +236,7 @@
         "name": "Validation in progress",
         "category": "Collaboration",
         "description": "",
+        "metadata_title": "Test Type(s)",
         "color": "#33a02c",
         "order": 12.5
     }
@@ -251,6 +253,7 @@
         "name": "Validated",
         "category": "Collaboration",
         "description": "",
+        "metadata_title": "Test Type(s)",
         "color": "#b2df8a",
         "order": 13.0
     }
@@ -267,6 +270,7 @@
         "name": "Validation did not confirm",
         "category": "Collaboration",
         "description": "",
+        "metadata_title": "Test Type(s)",
         "color": "#823a3a",
         "order": 14.0
     }
@@ -283,6 +287,7 @@
         "name": "Validation troubleshooting",
         "category": "Collaboration",
         "description": "",
+        "metadata_title": "Test Type(s)",
         "color": "#9e064b",
         "order": 14.5
     }
@@ -363,6 +368,7 @@
         "name": "Excluded",
         "category": "Collaboration",
         "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
+        "metadata_title": "Reason",
         "color": "#555555",
         "order": 17.0
     }

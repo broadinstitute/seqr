@@ -122,6 +122,7 @@ spec:
       cluster.routing.allocation.disk.watermark.low: "91%"
       cluster.routing.allocation.disk.watermark.high: "95%"
       cluster.routing.allocation.disk.watermark.flood_stage: "97%"
+      cluster.routing.allocation.total_shards_per_node: {{ ELASTICSEARCH_MAX_SHARDS_PER_NODE }}
     podTemplate:
       metadata:
         labels:

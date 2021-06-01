@@ -25,12 +25,21 @@ ES_CAT_ALLOCATION=[{
      'disk.percent': None
      }]
 
+ES_CAT_NODES=[{
+    'name': 'node-1',
+    'heap.percent': '57',
+},
+    {'name': 'no-disk-node',
+     'heap.percent': '83',
+     }]
+
 EXPECTED_DISK_ALLOCATION = [{
     'node': 'node-1',
     'shards': '113',
     'diskUsed': '67.2gb',
     'diskAvail': '188.6gb',
-    'diskPercent': '26'
+    'diskPercent': '26',
+    'heapPercent': '57',
 },
     {'node': 'UNASSIGNED',
      'shards': '2',
@@ -252,6 +261,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         urllib3_responses.add_json(
             '/_cat/allocation?format=json&h=node,shards,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
+        urllib3_responses.add_json(
+            '/_cat/nodes?format=json&h=name,heap.percent', ES_CAT_NODES)
         urllib3_responses.add_json(
            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
         urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)

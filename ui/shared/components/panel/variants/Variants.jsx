@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Popup, Label, Button, Header } from 'semantic-ui-react'
+import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -49,6 +49,19 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
   padding: 0.2em !important;
   box-shadow: none !important;
   z-index: 10 !important;
+`
+
+const NestedVariantTab = styled(Tab).attrs({
+  menu: { fluid: true, vertical: true, secondary: true, pointing: true },
+  grid: { paneWidth: 15, tabWidth: 1 },
+  renderActiveOnly: false,
+})`
+  .segment.tab {
+    margin: 0;
+    &:first-child {
+      padding: 0;
+    }
+  }
 `
 
 const tagFamily = tag =>
@@ -128,6 +141,21 @@ const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet =>
   <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
 )
 
+const nestedVariantPanes = (variants, mainGeneId, props) => ([
+  {
+    menuIcon: 'plus',
+    content: (
+      <StyledCompoundHetRows stackable columns="equal">
+        {compHetRows(variants, mainGeneId, props)}
+      </StyledCompoundHetRows>
+    ),
+  },
+  { menuIcon: 'minus', content: `Collapsing ${variants.length} nested variants` },
+].map(({ menuIcon, content }, i) => ({
+  menuItem: { key: menuIcon, icon: menuIcon },
+  pane: { key: `pane${i}`, attached: false, basic: true, content },
+})))
+
 const CompoundHets = React.memo(({ variants, ...props }) => {
   const sharedGeneIds = variants.slice(1).reduce((acc, v) =>
     acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}))
@@ -158,12 +186,9 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
       <StyledCompoundHetRows stackable columns="equal">
         {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
-      {mainVariants && <Grid.Column width={1} />}
       {mainVariants &&
-        <Grid.Column width={15}>
-          <StyledCompoundHetRows stackable columns="equal">
-            {compHetRows(variants, mainGeneId, props)}
-          </StyledCompoundHetRows>
+        <Grid.Column width={16}>
+          <NestedVariantTab panes={nestedVariantPanes(variants, mainGeneId, props)} />
         </Grid.Column>
       }
     </StyledVariantRow>
