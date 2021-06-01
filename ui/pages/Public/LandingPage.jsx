@@ -62,7 +62,7 @@ export default () =>
               This instance is available for collaborators within the &nbsp;
               <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor> with data pre-loaded into projects.
               If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
+              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>.
             </List.Item>
             <List.Item>
               The Broad <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor> is available for all collaborators within the &nbsp;
