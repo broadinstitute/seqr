@@ -45,7 +45,7 @@ export default () =>
       to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the
       Broad Institute.
     </PageSegment>
-    <Segment size="large" padded="very">
+    <PageSegment size="large" padded="very">
       <Header
         textAlign="center"
         size="medium"
@@ -65,7 +65,7 @@ export default () =>
               <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
             </List.Item>
             <List.Item>
-              The Broad <Anchor href="https://seqr.broadinstitute.org">Institute's instance</Anchor> is available for all collaborators within the &nbsp;
+              The Broad <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor> is available for all collaborators within the &nbsp;
               <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor> or
               Mendelian Genomics Research Center with data pre-loaded into projects
             </List.Item>
@@ -82,7 +82,6 @@ export default () =>
         </Grid.Column>
         <Grid.Column width={3} />
       </Grid>
-    </Segment>
     </PageSegment>
     <PageSegment secondary>
       <List bulleted>
@@ -91,7 +90,7 @@ export default () =>
           <Anchor href="mailto:seqr@populationgenomics.org.au">contact us</Anchor>
         </List.Item>
         <List.Item>
-          Please use the <Anchor href="http://github.com/populationgenomics/seqr/issues">CPG's GitHub issues page</Anchor> to
+          Please use the <Anchor href="http://github.com/populationgenomics/seqr/issues">CPG&apos;s GitHub issues page</Anchor> to
           submit bug reports or feature requests
         </List.Item>
         <List.Item>
