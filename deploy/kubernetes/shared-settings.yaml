@@ -15,7 +15,7 @@ NODE_POOLS:
 #  es-loading-nodes:
 #    num_nodes: 2
 
-DISKS: postgres, seqr-static-files, es-data
+DISKS: seqr-static-files, es-data
 
 POSTGRES_DISK_SIZE: '200Gb'
 SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
