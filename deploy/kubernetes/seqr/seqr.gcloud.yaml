@@ -192,6 +192,26 @@ spec:
             - /bin/bash
             - -c
             - /readiness_probe
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        command:
+          - "/cloud_sql_proxy"
+          - "-instances={{ GCLOUD_PROJECT }}:{{ GCLOUD_ZONE }}:postgres-{{ DEPLOYMENT_TYPE}}=tcp:{{ POSTGRES_SERVICE_PORT }}"
+          - "-credential_file=/.config/service-account-key.json"
+        securityContext:
+          # The default Cloud SQL proxy image runs as the "nonroot" user and group (uid: 65532) by default.
+          runAsNonRoot: true
+        volumeMounts:
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+          limits:
+            memory: "2Gi"
+            cpu: "2"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       affinity:
