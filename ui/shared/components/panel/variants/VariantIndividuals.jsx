@@ -114,14 +114,12 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
     }
     {variant.svType ?
       <Header.Content>
-        {Number.isInteger(genotype.cn) &&
-        <span>CN:
-          {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}&nbsp;
-        </span>}
-        {Number.isInteger(genotype.numAlt) &&
-        <span>
+        {Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0 &&
+        <div>
           {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
-        </span>}
+        </div>}
+        {Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2) &&
+          <div>CN: <b><i>{genotype.cn}</i></b></div>}
       </Header.Content> :
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />

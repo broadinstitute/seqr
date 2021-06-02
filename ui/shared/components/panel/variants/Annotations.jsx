@@ -251,7 +251,7 @@ const Annotations = React.memo(({ variant }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && `:${svTypeDetail}`}
+              {svType && svTypeDetail && `:${svTypeDetail}`}
             </ButtonLink>
           }
           popup={transcriptPopupProps}
