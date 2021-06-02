@@ -268,7 +268,7 @@ def deploy_postgres(settings):
         '--require-ssl',
         '--retained-backups-count=30',
         '--storage-auto-increase',
-    ]) % settings, errors_to_ignore=['already exists'])
+    ]), errors_to_ignore=['already exists'])
 
     seqr_db_backup = settings.get('RESTORE_SEQR_DB_FROM_BACKUP')
     reference_data_db_backup = settings.get('RESTORE_REFERENCE_DB_FROM_BACKUP')
