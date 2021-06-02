@@ -652,7 +652,7 @@ SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn
 
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
-    'primate_ai_score': {'type': 'double'},
+    'primate_ai_score': {'type': 'float'},
     'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
 }
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
@@ -1493,7 +1493,7 @@ class EsUtilsTest(TestCase):
                     }},
                 ]
             }}
-        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
+        ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
