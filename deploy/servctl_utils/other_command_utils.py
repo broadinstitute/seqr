@@ -354,6 +354,7 @@ def delete_all(deployment_target):
     ], settings)
 
     run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+    run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
 
     for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
         for disk_name in  get_disk_names(disk_label, settings):
