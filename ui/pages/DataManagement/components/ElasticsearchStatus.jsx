@@ -15,7 +15,8 @@ const DISK_STAT_COLUMNS = [
   { name: 'shards', content: 'Shards' },
   { name: 'diskAvail', content: 'Disk available' },
   { name: 'diskUsed', content: 'Disk used' },
-  { name: 'diskPercent', content: 'Disk percentage used' },
+  { name: 'diskPercent', content: 'Disk %' },
+  { name: 'heapPercent', content: 'Heap %' },
 ]
 
 const INDEX_COLUMNS = [
