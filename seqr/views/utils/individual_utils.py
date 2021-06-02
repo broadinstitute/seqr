@@ -116,7 +116,10 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
     for update in parent_updates:
         individual = update.pop('individual')
-        update_individual_from_json(individual, update, user=user)
+        is_updated = update_individual_from_json(individual, update, user=user)
+        if is_updated:
+            updated_individuals.add(individual)
+            updated_families.add(individual.family)
 
     # update pedigree images
     update_pedigree_images(updated_families, user, project_guid=project.guid)

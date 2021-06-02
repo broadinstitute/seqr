@@ -118,6 +118,11 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login')
 
+        # no error when attempt to log out again
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login')
+
     def test_login_required_error(self):
         url = reverse(login_required_error)
         response = self.client.post(url)

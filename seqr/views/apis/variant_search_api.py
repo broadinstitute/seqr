@@ -2,7 +2,6 @@ import json
 import jmespath
 from collections import defaultdict
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
@@ -33,9 +32,9 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_searches, \
     get_json_for_discovery_tags, \
     _get_json_for_models
-from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, user_is_analyst
+from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
+    user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
@@ -134,7 +133,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
     return results_model
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
@@ -244,7 +243,7 @@ VARIANT_SAMPLE_DATA = [
 ]
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
@@ -256,7 +255,7 @@ def get_variant_gene_breakdown(request, search_hash):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
@@ -309,7 +308,7 @@ def _get_field_value(value, config):
     return field_value
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def search_context_handler(request):
     """Search variants.
     """
@@ -448,12 +447,12 @@ def _get_projects_details(projects, user, project_category_guid=None):
     return response
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_saved_search_handler(request):
     return create_json_response(_get_saved_searches(request.user))
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def create_saved_search_handler(request):
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)
@@ -488,7 +487,7 @@ def create_saved_search_handler(request):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     if search.created_by != request.user:
@@ -508,7 +507,7 @@ def update_saved_search_handler(request, saved_search_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
     search.delete_model(request.user)

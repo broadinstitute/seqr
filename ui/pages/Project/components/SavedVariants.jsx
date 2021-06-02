@@ -5,6 +5,7 @@ import { Route, Switch, Link } from 'react-router-dom'
 import { Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import { updateVariantTags } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid } from 'redux/selectors'
 import {
   VARIANT_SORT_FIELD,
@@ -13,11 +14,15 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { LargeMultiselect } from 'shared/components/form/Inputs'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
+import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
-import { getCurrentProject } from '../selectors'
+import { getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
 const ALL_FILTER = 'ALL'
 
@@ -37,6 +42,69 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
+
+const BASE_FORM_ID = '-linkVariants'
+
+const mapVariantLinkStateToProps = (state, ownProps) => {
+  const familyGuid = ownProps.meta.form.split(BASE_FORM_ID)[0]
+  return {
+    data: getTaggedVariantsByFamily(state)[familyGuid],
+    familyGuid,
+  }
+}
+
+const mapTagInputStateToProps = state => ({
+  options: getProjectTagTypeOptions(state),
+})
+
+const LINK_VARIANT_FIELDS = [
+  {
+    component: connect(mapTagInputStateToProps)(LargeMultiselect),
+    ...TAG_FORM_FIELD,
+  },
+  {
+    name: 'variantGuids',
+    idField: 'variantGuid',
+    component: connect(mapVariantLinkStateToProps)(SelectSavedVariantsTable),
+    columns: [
+      GENES_COLUMN,
+      VARIANT_POS_COLUMN,
+      TAG_COLUMN,
+    ],
+    // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
+    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
+    validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
+  },
+]
+
+const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) =>
+  <UpdateButton
+    modalTitle="Link Saved Variants"
+    modalId={`${familyGuid}${BASE_FORM_ID}`}
+    buttonText="Link Variants"
+    editIconName="linkify"
+    size="medium"
+    formFields={LINK_VARIANT_FIELDS}
+    onSubmit={onSubmit}
+    showErrorPanel
+  />
+
+BaseLinkSavedVariants.propTypes = {
+  familyGuid: PropTypes.string,
+  onSubmit: PropTypes.func,
+}
+
+const mapVariantDispatchToProps = (dispatch, { familyGuid }) => {
+  return {
+    onSubmit: (values) => {
+      const variantGuids = Object.keys(values.variantGuids).filter(
+        variantGuid => values.variantGuids[variantGuid]).join(',')
+      dispatch(updateVariantTags({ ...values, familyGuid, variantGuids }))
+    },
+  }
+}
+
+const LinkSavedVariants = connect(null, mapVariantDispatchToProps)(BaseLinkSavedVariants)
 
 const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProjectSavedVariants, ...props }) => {
   const { familyGuid, variantGuid, analysisGroupGuid } = props.match.params
@@ -108,6 +176,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
+      additionalFilter={(project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null}
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}

@@ -400,7 +400,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.get('x-test-header'), 'test')
         self.assertIsNone(response.get('keep-alive'))
 
-        data = json.dumps({'content': 'Test Body'})
+        data = json.dumps([{'content': 'Test Body'}])
         response = self.client.post(url, content_type='application/json', data=data)
         self.assertEqual(response.status_code, 201)
 
@@ -415,7 +415,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(post_request.headers['Host'], 'localhost:5601')
         self.assertEqual(get_request.headers['Authorization'], 'Basic a2liYW5hOmFiYzEyMw==')
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
-        self.assertEqual(post_request.headers['Content-Length'], '24')
+        self.assertEqual(post_request.headers['Content-Length'], '26')
         self.assertEqual(post_request.body, data.encode('utf-8'))
 
         # Test with error response

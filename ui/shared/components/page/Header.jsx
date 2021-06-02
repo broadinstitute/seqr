@@ -2,11 +2,14 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 
-import { Menu, Header } from 'semantic-ui-react'
+import { Menu, Header, Dropdown } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
+import { updateUser } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
+import { USER_NAME_FIELDS } from 'shared/utils/constants'
+import UpdateButton from '../buttons/UpdateButton'
 
 import AwesomeBar from './AwesomeBar'
 
@@ -15,7 +18,7 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = React.memo(({ user }) =>
+const PageHeader = React.memo(({ user, onSubmit }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length ? [
@@ -23,9 +26,19 @@ const PageHeader = React.memo(({ user }) =>
       user.isAnalyst ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
       user.isDataManager ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
-      <Menu.Item key="user" position="right">
-        <p>Logged in as &nbsp; <b>{user && (user.displayName || user.email)}</b></p>
-      </Menu.Item>,
+      <Menu.Item key="spacer" position="right" />,
+      <Dropdown item key="user" trigger={<span>Logged in as <b>{user.displayName || user.email}</b></span>}>
+        <Dropdown.Menu>
+          <UpdateButton
+            trigger={<Dropdown.Item icon="write" text="Edit User Info" />}
+            modalId="updateUser"
+            modalTitle="Edit User Info"
+            initialValues={user}
+            formFields={USER_NAME_FIELDS}
+            onSubmit={onSubmit}
+          />
+        </Dropdown.Menu>
+      </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ] : <Menu.Item as="a" href="/login/google-oauth2" position="right">Log in</Menu.Item>}
   </HeaderMenu>,
@@ -33,6 +46,7 @@ const PageHeader = React.memo(({ user }) =>
 
 PageHeader.propTypes = {
   user: PropTypes.object,
+  onSubmit: PropTypes.func,
 }
 
 // wrap top-level component so that redux state is passed in as props
@@ -40,6 +54,10 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
+const mapDispatchToProps = {
+  onSubmit: updateUser,
+}
+
 export { PageHeader as PageHeaderComponent }
 
-export default connect(mapStateToProps)(PageHeader)
+export default connect(mapStateToProps, mapDispatchToProps)(PageHeader)

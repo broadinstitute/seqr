@@ -26,7 +26,7 @@ import {
   getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
-import EditHpoTermsButton from './edit-families-and-individuals/EditHpoTermsButton'
+import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
 import EditDatasetsButton from './EditDatasetsButton'
 
 
@@ -158,7 +158,7 @@ const ProjectOverview = React.memo((
   if (user.isPm || (project.hasCaseReview && project.canEdit)) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
   } else if (project.canEdit) {
-    editIndividualsButton = <EditHpoTermsButton />
+    editIndividualsButton = <EditIndividualMetadataButton />
   }
 
   const mmeSubmissionCount = mmeSubmissions.length

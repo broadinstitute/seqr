@@ -4,14 +4,14 @@ import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { GENOME_VERSION_37, GENOME_VERSION_38 } from '../../../utils/constants'
+import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
 
 const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams }) => {
+const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams, getPath }) => {
   let { chrom, pos, genomeVersion } = variant
   if (!urls[genomeVersion] && urls[variant.liftedOverGenomeVersion]) {
     chrom = variant.liftedOverChrom
@@ -19,19 +19,12 @@ const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams }
     genomeVersion = variant.liftedOverGenomeVersion
   }
 
-  const isRegion = parseFloat(value, 10) <= 0
-  let coords
-  if (isRegion) {
-    const posInt = parseInt(pos, 10)
-    coords = `${chrom}-${posInt - 100}-${posInt + 100}`
-  } else {
-    coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
-  }
+  const path = getPath({ chrom, pos, genomeVersion, variant, value })
 
   const queryString = (queryParams && queryParams[genomeVersion]) ? `?${queryParams[genomeVersion]}` : ''
 
   return (
-    <a href={`http://${urls[genomeVersion]}/${isRegion ? 'region' : 'variant'}/${coords}${queryString}`} target="_blank">
+    <a href={`http://${urls[genomeVersion]}/${path}${queryString}`} target="_blank">
       {displayValue || value}
     </a>
   )
@@ -43,9 +36,24 @@ FreqLink.propTypes = {
   displayValue: PropTypes.string,
   variant: PropTypes.object.isRequired,
   queryParams: PropTypes.object,
+  getPath: PropTypes.func,
 }
 
-const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams, acDisplay, precision = 2 }) => {
+const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
+  const isRegion = parseFloat(value, 10) <= 0
+  let coords
+  if (isRegion) {
+    const posInt = parseInt(pos, 10)
+    coords = `${chrom}-${posInt - 100}-${posInt + 100}`
+  } else {
+    coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
+  }
+
+  return `${isRegion ? 'region' : 'variant'}/${coords}`
+}
+
+const FreqSummary = React.memo((props) => {
+  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
@@ -56,7 +64,7 @@ const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams,
 
   return (
     <div>
-      {fieldTitle}<HorizontalSpacer width={5} />
+      {titleContainer ? titleContainer(props) : fieldTitle}<HorizontalSpacer width={5} />
       <FreqValue>
         <b>
           {urls ?
@@ -66,6 +74,7 @@ const FreqSummary = React.memo(({ field, fieldTitle, variant, urls, queryParams,
               value={value}
               displayValue={filterValue}
               variant={variant}
+              getPath={getFreqLinkPath}
             /> : (filterValue || value)
           }
         </b>
@@ -90,9 +99,22 @@ FreqSummary.propTypes = {
   variant: PropTypes.object.isRequired,
   precision: PropTypes.number,
   fieldTitle: PropTypes.string,
+  titleContainer: PropTypes.func,
   urls: PropTypes.object,
   queryParams: PropTypes.object,
   acDisplay: PropTypes.string,
+}
+
+const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
+
+const gnomadLink = ({ fieldTitle, ...props }) => {
+  const [detail, ...linkName] = fieldTitle.split(' ').reverse()
+  return <span><FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} /> {detail}</span>
+}
+
+
+gnomadLink.propTypes = {
+  fieldTitle: PropTypes.string,
 }
 
 const POPULATIONS = [
@@ -105,10 +127,16 @@ const POPULATIONS = [
     urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
     queryParams: { [GENOME_VERSION_37]: 'dataset=exac' },
   },
-  { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' } },
+  {
+    field: 'gnomad_exomes',
+    fieldTitle: 'gnomAD v2 exomes',
+    titleContainer: gnomadLink,
+    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
+  },
   {
     field: 'gnomad_genomes',
-    fieldTitle: 'gnomAD genomes',
+    fieldTitle: 'gnomAD v3 genomes',
+    titleContainer: gnomadLink,
     precision: 3,
     urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
     queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },

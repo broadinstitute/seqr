@@ -58,20 +58,6 @@ MOCK_EXCEL_SHEET.iter_rows.return_value = [[_mock_cell(cell) for cell in row] fo
 class FileUtilsTest(AuthenticationTestCase):
     fixtures = ['users']
 
-    def setUp(self):
-        # Test uploading with xlsx data
-        wb = xl.Workbook()
-        ws = wb[wb.sheetnames[0]]
-        ws['A1'], ws['B1'], ws['C1'] = ['Family ID', 'Individual ID', 'Notes']
-        ws['A2'], ws['B2'], ws['C2'] = [1, 'NA19675', 'An affected individual, additional metadata']
-        ws['A3'], ws['B3']           = [0, 'NA19678']
-        ws['A4']                     = '' # for testing trimming trailing empty rows
-
-        with NamedTemporaryFile() as tmp:
-            wb.save(tmp)
-            tmp.seek(0)
-            self.xlsx_data = tmp.read()
-
     def test_temp_file_upload(self):
         url = reverse(save_temp_file)
         self.check_require_login(url)
@@ -103,10 +89,23 @@ class FileUtilsTest(AuthenticationTestCase):
         with self.assertRaises(IOError):
             load_uploaded_file(uploaded_file_id)
 
-        # Test uploading with returned data and test with file formats other than 'xls' and 'xlsx'
+        # Test uploading with returned data and test with file formats
+        wb = xl.Workbook()
+        ws = wb[wb.sheetnames[0]]
+        ws['A1'], ws['B1'], ws['C1'] = ['Family ID', 'Individual ID', 'Notes']
+        ws['A2'], ws['B2'], ws['C2'] = [1, 'NA19675', 'An affected individual, additional metadata']
+        ws['A3'], ws['B3'] = [0, 'NA19678']
+        ws['A4'] = ''  # for testing trimming trailing empty rows
+
+        with NamedTemporaryFile() as tmp:
+            wb.save(tmp)
+            tmp.seek(0)
+            xlsx_data = tmp.read()
+
+
         for ext, data in TEST_DATA_TYPES.items():
             if ext == 'xls' or ext == 'xlsx':
-                data = self.xlsx_data
+                data = xlsx_data
             response = self.client.post(
                 '{}?parsedData=true'.format(url), {'f': SimpleUploadedFile("test_data.{}".format(ext), data)})
             self.assertEqual(response.status_code, 200)

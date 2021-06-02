@@ -1,6 +1,6 @@
 import logging
 
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value
@@ -11,10 +11,9 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
-
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
@@ -25,11 +24,48 @@ def user_is_data_manager(user):
 def user_is_pm(user):
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
 
+def _has_current_policies(user):
+    if not hasattr(user, 'userpolicy'):
+        return False
+
+    current_privacy = user.userpolicy.privacy_version
+    current_tos = user.userpolicy.tos_version
+    return current_privacy == SEQR_PRIVACY_VERSION and current_tos == SEQR_TOS_VERSION
+
 
 # User access decorators
-analyst_required = user_passes_test(user_is_analyst, login_url=API_LOGIN_REQUIRED_URL)
-data_manager_required = user_passes_test(user_is_data_manager, login_url=API_LOGIN_REQUIRED_URL)
-pm_required = user_passes_test(user_is_pm, login_url=API_LOGIN_REQUIRED_URL)
+def _require_permission(user_permission_test_func, error='User has insufficient permission'):
+    def test_user(user):
+        if not user_permission_test_func(user):
+            raise PermissionDenied(error)
+        return True
+    return test_user
+
+_active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
+_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
+
+def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
+    def decorator(view_func):
+        return login_required(_active_required(view_func), login_url=login_url)
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
+
+def login_and_policies_required(view_func):
+    return login_active_required(_current_policies_required(view_func))
+
+def _user_has_policies_and_passes_test(user_permission_test_func):
+    def decorator(view_func):
+        return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
+    return decorator
+
+analyst_required = _user_has_policies_and_passes_test(user_is_analyst)
+data_manager_required = _user_has_policies_and_passes_test(user_is_data_manager)
+pm_required = _user_has_policies_and_passes_test(user_is_pm)
+pm_or_data_manager_required = _user_has_policies_and_passes_test(
+    lambda user: user_is_data_manager(user) or user_is_pm(user))
+superuser_required = _user_has_policies_and_passes_test(lambda user: user.is_superuser)
+
 
 def _has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()

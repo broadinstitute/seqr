@@ -10,6 +10,10 @@ body {
   color: #111;
 }
 
+#reactjs-root {
+  height: 100%;
+}
+
 .clickable {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -61,4 +65,13 @@ body {
 .ui.search > .results .result .title {
   font-weight: 500;
   font-size: 0.95em;
+}
+
+/* Bug in current version of semantic UI css, fixed in 2.4.2 which is not yet available for the css-only node module */
+.ui.fullscreen.modal {
+  left: auto !important; /* csslint allow: important */
+}
+
+.ui.fullscreen.scrolling.modal {
+  left: auto !important; /* csslint allow: important */
 }

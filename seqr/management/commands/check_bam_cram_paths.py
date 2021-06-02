@@ -1,11 +1,13 @@
 from django.core.management.base import BaseCommand
 
-from seqr.models import IgvSample
-from seqr.utils.file_utils import does_file_exist
-
 import collections
 import logging
 import tqdm
+
+from seqr.models import IgvSample
+from seqr.utils import communication_utils
+from seqr.utils.file_utils import does_file_exist
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +33,13 @@ class Command(BaseCommand):
 
         missing_counter = collections.defaultdict(int)
         guids_of_samples_with_missing_file = set()
+        project_name_to_missing_paths = collections.defaultdict(list)
         for sample in tqdm.tqdm(samples, unit=" samples"):
             if not does_file_exist(sample.file_path):
                 individual_id = sample.individual.individual_id
-                project = sample.individual.family.project.name
-                missing_counter[project] += 1
+                project_name = sample.individual.family.project.name
+                missing_counter[project_name] += 1
+                project_name_to_missing_paths[project_name].append((individual_id, sample.file_path))
                 logger.info('Individual: {}  file not found: {}'.format(individual_id, sample.file_path))
                 if not options.get('dry_run'):
                     guids_of_samples_with_missing_file.add(sample.guid)
@@ -49,3 +53,13 @@ class Command(BaseCommand):
             logger.info('{} files not found:'.format(sum(missing_counter.values())))
             for project_name, c in sorted(missing_counter.items(), key=lambda t: -t[1]):
                 logger.info('   {} in {}'.format(c, project_name))
+
+            # post to slack
+            if not options.get('dry_run'):
+                slack_message = 'Found {} broken bam/cram path(s)\n'.format(sum(missing_counter.values()))
+                for project_name, missing_paths_list in project_name_to_missing_paths.items():
+                    slack_message += "\nIn project {}:\n".format(project_name)
+                    slack_message += "\n".join([
+                        "  {}   {}".format(individual_id, path) for individual_id, path in missing_paths_list
+                    ])
+                communication_utils.safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message)

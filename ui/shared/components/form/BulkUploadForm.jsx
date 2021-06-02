@@ -69,7 +69,7 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
           </Table.HeaderCell>
         </Table.Row>
         {optionalFields.map(field =>
-          <Table.Row key={field.header}>
+          <Table.Row key={field.header} verticalAlign="top">
             <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
             <Table.Cell>{field.description}</Table.Cell>
           </Table.Row>,

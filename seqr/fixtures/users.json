@@ -70,7 +70,7 @@
     "pk": 12,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-03-12T23:09:54.180Z",
         "is_superuser": false,
         "username": "test_user_collaborator",
         "first_name": "Test Collaborator User",
@@ -122,7 +122,7 @@
     "pk": 15,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-03-12T23:09:54.180Z",
         "is_superuser": true,
         "username": "test_superuser",
         "first_name": "Test Superuser",
@@ -140,7 +140,7 @@
     "pk": 16,
     "fields": {
         "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
-        "last_login": null,
+        "last_login": "2020-05-12T23:09:54.180Z",
         "is_superuser": false,
         "username": "test_data_manager",
         "first_name": "Test Data Manager",
@@ -172,12 +172,48 @@
     }
 },
 {
+    "model": "auth.user",
+    "pk": 18,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCyrtyrty+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": "2020-03-12T23:09:54.180Z",
+        "is_superuser": false,
+        "username": "test_user_inactive",
+        "first_name": "Test Inactive User",
+        "last_name": "",
+        "email": "test_user_inactive@test.com",
+        "is_staff": true,
+        "is_active": false,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 19,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCyrtyrty+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "test_user_no_policies",
+        "first_name": "Test No Policy User",
+        "last_name": "",
+        "email": "test_user_no_policy@test.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
   "model": "seqr.userpolicy",
   "pk": 1,
   "fields": {
     "user_id": 10,
-    "privacy_version": 1,
-    "tos_version": 1.1
+    "privacy_version": 2.1,
+    "tos_version": 1.3
   }
 },
 {
@@ -185,8 +221,62 @@
   "pk": 2,
   "fields": {
     "user_id": 11,
-    "privacy_version": 0.7,
-    "tos_version": 0.3
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 3,
+  "fields": {
+    "user_id": 12,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 4,
+  "fields": {
+    "user_id": 13,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 5,
+  "fields": {
+    "user_id": 14,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 6,
+  "fields": {
+    "user_id": 15,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 7,
+  "fields": {
+    "user_id": 16,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
+  }
+},
+{
+  "model": "seqr.userpolicy",
+  "pk": 8,
+  "fields": {
+    "user_id": 17,
+    "privacy_version": 2.1,
+    "tos_version": 1.3
   }
 }
 ]

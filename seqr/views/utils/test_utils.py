@@ -5,11 +5,12 @@ from guardian.shortcuts import assign_perm
 import json
 import mock
 import re
+from urllib.parse import quote_plus, urlparse
 from urllib3_mock import Responses
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
-INITIAL_JSON_REGEX = r'\(window\.initialJSON=(?P<initial_json>[^)]+)'
+WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
 def _initialize_users(cls):
     cls.super_user = User.objects.get(username='test_superuser')
@@ -19,6 +20,8 @@ def _initialize_users(cls):
     cls.manager_user = User.objects.get(username='test_user_manager')
     cls.collaborator_user = User.objects.get(username='test_user_collaborator')
     cls.no_access_user = User.objects.get(username='test_user_no_access')
+    cls.inactive_user = User.objects.get(username='test_user_inactive')
+    cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
@@ -29,6 +32,7 @@ class AuthenticationTestCase(TestCase):
     MANAGER = 'manager'
     COLLABORATOR = 'collaborator'
     AUTHENTICATED_USER = 'authenticated'
+    NO_POLICY_USER = 'no_policy'
 
     super_user = None
     analyst_user = None
@@ -37,6 +41,16 @@ class AuthenticationTestCase(TestCase):
     manager_user = None
     collaborator_user = None
     no_access_user = None
+    inactive_user = None
+    no_policy_user = None
+
+    def setUp(self):
+        patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_PRIVACY_VERSION', 2.1)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_TOS_VERSION', 1.3)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @classmethod
     def setUpTestData(cls):
@@ -50,8 +64,11 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
-    def check_require_login(self, url):
-        self._check_login(url, self.AUTHENTICATED_USER)
+    def check_require_login(self, url, **request_kwargs):
+        self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
+
+    def check_require_login_no_policies(self, url, **request_kwargs):
+        self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
@@ -68,8 +85,8 @@ class AuthenticationTestCase(TestCase):
     def check_data_manager_login(self, url):
         self._check_login(url, self.DATA_MANAGER)
 
-    def check_superuser_login(self, url):
-        self._check_login(url, self.SUPERUSER)
+    def check_superuser_login(self, url, **request_kwargs):
+        self._check_login(url, self.SUPERUSER, **request_kwargs)
 
     def login_base_user(self):
         self.client.force_login(self.no_access_user)
@@ -89,7 +106,8 @@ class AuthenticationTestCase(TestCase):
     def login_data_manager_user(self):
         self.client.force_login(self.data_manager_user)
 
-    def _check_login(self, url, permission_level, request_data=None):
+    def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error',
+                     policy_redirect_url='/api/policy-required-error', permission_denied_error=403):
         """For integration tests of django views that can only be accessed by a logged-in user,
         the 1st step is to authenticate. This function checks that the given url redirects requests
         if the user isn't logged-in, and then authenticates a test user.
@@ -99,8 +117,26 @@ class AuthenticationTestCase(TestCase):
             url (string): The url of the django view being tested.
             permission_level (string): what level of permission this url requires
          """
+        # check that it redirects if you don't login
+        parsed_url = urlparse(url)
+        next_query = quote_plus('?{}'.format(parsed_url.query)) if parsed_url.query else ''
+        next_url = 'next={}{}'.format('/'.join(map(quote_plus, parsed_url.path.split('/'))), next_query)
+        login_required_url = '{}?{}'.format(login_redirect_url, next_url)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)  # check that it redirects if you don't login
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, login_required_url)
+
+        self.client.force_login(self.inactive_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, permission_denied_error)
+
+        self.client.force_login(self.no_policy_user)
+        if permission_level == self.NO_POLICY_USER:
+            return
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '{}?{}'.format(policy_redirect_url, next_url))
 
         self.client.force_login(self.no_access_user)
         if permission_level == self.AUTHENTICATED_USER:
@@ -112,50 +148,54 @@ class AuthenticationTestCase(TestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(request_data))
             else:
                 response = self.client.get(url)
-            self.assertEqual(response.status_code, 403)
+            self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_collaborator()
         if permission_level == self.COLLABORATOR:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403 if permission_level == self.MANAGER else 302)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_analyst_user()
         if permission_level in self.ANALYST:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_pm_user()
         if permission_level in self.PM:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.login_data_manager_user()
         if permission_level in self.DATA_MANAGER:
             return
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, permission_denied_error)
 
         self.client.force_login(self.super_user)
 
-    def get_initial_page_json(self, response):
+    def get_initial_page_window(self, key, response):
         content = response.content.decode('utf-8')
-        self.assertRegex(content, INITIAL_JSON_REGEX)
-        m = re.search(INITIAL_JSON_REGEX, content)
-        return json.loads(m.group('initial_json'))
+        regex = WINDOW_REGEX_TEMPLATE.format(key=key)
+        self.assertRegex(content, regex)
+        m = re.search(regex, content)
+        return json.loads(m.group('value'))
+
+    def get_initial_page_json(self, response):
+        return self.get_initial_page_window('initialJSON', response)
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
@@ -335,6 +375,7 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level = patcher.start()
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
+        super(AnvilAuthenticationTestCase, self).setUp()
 
 
 # inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
@@ -424,7 +465,9 @@ IGV_SAMPLE_FIELDS = {
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}
 
-TAG_FIELDS = {'tagGuid', 'name', 'category', 'color', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids'}
+TAG_FIELDS = {
+    'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
+}
 
 VARIANT_NOTE_FIELDS = {'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy', 'variantGuids'}
 

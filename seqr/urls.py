@@ -6,7 +6,8 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.status import status_view
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \
+    API_POLICY_REQUIRED_URL
 from django.conf.urls import url, include
 from django.contrib import admin
 from django.views.generic.base import RedirectView
@@ -29,8 +30,8 @@ from seqr.views.apis.individual_api import \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
-    receive_hpo_table_handler, \
-    save_hpo_table_handler
+    receive_individuals_metadata_handler, \
+    save_individuals_metadata_table_handler
 
 from seqr.views.apis.case_review_api import \
     update_case_review_discussion, \
@@ -49,9 +50,7 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_main_transcript, \
     update_saved_variant_json
 
-from seqr.views.apis.dashboard_api import \
-    dashboard_page_data, \
-    export_projects_table_handler
+from seqr.views.apis.dashboard_api import dashboard_page_data
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -97,6 +96,7 @@ from seqr.views.apis.users_api import \
     delete_project_collaborator, \
     set_password, \
     update_policies, \
+    update_user, \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
@@ -110,8 +110,9 @@ from seqr.views.apis.summary_data_api import success_story, saved_variants_page,
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
-from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample
+from seqr.views.apis.auth_api import login_required_error, login_view, logout_view, policies_required_error
+from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
+    igv_genomes_proxy
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data
@@ -130,6 +131,7 @@ react_app_pages = [
     'report/.*',
     'data_management/.*',
     'summary_data/.*',
+    'accept_policies',
 ]
 
 no_login_react_app_pages = [
@@ -160,7 +162,6 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
     'dashboard': dashboard_page_data,
-    'dashboard/export_projects_table': export_projects_table_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
 
@@ -183,8 +184,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
-    'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
-    'project/(?P<project_guid>[^/]+)/save_hpo_terms_table/(?P<upload_file_id>[^/]+)': save_hpo_table_handler,
+    'project/(?P<project_guid>[^/]+)/upload_individuals_metadata_table': receive_individuals_metadata_handler,
+    'project/(?P<project_guid>[^/]+)/save_individuals_metadata_table/(?P<upload_file_id>[^/]+)': save_individuals_metadata_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
@@ -216,6 +217,7 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
+    'igv_genomes/(?P<file_path>.*)': igv_genomes_proxy,
 
     'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
@@ -237,6 +239,7 @@ api_endpoints = {
     'login': login_view,
     'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/update': update_user,
     'users/update_policies': update_policies,
 
     'users/get_options': get_all_collaborator_options,
@@ -288,7 +291,8 @@ for url_endpoint, handler_function in api_endpoints.items():
 # login/ logout
 urlpatterns += [
     url('^logout$', logout_view),
-    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
+    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error),
+    url(API_POLICY_REQUIRED_URL.lstrip('/'), policies_required_error),
 ]
 
 kibana_urls = '^(?:{})'.format('|'.join([
