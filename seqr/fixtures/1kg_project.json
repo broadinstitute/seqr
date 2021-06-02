@@ -17,7 +17,7 @@
 	"is_mme_enabled": true,
     "has_case_review": true,
 	"mme_primary_data_owner": "PI",
-    "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
+    "mme_contact_url": "mailto:seqr+test@populationgenomics.org.au,matchmaker@populationgenomics.org.au",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -54,7 +54,7 @@
     "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-    "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
+    "mme_contact_url": "mailto:seqr-test@gmail.com,seqr+test@populationgenomics.org.au",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z"
     }
 },
@@ -1912,7 +1912,7 @@
         "submission_id": "NA19675_1_01",
         "label": "NA19675_1",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org",
+        "contact_href": "mailto:matchmaker@populationgenomics.org.au,seqr+test_user@populationgenomics.org.au",
         "features": [
             {
                 "id": "HP:0001252",
@@ -1956,7 +1956,7 @@
         "submission_id": "NA20885",
         "label": "NA20885",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org",
+        "contact_href": "mailto:matchmaker@populationgenomics.org.au",
         "features": [
             {
                 "id": "HP:0001252",
@@ -1998,7 +1998,7 @@
         "submission_id": "P0004515",
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
-        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
+        "contact_href": "mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au",
         "genomic_features": [
             {
                 "gene": {
@@ -2037,7 +2037,7 @@
         "submission_id": "P0004517",
         "label": "P0004517",
        "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org",
+        "contact_href": "mailto:matchmaker@populationgenomics.org.au",
         "genomic_features": [
             {
                 "gene": {
@@ -2080,7 +2080,7 @@
                     }
                 ],
                 "contact": {
-                    "href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
+                    "href": "mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au",
                     "name": "Baylor UDN Clinical Site"
                 },
                 "id": "P0004515",

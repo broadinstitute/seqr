@@ -23,13 +23,13 @@ export default () =>
               at the <a target="_blank" href="https://cmg.broadinstitute.org/">Center for Mendelian Genomics</a> at the
               &nbsp; <a target="_blank" href="https://www.broadinstitute.org/">Broad Institute of MIT and Harvard</a>
               (Broad CMG). To use <i>matchbox</i>, you must be a collaborator and have your data deposited in the
-              &nbsp; <a target="_blank" href="https://seqr.broadinstitute.org"><i>seqr</i></a> platform
+              &nbsp; <a target="_blank" href="https://seqr.populationgenomics.org.au"><i>seqr</i></a> platform
             </p>
           </Grid.Column>
         </Grid.Row>
         <Grid.Row>
           <Grid.Column>
-            Please contact us at <a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a>.
+            Please contact us at <a href="mailto:matchmaker@populationgenomics.org.au">matchmaker@broad</a>.
           </Grid.Column>
         </Grid.Row>
       </Grid>

@@ -1,17 +1,27 @@
 import React from 'react'
+import styled from 'styled-components'
 import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 
+const PageSegment = styled(Segment).attrs({ padded: 'very' })`
+  padding-left: 20% !important;
+  padding-right: 20% !important;
+`
+
+const Anchor = styled.a.attrs({ target: '_blank' })`
+  font-weight: 400;
+`
+
 export default () =>
   <Segment.Group>
-    <Segment textAlign="center" size="massive" padded="very" secondary>
+    <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
       <VerticalSpacer height={20} />
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
-      <Button as="a" href="/login/google-oauth2" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
-    </Segment>
+      <Button as={Anchor} href="/login/google-oauth2" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
+    </PageSegment>
     <Segment padded>
       <Grid columns="equal">
         <Grid.Column width={3} />
@@ -27,46 +37,68 @@ export default () =>
         <Grid.Column width={3} />
       </Grid>
     </Segment>
-    <Segment textAlign="center" size="big" secondary padded="very">
-      <Header size="large" content={<span>About <i>seqr</i></span>} />
-      <VerticalSpacer height={20} />
+    <PageSegment textAlign="center" size="big" secondary>
+      <Header size="medium">About <i>seqr</i></Header>
+      <VerticalSpacer height={10} />
       Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without
-      proper tools, this data can be inaccessible to researchers. We are developing seqr as an open source web interface
+      proper tools, this data can be inaccessible to researchers. We have developed seqr as an open source web interface
       to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the
       Broad Institute.
-    </Segment>
-    <Segment size="large" padded="very">
+    </PageSegment>
+    <PageSegment size="large" padded="very">
       <Header
         textAlign="center"
         size="medium"
         content={
           <span>
-            Currently, <i>seqr</i> is in closed beta-testing mode and is only used by our group and collaborators
+            <i>seqr</i> is available through four methods:
           </span>}
       />
       <Grid>
         <Grid.Column width={3} />
         <Grid.Column width={10}>
-          <List bulleted>
+          <List ordered>
             <List.Item>
+              This instance is available for collaborators of the &nbsp;
+              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor> with data pre-loaded into projects.
               If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@broadinstitute.org"><b>contact us</b></a>
+              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>.
             </List.Item>
             <List.Item>
-              To get updates about seqr, &nbsp;
-              <a target="_blank" href="http://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join">
-                <b>join our mailing list</b>
-              </a>
+              The Broad <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor> is available for all collaborators within the &nbsp;
+              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor> or
+              Mendelian Genomics Research Center with data pre-loaded into projects
             </List.Item>
             <List.Item>
-              The <a target="_blank" href="http://github.com/broadinstitute/seqr"><b>source code</b></a> is available on
-              github. Please use the &nbsp;
-              <a target="_blank" href="http://github.com/broadinstitute/seqr/issues"><b>github issues page</b></a> to
-              submit bug reports or feature requests
+              Available for use on the <Anchor href="https://anvilproject.org">AnVIL platform</Anchor> where requests
+              can be placed for loading a joint called vcf into seqr
+            </List.Item>
+            <List.Item>
+              Available on GitHub as an &nbsp;
+              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor> for download and local
+              installation
             </List.Item>
           </List>
         </Grid.Column>
         <Grid.Column width={3} />
       </Grid>
-    </Segment>
+    </PageSegment>
+    <PageSegment secondary>
+      <List bulleted>
+        <List.Item>
+          If you are interested in collaborating with our group, please &nbsp;
+          <Anchor href="mailto:seqr@populationgenomics.org.au">contact us</Anchor>
+        </List.Item>
+        <List.Item>
+          Please use the <Anchor href="http://github.com/populationgenomics/seqr/issues">CPG&apos;s GitHub issues page</Anchor> to
+          submit bug reports or feature requests
+        </List.Item>
+        <List.Item>
+          Training videos for use of seqr are available on the &nbsp;
+          <Anchor href="https://www.youtube.com/playlist?list=PLlMMtlgw6qNiY6mkBu111-lpmANKHdGKM">
+            Broad YouTube channel
+          </Anchor>
+        </List.Item>
+      </List>
+    </PageSegment>
   </Segment.Group>

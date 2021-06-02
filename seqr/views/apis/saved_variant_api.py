@@ -1,7 +1,6 @@
 import logging
 import json
 from collections import defaultdict
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
@@ -14,16 +13,15 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
     _get_json_for_models, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_analyst
+    user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
-from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
@@ -57,7 +55,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json['familyGuid']
@@ -83,7 +81,7 @@ def create_saved_variant_handler(request):
     if variant_json.get('note'):
         _create_variant_note(saved_variants, variant_json, request.user)
     elif variant_json.get('tags'):
-        _create_new_tags(saved_variants, variant_json, request.user)
+        _update_tags(saved_variants, variant_json, request.user)
 
     return create_json_response(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
 
@@ -105,7 +103,7 @@ def _get_parsed_variant_args(variant_json, family):
     }
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def create_variant_note_handler(request, variant_guids):
     request_json = json.loads(request.body)
     save_as_gene_note = request_json.get('saveAsGeneNote')
@@ -155,7 +153,7 @@ def _create_variant_note(saved_variants, note_json, user):
     return note
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
@@ -172,7 +170,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
@@ -196,8 +194,31 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def _get_tag_type_create_data(tag, saved_variants=None):
+    variant_tag_type = VariantTagType.objects.get(
+        Q(name=tag['name']),
+        Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
+    )
+    return {'variant_tag_type': variant_tag_type}
+
+
+@login_and_policies_required
 def update_variant_tags_handler(request, variant_guids):
+    return _update_variant_tag_models(
+        request, variant_guids, tag_key='tags', response_guid_key='tagGuids', model_cls=VariantTag,
+        get_tag_create_data=_get_tag_type_create_data, get_tags_json=get_json_for_variant_tags,
+        delete_variants_if_empty=True)
+
+
+@login_and_policies_required
+def update_variant_functional_data_handler(request, variant_guids):
+    return _update_variant_tag_models(
+        request, variant_guids, tag_key='functionalData', model_cls=VariantFunctionalData,
+        get_tag_create_data=lambda tag, **kwargs: {'functional_data_tag': tag.get('name')},
+        get_tags_json=get_json_for_variant_functional_data_tags)
+
+
+def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_tag_create_data, get_tags_json, response_guid_key=None, delete_variants_if_empty=False):
     request_json = json.loads(request.body)
 
     family_guid = request_json.pop('familyGuid')
@@ -211,74 +232,39 @@ def update_variant_tags_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []), request.user)
-    created_tags = _create_new_tags(saved_variants, request_json, request.user)
-    tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
-    tag_updates.update({guid: None for guid in deleted_tag_guids})
+    tag_type = tag_key.lower().rstrip('s')
+    updated_data = request_json.get(tag_key, [])
+    deleted_guids = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type)
 
+    updated_models = _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data)
+    updates = {tag['tagGuid']: tag for tag in get_tags_json(updated_models)}
+    updates.update({guid: None for guid in deleted_guids})
+
+    if not response_guid_key:
+        response_guid_key = '{}Guids'.format(tag_key)
     saved_variants_by_guid = {}
     for saved_variant in saved_variants:
-        tags = saved_variant.varianttag_set.all()
-        saved_variants_by_guid[saved_variant.guid] = {'tagGuids': [t.guid for t in tags]}
-        if not tags:
+        tags = _get_tag_set(saved_variant, tag_type).all()
+        saved_variants_by_guid[saved_variant.guid] = {response_guid_key: [t.guid for t in tags]}
+        if delete_variants_if_empty and not tags:
             if not saved_variant.variantnote_set.count() > 0:
                 saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
         'savedVariantsByGuid': saved_variants_by_guid,
-        'variantTagsByGuid': tag_updates,
+        'variant{}{}ByGuid'.format(tag_key[0].upper(), tag_key[1:]): updates,
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def update_variant_functional_data_handler(request, variant_guids):
-    request_json = json.loads(request.body)
-
-    family_guid = request_json.pop('familyGuid')
-    family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
-
-    all_variant_guids = set(variant_guids.split(','))
-    saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
-    if len(saved_variants) != len(all_variant_guids):
-        error = 'Unable to find the following variant(s): {}'.format(
-            ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    updated_functional_data = request_json.get('functionalData', [])
-    deleted_functional_guids = _delete_removed_tags(
-        saved_variants, all_variant_guids, updated_functional_data, request.user, tag_type='functionaldata')
-
-    updated_functional_models = []
-    for tag in updated_functional_data:
-        if tag.get('tagGuid'):
-            functional_data = VariantFunctionalData.objects.get(guid=tag.get('tagGuid'))
-            update_model_from_json(functional_data, tag, user=request.user, allow_unknown_keys=True)
-        else:
-            functional_data = create_model_from_json(VariantFunctionalData, {
-                'functional_data_tag': tag.get('name'),
-                'metadata': tag.get('metadata'),
-                'search_hash': request_json.get('searchHash'),
-            }, request.user)
-            functional_data.saved_variants.set(saved_variants)
-        updated_functional_models.append(functional_data)
-
-    functional_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_functional_data_tags(updated_functional_models)}
-    functional_updates.update({guid: None for guid in deleted_functional_guids})
-
-    return create_json_response({
-        'savedVariantsByGuid': {saved_variant.guid: {
-            'functionalDataGuids': [t.guid for t in saved_variant.variantfunctionaldata_set.all()],
-        } for saved_variant in saved_variants},
-        'variantFunctionalDataByGuid': functional_updates,
-    })
+def _get_tag_set(saved_variant, tag_type):
+    return getattr(saved_variant, 'variant{}_set'.format(tag_type))
 
 
-def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type='tag'):
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type):
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
-    tag_set = getattr(saved_variants[0], 'variant{}_set'.format(tag_type))
+    tag_set = _get_tag_set(saved_variants[0], tag_type)
     for tag in tag_set.exclude(guid__in=existing_tag_guids):
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
@@ -287,26 +273,27 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, t
     return deleted_tag_guids
 
 
-def _create_new_tags(saved_variants, tags_json, user):
-    tags = tags_json.get('tags', [])
-    new_tags = [tag for tag in tags if not tag.get('tagGuid')]
+def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data):
+    tags = tags_json.get(tag_key, [])
+    updated_models = []
+    for tag in tags:
+        if tag.get('tagGuid'):
+            model = model_cls.objects.get(guid=tag.get('tagGuid'))
+            update_model_from_json(model, tag, user=user, allow_unknown_keys=True)
+        else:
+            create_data = get_tag_create_data(tag, saved_variants=saved_variants)
+            create_data.update({
+                'metadata': tag.get('metadata'),
+                'search_hash': tags_json.get('searchHash'),
+            })
+            model = create_model_from_json(model_cls, create_data, user)
+            model.saved_variants.set(saved_variants)
 
-    new_tag_models = []
-    for tag in new_tags:
-        variant_tag_type = VariantTagType.objects.get(
-            Q(name=tag['name']),
-            Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
-        )
-        tag_model = create_model_from_json(VariantTag, {
-            'variant_tag_type': variant_tag_type,
-            'search_hash': tags_json.get('searchHash'),
-        }, user)
-        tag_model.saved_variants.set(saved_variants)
-        new_tag_models.append(tag_model)
-    return new_tag_models
+        updated_models.append(model)
+    return updated_models
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     reset_cached_search_results(project)
@@ -319,7 +306,7 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user, can_edit=True)

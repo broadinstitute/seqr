@@ -26,7 +26,7 @@ import {
   getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
-import EditHpoTermsButton from './edit-families-and-individuals/EditHpoTermsButton'
+import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
 import EditDatasetsButton from './EditDatasetsButton'
 
 
@@ -143,7 +143,7 @@ const ProjectOverview = React.memo((
                   <div>
                     Loading data from AnVIL to seqr is a slow process, and generally takes a week.
                     If you have been waiting longer than this for your data, please reach
-                    out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
+                    out to <a href="mailto:seqr@populationgenomics.org.au">seqr@populationgenomics.org.au</a>
                   </div>
                 }
               />
@@ -158,7 +158,7 @@ const ProjectOverview = React.memo((
   if (user.isPm || (project.hasCaseReview && project.canEdit)) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
   } else if (project.canEdit) {
-    editIndividualsButton = <EditHpoTermsButton />
+    editIndividualsButton = <EditIndividualMetadataButton />
   }
 
   const mmeSubmissionCount = mmeSubmissions.length

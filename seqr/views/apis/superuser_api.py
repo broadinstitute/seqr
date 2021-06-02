@@ -1,17 +1,17 @@
 import logging
 
-from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
-from settings import API_LOGIN_REQUIRED_URL
-
+from seqr.views.utils.permissions_utils import superuser_required
+from seqr.views.utils.terra_api_utils import is_google_authenticated
 logger = logging.getLogger(__name__)
 
 
-@user_passes_test(lambda u: u.is_active and u.is_superuser, login_url=API_LOGIN_REQUIRED_URL)
+@superuser_required
 def get_all_users(request):
-    users = [_get_json_for_user(user, is_anvil=False) for user in User.objects.exclude(email='')]
+    user_tups = [(user, _get_json_for_user(user, is_anvil=False)) for user in User.objects.exclude(email='')]
+    users = [dict(hasGoogleAuth=is_google_authenticated(user), **user_json) for user, user_json in user_tups]
 
     return create_json_response({'users': users})

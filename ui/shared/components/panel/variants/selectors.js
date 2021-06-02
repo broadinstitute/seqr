@@ -56,6 +56,10 @@ export const getPairedSelectedSavedVariants = createSelector(
       (acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
     const seenCompoundHets = []
     let pairedVariants = variants.reduce((acc, variant) => {
+      if (seenCompoundHets.includes(variant.variantGuid)) {
+        return acc
+      }
+
       const variantCompoundHetGuids = [...[
         ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
         ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
@@ -64,9 +68,14 @@ export const getPairedSelectedSavedVariants = createSelector(
       new Set())].filter(varGuid => selectedVariantsByGuid[varGuid])
 
       if (variantCompoundHetGuids.length) {
-        seenCompoundHets.push(variant.variantGuid)
-        return acc.concat(variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid)).map(
-          varGuid => ([variant, selectedVariantsByGuid[varGuid]])))
+        const unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
+        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort((a, b) =>
+          // sorts manual variants to top of list, as manual variants are missing all populations
+          (a.populations ? 1 : 0) - (b.populations ? 1 : 0),
+        )
+        acc.push(compHet)
+        seenCompoundHets.push(variant.variantGuid, ...unseenGuids)
+        return acc
       }
 
       acc.push(variant)

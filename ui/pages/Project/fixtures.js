@@ -136,7 +136,7 @@ export const STATE1 = {
   },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
-    email: 'test@broadinstitute.org',
+    email: 'seqr+test@populationgenomics.org.au',
     first_name: '',
     id: 1,
     is_active: true,
@@ -320,7 +320,7 @@ export const STATE_WITH_2_FAMILIES = {
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       mmeContactInstitution: 'Broad',
-      mmeContactUrl: 'test@broadinstitute.org',
+      mmeContactUrl: 'seqr+test@populationgenomics.org.au',
       name: '1000 Genomes Demo',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
@@ -328,7 +328,7 @@ export const STATE_WITH_2_FAMILIES = {
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
           displayName: '',
-          email: 'test1@broadinstitute.org',
+          email: 'seqr+test1@populationgenomics.org.au',
           firstName: '',
           hasEditPermissions: true,
           hasViewPermissions: true,
@@ -341,7 +341,7 @@ export const STATE_WITH_2_FAMILIES = {
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
           displayName: '',
-          email: 'test2@broadinstitute.org',
+          email: 'seqr+test2@populationgenomics.org.au',
           firstName: '',
           hasEditPermissions: true,
           hasViewPermissions: true,
@@ -362,7 +362,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
-    email: 'test@broadinstitute.org',
+    email: 'seqr+test@populationgenomics.org.au',
     first_name: '',
     id: 1,
     is_active: true,
@@ -850,7 +850,7 @@ export const STATE_WITH_2_FAMILIES = {
       mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
       createdDate: '2018-05-09T10:29:00.000Z',
       submissionId: 'NA19675_1',
-      contactHref: 'mailto:matchmaker@broadinstitute.org,test@test.com',
+      contactHref: 'mailto:matchmaker@populationgenomics.org.au,test@test.com',
       phenotypes: [
         {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
@@ -957,7 +957,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test': {
       displayName: '',
-      email: 'test@broadinstitute.org',
+      email: 'seqr+test@populationgenomics.org.au',
       firName: '',
       isAnalyst: true,
       last_name: '',
@@ -965,7 +965,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test_user1': {
       displayName: '',
-      email: 'test1@broadinstitute.org',
+      email: 'seqr+test1@populationgenomics.org.au',
       firstName: '',
       isAnalyst: false,
       lastName: '',
@@ -973,7 +973,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     'test_user2': {
       displayName: '',
-      email: 'test2@broadinstitute.org',
+      email: 'seqr+test2@populationgenomics.org.au',
       firstName: '',
       isAnalyst: true,
       lastName: '',

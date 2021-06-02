@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                 ('owners_group',
                  models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='auth.Group')),
                 ('mme_contact_url', models.TextField(
-                    blank=True, default='mailto:matchmaker@broadinstitute.org', null=True)),
+                    blank=True, default='mailto:matchmaker@populationgenomics.org.au', null=True)),
                 ('mme_contact_institution', models.TextField(
                     blank=True, default='Broad Center for Mendelian Genomics', null=True)),
                 ('disease_area', models.CharField(blank=True, choices=[

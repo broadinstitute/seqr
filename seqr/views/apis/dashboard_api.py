@@ -5,19 +5,17 @@ APIs used by the main seqr dashboard page
 import logging
 
 from django.db import models
-from django.contrib.auth.decorators import login_required
 
 from seqr.models import ProjectCategory, Sample, Family, Project
-from seqr.views.utils.export_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
-from seqr.views.utils.permissions_utils import get_project_guids_user_can_view
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_PROJECT_CATEGORY
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = logging.getLogger(__name__)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def dashboard_page_data(request):
     """Returns a JSON object containing information used by the dashboard page:
     ::
@@ -100,55 +98,3 @@ def _retrieve_project_categories_by_guid(project_guids):
         project_categories_by_guid[project_category.guid] = project_category.json()
 
     return project_categories_by_guid
-
-
-@login_required
-def export_projects_table_handler(request):
-    file_format = request.GET.get('file_format', 'tsv')
-
-    projects_by_guid = _get_projects_json(request.user)
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
-
-    header = [
-        'Project',
-        'Description',
-        'Categories',
-        'Created Date',
-        'Families',
-        'Individuals',
-        'Tagged Variants',
-        'WES Samples',
-        'WGS Samples',
-        'RNA Samples',
-    ]
-
-    header.extend([label for key, label in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
-
-    rows = []
-    for project in sorted(projects_by_guid.values(), key=lambda project: project.get('name') or project.get('deprecatedProjectId')):
-        project_categories = ', '.join(sorted(
-            [project_categories_by_guid[category_guid]['name'] for category_guid in project.get('projectCategoryGuids')]
-        ))
-
-        row = [
-            project.get('name') or project.get('deprecatedProjectId'),
-            project.get('description'),
-            project_categories,
-            project.get('createdDate'),
-            project.get('numFamilies'),
-            project.get('numIndividuals'),
-            project.get('numVariantTags'),
-            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_WES, 0),
-            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_WGS, 0),
-            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_RNA, 0),
-        ]
-
-        row.extend([project.get('analysisStatusCounts', {}).get(key, 0) for key, _ in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
-
-        rows.append(row)
-
-    try:
-        response = export_table('projects', header, rows, file_format)
-    except ValueError as e:
-        response = create_json_response({'error': str(e)}, status=400)
-    return response

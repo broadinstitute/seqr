@@ -117,11 +117,15 @@ def _update_pedigree_image(family, user, project_guid=None):
     # run HaploPainter to generate the pedigree image
     png_file_path = os.path.join(tempfile.gettempdir(), "pedigree_image_%s.png" % _random_string(10))
     family_id = family.family_id
+    ped_file_rows = [
+        [family_id] + [indiv[key] for key in ['individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
+        for indiv in individual_records
+    ]
+
     with tempfile.NamedTemporaryFile('w', suffix=".fam", delete=True) as fam_file:
 
         # columns: family, individual id, paternal id, maternal id, sex, affected
-        for i in individual_records:
-            row = [family_id] + [i[key] for key in ['individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
+        for row in ped_file_rows:
             fam_file.write("\t".join(row))
             fam_file.write("\n")
         fam_file.flush()
@@ -134,7 +138,8 @@ def _update_pedigree_image(family, user, project_guid=None):
         completed_process = subprocess.run(haplopainter_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     if not os.path.isfile(png_file_path):
-        logger.error('Failed to generate pedigree image for family {}: {}'.format(family_id, completed_process.stdout))
+        logger.error('Failed to generate pedigree image for family {}: {}'.format(family_id, completed_process.stdout),
+                     extra={'detail': {'ped_file': ped_file_rows}})
         _save_pedigree_image_file(family, None, user)
         return
 

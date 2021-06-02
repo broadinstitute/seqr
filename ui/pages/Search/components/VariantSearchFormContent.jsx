@@ -136,6 +136,15 @@ const secondaryPanel = panel => ({
   ...panel,
   headerProps: { ...panel.headerProps, title: 'Annotations (Second Hit)' },
   name: ANNOTATION_SECONDARY_NAME,
+  helpText: (
+    <span>
+      Apply a secondary annotation filter to compound heterozygous pairs. All pairs of variants will include exactly one
+      variant that matches the above annotation filter and one variant that matches this secondary annotation filter.
+      <br />
+      For recessive searches, homozygous and X-linked recessive variants will be filtered using the above main
+      annotations filter.
+    </span>
+  ),
 })
 const ANNOTATION_SECONDARY_PANEL_MAP = {
   ...secondaryPanel(ANNOTATION_PANEL),

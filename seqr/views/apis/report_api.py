@@ -535,7 +535,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 
 def _validate_airtable_access(user):
-    if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
+    if not (is_google_authenticated(user) and user.email.endswith('populationgenomics.org.au')):
         raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
 
 

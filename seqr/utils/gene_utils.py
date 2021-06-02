@@ -167,6 +167,7 @@ def parse_locus_list_items(request_json):
                 if interval['start'] > interval['end']:
                     raise ValueError
                 get_xpos(interval['chrom'], interval['start'])
+                get_xpos(interval['chrom'], interval['end'])
                 intervals.append(interval)
             except (KeyError, ValueError):
                 invalid_items.append('chr{chrom}:{start}-{end}'.format(

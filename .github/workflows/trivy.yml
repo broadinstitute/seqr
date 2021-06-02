@@ -1,0 +1,91 @@
+
+name: trivy
+on:
+  # runs on default branch
+  schedule:
+    - cron:  '0 22 * * 0' # each Monday at 9am AEST+10 / 10am AEDT+11
+
+jobs:
+  trivy-prod:
+    name: Trivy check
+    runs-on: ubuntu-latest
+
+    env:
+      # BUILDKIT_PROGRESS: plain
+      CLOUDSDK_CORE_DISABLE_PROMPTS: 1
+      DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-prod
+
+    steps:
+      # - uses: actions/checkout@v2
+      - name: gcloud setup
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: seqr-308602
+          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+
+      - name: gcloud docker auth
+        run: |
+          gcloud auth configure-docker australia-southeast1-docker.pkg.dev
+
+      - name: pull dockers
+        run: |
+          docker pull ${{ env.DOCKER_IMAGE }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_IMAGE }}
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          # upload trivvy results to GH security tab
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results-prod.sarif'
+          
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: 'trivy-results-prod.sarif'
+
+  trivy-dev:
+    name: Trivy DEV check
+    runs-on: ubuntu-latest
+
+    env:
+      # BUILDKIT_PROGRESS: plain
+      CLOUDSDK_CORE_DISABLE_PROMPTS: 1
+      DOCKER_IMAGE: australia-southeast1-docker.pkg.dev/seqr-308602/seqr-project/seqr:gcloud-dev
+
+    steps:
+      # - uses: actions/checkout@v2
+      - name: gcloud setup
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: seqr-308602
+          service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
+
+      - name: gcloud docker auth
+        run: |
+          gcloud auth configure-docker australia-southeast1-docker.pkg.dev
+
+      - name: pull dockers
+        run: |
+          docker pull ${{ env.DOCKER_IMAGE }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_IMAGE }}
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          # upload trivvy results to GH security tab
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results-dev.sarif'
+          
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: 'trivy-results-dev.sarif'

@@ -2,9 +2,7 @@ from requests.utils import quote
 
 import json
 import logging
-from anymail.exceptions import AnymailError
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
@@ -14,15 +12,16 @@ from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
-from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions
-from settings import API_LOGIN_REQUIRED_URL, BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
+from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
+    login_and_policies_required, login_active_required
+from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
 logger = logging.getLogger(__name__)
 
 USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_all_collaborator_options(request):
     collaborators = set()
     for project in get_local_access_projects(request.user):
@@ -35,7 +34,7 @@ def get_all_collaborator_options(request):
 def _get_all_analysts():
     return Group.objects.get(name=ANALYST_USER_GROUP).user_set.all()
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def get_all_analyst_options(request):
     analysts = {
         user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in _get_all_analysts()
@@ -65,10 +64,7 @@ def forgot_password(request):
         password_token=quote(user.password, safe=''),
     )
 
-    try:
-        user.email_user('Reset your seqr password', email_content, fail_silently=False)
-    except AnymailError as e:
-        return create_json_response({}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+    user.email_user('Reset your seqr password', email_content, fail_silently=False)
 
     return create_json_response({'success': True})
 
@@ -94,7 +90,15 @@ def set_password(request, username):
     return create_json_response({'success': True})
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
+def update_user(request):
+    request_json = json.loads(request.body)
+    _update_user_from_json(request.user, request_json)
+
+    return create_json_response(_get_json_for_user(request.user))
+
+
+@login_active_required
 def update_policies(request):
     request_json = json.loads(request.body)
     if not request_json.get('acceptedPolicies'):
@@ -110,7 +114,7 @@ def update_policies(request):
     return create_json_response({'currentPolicies': True})
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     if project.workspace_name:
@@ -134,10 +138,7 @@ def create_project_collaborator(request, project_guid):
     )
     logger.info('Created user {} (local)'.format(request_json['email']), extra={'user': request.user})
 
-    try:
-        send_welcome_email(user, request.user)
-    except AnymailError as e:
-        return create_json_response({'error': str(e)}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+    send_welcome_email(user, request.user)
 
     project.can_view_group.user_set.add(user)
 
@@ -152,8 +153,6 @@ def _update_user_from_json(user, request_json, **kwargs):
 
 
 def _update_existing_user(user, project, request_json):
-    _update_user_from_json(user, request_json)
-
     project.can_view_group.user_set.add(user)
     if request_json.get('hasEditPermissions'):
         project.can_edit_group.user_set.add(user)
@@ -165,7 +164,7 @@ def _update_existing_user(user, project, request_json):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -174,7 +173,7 @@ def update_project_collaborator(request, project_guid, username):
     return _update_existing_user(user, project, request_json)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@login_and_policies_required
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)

@@ -1,4 +1,3 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.urls.base import reverse
 import mock
 
@@ -6,37 +5,40 @@ from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 
-MAIN_APP_USER_FIELDS = {'currentPolicies'}
-MAIN_APP_USER_FIELDS.update(USER_FIELDS)
-
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
 
-    def run_react_page(self, google_enabled):
-        url = reverse(main_app)
-        self.check_require_login(url)
-
-        response = self.client.get(url)
+    def _check_page_html(self, response,  user, google_enabled=False, user_key='user'):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
-        self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
-        self.assertEqual(initial_json['user']['username'], 'test_user_no_access')
-        self.assertFalse(initial_json['user']['currentPolicies'])
+        self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
+        self.assertSetEqual(set(initial_json[user_key].keys()), USER_FIELDS)
+        self.assertEqual(initial_json[user_key]['username'], user)
         self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
+
+        nonce = self.get_initial_page_window('__webpack_nonce__', response)
+        self.assertIn('nonce-{}'.format(nonce), response.get('Content-Security-Policy'))
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
         self.assertRegex(content, r'static/app(-.*)js')
         self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
+        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 2)
 
-    def test_react_page(self):
-        self.run_react_page(False)
+    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+    def test_react_page(self, mock_oauth_key):
+        mock_oauth_key.__bool__.return_value = False
+        url = reverse(main_app)
+        self.check_require_login_no_policies(url, login_redirect_url='/login')
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
-    def test_react_page_google_enabled(self):
-        self.run_react_page(True)
+        response = self.client.get(url)
+        self._check_page_html(response, 'test_user_no_policies')
+
+        # test with google auth enabled
+        mock_oauth_key.__bool__.return_value = True
+        response = self.client.get(url)
+        self._check_page_html(response, 'test_user_no_policies', google_enabled=True)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
@@ -60,22 +62,12 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(
             '/users/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
         self.assertEqual(response.status_code, 200)
-        initial_json = self.get_initial_page_json(response)
-        self.assertSetEqual(set(initial_json.keys()), {'meta', 'newUser'})
-        self.assertSetEqual(set(initial_json['newUser'].keys()), MAIN_APP_USER_FIELDS)
-        self.assertEqual(initial_json['newUser']['username'], 'test_user_manager')
-        self.assertFalse(initial_json['newUser']['currentPolicies'])
-        self.assertFalse(initial_json['meta']['googleLoginEnabled'])
+        self._check_page_html(response, 'test_user_manager', user_key='newUser')
 
-        with self.assertRaises(ObjectDoesNotExist):
-            self.client.get('/users/set_password/invalid_pwd')
+        response = self.client.get('/users/set_password/invalid_pwd')
+        self.assertEqual(response.status_code, 404)
 
         # Even if page does not require login, include user metadata if logged in
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        initial_json = self.get_initial_page_json(response)
-        self.assertSetEqual(set(initial_json.keys()), {'meta', 'user'})
-        self.assertSetEqual(set(initial_json['user'].keys()), MAIN_APP_USER_FIELDS)
-        self.assertEqual(initial_json['user']['username'], 'test_user')
-        self.assertTrue(initial_json['user']['currentPolicies'])
+        self._check_page_html(response, 'test_user')
