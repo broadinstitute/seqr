@@ -25,7 +25,6 @@ COMPONENT_PORTS = {
 
     "redis":           [6379],
 
-    "postgres":        [5432], # TODO remove if will not work for port_forward/ print_log
     "seqr":            [8000],
     "pipeline-runner": [30005],
 
@@ -151,7 +150,9 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
         elif component_label == "postgres":
-            continue  # TODO
+            raise ValueError(
+                'Kubernetes log proxy not available for Cloud SQl. See the console for logs: {}'.format(
+                    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22cloudsql_database%22%0A'))
 
         if not previous:
             wait_until_pod_is_running(component_label, deployment_target)
@@ -219,7 +220,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
         elif component_label == 'postgres':
-            continue # TODO
+            continue
 
         wait_until_pod_is_running(component_label, deployment_target)
 
@@ -303,7 +304,6 @@ def delete_component(component, deployment_target=None):
         component (string): component to delete (eg. 'postgres' or 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
-    # TODO delete postgres
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
     elif component == 'elasticsearch':
@@ -317,6 +317,8 @@ def delete_component(component, deployment_target=None):
             pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
+    elif component == 'postgres':
+        run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 

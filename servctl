@@ -249,6 +249,8 @@ elif args.command == DELETE_COMMAND:
     for component in args.components:
         delete_component(component, deployment_target=args.deployment_target)
 
+# TODO add command helper for restoring local postgres db from dev/prod
+
 elif args.command == TROUBLESHOOT_COMMAND:
     troubleshoot_component(args.component, deployment_target=args.deployment_target)
 
