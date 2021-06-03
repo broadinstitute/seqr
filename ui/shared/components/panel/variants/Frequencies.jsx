@@ -21,7 +21,7 @@ const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams, 
 
   let path
   if (variant.populations.gnomad_svs.id) {
-    path = `variant/${variant.populations.gnomad_svs.id}`
+    path = `variant/${variant.populations.gnomad_svs.id.replace('gnomAD-SV_v2.1_', '')}`
   }
   else {
     path = getPath({ chrom, pos, genomeVersion, variant, value })
@@ -62,7 +62,7 @@ const FreqSummary = React.memo((props) => {
   const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
-  if (population.af === null || population.af === undefined || population.id === '') {
+  if (population.af === null || population.af === undefined) {
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'

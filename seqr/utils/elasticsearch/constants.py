@@ -108,7 +108,7 @@ POPULATION_FIELD_CONFIGS = {
     'AN': {},
     'Hom': {},
     'Hemi': {},
-    'ID': {'format_value': str, 'default_value': ''},
+    'ID': {'format_value': str, 'default_value': None},
 }
 for population, pop_config in POPULATIONS.items():
     for freq_field in POPULATION_FIELD_CONFIGS.keys():
