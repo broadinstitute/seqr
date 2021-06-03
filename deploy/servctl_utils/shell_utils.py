@@ -42,7 +42,7 @@ def run(command,
         print_command=True,
         verbose=True,
         env={},
-        is_interactive=False):
+        is_interactive=False, **kwargs):
 
     """Runs the given command in a shell.
 
@@ -72,7 +72,7 @@ def run(command,
         return None
 
     # pipe output to log
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, **kwargs)
     line_buffer = StringIO()
     log_buffer = StringIO()
     previous_is_slash_r = False

@@ -1,4 +1,5 @@
 import collections
+from datetime import datetime
 from threading import Thread
 
 import logging
@@ -337,6 +338,20 @@ def delete_component(component, deployment_target=None):
     # print services and pods status
     run("kubectl get services" % locals(), verbose=True)
     run("kubectl get pods" % locals(), verbose=True)
+
+
+def restore_local_db(db, deployment_target):
+    deployment = deployment_target.replace('gcloud-', '')
+    filename = '{db}_{deployment}_backup_{timestamp}.gz'.format(
+        db=db, deployment=deployment, timestamp=datetime.now().strftime('%Y-%m-%d__%H-%M-%S'))
+    gs_file = 'gs://seqr-backups/{}'.format(filename)
+    run('gcloud sql export sql postgres-{deployment} {gs_file} --database={db} --offload'.format(
+        deployment=deployment, gs_file=gs_file, db=db,
+    ))
+    run('gsutil mv {} .'.format(gs_file))
+    run('psql postgres -c "DROP DATABASE {}"'.format(db))
+    run('psql postgres -c "CREATE DATABASE {}"'.format(db))
+    run('psql {} <  <(gunzip -c {})'.format(db, filename), executable='/bin/bash')
 
 
 def delete_all(deployment_target):
