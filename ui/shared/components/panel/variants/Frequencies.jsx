@@ -19,7 +19,13 @@ const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams, 
     genomeVersion = variant.liftedOverGenomeVersion
   }
 
-  const path = getPath({ chrom, pos, genomeVersion, variant, value })
+  let path
+  if (variant.populations.gnomad_svs.id) {
+    path = `variant/${variant.populations.gnomad_svs.id}`
+  }
+  else {
+    path = getPath({ chrom, pos, genomeVersion, variant, value })
+  }
 
   const queryString = (queryParams && queryParams[genomeVersion]) ? `?${queryParams[genomeVersion]}` : ''
 
@@ -56,7 +62,7 @@ const FreqSummary = React.memo((props) => {
   const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
-  if (population.af === null || population.af === undefined) {
+  if (population.af === null || population.af === undefined || population.id === '') { // I'd like to remove the gnomAD frequency but when gnomAD_SVS_AF dosen't present, the population.af is 0 insteal of none. It is weird.
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
