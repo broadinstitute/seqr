@@ -94,6 +94,7 @@ const IGV_OPTIONS = {
   showCenterGuide: true,
   showCursorTrackingGuide: true,
   showCommandBar: true,
+  loadDefaultGenomes: true, // TODO change once proxy works
 }
 
 const BASE_REFERENCE_URL = '/api/igv_genomes'
@@ -161,9 +162,7 @@ const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
-    <span id={`${individual.displayName}-${type}`}>
-      <PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}
-    </span>,
+    <PedigreeIcon sex={individual.sex} affected={individual.affected} label={individual.displayName} />,
   )
 
   const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.filePath)}`
@@ -318,7 +317,13 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
   const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)
 
   return (
-    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
+    <IGV
+      tracks={tracks}
+      genome={REFERENCE_LOOKUP[project.genomeVersion].id}
+      // reference={REFERENCE_LOOKUP[project.genomeVersion]} TODO change once proxy works
+      locus={locus}
+      {...IGV_OPTIONS}
+    />
   )
 })
 

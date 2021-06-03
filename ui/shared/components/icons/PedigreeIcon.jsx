@@ -7,7 +7,7 @@ import { Icon, Popup } from 'semantic-ui-react'
 
 import { SEX_LOOKUP, AFFECTED_LOOKUP } from 'shared/utils/constants'
 
-const iconStyle = { fontSize: '13px !important' }
+const iconStyle = { fontSize: '13px !important' } // TODO remove, isn't being applied anyways
 const rotate45deg = {
   msTransform: 'rotate(45deg)', /* IE 9 */
   WebkitTransform: 'rotate(45deg)', /* Chrome, Safari, Opera */
