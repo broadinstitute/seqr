@@ -45,7 +45,7 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
 
 def get_component_port_pairs(components=[]):
     """Uses the PORTS dictionary to return a list of (<component name>, <port>) pairs (For example:
-    [('postgres', 5432), ('seqr', 8000), ('seqr', 3000), ... ])
+    [('seqr', 8000), ('seqr', 3000), ... ])
 
     Args:
         components (list): optional list of component names. If not specified, all components will be included.
@@ -130,7 +130,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
-        components (list): one or more kubernetes pod labels (eg. 'postgres' or 'nginx').
+        components (list): one or more kubernetes pod labels (eg. 'seqr' or 'nginx').
             If more than one is specified, logs will be printed from all components in parallel.
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev", etc.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
@@ -206,7 +206,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
 
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
-            pod, along with the port to forward to that pod (eg. ('postgres', 5432))
+            pod, along with the port to forward to that pod (eg. ('elasticsearch', 9200))
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
