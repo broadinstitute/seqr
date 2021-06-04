@@ -150,6 +150,13 @@ const POPULATIONS = [
       [GENOME_VERSION_38]: 'bravo.sph.umich.edu/freeze5/hg38',
     },
   },
+  {
+    field: 'gnomad_svs',
+    fieldTitle: 'gnomAD SVs',
+    precision: 3,
+    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_sv_r2_1' },
+  },
 ]
 
 const Frequencies = React.memo(({ variant }) => {

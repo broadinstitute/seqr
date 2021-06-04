@@ -262,6 +262,11 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    'sv_type_detail': {'response_key': 'svTypeDetail'},
+    'cpx_intervals': {
+      'response_key': 'cpxIntervals',
+      'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
+},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},

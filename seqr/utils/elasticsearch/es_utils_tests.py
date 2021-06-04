@@ -386,6 +386,8 @@ ES_SV_VARIANT = {
           'gene_id': 'ENSG00000228198'
         },
       ],
+      'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
+                        {'type': 'INS', 'chrom': '20', 'start': 11000, 'end': 13000}],
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
@@ -621,12 +623,6 @@ MAPPING_FIELDS = [
     'topmed_AN',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
-    'gnomad_svs_AC',
-    'gnomad_svs_Hom',
-    'gnomad_svs_Hemi',
-    'gnomad_svs_AF',
-    'gnomad_svs_AN',
-    'gnomad_svs_filter_AF',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -648,7 +644,16 @@ SV_MAPPING_FIELDS = [
     'num_exon',
     'svType',
     'StrVCTVRE_score',
+    'sv_type_detail',
+    'cpx_intervals',
+    'gnomad_svs_AC',
+    'gnomad_svs_Hom',
+    'gnomad_svs_Hemi',
+    'gnomad_svs_AF',
+    'gnomad_svs_AN',
+    'gnomad_svs_filter_AF',
 ]
+
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom',
 }
