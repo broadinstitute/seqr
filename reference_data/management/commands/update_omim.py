@@ -92,7 +92,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
     def __init__(self, omim_key=None, cache_parsed_records=False, **kwargs):
-        """Init OMIM handler"""
+        """Init OMIM handler."""
         if not omim_key:
             raise CommandError("omim_key is required")
 
