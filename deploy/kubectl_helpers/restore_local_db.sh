@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -x
+set -x -e
 
 DEPLOYMENT_TARGET=$1
 DB=$2

@@ -2,7 +2,7 @@
 
 DIR=$(dirname $BASH_SOURCE)
 
-set -x
+set -x -e
 
 DEPLOYMENT_TARGET=$1
 COMPONENT=$2
@@ -31,7 +31,7 @@ case ${COMPONENT} in
 esac
 
 if [[ ! ${NAME} ]] ; then
-  NAME=$(${DIR}/utils/get_resource_name.sh pod ${DEPLOYMENT_TARGET} ${COMPONENT})
+  NAME=$(${DIR}/utils/get_pod_name.sh ${DEPLOYMENT_TARGET} ${COMPONENT})
 fi
 
 kubectl port-forward ${NAME} ${PORT} &
