@@ -104,16 +104,16 @@ Allele.propTypes = {
 }
 
 const svGenotype = (genotype, isHemiX) => {
-  const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt > 0
+  const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0
   const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
   if (!hasGenotype) {
-    return <div>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</div>
+    return <span>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</span>
   }
   return (
-    <div>
+    <span>
       {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
-      {isAltCn && <div>CN: <b><i>{genotype.cn}</i></b></div>}
-    </div>
+      {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
+    </span>
   )
 }
 
