@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def check_kubernetes_context(deployment_target, set_if_different=False):
+def check_kubernetes_context(deployment_target):
     """
     Make sure the environment is configured correctly, so that kubectl and other commands
     are actually aimed at the given deployment target and not some other cluster.
 
     Args:
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-        set_if_different (bool): Update the context if the deployment_target doesn't match the current context.
     Return:
         string: The output of `kubectl config current-context`
     """
@@ -48,14 +47,11 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
         raise ValueError("Unexpected value for deployment_target: %s" % deployment_target)
 
     if context_is_different:
-        if set_if_different:
-            set_environment(deployment_target)
-        else:
-            sys.exit(-1)
+        sys.exit(-1)
 
     return kubectl_current_context
 
-
+# TODO use sh command
 def set_environment(deployment_target):
     """Configure the shell environment to point to the given deployment_target using 'gcloud config set-context' and other commands.
 
