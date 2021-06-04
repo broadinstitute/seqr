@@ -80,28 +80,6 @@ def set_environment(deployment_target):
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
-def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_path, direction=1):
-    """Copy file(s) to or from the given component.
-
-    Args:
-        component (string): component label (eg. "seqr")
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-        source_path (string): source file path. If copying files to the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
-        dest_path (string): destination file path. If copying files from the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
-        direction (int): If > 0 the file will be copied to the pod. If < 0, then it will be copied from the pod.
-    """
-    full_pod_name = get_pod_name(component, deployment_target=deployment_target)
-    if not full_pod_name:
-        raise ValueError("No '%(pod_name)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
-    if direction < 0:  # copy from pod
-        source_path = "%s:%s" % (full_pod_name, source_path)
-    elif direction > 0: # copy to pod
-        dest_path = "%s:%s" % (full_pod_name, dest_path)
-
-    run("kubectl cp '%(source_path)s' '%(dest_path)s'" % locals())
-
-
 def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 
