@@ -2,12 +2,25 @@
 
 set -x -e
 
+GCLOUD_PROJECT=seqr-project
+GCLOUD_ZONE=us-central1-b
+
 DEPLOYMENT_TARGET=$1
 DIR=$(dirname $BASH_SOURCE)
 
-set +x
-source ${DIR}/utils/load_settings.sh ${DEPLOYMENT_TARGET}
-set -x
+case ${DEPLOYMENT_TARGET} in
+  dev)
+    CLUSTER_NAME=seqr-cluster-dev
+    NAMESPACE=gcloud-dev
+    ;;
+  prod)
+    CLUSTER_NAME=seqr-cluster-prod
+    NAMESPACE=default
+    ;;
+  *)
+    echo "Invalid deployment target '${DEPLOYMENT_TARGET}'"
+    exit 1
+esac
 
 export KUBECONFIG=~/.kube/config
 gcloud config set core/project ${GCLOUD_PROJECT}
