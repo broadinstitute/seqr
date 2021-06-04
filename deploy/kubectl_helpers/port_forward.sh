@@ -21,9 +21,6 @@ case ${COMPONENT} in
   redis)
     PORT=6379
     ;;
-  postgres)
-    PORT=5432
-    ;;
   seqr)
     PORT=8000
     OPEN_BROWSER=true
