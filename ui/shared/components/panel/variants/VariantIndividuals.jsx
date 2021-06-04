@@ -103,6 +103,20 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
+const svGenotype = (genotype, isHemiX) => {
+  const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt > 0
+  const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
+  if (!hasGenotype) {
+    return <div>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</div>
+  }
+  return (
+    <div>
+      {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
+      {isAltCn && <div>CN: <b><i>{genotype.cn}</i></b></div>}
+    </div>
+  )
+}
+
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
@@ -114,12 +128,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
     }
     {variant.svType ?
       <Header.Content>
-        {Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0 &&
-        <div>
-          {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
-        </div>}
-        {Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2) &&
-          <div>CN: <b><i>{genotype.cn}</i></b></div>}
+        {svGenotype(genotype, isHemiX)}
       </Header.Content> :
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
