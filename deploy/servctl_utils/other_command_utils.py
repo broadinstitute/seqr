@@ -1,4 +1,5 @@
 import collections
+from datetime import datetime
 
 import logging
 import os
@@ -84,7 +85,7 @@ def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_pa
     """Copy file(s) to or from the given component.
 
     Args:
-        component (string): component label (eg. "postgres")
+        component (string): component label (eg. "seqr")
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         source_path (string): source file path. If copying files to the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
         dest_path (string): destination file path. If copying files from the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
@@ -122,6 +123,8 @@ def delete_component(component, deployment_target=None):
             pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
+    elif component == 'postgres':
+        run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 
@@ -142,20 +145,18 @@ def delete_component(component, deployment_target=None):
     run("kubectl get pods" % locals(), verbose=True)
 
 
-def reset_database(database=[], deployment_target=None):
-    """Runs kubectl commands to delete and reset the given database(s).
-
-    Args:
-        component (list): one more database labels - "seqrdb"
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-    """
-    if "seqrdb" in database:
-        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
-        if not postgres_pod_name:
-            logger.error("postgres pod must be running")
-        else:
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
+def restore_local_db(db, deployment_target):
+    deployment = deployment_target.replace('gcloud-', '')
+    filename = '{db}_{deployment}_backup_{timestamp}.gz'.format(
+        db=db, deployment=deployment, timestamp=datetime.now().strftime('%Y-%m-%d__%H-%M-%S'))
+    gs_file = 'gs://seqr-backups/{}'.format(filename)
+    run('gcloud sql export sql postgres-{deployment} {gs_file} --database={db} --offload'.format(
+        deployment=deployment, gs_file=gs_file, db=db,
+    ))
+    run('gsutil mv {} .'.format(gs_file))
+    run('psql postgres -c "DROP DATABASE {}"'.format(db))
+    run('psql postgres -c "CREATE DATABASE {}"'.format(db))
+    run('psql {} <  <(gunzip -c {})'.format(db, filename), executable='/bin/bash')
 
 
 def delete_all(deployment_target):
@@ -173,6 +174,7 @@ def delete_all(deployment_target):
     ], settings)
 
     run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+    run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
 
     for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
         for disk_name in  get_disk_names(disk_label, settings):
