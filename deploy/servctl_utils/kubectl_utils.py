@@ -176,32 +176,3 @@ def get_node_name():
         errors_to_ignore=["array index out of bounds: index 0"],
         verbose=True,
     )
-
-
-def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, print_command=True, verbose=False, is_interactive=False):
-    """Execute an arbitrary linux command inside the given pod. Assumes there's only 1 instance with the given pod_name.
-
-    Args:
-        pod_name (str): either the pod's "name" label (eg. 'phenotips' or 'nginx'), or the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx")
-        command (str): linux command to execute inside the pod
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
-        errors_to_ignore (list): if the command's return code isn't in ok_return_codes, but its
-            output contains one of the strings in this list, the bad return code will be ignored,
-            and this function will return None. Otherwise, it raises a RuntimeException.
-        print_command (bool):
-        verbose (bool):
-        is_interactive (bool): whether the command expects input from the user
-    """
-
-    full_pod_name = get_pod_name(pod_name, deployment_target=deployment_target)
-    if not full_pod_name:
-        # assume it's already a full pod name
-        full_pod_name = pod_name
-
-    it_arg = "-it" if is_interactive else ""
-    run("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(),
-        errors_to_ignore=errors_to_ignore,
-        print_command=print_command,
-        verbose=verbose,
-        is_interactive=is_interactive)
-

@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from deploy.servctl_utils.kubectl_utils import get_pod_name, run_in_pod, is_pod_running, \
+from deploy.servctl_utils.kubectl_utils import get_pod_name, is_pod_running, \
     wait_for_resource, get_resource_name
 from deploy.servctl_utils.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import run

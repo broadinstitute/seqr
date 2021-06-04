@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 
-from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
+from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
     DEPLOYMENT_ENVS, SECRETS
 from deploy.servctl_utils.other_command_utils import delete_component, delete_all, \
     check_kubernetes_context, copy_files_to_or_from_pod
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 DEPLOY_COMMAND = 'deploy'
-REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
 COPY_TO_POD_COMMAND = 'copy-to'
 COPY_FROM_POD_COMMAND = 'copy-from'
@@ -50,11 +49,6 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kuber
 ## DELETE_ALL_COMMAND
 sp = subparsers.add_parser(DELETE_ALL_COMMAND, description="Delete all components + the cluster")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## REDEPLOY_COMMAND
-sp = subparsers.add_parser(REDEPLOY_COMMAND, description="Re-deploy one or more components in their existing pod")
-sp.add_argument("components", nargs="+", help="one or more components to re-deploy", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
 
 
 for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
@@ -121,10 +115,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     deploy(args.deployment_target, components=components_to_deploy, runtime_settings=runtime_settings)
 
     logger.info("==> Deployed " + ", ".join(components_to_deploy))
-
-elif args.command == REDEPLOY_COMMAND:
-    components = args.components
-    redeploy(args.deployment_target, components)
 
 elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
     direction = 1 if args.command == COPY_TO_POD_COMMAND else -1
