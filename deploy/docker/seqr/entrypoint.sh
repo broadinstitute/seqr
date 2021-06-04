@@ -9,12 +9,12 @@ echo PATH: $PATH
 echo PYTHONPATH: $PYTHONPATH
 
 # init gcloud
-if [ $GCLOUD_PROJECT ]; then
-    gcloud config set project $GCLOUD_PROJECT
+if [ "$GCLOUD_PROJECT" ]; then
+    gcloud config set project "$GCLOUD_PROJECT"
 fi
 
-if [ $GCLOUD_ZONE ]; then
-    gcloud config set compute/zone $GCLOUD_ZONE
+if [ "$GCLOUD_ZONE" ]; then
+    gcloud config set compute/zone "$GCLOUD_ZONE"
 fi
 
 if [ -e "/.config/service-account-key.json" ]; then
@@ -30,9 +30,9 @@ mkdir -p /seqr_static_files/generated_files
 # launch django dev server in background
 cd /seqr
 
-if [ $SEQR_GIT_BRANCH ]; then
+if [ "$SEQR_GIT_BRANCH" ]; then
   git pull
-  git checkout $SEQR_GIT_BRANCH
+  git checkout "$SEQR_GIT_BRANCH"
 fi
 
 pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
@@ -43,10 +43,10 @@ chmod 600 ~/.pgpass
 cat ~/.pgpass
 
 # init seqrdb unless it already exists
-if ! psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -l | grep seqrdb; then
+if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
 
-  psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -c 'CREATE DATABASE reference_data_db';
-  psql --host $POSTGRES_SERVICE_HOSTNAME -U postgres -c 'CREATE DATABASE seqrdb';
+  psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE reference_data_db';
+  psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE seqrdb';
   python -u manage.py makemigrations
   python -u manage.py migrate
   python -u manage.py migrate --database=reference_data
@@ -60,7 +60,7 @@ fi
 # launch django server in background
 /usr/local/bin/start_server.sh
 
-if [ $RUN_CRON_JOBS ]; then
+if [ "$RUN_CRON_JOBS" ]; then
     # set up cron jobs
     echo 'SHELL=/bin/bash
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /proc/1/fd/1 2>&1
