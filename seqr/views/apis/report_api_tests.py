@@ -341,13 +341,13 @@ class ReportAPITest(AuthenticationTestCase):
         subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
         self.assertEqual(subject_file[0], '\t'.join([
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
-            '05-dbgap_submission', '06-dbgap_study_id', '07-dbgap_subject_id', '08-multiple_datasets',
-            '09-family_id', '10-paternal_id', '11-maternal_id', '12-twin_id', '13-proband_relationship', '14-sex',
-            '15-ancestry', '16-ancestry_detail', '17-age_at_last_observation', '18-phenotype_group', '19-disease_id',
-            '20-disease_description', '21-affected_status', '22-congenital_status', '23-age_of_onset', '24-hpo_present',
-            '25-hpo_absent', '26-phenotype_description', '27-solve_state']))
+            '05-dbgap_study_id', '06-dbgap_subject_id', '07-multiple_datasets',
+            '08-family_id', '09-paternal_id', '10-maternal_id', '11-twin_id', '12-proband_relationship', '13-sex',
+            '14-ancestry', '15-ancestry_detail', '16-age_at_last_observation', '17-phenotype_group', '18-disease_id',
+            '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
+            '24-hpo_absent', '25-phenotype_description', '26-solve_state']))
         self.assertIn(u'\t'.join([
-            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'Yes', 'dbgap_stady_id_1',
+            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
             'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
             'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
