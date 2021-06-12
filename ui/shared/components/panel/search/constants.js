@@ -485,6 +485,11 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
 
 export const COMPARE_OPTIONS = [
   {
+    key: 'Option_None',
+    text: '',
+    value: null,
+  },
+  {
     key: 'Option_Less',
     text: '<',
     value: 'LT',

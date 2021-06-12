@@ -128,6 +128,10 @@ const updateFilterPredictionValue = (prediction, value) => {
   } else {
     filteredPredictions[prediction].value = value
   }
+
+  if (value === '' && (filteredPredictions[prediction].operator === undefined || filteredPredictions[prediction].operator === null)) {
+    delete filteredPredictions[prediction]
+  }
 }
 
 const updateFilterPredictionOperator = (prediction, operator) => {
@@ -136,6 +140,11 @@ const updateFilterPredictionOperator = (prediction, operator) => {
   } else {
     filteredPredictions[prediction].operator = operator
   }
+
+  if (operator === null) {
+    delete filteredPredictions[prediction]
+  }
+
 }
 
 export const InputGroup = React.memo((props) => {
@@ -353,14 +362,14 @@ export class SearchAnnotations extends React.PureComponent {
       const newOptions = [...previousOptions]
       const optionResult = newOptions.filter((option) => { return option.name === result.title })
       if (optionResult.length === 0) {
-        const hello = {
+        const newOption = {
           name: result.title.toLowerCase(),
           label: result.title,
           isDefault: false,
           value: '',
           operator: '',
         }
-        newOptions.push(hello)
+        newOptions.push(newOption)
       }
       return { options: [{ options: newOptions }] }
     })
