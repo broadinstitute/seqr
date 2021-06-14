@@ -155,7 +155,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
     "sample_provider": "",
-    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
+    "inheritance_description-1": "Autosomal dominant",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
     "hpo_absent": "",
     "novel_mendelian_gene-1": "Y",
@@ -375,15 +375,15 @@ class ReportAPITest(AuthenticationTestCase):
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
-            '17-significance']))
+            '17-significance', '18-discovery_notes']))
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-']), discovery_file)
+            '-', '-', '-', '-']), discovery_file)
         self.assertIn('\t'.join([
             'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-']), discovery_file)
+            '-', '-', '-', '-']), discovery_file)
 
         # Test non-broad analysts do not have access
         self.login_pm_user()
