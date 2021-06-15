@@ -9,6 +9,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.management.base import CommandError
 
+from reference_data.management.commands.utils.update_utils import update_records
+from reference_data.management.commands.update_omim import CachedOmimReferenceDataHandler
 from reference_data.models import Omim, GeneInfo
 
 OMIM_DATA = [
@@ -63,6 +65,8 @@ OMIM_ENTRIES = {
     }
 }
 
+CACHED_OMIM_DATA = "ENSG00000235249\t607413\tAlzheimer disease neuronal thread protein\t\t\t\t\t\t\nENSG00000186092\t612367\tAlkaline phosphatase, plasma level of, QTL 2\tlinkage with rs1780324\tAlkaline phosphatase, plasma level of, QTL 2\t612367\t2\t\tPS300755"
+
 
 class UpdateOmimTest(TestCase):
     databases = '__all__'
@@ -112,7 +116,8 @@ class UpdateOmimTest(TestCase):
     @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.update_omim.logger')
     @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
-    def test_update_omim_command(self, mock_tempfile, mock_omim_logger, mock_utils_logger):
+    @mock.patch('reference_data.management.commands.update_omim.os')
+    def test_update_omim_command(self, mock_os, mock_tempfile, mock_omim_logger, mock_utils_logger):
         tmp_dir = tempfile.gettempdir()
         mock_tempfile.gettempdir.return_value = tmp_dir
         tmp_file = '{}/genemap2.txt'.format(tmp_dir)
@@ -159,12 +164,13 @@ class UpdateOmimTest(TestCase):
         ]
         mock_omim_logger.info.assert_has_calls(calls)
         mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
+        mock_os.system.assert_not_called()
 
         # test with a file_path parameter
         responses.remove(responses.GET, data_url)
         mock_utils_logger.reset_mock()
         mock_omim_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', tmp_file)
+        call_command('update_omim', '--omim-key=test_key', '--cache-parsed-records', tmp_file)
         calls = [
             mock.call('Deleting 2 existing Omim records'),
             mock.call('Parsing file'),
@@ -176,13 +182,21 @@ class UpdateOmimTest(TestCase):
         mock_utils_logger.info.assert_has_calls(calls)
         calls = [
             mock.call('Adding phenotypic series information'),
-            mock.call('Found 1 records with phenotypic series')
+            mock.call('Found 1 records with phenotypic series'),
+            mock.call('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/'),
         ]
         mock_omim_logger.info.assert_has_calls(calls)
         mock_omim_logger.debug.assert_called_with('Fetching entries 0-20')
 
+        mock_os.system.assert_called_with('gsutil mv parsed_omim_records.txt gs://seqr-reference-data/omim/')
+        with open('parsed_omim_records.txt', 'r') as f:
+            self.assertEqual(f.read(), CACHED_OMIM_DATA)
+
+        self._assert_has_expected_omim_records()
+
+    def _assert_has_expected_omim_records(self):
         self.assertEqual(Omim.objects.all().count(), 2)
-        record = Omim.objects.get(gene__gene_symbol = 'OR4F5')
+        record = Omim.objects.get(gene__gene_symbol='OR4F5')
         self.assertEqual(record.comments, 'linkage with rs1780324')
         self.assertEqual(record.gene_description, 'Alkaline phosphatase, plasma level of, QTL 2')
         self.assertEqual(record.mim_number, 612367)
@@ -191,3 +205,29 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(record.phenotype_map_method, '2')
         self.assertEqual(record.phenotype_mim_number, 612367)
         self.assertEqual(record.phenotypic_series_number, 'PS300755')
+
+    @responses.activate
+    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
+    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
+    def test_update_omim_cached_records(self, mock_tempfile, mock_utils_logger):
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        tmp_file = '{}/parsed_omim_records.txt'.format(tmp_dir)
+
+        data_url = 'https://storage.googleapis.com/seqr-reference-data/omim/parsed_omim_records.txt'
+        responses.add(responses.HEAD, data_url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, data_url, body=CACHED_OMIM_DATA)
+
+        update_records(CachedOmimReferenceDataHandler())
+
+        calls = [
+            mock.call('Deleting 3 existing Omim records'),
+            mock.call('Parsing file'),
+            mock.call('Creating 2 Omim records'),
+            mock.call('Done'),
+            mock.call('Loaded 2 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),
+        ]
+        mock_utils_logger.info.assert_has_calls(calls)
+
+        self._assert_has_expected_omim_records()
+

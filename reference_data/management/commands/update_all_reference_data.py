@@ -7,7 +7,7 @@ from reference_data.management.commands.update_human_phenotype_ontology import u
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
 from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
-from reference_data.management.commands.update_omim import OmimReferenceDataHandler
+from reference_data.management.commands.update_omim import OmimReferenceDataHandler, CachedOmimReferenceDataHandler
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
 from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
 from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
@@ -30,6 +30,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         omim_options = parser.add_mutually_exclusive_group(required=True)
         omim_options.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads")
+        omim_options.add_argument('--use-cached-omim', help='Use parsed OMIM from google storage', action='store_true')
         omim_options.add_argument('--skip-omim', help="Don't reload gene constraint", action="store_true")
 
         parser.add_argument('--skip-gencode', help="Don't reload gencode", action="store_true")
@@ -55,7 +56,9 @@ class Command(BaseCommand):
 
         if not options["skip_omim"]:
             try:
-                update_records(OmimReferenceDataHandler(options["omim_key"]))
+                omim_handler = CachedOmimReferenceDataHandler() if options['use_cached_omim'] else \
+                    OmimReferenceDataHandler(options["omim_key"])
+                update_records(omim_handler)
                 updated.append('omim')
             except Exception as e:
                 logger.error("unable to update omim: {}".format(e))
