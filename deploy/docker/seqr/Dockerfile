@@ -118,7 +118,7 @@ ARG SEQR_REPO=https://github.com/broadinstitute/seqr
 ARG SEQR_GIT_BRANCH=master
 
 # update seqr repo
-RUN git clone -q $SEQR_REPO --single-branch --branch $SEQR_GIT_BRANCH
+RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
 
 WORKDIR /seqr
 
