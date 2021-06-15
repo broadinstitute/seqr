@@ -345,11 +345,8 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
         for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
             if len(comp_het_variants) > 1:
                 if len(comp_het_variants) > 2:
-                    discovery_notes = 'The following variants are part of the multinucleotide variant {}'.format(
-                        'variant id')
-                    for variant in comp_het_variants:
-                        discovery_notes += ',{}'.format(variant.id)
-                    variant['discovery_notes'] = discovery_notes
+                    variant['discovery_notes'] = 'The following variants are part of the multinucleotide variant {}: {}'.format(
+                        variant['variantId'], ', '.join([v['variantId'] for v in comp_het_variants ]))
                 else:
                     variant['inheritance_models'] = {'AR-comphet'}
                 main_gene_ids = set()
