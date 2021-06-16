@@ -291,7 +291,7 @@ const DISPLAY_FIELDS = [
   },
   {
     name: 'createdDate',
-    width: 1,
+    width: 2,
     content: 'First Seen',
     verticalAlign: 'top',
     format: val => new Date(val.createdDate).toLocaleDateString(),
@@ -330,7 +330,7 @@ const DISPLAY_FIELDS = [
   },
   {
     name: 'phenotypes',
-    width: 4,
+    width: 3,
     content: 'Phenotypes',
     verticalAlign: 'top',
     downloadColumn: 'Host Contacted Us',
