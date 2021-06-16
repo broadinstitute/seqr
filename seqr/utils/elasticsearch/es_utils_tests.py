@@ -598,6 +598,7 @@ MAPPING_FIELDS = [
     'g1k_POPMAX_AF',
     'g1k_AF',
     'g1k_AN',
+    'g1k_Het',
     'g1k_ID',
     'gnomad_genomes_AC',
     'gnomad_genomes_Hom',
@@ -605,6 +606,7 @@ MAPPING_FIELDS = [
     'gnomad_genomes_AF',
     'gnomad_genomes_AF_POPMAX_OR_GLOBAL',
     'gnomad_genomes_AN',
+    'gnomad_genomes_Het',
     'gnomad_genomes_ID',
     'gnomad_exomes_AC',
     'gnomad_exomes_Hom',
@@ -612,6 +614,7 @@ MAPPING_FIELDS = [
     'gnomad_exomes_AF',
     'gnomad_exomes_AF_POPMAX_OR_GLOBAL',
     'gnomad_exomes_AN',
+    'gnomad_exomes_Het',
     'gnomad_exomes_ID',
     'exac_AC_Adj',
     'exac_AC_Hom',
@@ -619,12 +622,14 @@ MAPPING_FIELDS = [
     'exac_AF_POPMAX',
     'exac_AF',
     'exac_AN_Adj',
+    'exac_Het',
     'exac_ID',
     'topmed_AC',
     'topmed_Hom',
     'topmed_Hemi',
     'topmed_AF',
     'topmed_AN',
+    'topmed_Het',
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
@@ -657,11 +662,12 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_AF',
     'gnomad_svs_AN',
     'gnomad_svs_filter_AF',
+    'gnomad_svs_Het',
     'gnomad_svs_ID',
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom', 'sv_callset_ID',
+    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
