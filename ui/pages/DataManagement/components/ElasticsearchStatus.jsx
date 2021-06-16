@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { Header, Message, Button } from 'semantic-ui-react'
 
-import DeleteButton from 'shared/components/buttons/DeleteButton'
+import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { getElasticsearchStatusLoading, getElasticsearchStatusData } from '../selectors'
-import { loadElasticsearchStatus } from '../reducers'
+import { loadElasticsearchStatus, deleteEsIndex } from '../reducers'
 
 const DISK_STAT_COLUMNS = [
   { name: 'node', content: 'Node name' },
@@ -40,18 +40,23 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
-const DeleteIndexButton = props =>
-  <DeleteButton
-    initialValues={props}
-    confirmDialog={`Are you sure you want to delete "${props.index}"`}
-    onSubmit={console.log} // TODO
-  >
+const BaseDeleteIndexButton = ({ onSubmit, index }) =>
+  <DispatchRequestButton confirmDialog={`Are you sure you want to delete "${index}"`} onSubmit={onSubmit}>
     <Button negative size="small" compact content="Delete Index" />
-  </DeleteButton>
+  </DispatchRequestButton>
 
-DeleteIndexButton.propTypes = {
+BaseDeleteIndexButton.propTypes = {
   index: PropTypes.string,
+  onSubmit: PropTypes.func,
 }
+
+const mapDeleteIndexDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: () => {
+    return dispatch(deleteEsIndex(ownProps.index))
+  },
+})
+
+const DeleteIndexButton = connect(null, mapDeleteIndexDispatchToProps)(BaseDeleteIndexButton)
 
 const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>

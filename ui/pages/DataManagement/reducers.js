@@ -63,6 +63,19 @@ export const uploadQcPipelineOutput = (values) => {
   }
 }
 
+export const deleteEsIndex = (index) => {
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/data_management/delete_index',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, newValue: responseJson }) // TODO probably should use a different reducer or reducer type
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, error: e.message, newValue: {} })
+      },
+    ).post({ index })
+  }
+}
+
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleValueReducer(RECEIVE_ELASTICSEARCH_STATUS, {}),
