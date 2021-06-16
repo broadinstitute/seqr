@@ -39,6 +39,7 @@ def anvil_workspace_page(request, namespace, name):
     :return Redirect to a page depending on if the workspace permissions or project exists.
 
     """
+    return render_app_html(request, status=403)
     project = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if project:
         return redirect('/project/{}/project_page'.format(project.first().guid))
