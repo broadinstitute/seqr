@@ -142,6 +142,17 @@ class EsSearch(object):
                 if callable(val_func):
                     self._sort[0]['_script']['script']['params'][key] = val_func()
 
+        # Add unmapped_type
+        if main_sort_dict and 'unmapped_type' in list(main_sort_dict.values())[0]:
+            sort_field = list(main_sort_dict.keys())[0]
+            field_type = next((
+                metadata['fields'][sort_field] for metadata in self.index_metadata.values()
+                if metadata['fields'].get(sort_field)
+            ), 'double')
+            if field_type == 'keyword':
+                self._sort[0][sort_field]['unmapped_type'] = field_type
+                self._sort[0][sort_field].pop('numeric_type')
+
         if XPOS_SORT_KEY not in self._sort:
             self._sort.append(XPOS_SORT_KEY)
 

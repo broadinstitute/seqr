@@ -3,6 +3,7 @@
 KUBERNETES_VERSION: '1.16.15-gke.4300'
 ELASTICSEARCH_VERSION: 7.8.1
 LINKERD_VERSION: 'stable-2.10.0'
+POSTGRES_VERSION: '12'
 
 DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-8'
 DEFAULT_POOL_NUM_NODES: 2
@@ -14,7 +15,7 @@ NODE_POOLS:
 #  es-loading-nodes:
 #    num_nodes: 2
 
-DISKS: postgres, seqr-static-files, es-data
+DISKS: seqr-static-files, es-data
 
 POSTGRES_DISK_SIZE: '200Gb'
 SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
@@ -64,7 +65,7 @@ DEPLOYMENT_TEMP_DIR: '/tmp'
 STATIC_MEDIA_DIR: '/seqr_static_files'
 MME_CONFIG_DIR: '/mme'
 
-POSTGRES_SERVICE_HOSTNAME: postgres
+POSTGRES_SERVICE_HOSTNAME: '127.0.0.1'
 ELASTICSEARCH_SERVICE_HOSTNAME: elasticsearch-es-http
 KIBANA_SERVICE_HOSTNAME: kibana-kb-http
 REDIS_SERVICE_HOSTNAME: redis
