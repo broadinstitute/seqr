@@ -70,7 +70,11 @@ export const deleteEsIndex = (index) => {
         dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, updates: responseJson })
       },
       (e) => {
-        throw new SubmissionError({ _error: e.body.errors })
+        if (e.body && e.body.error) {
+          throw new SubmissionError({ _error: [e.body.error] })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
       },
     ).post({ index })
   }
