@@ -2,8 +2,9 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
-import { Header, Message } from 'semantic-ui-react'
+import { Header, Message, Button } from 'semantic-ui-react'
 
+import DeleteButton from 'shared/components/buttons/DeleteButton'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -24,11 +25,11 @@ const INDEX_COLUMNS = [
   {
     name: 'projects',
     content: 'Project(s)',
-    format: row => (row.projects ? row.projects.map(project =>
+    format: row => ((row.projects && row.projects.length) ? row.projects.map(project =>
       <div key={project.projectGuid}>
         <Link to={`/project/${project.projectGuid}/project_page`} target="_blank">{project.projectName}</Link>
       </div>,
-    ) : ''),
+    ) : <DeleteIndexButton index={row.index} />),
   },
   { name: 'datasetType', content: 'Caller Type', format: row => (row.datasetType === 'SV' ? 'SV' : 'SNV') },
   { name: 'sampleType', content: 'Data Type' },
@@ -38,6 +39,19 @@ const INDEX_COLUMNS = [
   { name: 'storeSize', content: 'Size' },
   { name: 'sourceFilePath', content: 'File Path' },
 ]
+
+const DeleteIndexButton = props =>
+  <DeleteButton
+    initialValues={props}
+    confirmDialog={`Are you sure you want to delete "${props.index}"`}
+    onSubmit={console.log} // TODO
+  >
+    <Button negative size="small" compact content="Delete Index" />
+  </DeleteButton>
+
+DeleteIndexButton.propTypes = {
+  index: PropTypes.string,
+}
 
 const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
@@ -55,7 +69,7 @@ const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
     />
 
     <Header size="medium" content="Loaded Indices:" />
-    {data.errors && data.errors.length > 0 && <Message error list={data.errors} />}
+    {data.errors && data.errors.length > 0 && <Message error hidden list={data.errors} />}
     <DataTable
       striped
       collapsing
