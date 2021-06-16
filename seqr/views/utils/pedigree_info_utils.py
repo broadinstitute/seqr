@@ -513,18 +513,20 @@ def _get_rgp_dsm_family_notes(row):
         else:
             display = DC.TEST_DISPLAYS[test]
 
-        col_config = DC.TEST_DETAIL_COLUMNS.get(test)
-        if not col_config:
+        if test not in DC.TEST_DETAIL_COLUMNS:
             return display
 
-        relatives = row[col_config[DC.RELATIVES_KEY]] or 'None Specified'
+        def _get_test_detail(column):
+            return row['TESTS_{}_{}'.format(test, column)]
+
+        relatives = _get_test_detail(DC.RELATIVES_KEY) or 'None Specified'
 
         return '{name}. Year: {year}, Lab: {lab}, Relatives: {relatives}{other_relatives}'.format(
             name=display,
-            year=row[col_config[DC.YEAR_KEY]] or 'unspecified',
-            lab=row[col_config[DC.LAB_KEY]] or 'unspecified',
+            year=_get_test_detail(DC.YEAR_KEY) or 'unspecified',
+            lab=_get_test_detail(DC.LAB_KEY) or 'unspecified',
             relatives=', '.join([rel.strip().title().replace('_', ' or ') for rel in relatives.split(',')]),
-            other_relatives=': {}'.format(row[col_config[DC.RELATIVE_SPEC_KEY]] or 'not specified') if DC.OTHER in relatives else '',
+            other_relatives=': {}'.format(_get_test_detail(DC.RELATIVE_DETAILS_KEY) or 'not specified') if DC.OTHER in relatives else '',
         )
 
     def _parent_summary(parent):
@@ -811,7 +813,8 @@ class DSMConstants:
         'PSYCH': 'Psychologist',
         'GASTRO': 'Gastroenterologist',
         'DERMA': 'Dermatologist',
-        'OPHTALOTOL': 'Ophthalmologist',
+        'OPHTHAL': 'Ophthalmologist',
+        'OTOL': 'Otologist',
         'OTHER': 'Other',
     }
 
@@ -843,28 +846,9 @@ class DSMConstants:
 
     YEAR_KEY = 'YEAR'
     LAB_KEY = 'LAB'
-    RELATIVES_KEY = 'RELATIVES'
-    RELATIVE_SPEC_KEY = 'RELATIVE_SPEC'
-    TEST_DETAIL_COLUMNS = {
-        MICROARRAY_TEST: {
-            YEAR_KEY: 'TESTS_MICROARRAY_YEAR',
-            LAB_KEY: 'TESTS_MICROARRAY_LAB',
-            RELATIVES_KEY: 'TESTS_MICROARRAY_FAMILY',
-            RELATIVE_SPEC_KEY: 'TESTS_MICROARRAY_OTHER_DETAILS'
-        },
-        WES_TEST: {
-            YEAR_KEY: 'TESTS_WEXOME_YEAR',
-            LAB_KEY: 'TESTS_WEXOME_LAB',
-            RELATIVES_KEY: 'TESTS_WEXOME_FAMILY',
-            RELATIVE_SPEC_KEY: 'TESTS_WEXOME_FAMILY_OTHER_DETAILS'
-        },
-        WGS_TEST: {
-            YEAR_KEY: 'TESTS_WGENOME_YEAR',
-            LAB_KEY: 'TESTS_WGENOME_LAB',
-            RELATIVES_KEY: 'TESTS_WGENOME_FAMILY',
-            RELATIVE_SPEC_KEY: 'TESTS_WGENOME_FAMILY_OTHER_DETAILS'
-        },
-    }
+    RELATIVES_KEY = 'FAMILY'
+    RELATIVE_DETAILS_KEY = 'FAMILY_OTHER_DETAILS'
+    TEST_DETAIL_COLUMNS = {MICROARRAY_TEST, WES_TEST, WGS_TEST}
 
     TEST_DISPLAYS = {
         KARYOTYPE_TEST: 'Karyotype',
