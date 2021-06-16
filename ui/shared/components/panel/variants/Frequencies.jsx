@@ -62,7 +62,7 @@ const FreqSummary = React.memo((props) => {
   const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
-  if (population.af === null || population.af === undefined) { //When population is "gnomad_svs", how can I remove the frequency for null "gnomad_svs_AF"?
+  if (population.af === null || population.af === undefined) {
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
