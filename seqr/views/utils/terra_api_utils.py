@@ -77,7 +77,6 @@ def remove_token(user):
 
 
 def is_anvil_authenticated(user):
-    return user.is_authenticated
     if not anvil_enabled():
         return False
 
