@@ -92,6 +92,14 @@ def _get_es_meta(client, meta_type, fields, filter_rows=None):
     } for o in getattr(client.cat, meta_type)(format="json", h=','.join(fields))
         if filter_rows is None or filter_rows(o)]
 
+@data_manager_required
+def delete_index(request):
+    # TODO unit test
+    # TODO implement
+    index = json.loads(request.body)['index']
+    client = get_es_client()
+
+    return create_json_response({})
 
 @data_manager_required
 def upload_qc_pipeline_output(request):
