@@ -13,7 +13,7 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
         try:
             anvil_call('get', 'register', response['access_token'])
         except TerraNotFoundException as et:
-            logger.warning('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et)))
+            logger.warning('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et))) # TODO
             return _redirect_login('anvilLoginFailed', backend)
 
 

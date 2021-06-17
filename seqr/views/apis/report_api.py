@@ -563,7 +563,7 @@ def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offse
         return _fetch_airtable_records(
             record_type, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
 
-    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type))
+    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type)) # TODO
     return records
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
@@ -680,7 +680,7 @@ def discovery_sheet(request, project_guid):
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: {}".format(project))
-        logger.info("No data loaded for project: {}".format(project))
+        logger.info("No data loaded for project: {}".format(project), extra={'user': request.user})
         return create_json_response({
             'rows': [],
             'errors': errors,

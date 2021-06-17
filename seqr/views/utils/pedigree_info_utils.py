@@ -94,13 +94,13 @@ def parse_pedigree_table(parsed_file, filename, user, project=None):
     # convert to json and validate
     try:
         if is_merged_pedigree_sample_manifest:
-            logger.info("Parsing merged pedigree-sample-manifest file")
+            logger.info("Parsing merged pedigree-sample-manifest file", extra={'user': user})
             rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
         elif is_datstat_upload:
-            logger.info("Parsing datstat export file")
+            logger.info("Parsing datstat export file", extra={'user': user})
             rows = _parse_datstat_export_format(rows)
         else:
-            logger.info("Parsing regular pedigree file")
+            logger.info("Parsing regular pedigree file", extra={'user': user})
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
@@ -280,7 +280,7 @@ def validate_fam_file_records(records, fail_on_warnings=False):
 
     if errors:
         for error in errors:
-            logger.info("ERROR: " + error)
+            logger.info("ERROR: " + error) # TODO
 
     if warnings:
         for warning in warnings:
@@ -368,7 +368,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     temp_sample_manifest_file.seek(0)
 
     sample_manifest_filename = kit_id+".xlsx"
-    logger.info('Sending sample manifest file {} to {}'.format(sample_manifest_filename, ', '.join(recipients)))
+    logger.info('Sending sample manifest file {} to {}'.format(sample_manifest_filename, ', '.join(recipients)), extra={'user': user})
 
     original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 

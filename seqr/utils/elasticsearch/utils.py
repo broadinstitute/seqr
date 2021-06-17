@@ -1,7 +1,6 @@
 from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
-import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
@@ -11,8 +10,6 @@ from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
-
-logger = logging.getLogger(__name__)
 
 
 class InvalidIndexException(Exception):

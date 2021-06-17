@@ -13,9 +13,6 @@ from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
 
-import logging
-logger = logging.getLogger(__name__)
-
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):

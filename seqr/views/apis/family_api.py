@@ -2,7 +2,6 @@
 APIs used to retrieve and modify Individual fields
 """
 import json
-import logging
 
 from django.contrib.auth.models import User
 
@@ -16,7 +15,6 @@ from seqr.models import Family, FamilyAnalysedBy, Individual
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required
 
-logger = logging.getLogger(__name__)
 
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
@@ -76,8 +74,6 @@ def delete_families_handler(request, project_guid):
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
-
-    logger.info("delete_families_handler %s", request_json)
 
     families_to_delete = request_json.get('families')
     if families_to_delete is None:

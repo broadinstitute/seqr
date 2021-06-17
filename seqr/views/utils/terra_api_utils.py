@@ -139,11 +139,11 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
 
     if exception:
         if handle_errors:
-            logger.warning(str(exception))
+            logger.warning(str(exception), extra={'user': user})
             return {}
         raise exception  # pylint: disable=raising-bad-type
 
-    logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
+    logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)), extra={'user': user})
 
     return json.loads(r.text)
 
@@ -167,7 +167,7 @@ def list_anvil_workspaces(user):
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
     if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), extra={'user': user})
         return r
 
     r = _user_anvil_call('get', path, user)
@@ -187,7 +187,7 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name, m
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
     if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), extra={'user': user})
         return r
 
     # Exceptions are handled to return an empty result for users who have no permission to access the workspace

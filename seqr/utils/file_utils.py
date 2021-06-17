@@ -6,7 +6,7 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-def _run_command(command):
+def _run_command(command, user=None): # TODO
     logger.info('==> {}'.format(command))
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 

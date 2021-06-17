@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
-import logging
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
@@ -35,8 +34,6 @@ from seqr.views.utils.orm_to_json_utils import \
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
-
-logger = logging.getLogger(__name__)
 
 
 GENOTYPE_AC_LOOKUP = {

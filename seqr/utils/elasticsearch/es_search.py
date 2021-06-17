@@ -419,7 +419,7 @@ class EsSearch(object):
     def search(self,  **kwargs):
         indices = self._indices
 
-        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
+        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices))) # TODO
 
         is_single_search, search_kwargs = self._should_execute_single_search(**kwargs)
 

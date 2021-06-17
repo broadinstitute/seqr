@@ -109,7 +109,7 @@ def match_sample_ids_to_sample_records(
     sample_id_to_sample_record = find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
-    logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
+    logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches", extra={'user': user})
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
@@ -134,7 +134,7 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
             del remaining_individuals_dict[individual_id]
 
-        logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
+        logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids", extra={'user': user})
 
         # create new Sample records for Individual records that matches
         if create_sample_records:

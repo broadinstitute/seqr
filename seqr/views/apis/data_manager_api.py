@@ -107,7 +107,7 @@ def upload_qc_pipeline_output(request):
 
     info_message = 'Parsed {} {} samples'.format(
         len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
-    logger.info(info_message)
+    logger.info(info_message, extra={'user': request.user})
     info = [info_message]
     warnings = []
 
@@ -157,13 +157,14 @@ def upload_qc_pipeline_output(request):
         sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
         if len(record['individual_ids']) > 1}
     if multi_individual_samples:
-        logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)))
+        logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)),
+                    extra={'user': request.user})
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
             len(multi_individual_samples), ', '.join(
                 sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
 
     if missing_sample_ids:
-        logger.info('Missing {} samples from qc output'.format(len(missing_sample_ids)))
+        logger.info('Missing {} samples from qc output'.format(len(missing_sample_ids)), extra={'user': request.user})
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
@@ -178,7 +179,7 @@ def upload_qc_pipeline_output(request):
 
     message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
     info.append(message)
-    logger.info(message)
+    logger.info(message, extra={'user': request.user})
 
     return create_json_response({
         'errors': [],
@@ -252,13 +253,13 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_filter_flags))
-        logger.info(message)
+        logger.info(message, extra={'user': user})
         warnings.append(message)
 
     if unknown_pop_filter_flags:
         message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_pop_filter_flags))
-        logger.info(message)
+        logger.info(message, extra={'user': user})
         warnings.append(message)
 
 
@@ -343,7 +344,7 @@ def proxy_to_kibana(request):
 
         return proxy_response
     except (ConnectionError, RequestConnectionError) as e:
-        logger.error(str(e))
+        logger.error(str(e), extra={'user': request.user})
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
 

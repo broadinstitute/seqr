@@ -35,7 +35,7 @@ def login_view(request):
 
     user = users.first()
     if google_auth_enabled() and (user_is_data_manager(user) or user.is_superuser):
-        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user))
+        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user), extra={'user': user})
         error = 'Privileged user must login with Google authentication.'
         return create_json_response({'error': error}, status=401, reason=error)
 
