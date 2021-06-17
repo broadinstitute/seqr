@@ -19,13 +19,7 @@ const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams, 
     genomeVersion = variant.liftedOverGenomeVersion
   }
 
-  let path
-  if (variant.populations.gnomad_svs.id) {
-    path = `variant/${variant.populations.gnomad_svs.id.replace('gnomAD-SV_v2.1_', '')}`
-  }
-  else {
-    path = getPath({ chrom, pos, genomeVersion, variant, value })
-  }
+  const path = getPath({ chrom, pos, genomeVersion, variant, value })
 
   const queryString = (queryParams && queryParams[genomeVersion]) ? `?${queryParams[genomeVersion]}` : ''
 
@@ -46,9 +40,13 @@ FreqLink.propTypes = {
 }
 
 const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
-  const isRegion = parseFloat(value, 10) <= 0
+  const floatValue = parseFloat(value, 10)
+  const isRegion = floatValue <= 0
   let coords
-  if (isRegion) {
+  // eslint-disable-next-line no-restricted-globals
+  if (isNaN(floatValue)) {
+    coords = value
+  } else if (isRegion) {
     const posInt = parseInt(pos, 10)
     coords = `${chrom}-${posInt - 100}-${posInt + 100}`
   } else {
@@ -65,8 +63,9 @@ const FreqSummary = React.memo((props) => {
   if (population.af === null || population.af === undefined) {
     return null
   }
-  const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
-  const filterValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : null
+  const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
+  const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
+  const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
   return (
     <div>
@@ -78,10 +77,10 @@ const FreqSummary = React.memo((props) => {
               urls={urls}
               queryParams={queryParams}
               value={value}
-              displayValue={filterValue}
+              displayValue={displayValue}
               variant={variant}
               getPath={getFreqLinkPath}
-            /> : (filterValue || value)
+            /> : (displayValue || value)
           }
         </b>
         {population.hom !== null && population.hom !== undefined &&
