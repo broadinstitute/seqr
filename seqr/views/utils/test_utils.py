@@ -860,7 +860,7 @@ PARSED_SV_VARIANT = {
         'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
         'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
-        'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': None},
+        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': 'gnomAD-SV_v2.1_BND_1_1'},
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,

@@ -388,6 +388,8 @@ ES_SV_VARIANT = {
       ],
       'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
                         {'type': 'INS', 'chrom': '20', 'start': 11000, 'end': 13000}],
+      'gnomad_svs_ID': 'gnomAD-SV_v2.1_BND_1_1',
+      'gnomad_svs_AF': 0.00679,
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
