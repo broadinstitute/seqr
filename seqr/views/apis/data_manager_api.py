@@ -96,7 +96,7 @@ def _get_es_meta(client, meta_type, fields, filter_rows=None):
 @data_manager_required
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file']
-    raw_records = parse_file(file_path, file_iter(file_path))
+    raw_records = parse_file(file_path, file_iter(file_path, user=request.user))
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 

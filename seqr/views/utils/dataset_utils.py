@@ -55,8 +55,8 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
 
-def load_mapping_file(mapping_file_path):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
+def load_mapping_file(mapping_file_path, user):
+    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
     return _load_mapping_file(file_content)
 
 

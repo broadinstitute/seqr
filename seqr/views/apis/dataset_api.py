@@ -51,7 +51,7 @@ def add_variants_dataset_handler(request, project_guid):
         sample_type = index_metadata['sampleType']
 
         sample_id_to_individual_id_mapping = load_mapping_file(
-            request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
+            request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
 
         loaded_date = timezone.now()
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
