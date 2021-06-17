@@ -87,6 +87,9 @@ const FreqSummary = React.memo((props) => {
         {population.hom !== null && population.hom !== undefined &&
           <span><HorizontalSpacer width={5} />Hom={population.hom}</span>
         }
+        {population.het !== null && population.het !== undefined &&
+          <span><HorizontalSpacer width={5} />Het={population.het}</span>
+        }
         {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined &&
           <span><HorizontalSpacer width={5} />Hemi={population.hemi}</span>
         }
