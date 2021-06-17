@@ -101,14 +101,13 @@ def _get_es_indices(client):
 
 @data_manager_required
 def delete_index(request):
-    # TODO unit test
     index = json.loads(request.body)['index']
     active_index_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
     if active_index_samples:
         projects = {
             sample.individual.family.project.name for sample in active_index_samples.select_related('individual__family__project')
         }
-        return create_json_response({'error': 'Index is still used by: {}'.format(', '.join(projects))}, status=403)
+        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=403)
 
     client = get_es_client()
     client.indices.delete(index)

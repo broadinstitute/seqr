@@ -74,7 +74,7 @@ const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
     />
 
     <Header size="medium" content="Loaded Indices:" />
-    {data.errors && data.errors.length > 0 && <Message error hidden list={data.errors} />}
+    {data.errors && data.errors.length > 0 && <Message error list={data.errors} />}
     <DataTable
       striped
       collapsing
