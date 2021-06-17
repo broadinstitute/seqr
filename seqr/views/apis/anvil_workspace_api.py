@@ -124,7 +124,7 @@ def create_project_from_workspace(request, namespace, name):
     try:
         _send_load_data_email(project, updated_individuals, data_path, request.user)
     except Exception as ee:
-        message = 'AnVIL loading request email exception: {}'.format(request.user, str(ee))
+        message = 'AnVIL loading request email exception: {}'.format(str(ee))
         logger.error(message, extra={'user': request.user})
 
     return create_json_response({'projectGuid':  project.guid})

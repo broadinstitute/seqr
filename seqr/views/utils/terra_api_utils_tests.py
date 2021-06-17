@@ -74,7 +74,7 @@ class TerraApiUtilsCallsCase(TestCase):
         responses.add(responses.GET, url, status=200, body=REGISTER_RESPONSE)
         r = anvil_call('get', 'register', 'ya.EXAMPLE')
         self.assertDictEqual(r['userInfo'], {"userEmail": "test@test.com", "userSubjectId": "123456"})
-        mock_logger.info.assert_called_with('GET https://terra.api/register 200 127 None')
+        mock_logger.info.assert_called_with('GET https://terra.api/register 200 127', extra={'user': None})
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -99,7 +99,7 @@ class TerraApiUtilsCallsCase(TestCase):
         workspaces = list_anvil_workspaces(user)
         self.assertEqual(len(workspaces), 2)
         self.assertEqual(workspaces[1]['workspace']['namespace'], 'my-seqr-billing')
-        mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces?fields=public,workspace.name,workspace.namespace 200 276 test_user')
+        mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces?fields=public,workspace.name,workspace.namespace 200 276', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
         responses.assert_call_count(url, 1)
 
@@ -110,7 +110,7 @@ class TerraApiUtilsCallsCase(TestCase):
         workspaces = list_anvil_workspaces(user)
         self.assertEqual(len(workspaces), 2)
         self.assertEqual(workspaces[1]['workspace']['namespace'], 'my-seqr-billing')
-        mock_logger.info.assert_called_with('Terra API cache hit for: GET {} {}'.format(GET_WORKSPACE_PATH, user))
+        mock_logger.info.assert_called_with('Terra API cache hit for: GET {} {}'.format(GET_WORKSPACE_PATH, user), extra={'user': user})
         mock_redis.return_value.get.assert_called_with('terra_req__{}__{}'.format(user, GET_WORKSPACE_PATH))
         responses.assert_call_count(url, 0)  # no call to the Terra API
 
@@ -162,7 +162,7 @@ class TerraApiUtilsCallsCase(TestCase):
         acl = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertIn('test3@test3.com', acl.keys())
         mock_logger.info.assert_called_with(
-            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 200 425 test_user')
+            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace/acl 200 425', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -171,7 +171,7 @@ class TerraApiUtilsCallsCase(TestCase):
         self.assertDictEqual(r, {})
 
         mock_logger.warning.assert_called_with(
-            'Error: called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status: 401 with a reason: Unauthorized')
+            'Error: called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status: 401 with a reason: Unauthorized', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -179,7 +179,7 @@ class TerraApiUtilsCallsCase(TestCase):
         r = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertDictEqual(r, {})
         mock_logger.warning.assert_called_with(
-            'test_user got access denied (403) from Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Forbidden')
+            'test_user got access denied (403) from Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl with reason: Forbidden', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
 
         mock_logger.reset_mock()
@@ -187,7 +187,7 @@ class TerraApiUtilsCallsCase(TestCase):
         r = user_get_workspace_acl(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertDictEqual(r, {})
         mock_logger.warning.assert_called_with(
-            'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status 404 with reason: Not Found')
+            'test_user called Terra API: GET /api/workspaces/my-seqr-billing/my-seqr-workspace/acl got status 404 with reason: Not Found', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
 
     @responses.activate
@@ -202,7 +202,7 @@ class TerraApiUtilsCallsCase(TestCase):
         permission = user_get_workspace_access_level(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertDictEqual(permission, {"accessLevel": "OWNER"})
         mock_logger.info.assert_called_with(
-            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare 200 24 test_user')
+            'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare 200 24', extra={'user': user})
         self.assertEqual(len(mock_logger.method_calls), 1)
         responses.assert_call_count(url, 1)
 
