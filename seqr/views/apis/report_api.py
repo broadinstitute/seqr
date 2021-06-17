@@ -493,6 +493,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
         raw_records.update(_fetch_airtable_records(
             'Samples',
+            user=user,
             fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
             filter_formula='OR({})'.format(','.join([
                 "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
@@ -525,7 +526,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
     if include_collaborator and collaborator_ids:
         collaborator_map = _fetch_airtable_records(
-            'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
+            'Collaborator', user=user, fields=['CollaboratorID'], filter_formula='OR({})'.format(
                 ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
 
         for sample in sample_records.values():
@@ -539,7 +540,7 @@ def _validate_airtable_access(user):
         raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
 
 
-def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):
+def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None, user=None):
     headers = {'Authorization': 'Bearer {}'.format(AIRTABLE_API_KEY)}
 
     params = {}
@@ -561,9 +562,9 @@ def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offse
 
     if response_json.get('offset'):
         return _fetch_airtable_records(
-            record_type, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
+            record_type, user=user, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
 
-    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type)) # TODO
+    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type), extra={'user': user})
     return records
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
