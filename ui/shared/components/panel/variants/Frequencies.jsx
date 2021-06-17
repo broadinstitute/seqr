@@ -43,8 +43,7 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
   const floatValue = parseFloat(value, 10)
   const isRegion = floatValue <= 0
   let coords
-  // eslint-disable-next-line no-restricted-globals
-  if (isNaN(floatValue)) {
+  if (Number.isNaN(floatValue)) {
     coords = value
   } else if (isRegion) {
     const posInt = parseInt(pos, 10)
@@ -80,7 +79,7 @@ const FreqSummary = React.memo((props) => {
               displayValue={displayValue}
               variant={variant}
               getPath={getFreqLinkPath}
-            /> : (displayValue || value)
+            /> : displayValue
           }
         </b>
         {population.hom !== null && population.hom !== undefined &&
