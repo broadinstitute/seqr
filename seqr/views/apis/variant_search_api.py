@@ -67,7 +67,7 @@ def query_variants_handler(request, search_hash):
     is_all_project_search = _is_all_project_family_search(search_context)
 
     variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
-                                              skip_genotype_filter=is_all_project_search)
+                                              skip_genotype_filter=is_all_project_search, user=request.user)
 
     response_context = {}
     if is_all_project_search and len(variants) == total_results:
@@ -136,7 +136,7 @@ def query_single_variant_handler(request, variant_id):
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
 
-    variant = get_single_es_variant(families, variant_id)
+    variant = get_single_es_variant(families, variant_id, user=request.user)
 
     response = _process_variants([variant], families, request.user)
     response.update(_get_projects_details([families.first().project], request.user))
@@ -245,7 +245,7 @@ def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     _check_results_permission(results_model, request.user)
 
-    gene_counts = get_es_variant_gene_counts(results_model)
+    gene_counts = get_es_variant_gene_counts(results_model, user=request.user)
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
         'genesById': get_genes_for_variant_display(list(gene_counts.keys())),
@@ -261,7 +261,7 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants, _ = get_es_variants(results_model, page=1, load_all=True)
+    variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
     json, variants_to_saved_variants = _get_saved_variants(variants, families)

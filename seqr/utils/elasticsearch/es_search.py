@@ -30,7 +30,7 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, inheritance_search=None,
-                 return_all_queried_families=False):
+                 return_all_queried_families=False, user=None):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
@@ -87,6 +87,7 @@ class EsSearch(object):
 
         self.previous_search_results = previous_search_results or {}
         self._return_all_queried_families = return_all_queried_families
+        self._user = user
 
         self._search = Search()
         self._index_searches = defaultdict(list)
@@ -419,7 +420,7 @@ class EsSearch(object):
     def search(self,  **kwargs):
         indices = self._indices
 
-        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices))) # TODO
+        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)), extra={'user': self._user})
 
         is_single_search, search_kwargs = self._should_execute_single_search(**kwargs)
 
@@ -565,7 +566,8 @@ class EsSearch(object):
             return response_hits, response_total, True, index_name
 
         response_total = response.hits.total['value']
-        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
+        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0),
+                    extra={'user': self._user})
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
     def _parse_hit(self, raw_hit):
@@ -762,7 +764,7 @@ class EsSearch(object):
                 compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
-        logger.info('Total compound het hits: {}'.format(total_compound_het_results))
+        logger.info('Total compound het hits: {}'.format(total_compound_het_results), extra={'user': self._user})
 
         compound_het_results = []
         for k, compound_het_pairs in compound_het_pairs_by_gene.items():
@@ -981,7 +983,7 @@ class EsSearch(object):
             if search.aggs.to_dict():
                 # For compound het search get results from aggregation instead of top level hits
                 search = search[:1]
-                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
+                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name), extra={'user': self._user})
             else:
                 end_index = page * num_results
                 if start_index is None:
@@ -990,11 +992,13 @@ class EsSearch(object):
                     # ES request size limits are limited by offset + size, which is the same as end_index
                     from seqr.utils.elasticsearch.utils import InvalidSearchException
                     raise InvalidSearchException(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
+                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index),
+                        extra={'user': self._user})
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
-                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+                logger.info(
+                    'Loading {} records {}-{}'.format(index_name, start_index, end_index), extra={'user': self._user})
 
             searches.append(search)
         return searches
@@ -1005,7 +1009,7 @@ class EsSearch(object):
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:
             canceled = self._delete_long_running_tasks()
-            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled), extra={'user': self._user})
             raise e
         except elasticsearch.exceptions.TransportError as e:
             if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
@@ -1211,8 +1215,6 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
                 q |= interval_q
             else:
                 q = interval_q
-
-        logger.info(q.to_dict())
 
     filters = [
         {'geneIds': list((genes or {}).keys())},
