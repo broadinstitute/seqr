@@ -146,7 +146,7 @@ def edit_individuals_handler(request, project_guid):
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + related_individuals_json
 
-    errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
+    errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True, user=request.user)
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
@@ -269,7 +269,7 @@ def receive_individuals_table_handler(request, project_guid):
         related_individuals_json = _get_json_for_individuals(
             related_individuals, project_guid=project_guid, family_fields=['family_id'])
 
-        errors, _ = validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
+        errors, _ = validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True, user=request.user)
         if errors:
             return create_json_response({'errors': errors, 'warnings': []}, status=400, reason=errors)
 

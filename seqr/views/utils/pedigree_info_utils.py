@@ -107,7 +107,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None):
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 
-    errors, warnings = validate_fam_file_records(json_records)
+    errors, warnings = validate_fam_file_records(json_records, user=user)
 
     if not errors and is_merged_pedigree_sample_manifest:
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
@@ -213,7 +213,7 @@ def _convert_fam_file_rows_to_json(rows):
     return json_results
 
 
-def validate_fam_file_records(records, fail_on_warnings=False):
+def validate_fam_file_records(records, fail_on_warnings=False, user=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -280,11 +280,11 @@ def validate_fam_file_records(records, fail_on_warnings=False):
 
     if errors:
         for error in errors:
-            logger.info("ERROR: " + error) # TODO
+            logger.info("ERROR: " + error, extra={'user': user})
 
     if warnings:
         for warning in warnings:
-            logger.info("WARNING: " + warning)
+            logger.info("WARNING: " + warning, extra={'user': user})
 
     if fail_on_warnings:
         errors += warnings

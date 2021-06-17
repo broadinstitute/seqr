@@ -20,6 +20,8 @@ class JsonLogFormatter(logging.Formatter):
 
         if getattr(record, 'user', None) and record.user.is_authenticated:
             log_json['user'] = record.user.email
+        elif getattr(record, 'user_email', None):
+            log_json['user'] = record.user_email
 
         if hasattr(record, 'db_update'):
             log_json['dbUpdate'] = record.db_update
