@@ -128,6 +128,10 @@ const updateFilterPredictionValue = (prediction, value) => {
   } else {
     filteredPredictions[prediction].value = value
   }
+  if (value === '' && (filteredPredictions[prediction].operator === undefined || filteredPredictions[prediction].operator === null)) {
+    delete filteredPredictions[prediction]
+  }
+
 }
 
 const updateFilterPredictionOperator = (prediction, operator) => {
