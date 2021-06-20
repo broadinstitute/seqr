@@ -128,10 +128,6 @@ const updateFilterPredictionValue = (prediction, value) => {
   } else {
     filteredPredictions[prediction].value = value
   }
-
-  if (value === '' && (filteredPredictions[prediction].operator === undefined || filteredPredictions[prediction].operator === null)) {
-    delete filteredPredictions[prediction]
-  }
 }
 
 const updateFilterPredictionOperator = (prediction, operator) => {
@@ -180,6 +176,9 @@ export const InputGroup = React.memo((props) => {
               onFocus={() => { }}
               onChange={(operator) => {
                 updateFilterPredictionOperator(option.name, operator)
+                if (operator === null) {
+                  document.getElementById(option.name).value = ''
+                }
                 if (!isDefaultGroup) {
                   handleOptionOperatorUpdate(option, operator)
                 }
