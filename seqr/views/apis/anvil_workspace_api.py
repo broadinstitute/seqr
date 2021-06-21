@@ -1,6 +1,4 @@
 """APIs for management of projects related to AnVIL workspaces."""
-
-import logging
 import json
 import time
 
@@ -21,10 +19,11 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import does_file_exist
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
@@ -125,7 +124,7 @@ def create_project_from_workspace(request, namespace, name):
         _send_load_data_email(project, updated_individuals, data_path, request.user)
     except Exception as ee:
         message = 'AnVIL loading request email exception: {}'.format(str(ee))
-        logger.error(message, extra={'user': request.user})
+        logger.error(message, request.user)
 
     return create_json_response({'projectGuid':  project.guid})
 

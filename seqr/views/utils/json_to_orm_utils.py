@@ -1,12 +1,11 @@
-import logging
 from django.core.exceptions import PermissionDenied
 
 from seqr.models import Individual
-from seqr.utils.logging_utils import log_model_update
+from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.json_utils import _to_snake_case
 from seqr.views.utils.permissions_utils import user_is_analyst
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 def update_project_from_json(project, json, user, allow_unknown_keys=False):

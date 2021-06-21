@@ -1,13 +1,13 @@
-import logging
 import os
 import subprocess
 
+from seqr.utils.logging_utils import SeqrLogger
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 def _run_command(command, user=None):
-    logger.info('==> {}'.format(command), extra={'user': user})
+    logger.info('==> {}'.format(command), user)
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
 

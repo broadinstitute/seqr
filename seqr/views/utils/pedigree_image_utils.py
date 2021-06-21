@@ -62,7 +62,7 @@ def _get_parsed_individuals(family, user, project_guid=None):
 
     if not parent_ids_to_children_map:
         logger.warning('Unable to generate for pedigree image for family {}: no parents specified'.format(family.family_id),
-                       extra={'user': user})
+                       user)
         _save_pedigree_image_file(family, None, user)
         return None
 
@@ -140,15 +140,15 @@ def _update_pedigree_image(family, user, project_guid=None):
 
     if not os.path.isfile(png_file_path):
         logger.error('Failed to generate pedigree image for family {}: {}'.format(family_id, completed_process.stdout),
-                     extra={'detail': {'ped_file': ped_file_rows}, 'user': user})
+                     user, detail={'ped_file': ped_file_rows})
         _save_pedigree_image_file(family, None, user)
         return
 
     if completed_process.returncode:
         logger.error('Generated pedigree image for family {} with exit status {}: {}'.format(
-            family_id, completed_process.returncode, completed_process.stdout), extra={'user': user})
+            family_id, completed_process.returncode, completed_process.stdout), user)
     elif completed_process.stdout:
-        logger.info(completed_process.stdout, extra={'user': user})
+        logger.info(completed_process.stdout, user)
 
     _save_pedigree_image_file(family, png_file_path, user)
 
