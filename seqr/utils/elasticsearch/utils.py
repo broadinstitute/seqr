@@ -147,7 +147,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     return variant_results, es_search.previous_search_results.get('total_results')
 
 
-def get_es_variant_gene_counts(search_model, user=None):
+def get_es_variant_gene_counts(search_model, user):
     gene_counts, _ = get_es_variants(search_model, es_search_cls=EsGeneAggSearch, sort=None, user=user)
     return gene_counts
 

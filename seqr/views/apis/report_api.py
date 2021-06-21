@@ -682,7 +682,6 @@ def discovery_sheet(request, project_guid):
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: {}".format(project))
-        logger.info("No data loaded for project: {}".format(project), request.user)
         return create_json_response({
             'rows': [],
             'errors': errors,

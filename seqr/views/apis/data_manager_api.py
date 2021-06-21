@@ -179,14 +179,14 @@ def upload_qc_pipeline_output(request):
         sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
         if len(record['individual_ids']) > 1}
     if multi_individual_samples:
-        logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)),
+        logger.warning('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)),
                     request.user)
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
             len(multi_individual_samples), ', '.join(
                 sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
 
     if missing_sample_ids:
-        logger.info('Missing {} samples from qc output'.format(len(missing_sample_ids)), request.user)
+        logger.warning('Missing {} samples from qc output'.format(len(missing_sample_ids)), request.user)
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
@@ -201,7 +201,6 @@ def upload_qc_pipeline_output(request):
 
     message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
     info.append(message)
-    logger.info(message, request.user)
 
     return create_json_response({
         'errors': [],
@@ -275,13 +274,13 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_filter_flags))
-        logger.info(message, user)
+        logger.warning(message, user)
         warnings.append(message)
 
     if unknown_pop_filter_flags:
         message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_pop_filter_flags))
-        logger.info(message, user)
+        logger.warning(message, user)
         warnings.append(message)
 
 

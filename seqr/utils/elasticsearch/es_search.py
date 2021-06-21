@@ -991,8 +991,7 @@ class EsSearch(object):
                     # ES request size limits are limited by offset + size, which is the same as end_index
                     from seqr.utils.elasticsearch.utils import InvalidSearchException
                     raise InvalidSearchException(
-                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index),
-                    )
+                        'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
