@@ -1,10 +1,11 @@
+import logging
+
 from django.shortcuts import redirect
 from urllib.parse import urlencode
 
-from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.terra_api_utils import anvil_call, TerraNotFoundException
 
-logger = SeqrLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def validate_anvil_registration(backend, response, *args, **kwargs):
@@ -13,14 +14,14 @@ def validate_anvil_registration(backend, response, *args, **kwargs):
             anvil_call('get', 'register', response['access_token'])
         except TerraNotFoundException as et:
             logger.warning('User {} is trying to login without registration on AnVIL. {}'.format(response['email'], str(et)),
-                           user_email=response['email'])
+                           extra={'user_email': response['email']})
             return _redirect_login('anvilLoginFailed', backend)
 
 
 def validate_user_exist(backend, response, user=None, *args, **kwargs):
     if not user:
         logger.warning('Google user {} is trying to login without an existing seqr account ({}).'
-                       .format(response['email'], backend.name), user_email=response['email'])
+                       .format(response['email'], backend.name), extra={'user_email': response['email']})
         return _redirect_login('googleLoginFailed', backend)
 
 
@@ -33,6 +34,6 @@ def _redirect_login(query_param, backend):
 
 
 def log_signed_in(backend, response, is_new=False, *args, **kwargs):
-    logger.info('Logged in {} ({})'.format(response['email'], backend.name), user_email=response['email'])
+    logger.info('Logged in {} ({})'.format(response['email'], backend.name), extra={'user_email': response['email']})
     if is_new:
-        logger.info('Created user {} ({})'.format(response['email'], backend.name), user_email=response['email'])
+        logger.info('Created user {} ({})'.format(response['email'], backend.name), extra={'user_email': response['email']})
