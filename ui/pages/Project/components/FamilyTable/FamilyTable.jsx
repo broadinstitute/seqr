@@ -58,6 +58,7 @@ class FamilyTableRow extends React.PureComponent {
             tableName={tableName}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
+            disableEdit={!this.state.showDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
             showIndividuals={this.state.showDetails}
           />
