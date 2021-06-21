@@ -45,7 +45,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
-                                               extra={'user': self.collaborator_user})
+                                               self.collaborator_user)
 
         self.login_manager()
         return response
@@ -206,7 +206,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_email.side_effect = Exception('Something wrong while sending email.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('AnVIL loading request email exception: Something wrong while sending email.', extra={'user': self.manager_user})
+        mock_api_logger.error.assert_called_with('AnVIL loading request email exception: Something wrong while sending email.', self.manager_user)
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

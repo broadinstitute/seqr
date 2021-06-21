@@ -7,7 +7,6 @@
 
 """
 import collections
-import logging
 import os
 import random
 import subprocess
@@ -16,11 +15,11 @@ import tempfile
 from django.core.files import File
 
 from seqr.models import Individual
-from seqr.utils.logging_utils import log_model_update
+from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 def update_pedigree_images(families, user, project_guid=None):

@@ -53,7 +53,7 @@ class PedigreeImageTest(TestCase):
             mock.call('\t'.join(['1', 'NA19679', '0', '0', '2', '1'])),
             mock.call('\n'),
         ])
-        mock_logger.info.assert_any_call('Generated pedigree', extra={'user': None})
+        mock_logger.info.assert_any_call('Generated pedigree', None)
         mock_logger.warning.assert_not_called()
         mock_logger.error.assert_not_called()
 
@@ -84,7 +84,7 @@ class PedigreeImageTest(TestCase):
             mock.call('\n'),
         ])
         mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_called_with('Generated pedigree image for family 1 with exit status 1: Error!', extra={'user': None})
+        mock_logger.error.assert_called_with('Generated pedigree image for family 1 with exit status 1: Error!', None)
 
         # Do not generate for families with one individual
         mock_tempfile_file.write.reset_mock()
@@ -106,7 +106,7 @@ class PedigreeImageTest(TestCase):
         self.assertFalse(bool(pedigree_image))
         mock_run.assert_not_called()
         mock_tempfile_file.write.assert_not_called()
-        mock_logger.warning.assert_called_with('Unable to generate for pedigree image for family 12: no parents specified', extra={'user': None})
+        mock_logger.warning.assert_called_with('Unable to generate for pedigree image for family 12: no parents specified', None)
         mock_logger.error.assert_not_called()
 
         # Alert when generation fails
@@ -133,6 +133,5 @@ class PedigreeImageTest(TestCase):
             mock.call('\n'),
         ])
         mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_called_with('Failed to generate pedigree image for family 1: Error!', extra={
-            'detail': {'ped_file': records}, 'user': None})
+        mock_logger.error.assert_called_with('Failed to generate pedigree image for family 1: Error!', None, detail={'ped_file': records})
 

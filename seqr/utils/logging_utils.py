@@ -47,7 +47,7 @@ class SeqrLogger(object):
     def _log(self, level, message, user, **kwargs):
         self._logger.log(level, message, extra=dict(user=user, **kwargs))
 
-    def debug(self, *args, **kwargs):
+    def debug(self, *args, **kwargs):\
         self._log(logging.DEBUG, *args, **kwargs)
 
     def info(self, *args, **kwargs):

@@ -88,7 +88,8 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid index')
-        mock_error_logger.assert_called_with('Invalid index', extra=mock.ANY)
+        mock_error_logger.assert_called_with(
+            'Invalid index', self.collaborator_user, http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY, detail=None)
 
         mock_get_variants.side_effect = InvalidSearchException('Invalid search')
         mock_error_logger.reset_mock()
