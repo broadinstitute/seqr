@@ -331,6 +331,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
     gene_ids = set()
     for family_guid, saved_variants in saved_variants_by_family.items():
         potential_com_het_gene_variants = defaultdict(list)
+        potential_mnvs = defaultdict(lambda: defaultdict(list))
         for variant in saved_variants:
             variant['main_transcript'] = _get_variant_main_transcript(variant)
             if variant['main_transcript']:
@@ -342,22 +343,31 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             variant['inheritance_models'] = inheritance_models
             for gene_id in potential_compound_het_gene_ids:
                 potential_com_het_gene_variants[gene_id].append(variant)
+            for tag in variant['discovery_tag_names']:
+                for guid in variant.get('discovery_tag_guids_by_name', {}).get(tag):
+                    potential_mnvs[tag][guid].append(variant)
+        mnv_genes = set()
+        for tag_guid, variants_by_tag_guid in potential_mnvs.items():
+            mnvs = next((variants for variants in variants_by_tag_guid.values() if len(variants) > 2), None)
+            if not mnvs:
+                continue
+            parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
+            nested_mnvs = [v for v in mnvs if v.get('populations')]
+            mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
+            discovery_notes = 'The following variants are part of the complex structural variant {}: {}'.format(
+                parent_mnv['svName'],
+                ', '.join([_get_sv_name(v) for v in nested_mnvs])) if parent_mnv.get('svType') else \
+                'The following variants are part of the multinucleotide variant {}: {}'.format(
+                    parent_mnv['variantId'], ', '.join([v['variantId'] for v in nested_mnvs]))
+            for variant in mnvs:
+                variant['discovery_notes'] = discovery_notes
         for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
+            if gene_id in mnv_genes:
+                continue
             if len(comp_het_variants) > 1:
-                discovery_notes = ''
-                if len(comp_het_variants) > 2:
-                    if variant.get('svType'):
-                        discovery_notes = 'The following variants are part of the complex structural variant {}: {}'.format(
-                            variant['svName'], ', '.join([v['svName'] for v in comp_het_variants]))
-                    else:
-                        discovery_notes = 'The following variants are part of the multinucleotide variant {}: {}'.format(
-                            variant['variantId'], ', '.join([v['variantId'] for v in comp_het_variants]))
                 main_gene_ids = set()
                 for variant in comp_het_variants:
-                    if discovery_notes:
-                        variant['discovery_notes'] = discovery_notes
-                    else:
-                        variant['inheritance_models'] = {'AR-comphet'}
+                    variant['inheritance_models'] = {'AR-comphet'}
                     if variant['main_transcript']:
                         main_gene_ids.add(variant['main_transcript']['geneId'])
                     else:
@@ -771,6 +781,9 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
         if parse_json:
             parsed_variant = variant_by_guid[saved_variant.guid]
             parsed_variant['discovery_tag_names'] = {vt.variant_tag_type.name for vt in saved_variant.discovery_tags}
+            parsed_variant['discovery_tag_guids_by_name'] = {
+                name: [vt.guid for vt in saved_variant.discovery_tags if vt.variant_tag_type.name == name] for name in
+                parsed_variant['discovery_tag_names']}
         saved_variants_by_family[saved_variant.family.guid].append(parsed_variant)
 
     return saved_variants_by_family

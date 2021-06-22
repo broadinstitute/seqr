@@ -155,7 +155,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
     "sample_provider": "",
-    "inheritance_description-1": "Autosomal dominant",
+    "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
     "hpo_absent": "",
     "novel_mendelian_gene-1": "Y",
