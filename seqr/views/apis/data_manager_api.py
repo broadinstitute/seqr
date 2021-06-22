@@ -1,7 +1,6 @@
 import base64
 from collections import defaultdict
 import json
-import logging
 import re
 import requests
 import urllib3
@@ -14,6 +13,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
+from seqr.utils.logging_utils import SeqrLogger
 
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -23,7 +23,7 @@ from seqr.models import Sample, Individual
 
 from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 @data_manager_required
@@ -118,7 +118,7 @@ def delete_index(request):
 @data_manager_required
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file']
-    raw_records = parse_file(file_path, file_iter(file_path))
+    raw_records = parse_file(file_path, file_iter(file_path, user=request.user))
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
@@ -129,7 +129,7 @@ def upload_qc_pipeline_output(request):
 
     info_message = 'Parsed {} {} samples'.format(
         len(json_records), 'SV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS else data_type)
-    logger.info(info_message)
+    logger.info(info_message, request.user)
     info = [info_message]
     warnings = []
 
@@ -179,13 +179,14 @@ def upload_qc_pipeline_output(request):
         sample_id: len(record['individual_ids']) for sample_id, record in records_by_sample_id.items()
         if len(record['individual_ids']) > 1}
     if multi_individual_samples:
-        logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)))
+        logger.warning('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)),
+                    request.user)
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
             len(multi_individual_samples), ', '.join(
                 sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
 
     if missing_sample_ids:
-        logger.info('Missing {} samples from qc output'.format(len(missing_sample_ids)))
+        logger.warning('Missing {} samples from qc output'.format(len(missing_sample_ids)), request.user)
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
@@ -200,7 +201,6 @@ def upload_qc_pipeline_output(request):
 
     message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
     info.append(message)
-    logger.info(message)
 
     return create_json_response({
         'errors': [],
@@ -274,13 +274,13 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
     if unknown_filter_flags:
         message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_filter_flags))
-        logger.info(message)
+        logger.warning(message, user)
         warnings.append(message)
 
     if unknown_pop_filter_flags:
         message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
             ', '.join(unknown_pop_filter_flags))
-        logger.info(message)
+        logger.warning(message, user)
         warnings.append(message)
 
 
@@ -365,7 +365,7 @@ def proxy_to_kibana(request):
 
         return proxy_response
     except (ConnectionError, RequestConnectionError) as e:
-        logger.error(str(e))
+        logger.error(str(e), request.user)
         return HttpResponse("Error: Unable to connect to Kibana {}".format(e), status=400)
 
 

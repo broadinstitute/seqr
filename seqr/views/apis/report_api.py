@@ -9,6 +9,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.export_utils import export_multiple_files
@@ -24,7 +25,7 @@ from reference_data.models import Omim, HumanPhenotypeOntology
 
 from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 HET = 'Heterozygous'
 HOM_ALT = 'Homozygous'
@@ -493,6 +494,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
         raw_records.update(_fetch_airtable_records(
             'Samples',
+            user=user,
             fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
             filter_formula='OR({})'.format(','.join([
                 "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
@@ -525,7 +527,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
     if include_collaborator and collaborator_ids:
         collaborator_map = _fetch_airtable_records(
-            'Collaborator', fields=['CollaboratorID'], filter_formula='OR({})'.format(
+            'Collaborator', user=user, fields=['CollaboratorID'], filter_formula='OR({})'.format(
                 ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
 
         for sample in sample_records.values():
@@ -539,7 +541,7 @@ def _validate_airtable_access(user):
         raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
 
 
-def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None):
+def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None, user=None):
     headers = {'Authorization': 'Bearer {}'.format(AIRTABLE_API_KEY)}
 
     params = {}
@@ -561,9 +563,9 @@ def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offse
 
     if response_json.get('offset'):
         return _fetch_airtable_records(
-            record_type, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
+            record_type, user=user, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
 
-    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type))
+    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type), user)
     return records
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
@@ -680,7 +682,6 @@ def discovery_sheet(request, project_guid):
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: {}".format(project))
-        logger.info("No data loaded for project: {}".format(project))
         return create_json_response({
             'rows': [],
             'errors': errors,
@@ -1105,7 +1106,7 @@ def _update_initial_omim_numbers(rows):
                        for omim in Omim.objects.filter(phenotype_mim_number__in=omim_numbers, phenotypic_series_number__isnull=False)}
 
     for mim_number, phenotypic_series_number in omim_number_map.items():
-        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (mim_number, phenotypic_series_number))
+        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (mim_number, phenotypic_series_number), user=None)
 
     for row in rows:
         if omim_number_map.get(row['omim_number_initial']):

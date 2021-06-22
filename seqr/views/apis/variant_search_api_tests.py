@@ -88,7 +88,8 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid index')
-        mock_error_logger.assert_called_with('Invalid index', extra=mock.ANY)
+        mock_error_logger.assert_called_with(
+            'Invalid index', self.collaborator_user, http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY, detail=None)
 
         mock_get_variants.side_effect = InvalidSearchException('Invalid search')
         mock_error_logger.reset_mock()
@@ -169,19 +170,19 @@ class VariantSearchAPITest(object):
         )
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, skip_genotype_filter=False)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test sort
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, skip_genotype_filter=False)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test export
@@ -205,7 +206,7 @@ class VariantSearchAPITest(object):
              '', '', '', '', '']]
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
-        mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
+        mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
         # Test gene breakdown
@@ -264,7 +265,7 @@ class VariantSearchAPITest(object):
 
         self.assertListEqual(response_json['searchedVariants'], VARIANTS_WITH_DISCOVERY_TAGS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000011_11'})
-        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, skip_genotype_filter=False)
+        mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, skip_genotype_filter=False, user=self.analyst_user)
         mock_error_logger.assert_not_called()
 
         # Test no results
@@ -312,7 +313,7 @@ class VariantSearchAPITest(object):
                 'totalResults': 3,
         }})
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.no_access_user)
 
         results_model.delete()
         self.login_collaborator()
@@ -347,7 +348,7 @@ class VariantSearchAPITest(object):
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100,
-                                             skip_genotype_filter=True)
+                                             skip_genotype_filter=True, user=self.collaborator_user)
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):

@@ -2,7 +2,6 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 import json
-import logging
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -18,8 +17,6 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     get_project_and_check_pm_permissions, login_and_policies_required
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
-
-logger = logging.getLogger(__name__)
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
 _SEX_TO_EXPORTED_VALUE['U'] = ''
@@ -210,8 +207,6 @@ def delete_individuals_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="Invalid request: 'individuals' not in request_json")
 
-    logger.info("delete_individuals_handler %s", request_json)
-
     individual_guids_to_delete = [ind['individualGuid'] for ind in individuals_list]
 
     # delete the individuals
@@ -326,7 +321,6 @@ def receive_individuals_table_handler(request, project_guid):
         'warnings': [],
         'info': info,
     }
-    logger.info(response)
     return create_json_response(response)
 
 
