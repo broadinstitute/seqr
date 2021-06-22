@@ -347,7 +347,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
                 for guid in variant.get('discovery_tag_guids_by_name', {}).get(tag):
                     potential_mnvs[tag][guid].append(variant)
         mnv_genes = set()
-        for tag_guid, variants_by_tag_guid in potential_mnvs.items():
+        for variants_by_tag_guid in potential_mnvs.values():
             mnvs = next((variants for variants in variants_by_tag_guid.values() if len(variants) > 2), None)
             if not mnvs:
                 continue
