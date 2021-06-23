@@ -30,6 +30,7 @@ def _redirect_login(query_param, backend):
     next_param = backend.strategy.session_get('next')
     if next_param:
         params['next'] = next_param
+    # TODO
     return redirect('/login?{}'.format(urlencode(params)))
 
 
