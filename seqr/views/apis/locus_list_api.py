@@ -106,7 +106,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 
 @login_and_policies_required
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
