@@ -56,7 +56,7 @@ def logout_view(request):
     remove_token(user)
     logout(request)
     logger.info('Logged out {}'.format(user.email), user)
-    return redirect('/login')
+    return redirect('/login') # TODO
 
 
 def login_required_error(request):
