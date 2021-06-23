@@ -8,15 +8,15 @@ from django.urls import get_resolver, get_urlconf
 import elasticsearch.exceptions
 from requests import HTTPError
 import json
-import logging
 import traceback
 
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
 from settings import DEBUG
 
-logger = logging.getLogger()
+logger = SeqrLogger()
 
 
 EXCEPTION_ERROR_MAP = {
@@ -145,9 +145,7 @@ class LogRequestMiddleware(MiddlewareMixin):
             message = error
         else:
             level = logger.info
-        level(message, extra={
-            'http_request_json': http_json, 'request_body': request_body, 'traceback': traceback, 'user': request.user,
-            'detail': detail,
-        })
+        level(message, request.user, http_request_json=http_json, request_body=request_body, traceback=traceback,
+            detail=detail)
 
         return response

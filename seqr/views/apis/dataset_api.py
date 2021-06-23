@@ -1,5 +1,4 @@
 import json
-import logging
 from collections import defaultdict
 
 from django.db.models import prefetch_related_objects
@@ -11,8 +10,6 @@ from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, v
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required
-
-logger = logging.getLogger(__name__)
 
 
 @data_manager_required
@@ -54,7 +51,7 @@ def add_variants_dataset_handler(request, project_guid):
         sample_type = index_metadata['sampleType']
 
         sample_id_to_individual_id_mapping = load_mapping_file(
-            request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
+            request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
 
         loaded_date = timezone.now()
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(

@@ -1,7 +1,6 @@
 """Provide python bindings for the AnVIL Terra API."""
 
 import json
-import logging
 import time
 import requests
 
@@ -9,6 +8,7 @@ from urllib.parse import urljoin
 
 from django.core.exceptions import PermissionDenied
 from social_django.utils import load_strategy
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, \
@@ -21,7 +21,7 @@ READER_ACCESS_LEVEL = 'READER'
 PROJECT_OWNER_ACCESS_LEVEL = 'PROJECT_OWNER'
 CAN_SHARE_PERM = 'canShare'
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 class TerraAPIException(Exception):
@@ -110,11 +110,11 @@ def _get_social_access_token(user):
     if (social.extra_data['auth_time'] + social.extra_data['expires'] - 10) <= int(
             time.time()):  # token expired or expiring?
         strategy = load_strategy()
-        logger.info('Refreshing access token', extra={'user': user})
+        logger.info('Refreshing access token', user)
         try:
             social.refresh_token(strategy)
         except Exception as ee:
-            logger.warning('Refresh token failed. {}'.format(str(ee)), extra={'user': user})
+            logger.warning('Refresh token failed. {}'.format(str(ee)), user)
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
 
@@ -139,11 +139,11 @@ def anvil_call(method, path, access_token, user=None, headers=None, root_url=Non
 
     if exception:
         if handle_errors:
-            logger.warning(str(exception))
+            logger.warning(str(exception), user)
             return {}
         raise exception  # pylint: disable=raising-bad-type
 
-    logger.info('{} {} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text), user))
+    logger.info('{} {} {} {}'.format(method.upper(), url, r.status_code, len(r.text)), user)
 
     return json.loads(r.text)
 
@@ -167,7 +167,7 @@ def list_anvil_workspaces(user):
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
     if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
         return r
 
     r = _user_anvil_call('get', path, user)
@@ -187,7 +187,7 @@ def user_get_workspace_access_level(user, workspace_namespace, workspace_name, m
     cache_key = 'terra_req__{}__{}'.format(user, path)
     r = safe_redis_get_json(cache_key)
     if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user))
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
         return r
 
     # Exceptions are handled to return an empty result for users who have no permission to access the workspace

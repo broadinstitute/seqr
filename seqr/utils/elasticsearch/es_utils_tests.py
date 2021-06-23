@@ -1119,7 +1119,7 @@ class EsUtilsTest(TestCase):
             'This search returned too many compound heterozygous variants. Please add stricter filters')
 
         with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variant_gene_counts(results_model)
+            get_es_variant_gene_counts(results_model, None)
         self.assertEqual(str(cm.exception), 'This search returned too many genes')
 
         search_model.search = {'qualityFilter': {'min_gq': 7}}
@@ -2398,7 +2398,7 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
 
         #  Test gene counts
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
             'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}}
@@ -2439,7 +2439,7 @@ class EsUtilsTest(TestCase):
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
 
         #  Test gene counts
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}},
             'ENSG00000228198': {'total': 4, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}}
@@ -2484,7 +2484,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 1, 'F000002_2': 1, 'F000011_11': 1}},
@@ -2512,7 +2512,7 @@ class EsUtilsTest(TestCase):
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 3, 'F000002_2': 2}},
@@ -2550,11 +2550,11 @@ class EsUtilsTest(TestCase):
             'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
         }
         _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, cached_gene_counts)
 
         _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
             'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
@@ -2572,7 +2572,7 @@ class EsUtilsTest(TestCase):
             },
             'total_results': 4,
         }))
-        gene_counts = get_es_variant_gene_counts(results_model)
+        gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
             'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
