@@ -68,6 +68,7 @@ export const VARIANT_ANVIL_COLUMNS = [
   'Transcript',
   'sv_name',
   'sv_type',
+  'discovery_notes',
 ]
 
 const formatT0 = row => new Date(row.t0).toISOString().slice(0, 10)
