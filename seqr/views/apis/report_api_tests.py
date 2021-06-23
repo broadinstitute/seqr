@@ -204,7 +204,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 
 
 class ReportAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -384,6 +384,11 @@ class ReportAPITest(AuthenticationTestCase):
             'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-']), discovery_file)
+        self.assertIn('\t'.join([
+            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+            '1912632', 'GC', 'TT', '-', '-', 'ENST00000371839', '-', '-', '-',
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT: 19-1912634-C-T, 19-1912633-G-T']),
+            discovery_file)
 
         # Test non-broad analysts do not have access
         self.login_pm_user()
