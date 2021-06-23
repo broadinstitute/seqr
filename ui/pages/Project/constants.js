@@ -477,6 +477,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
   },
   {
     isEditable: true,
+    isCollaboratorEditable: true,
     header: 'Individual Notes',
     field: 'notes',
     format: stripMarkdown,
@@ -566,7 +567,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
 
 export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
   ...INDIVIDUAL_HPO_EXPORT_DATA,
-  ...INDIVIDUAL_DETAIL_FIELDS.reduce((acc, { isEditable, isPrivate, subFields, ...field }) => {
+  ...INDIVIDUAL_DETAIL_FIELDS.reduce((acc, { isEditable, isCollaboratorEditable, isPrivate, subFields, ...field }) => {
     if (isPrivate || !isEditable || field.field === 'features') {
       return acc
     }
