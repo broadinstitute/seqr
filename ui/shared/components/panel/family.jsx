@@ -223,15 +223,13 @@ const Family = React.memo((
     return <div>Family Not Found</div>
   }
 
-  const isEditable = !disableEdit && project.canEdit
-
   const familyField = (field) => {
-    const { submitArgs, component, collaboratorEdit, managerEdit, internal, name } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const { submitArgs, component, canEdit, internal, name } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
       key: field.id,
-      isEditable: !disableEdit && (collaboratorEdit || (isEditable && managerEdit) || (!disableInternalEdit && internal)),
+      isEditable: !disableEdit && (canEdit || (!disableInternalEdit && internal)),
       isPrivate: internal,
       fieldName: compact ? null : name,
       field: field.id,
@@ -256,7 +254,7 @@ const Family = React.memo((
     />
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
-      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
     ]
   }
 
