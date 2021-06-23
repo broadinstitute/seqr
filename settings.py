@@ -202,7 +202,7 @@ if not SECRET_KEY:
 
 ROOT_URLCONF = 'seqr.urls'
 
-LOGIN_URL = '/login'
+LOGIN_URL = '/login' # TODO
 LOGOUT_URL = '/logout'
 
 POSTGRES_DB_CONFIG = {
