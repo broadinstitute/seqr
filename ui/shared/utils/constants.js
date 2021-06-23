@@ -212,7 +212,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes', managerEdit: true },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView, managerEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView, managerEdit: true },
-  [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView, managerEdit: true },
+  [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView, internal: true },
   [FAMILY_FIELD_INTERNAL_NOTES]: {
     name: 'Internal Notes',
     internal: true,
