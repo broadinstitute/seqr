@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { updateUser } from 'redux/rootReducer'
-import { getUser } from 'redux/selectors'
+import { getUser, getGoogleLoginEnabled } from 'redux/selectors'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 import UpdateButton from '../buttons/UpdateButton'
 
@@ -18,7 +18,7 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = React.memo(({ user, onSubmit }) =>
+const PageHeader = React.memo(({ user, googleLoginEnabled, onSubmit }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length ? [
@@ -40,18 +40,20 @@ const PageHeader = React.memo(({ user, onSubmit }) =>
         </Dropdown.Menu>
       </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
-    ] : <Menu.Item as="a" href="/login" position="right">Log in</Menu.Item>}
+    ] : <Menu.Item as="a" href={`/login${googleLoginEnabled ? '/google-oauth2' : ''}`} position="right">Log in</Menu.Item>}
   </HeaderMenu>,
 )
 
 PageHeader.propTypes = {
   user: PropTypes.object,
+  googleLoginEnabled: PropTypes.bool,
   onSubmit: PropTypes.func,
 }
 
 // wrap top-level component so that redux state is passed in as props
 const mapStateToProps = state => ({
   user: getUser(state),
+  googleLoginEnabled: getGoogleLoginEnabled(state),
 })
 
 const mapDispatchToProps = {
