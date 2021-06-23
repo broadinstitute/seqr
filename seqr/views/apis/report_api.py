@@ -311,6 +311,10 @@ def _get_sv_name(variant_json):
     return variant_json.get('svName') or '{svType}:chr{chrom}:{pos}-{end}'.format(**variant_json)
 
 
+def _get_nested_variant_name(variant):
+    return _get_sv_name(variant) if variant.get('svType') else variant['variantId']
+
+
 def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
     if max_loaded_date:
         max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')
@@ -331,7 +335,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
     gene_ids = set()
     for family_guid, saved_variants in saved_variants_by_family.items():
         potential_com_het_gene_variants = defaultdict(list)
-        potential_mnvs = defaultdict(lambda: defaultdict(list))
+        potential_mnvs = defaultdict(list)
         for variant in saved_variants:
             variant['main_transcript'] = _get_variant_main_transcript(variant)
             if variant['main_transcript']:
@@ -343,22 +347,19 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             variant['inheritance_models'] = inheritance_models
             for gene_id in potential_compound_het_gene_ids:
                 potential_com_het_gene_variants[gene_id].append(variant)
-            for tag in variant['discovery_tag_names']:
-                for guid in variant.get('discovery_tag_guids_by_name', {}).get(tag):
-                    potential_mnvs[tag][guid].append(variant)
+            for guid in variant['discovery_tag_guids_by_name'].values():
+                potential_mnvs[guid].append(variant)
         mnv_genes = set()
-        for variants_by_tag_guid in potential_mnvs.values():
-            mnvs = next((variants for variants in variants_by_tag_guid.values() if len(variants) > 2), None)
-            if not mnvs:
+        for mnvs in potential_mnvs.values():
+            if len(mnvs) <= 2:
                 continue
             parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
-            nested_mnvs = [v for v in mnvs if v.get('populations')]
+            nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
             mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
-            discovery_notes = 'The following variants are part of the complex structural variant {}: {}'.format(
-                parent_mnv['svName'],
-                ', '.join([_get_sv_name(v) for v in nested_mnvs])) if parent_mnv.get('svType') else \
-                'The following variants are part of the multinucleotide variant {}: {}'.format(
-                    parent_mnv['variantId'], ', '.join([v['variantId'] for v in nested_mnvs]))
+            discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
+                variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
+                parent=_get_nested_variant_name(parent_mnv),
+                nested=', '.join([_get_nested_variant_name(v) for v in nested_mnvs]))
             for variant in mnvs:
                 variant['discovery_notes'] = discovery_notes
         for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
@@ -394,13 +395,14 @@ def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_f
         'discovery_notes': variant.get('discovery_notes', ''),
     }
 
-    if 'discovery_tag_names' in variant:
-        is_novel = 'Y' if any('Novel gene' in name for name in variant['discovery_tag_names']) else 'N'
+    if 'discovery_tag_guids_by_name' in variant:
+        discovery_tag_names = variant['discovery_tag_guids_by_name'].keys()
+        is_novel = 'Y' if any('Novel gene' in name for name in discovery_tag_names) else 'N'
         parsed_variant['novel_mendelian_gene'] = is_novel
-        _set_discovery_phenotype_class(parsed_variant, variant['discovery_tag_names'])
-        if any('Tier 1' in name for name in variant['discovery_tag_names']):
+        _set_discovery_phenotype_class(parsed_variant, discovery_tag_names)
+        if any('Tier 1' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 1 - Candidate'
-        elif any('Tier 2' in name for name in variant['discovery_tag_names']):
+        elif any('Tier 2' in name for name in discovery_tag_names):
             parsed_variant['Gene_Class'] = 'Tier 2 - Candidate'
 
     if variant.get('svType'):
@@ -780,10 +782,8 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
         parsed_variant = saved_variant
         if parse_json:
             parsed_variant = variant_by_guid[saved_variant.guid]
-            parsed_variant['discovery_tag_names'] = {vt.variant_tag_type.name for vt in saved_variant.discovery_tags}
-            parsed_variant['discovery_tag_guids_by_name'] = {
-                name: [vt.guid for vt in saved_variant.discovery_tags if vt.variant_tag_type.name == name] for name in
-                parsed_variant['discovery_tag_names']}
+            parsed_variant['discovery_tag_guids_by_name'] = {vt.variant_tag_type.name: vt.guid for vt in
+                                                             saved_variant.discovery_tags}
         saved_variants_by_family[saved_variant.family.guid].append(parsed_variant)
 
     return saved_variants_by_family
