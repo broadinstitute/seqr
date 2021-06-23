@@ -110,13 +110,13 @@ def update_family_fields_handler(request, family_guid):
 
     family = Family.objects.get(guid=family_guid)
 
-    # check permission
-    project = family.project
-
-    check_project_permissions(project, request.user, can_edit=True)
+    # check permission - can be edited by anyone with access to the project
+    check_project_permissions(family.project, request.user, can_edit=False)
 
     request_json = json.loads(request.body)
-    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
+    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True, immutable_keys=[
+        'family_id', 'display_name',
+    ])
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
