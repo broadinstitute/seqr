@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.core.handlers.exception import get_exception_response
 from django.http import Http404
 from django.http.request import RawPostDataException
+from django.utils.cache import add_never_cache_headers
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import get_resolver, get_urlconf
 import elasticsearch.exceptions
@@ -148,4 +149,13 @@ class LogRequestMiddleware(MiddlewareMixin):
         level(message, request.user, http_request_json=http_json, request_body=request_body, traceback=traceback,
             detail=detail)
 
+        return response
+
+
+class CacheControlMiddleware(MiddlewareMixin):
+
+    @staticmethod
+    def process_response(request, response):
+        add_never_cache_headers(response)
+        response['Pragma'] = 'no-cache'
         return response
