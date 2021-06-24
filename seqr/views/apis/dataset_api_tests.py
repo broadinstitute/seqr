@@ -106,7 +106,7 @@ class DatasetAPITest(object):
             }}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds or .bed']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vds or .vcf.gz or .bgz or .bed']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             INDEX_NAME: {'mappings': {'_meta': {
