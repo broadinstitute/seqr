@@ -1,10 +1,7 @@
-import logging
 import re
 
 from django.http import JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-
-logger = logging.getLogger(__name__)
 
 
 class DjangoJSONEncoderWithSets(DjangoJSONEncoder):

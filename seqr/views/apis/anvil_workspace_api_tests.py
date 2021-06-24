@@ -44,7 +44,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
         mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
+                                               self.collaborator_user)
 
         self.login_manager()
         return response
@@ -152,7 +153,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_NO_SLASH_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Data file or path test_no_slash_path is not found.')
-        mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path', user=self.manager_user)
         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         self.assertEqual(mock_has_service_account.call_count, 1)
         self.assertEqual(mock_sleep.call_count, 1)
@@ -173,7 +174,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_sleep.assert_not_called()
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path', user=self.manager_user)
 
         email_body = """
         test_user_manager@test.com requested to load data from AnVIL workspace "{namespace}/{name}" at "gs://test_bucket/test_path" to seqr project
@@ -205,7 +206,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_email.side_effect = Exception('Something wrong while sending email.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('Exception while sending email to user test_user_manager. Something wrong while sending email.')
+        mock_api_logger.error.assert_called_with('AnVIL loading request email exception: Something wrong while sending email.', self.manager_user)
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

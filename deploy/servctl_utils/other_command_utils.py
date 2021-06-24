@@ -1,4 +1,5 @@
 import collections
+from datetime import datetime
 from threading import Thread
 
 import logging
@@ -25,7 +26,6 @@ COMPONENT_PORTS = {
 
     "redis":           [6379],
 
-    "postgres":        [5432],
     "seqr":            [8000],
     "pipeline-runner": [30005],
 
@@ -45,7 +45,7 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
 
 def get_component_port_pairs(components=[]):
     """Uses the PORTS dictionary to return a list of (<component name>, <port>) pairs (For example:
-    [('postgres', 5432), ('seqr', 8000), ('seqr', 3000), ... ])
+    [('seqr', 8000), ('seqr', 3000), ... ])
 
     Args:
         components (list): optional list of component names. If not specified, all components will be included.
@@ -130,7 +130,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
-        components (list): one or more kubernetes pod labels (eg. 'postgres' or 'nginx').
+        components (list): one or more kubernetes pod labels (eg. 'seqr' or 'nginx').
             If more than one is specified, logs will be printed from all components in parallel.
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev", etc.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
@@ -150,6 +150,10 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     for component_label in components:
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
+        elif component_label == "postgres":
+            raise ValueError(
+                'Kubernetes log proxy not available for Cloud SQl. See the console for logs: {}'.format(
+                    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22cloudsql_database%22%0A'))
 
         if not previous:
             wait_until_pod_is_running(component_label, deployment_target)
@@ -202,7 +206,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
 
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
-            pod, along with the port to forward to that pod (eg. ('postgres', 5432))
+            pod, along with the port to forward to that pod (eg. ('elasticsearch', 9200))
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
@@ -216,6 +220,8 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
     for component_label, port in component_port_pairs:
         if component_label == "kube-scan":
             continue  # See https://github.com/octarinesec/kube-scan for how to connect to the kube-scan pod.
+        elif component_label == 'postgres':
+            continue
 
         wait_until_pod_is_running(component_label, deployment_target)
 
@@ -255,7 +261,7 @@ def troubleshoot_component(component, deployment_target):
     """Runs kubectl command to print detailed debug output for the given component.
 
     Args:
-        component (string): component label (eg. "postgres")
+        component (string): component label (eg. "seqr")
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
 
@@ -268,7 +274,7 @@ def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_pa
     """Copy file(s) to or from the given component.
 
     Args:
-        component (string): component label (eg. "postgres")
+        component (string): component label (eg. "seqr")
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
         source_path (string): source file path. If copying files to the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
         dest_path (string): destination file path. If copying files from the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
@@ -312,6 +318,8 @@ def delete_component(component, deployment_target=None):
             pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
+    elif component == 'postgres':
+        run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 
@@ -332,20 +340,18 @@ def delete_component(component, deployment_target=None):
     run("kubectl get pods" % locals(), verbose=True)
 
 
-def reset_database(database=[], deployment_target=None):
-    """Runs kubectl commands to delete and reset the given database(s).
-
-    Args:
-        component (list): one more database labels - "seqrdb"
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-    """
-    if "seqrdb" in database:
-        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
-        if not postgres_pod_name:
-            logger.error("postgres pod must be running")
-        else:
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
+def restore_local_db(db, deployment_target):
+    deployment = deployment_target.replace('gcloud-', '')
+    filename = '{db}_{deployment}_backup_{timestamp}.gz'.format(
+        db=db, deployment=deployment, timestamp=datetime.now().strftime('%Y-%m-%d__%H-%M-%S'))
+    gs_file = 'gs://seqr-backups/{}'.format(filename)
+    run('gcloud sql export sql postgres-{deployment} {gs_file} --database={db} --offload'.format(
+        deployment=deployment, gs_file=gs_file, db=db,
+    ))
+    run('gsutil mv {} .'.format(gs_file))
+    run('psql postgres -c "DROP DATABASE {}"'.format(db))
+    run('psql postgres -c "CREATE DATABASE {}"'.format(db))
+    run('psql {} <  <(gunzip -c {})'.format(db, filename), executable='/bin/bash')
 
 
 def delete_all(deployment_target):
@@ -363,6 +369,7 @@ def delete_all(deployment_target):
     ], settings)
 
     run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+    run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
 
     for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
         for disk_name in  get_disk_names(disk_label, settings):

@@ -1,0 +1,142 @@
+[
+{
+    "model": "seqr.savedvariant",
+    "pk": 9,
+    "fields": {
+        "guid": "SV0027166_191912634_r0384_rare",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos": 19001912634,
+        "xpos_end": 19001912634,
+        "ref": "C",
+        "alt": "T",
+        "variant_id": "19-1912634-C-T",
+        "saved_variant_json": {
+            "liftedOverGenomeVersion": "37",
+            "pos": 1912634,
+            "end": 1912634,
+            "xpos": 19001912634,
+            "ref": "C",
+            "alt": "T",
+            "genomeVersion": "38", "genotypeFilters": [],
+            "genotypes": {
+                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+            },
+            "populations": {
+                "g1k": {
+                    "ac": 2206,
+                    "af": 0.6838,
+                    "an": 5008,
+                    "hemi": null,
+                    "hom": null
+                    }
+                },
+            "liftedOverPos": 1912633,
+            "liftedOverChrom": "19",
+            "variantId": "19-1912634-C-T",
+            "chrom": "19",
+            "mainTranscriptId": "ENST00000371839",
+            "transcripts": {
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
+                ]
+            }
+        },
+        "family": 2
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 10,
+    "fields": {
+        "guid": "SV0027167_191912633_r0384_rare",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos": 19001912633,
+        "xpos_end": 19001912633,
+        "ref": "G",
+        "alt": "T",
+        "variant_id": "19-1912633-G-T",
+        "saved_variant_json": {
+            "liftedOverGenomeVersion": "37",
+            "pos": 1912633,
+            "end": 1912633,
+            "xpos": 19001912633,
+            "ref": "G",
+            "alt": "T",
+            "genomeVersion": "38", "genotypeFilters": [],
+            "genotypes": {
+                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+            },
+            "populations": {
+                "g1k": {
+                    "ac": 2206,
+                    "af": 0.6838,
+                    "an": 5008,
+                    "hemi": null,
+                    "hom": null
+                    }
+                },
+            "liftedOverPos": 1912632,
+            "liftedOverChrom": "19",
+            "variantId": "19-1912633-G-T",
+            "chrom": "19",
+            "mainTranscriptId": "ENST00000371839",
+            "transcripts": {
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
+                ]
+            }
+        },
+        "family": 2
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 11,
+    "fields": {
+        "guid": "SV0027168_191912632_r0384_rare",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "xpos": 19001912632,
+        "xpos_end": 19001912632,
+        "ref": "GC",
+        "alt": "TT",
+        "variant_id": "19-1912632-GC-TT",
+        "saved_variant_json": {
+            "pos": 1912632,
+            "end": 1912632,
+            "xpos": 19001912632,
+            "genomeVersion": "38", "genotypeFilters": [],
+            "genotypes": {
+                "I000006_hg00733": {"sampleId": "HG00733", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+            },
+            "variantId": "19-1912632-GC-TT",
+            "chrom": "19",
+            "mainTranscriptId": "ENST00000371839",
+            "transcripts": {
+                "ENSG00000135953": [
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
+                ]
+            }
+        },
+        "family": 2
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726974,
+    "fields": {
+        "guid": "VT1726961_2103343353_r0006_tes",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variants": [9, 10, 11],
+        "variant_tag_type": 4,
+        "search_hash": null
+    }
+}
+]

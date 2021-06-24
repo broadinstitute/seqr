@@ -11,7 +11,7 @@ ES_CONFIGURE_SNAPSHOTS: true
 ES_SNAPSHOTS_ACCOUNT_NAME: seqr-es-snapshots-prod
 ES_SNAPSHOTS_BUCKET: seqr-es-7-snapshots-prod
 
-ENABLE_DATABASE_BACKUPS: true
+RUN_CRON_JOBS: true
 DATABASE_BACKUP_BUCKET: seqr-backups
 
 GUNICORN_WORKER_THREADS: 20    # number of webserver threads

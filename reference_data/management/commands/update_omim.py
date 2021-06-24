@@ -64,18 +64,41 @@ OMIM_PHENOTYPE_MAP_METHOD_CHOICES = {
     4: 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.',
 }
 
+CACHED_RECORDS_BUCKET = 'seqr-reference-data/omim/'
+CACHED_RECORDS_FILENAME = 'parsed_omim_records.txt'
+CACHED_RECORDS_HEADER = [
+    'gene_id', 'mim_number', 'gene_description', 'comments', 'phenotype_description',
+    'phenotype_mim_number', 'phenotype_map_method', 'phenotype_inheritance', 'phenotypic_series_number',
+]
+
+class CachedOmimReferenceDataHandler(ReferenceDataHandler):
+
+    model_cls = Omim
+    url = 'https://storage.googleapis.com/{bucket}{filename}'.format(
+        filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
+
+    @staticmethod
+    def get_file_header(f):
+        return CACHED_RECORDS_HEADER
+
+    @staticmethod
+    def parse_record(record):
+        yield {k: v or None for k, v in record.items()}
+
 
 class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
-    def __init__(self, omim_key=None, **kwargs):
+    def __init__(self, omim_key=None, cache_parsed_records=False, **kwargs):
+        """Init OMIM handler."""
         if not omim_key:
             raise CommandError("omim_key is required")
 
         self.url = self.url.format(omim_key=omim_key)
         self.omim_key = omim_key
+        self.cache_parsed_records = cache_parsed_records
         super(OmimReferenceDataHandler, self).__init__()
 
     @staticmethod
@@ -160,10 +183,25 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
             omim_record.phenotypic_series_number = mim_number_to_phenotypic_series.get(omim_record.mim_number)
         logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
 
+        if self.cache_parsed_records:
+            self._cache_records(models)
+
+    @staticmethod
+    def _cache_records(models):
+        with open(CACHED_RECORDS_FILENAME, 'w') as f:
+            f.write('\n'.join([
+                '\t'.join([model.gene.gene_id] + [str(getattr(model, field) or '') for field in CACHED_RECORDS_HEADER[1:]])
+                for model in models]))
+
+        command = 'gsutil mv {filename} gs://{bucket}'.format(filename=CACHED_RECORDS_FILENAME, bucket=CACHED_RECORDS_BUCKET)
+        logger.info(command)
+        os.system(command)
+
 
 class Command(GeneCommand):
     reference_data_handler = OmimReferenceDataHandler
 
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
+        parser.add_argument('--cache-parsed-records', action='store_true', help='write the parsed records to google storage for reuse')
         super(Command, self).add_arguments(parser)

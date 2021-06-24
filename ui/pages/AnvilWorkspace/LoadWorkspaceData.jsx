@@ -7,7 +7,16 @@ import LoadWorkspaceDataForm from './components/LoadWorkspaceDataForm'
 
 export const WorkspaceAccessError = ({ match }) =>
   <Segment basic padded="very" textAlign="center">
-    <Message error compact size="large" content={`User does not have sufficient permissions for workspace ${match.params.name}`} />
+    <Message error compact size="large" >
+      <Message.Header>
+        User does not have sufficient permissions for workspace &quot;{match.params.name}&quot;
+      </Message.Header>
+      <Message.List>
+        To submit the initial request to load data to seqr, users require:
+        <Message.Item>&quot;Writer&quot; or &quot;Owner&quot; level access to the workspace</Message.Item>
+        <Message.Item>The &quot;Can Share&quot; permission enabled for the workspace</Message.Item>
+      </Message.List>
+    </Message>
   </Segment>
 
 WorkspaceAccessError.propTypes = {

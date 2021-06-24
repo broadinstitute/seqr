@@ -114,7 +114,7 @@ class UsersAPITest(object):
         )
         mock_send_mail.reset_mock()
 
-        mock_logger.info.assert_called_with('Created user test@test.com (local)', extra={'user': self.manager_user})
+        mock_logger.info.assert_called_with('Created user test@test.com (local)', self.manager_user)
         mock_logger.reset_mock()
 
         # check user object added to project set

@@ -1,4 +1,3 @@
-import logging
 import elasticsearch_dsl
 from django.utils import timezone
 import random
@@ -6,10 +5,10 @@ import random
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
-from seqr.utils.logging_utils import log_model_bulk_update
+from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 
@@ -43,9 +42,9 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
     dataset_path = index_metadata['sourceFilePath']
-    dataset_suffixes = ('.vds', '.vcf.gz', '.vcf.bgz', '.bed')
+    dataset_suffixes = ('.vds', '.vcf.gz', '.bgz', '.bed')
     if not dataset_path.endswith(dataset_suffixes):
-        raise Exception("Variant call dataset path must end with .vcf.gz or .vds or .bed")
+        raise Exception("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
 
     if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
         raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
@@ -53,8 +52,8 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
 
-def load_mapping_file(mapping_file_path):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
+def load_mapping_file(mapping_file_path, user):
+    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
     return _load_mapping_file(file_content)
 
 
@@ -107,7 +106,7 @@ def match_sample_ids_to_sample_records(
     sample_id_to_sample_record = find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
-    logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
+    logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
@@ -132,7 +131,7 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
             del remaining_individuals_dict[individual_id]
 
-        logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
+        logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         # create new Sample records for Individual records that matches
         if create_sample_records:
