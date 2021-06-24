@@ -59,7 +59,7 @@ def update_individual_handler(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, can_edit=False)
+    check_project_permissions(project, request.user)
     can_edit = has_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)

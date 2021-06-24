@@ -82,7 +82,6 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'])
         self.assertFalse('features' in response_json[INDIVIDUAL_UPDATE_GUID])
         self.assertIsNone(individual.features)
-        self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'])
 
         self.login_manager()
         response = self.client.post(edit_individuals_url, content_type='application/json',
