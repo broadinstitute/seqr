@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Segment, Message, Button, Icon } from 'semantic-ui-react'
 
-import { ANVIL_URL } from 'shared/utils/constants'
+import { ANVIL_URL, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const GOGGLE_SETUP_URL = 'https://support.terra.bio/hc/en-us/articles/360029186611-Setting-up-a-Google-account-with-a-non-Google-email'
 
@@ -26,7 +26,7 @@ const LoginError = ({ location, match }) => (
       {ERROR_MESSAGES[match.params.error] || `Unknown error occured: ${match.params.error}`}
     </Message>
     <div>
-      <Button as="a" href={`/login/google-oauth2${location.search}`} primary>
+      <Button as="a" href={`${GOOGLE_LOGIN_URL}${location.search}`} primary>
         <Icon name="google" />
         Sign in to seqr
       </Button>

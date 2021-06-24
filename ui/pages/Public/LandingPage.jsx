@@ -7,6 +7,7 @@ import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { getGoogleLoginEnabled } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { LOCAL_LOGIN_URL, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const PageSegment = styled(Segment).attrs({ padded: 'very' })`
   padding-left: 20% !important;
@@ -29,8 +30,8 @@ const LandingPage = ({ googleLoginEnabled }) =>
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
       {googleLoginEnabled ?
-        <Button as="a" href="/login/google-oauth2" {...LOGIN_BUTTON_PROPS} /> :
-        <Button as={Link} to="/login" {...LOGIN_BUTTON_PROPS} />}
+        <Button as="a" href={GOOGLE_LOGIN_URL} {...LOGIN_BUTTON_PROPS} /> :
+        <Button as={Link} to={LOCAL_LOGIN_URL} {...LOGIN_BUTTON_PROPS} />}
     </PageSegment>
     <Segment padded>
       <Grid columns="equal">
