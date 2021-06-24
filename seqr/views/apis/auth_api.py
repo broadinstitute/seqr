@@ -8,13 +8,13 @@ from django.db.models.functions import Lower
 from django.shortcuts import redirect
 
 import json
-import logging
 
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import user_is_data_manager
 from seqr.views.utils.terra_api_utils import google_auth_enabled, remove_token
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 def login_view(request):
@@ -35,7 +35,7 @@ def login_view(request):
 
     user = users.first()
     if google_auth_enabled() and (user_is_data_manager(user) or user.is_superuser):
-        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user))
+        logger.warning("Privileged user {} is trying to login without Google authentication.".format(user), user)
         error = 'Privileged user must login with Google authentication.'
         return create_json_response({'error': error}, status=401, reason=error)
 
@@ -45,7 +45,7 @@ def login_view(request):
         return create_json_response({'error': error}, status=401, reason=error)
 
     login(request, u)
-    logger.info('Logged in {}'.format(u.email), extra={'user': u})
+    logger.info('Logged in {}'.format(u.email), u)
 
     return create_json_response({'success': True})
 
@@ -55,7 +55,7 @@ def logout_view(request):
     user = request.user
     remove_token(user)
     logout(request)
-    logger.info('Logged out {}'.format(user.email), extra={'user': user})
+    logger.info('Logged out {}'.format(user.email), user)
     return redirect('/login')
 
 

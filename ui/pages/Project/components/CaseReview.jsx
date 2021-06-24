@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 
 import {
   FAMILY_FIELD_DESCRIPTION,
-  FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_INTERNAL_NOTES,
@@ -17,14 +16,13 @@ import { getCaseReviewStatusCounts, getCaseReviewFamiliesExportConfig, getCaseRe
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-  { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
-  { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_CODED_PHENOTYPE },
+  { id: FAMILY_FIELD_INTERNAL_NOTES },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
 const CaseReviewTable = React.memo((props) => {

@@ -20,6 +20,8 @@ class JsonLogFormatter(logging.Formatter):
 
         if getattr(record, 'user', None) and record.user.is_authenticated:
             log_json['user'] = record.user.email
+        elif getattr(record, 'user_email', None):
+            log_json['user'] = record.user_email
 
         if hasattr(record, 'db_update'):
             log_json['dbUpdate'] = record.db_update
@@ -37,6 +39,28 @@ class JsonLogFormatter(logging.Formatter):
         return json.dumps(log_json)
 
 
+class SeqrLogger(object):
+
+    def __init__(self, name=None):
+        """Custom logger which requires user metadata to be included in the log."""
+        self._logger = logging.getLogger(name)
+
+    def _log(self, level, message, user, **kwargs):
+        self._logger.log(level, message, extra=dict(user=user, **kwargs))
+
+    def debug(self, *args, **kwargs):\
+        self._log(logging.DEBUG, *args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        self._log(logging.INFO, *args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        self._log(logging.WARNING, *args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self._log(logging.ERROR, *args, **kwargs)
+
+
 def log_model_update(logger, model, user, update_type, update_fields=None):
     db_entity = type(model).__name__
     entity_id = getattr(model, 'guid', model.pk)
@@ -45,7 +69,7 @@ def log_model_update(logger, model, user, update_type, update_fields=None):
     }
     if update_fields:
         db_update['updateFields'] = list(update_fields)
-    logger.info('{} {} {}'.format(update_type, db_entity, entity_id), extra={'user': user, 'db_update': db_update})
+    logger.info('{} {} {}'.format(update_type, db_entity, entity_id), user, db_update=db_update)
 
 
 def log_model_bulk_update(logger, models, user, update_type, update_fields=None):
@@ -59,5 +83,5 @@ def log_model_bulk_update(logger, models, user, update_type, update_fields=None)
     if update_fields:
         db_update['updateFields'] = list(update_fields)
     logger.info(
-        '{} {} {}s'.format(update_type, len(entity_ids), db_entity), extra={'user': user, 'db_update': db_update})
+        '{} {} {}s'.format(update_type, len(entity_ids), db_entity), user, db_update=db_update)
     return entity_ids

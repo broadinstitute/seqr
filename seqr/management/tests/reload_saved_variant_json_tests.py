@@ -16,7 +16,7 @@ class ReloadSavedVariantJsonTest(TestCase):
     @mock.patch('logging.getLogger')
     @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
     def test_with_param_command(self, mock_get_variants, mock_get_logger):
-        mock_get_variants.side_effect = lambda families, variant_ids: \
+        mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
              for variant_id in variant_ids]
         mock_logger = mock_get_logger.return_value
@@ -28,7 +28,7 @@ class ReloadSavedVariantJsonTest(TestCase):
 
         family_1 = Family.objects.get(id=1)
         mock_get_variants.assert_called_with(
-            [family_1], ['1-1562437-G-C', '1-46859832-G-A','21-3343353-GAGA-G'])
+            [family_1], ['1-1562437-G-C', '1-46859832-G-A','21-3343353-GAGA-G'], user=None)
 
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),
@@ -48,10 +48,10 @@ class ReloadSavedVariantJsonTest(TestCase):
         family_2 = Family.objects.get(id=2)
         mock_get_variants.assert_has_calls([
             mock.call(
-                [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'],
+                [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'], user=None,
             ),
-            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL']),
-            mock.call([Family.objects.get(id=14)], ['12-48367227-TC-T'])
+            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL'], user=None),
+            mock.call([Family.objects.get(id=14)], ['12-48367227-TC-T'], user=None)
         ], any_order=True)
 
         logger_info_calls = [
@@ -79,7 +79,7 @@ class ReloadSavedVariantJsonTest(TestCase):
                      PROJECT_GUID,
                      '--family-id={}'.format(FAMILY_ID))
 
-        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'])
+        mock_get_variants.assert_called_with([family_1], ['1-1562437-G-C', '1-46859832-G-A', '21-3343353-GAGA-G'], user=None)
 
         logger_info_calls = [
             mock.call('Project: 1kg project n\xe5me with uni\xe7\xf8de'),

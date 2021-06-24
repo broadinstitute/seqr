@@ -2,7 +2,6 @@
 APIs used to retrieve and modify Individual fields
 """
 import json
-import logging
 
 from django.contrib.auth.models import User
 
@@ -16,7 +15,6 @@ from seqr.models import Family, FamilyAnalysedBy, Individual
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required
 
-logger = logging.getLogger(__name__)
 
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
@@ -77,8 +75,6 @@ def delete_families_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    logger.info("delete_families_handler %s", request_json)
-
     families_to_delete = request_json.get('families')
     if families_to_delete is None:
         return create_json_response(
@@ -114,13 +110,13 @@ def update_family_fields_handler(request, family_guid):
 
     family = Family.objects.get(guid=family_guid)
 
-    # check permission
-    project = family.project
-
-    check_project_permissions(project, request.user, can_edit=True)
+    # check permission - can be edited by anyone with access to the project
+    check_project_permissions(family.project, request.user)
 
     request_json = json.loads(request.body)
-    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
+    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True, immutable_keys=[
+        'family_id', 'display_name',
+    ])
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
