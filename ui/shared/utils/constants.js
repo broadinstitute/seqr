@@ -188,17 +188,19 @@ export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
-  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
-  [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView },
+  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description', canEdit: true },
+  [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView, canEdit: true },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     name: 'Assigned Analyst',
     component: BaseFieldView,
     submitArgs: { familyField: 'assigned_analyst' },
+    canEdit: true,
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     name: 'Analysed By',
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
+    canEdit: true,
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     name: 'Success Story Type',
@@ -207,12 +209,12 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story', internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
-  [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes' },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView },
-  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView },
-  [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes', canEdit: true },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary', canEdit: true },
+  [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes', canEdit: true },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView, canEdit: true },
+  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView, canEdit: true },
+  [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView, internal: true },
   [FAMILY_FIELD_INTERNAL_NOTES]: {
     name: 'Internal Notes',
     internal: true,
@@ -226,18 +228,18 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
 }
 
 export const FAMILY_DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true, collaboratorEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true, collaboratorEdit: true },
-  { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
-  { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-  { id: FAMILY_FIELD_MME_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
-  { id: FAMILY_FIELD_OMIM_NUMBER, canEdit: true },
-  { id: FAMILY_FIELD_PMIDS, canEdit: true },
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST },
+  { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
+  { id: FAMILY_FIELD_SUCCESS_STORY },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_MME_NOTES },
+  { id: FAMILY_FIELD_CODED_PHENOTYPE },
+  { id: FAMILY_FIELD_OMIM_NUMBER },
+  { id: FAMILY_FIELD_PMIDS },
 ]
 
 // INDIVIDUAL FIELDS

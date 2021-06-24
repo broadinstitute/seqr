@@ -178,7 +178,7 @@ class FamilyAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_update_success_story_types(self, mock_analyst_group):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
-        self.check_manager_login(url)
+        self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
@@ -196,6 +196,17 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
+
+    def test_update_family_fields(self):
+        url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({FAMILY_ID_FIELD: 'new_id', 'description': 'Updated description'}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(response_json[FAMILY_GUID]['description'], 'Updated description')
+        self.assertEqual(response_json[FAMILY_GUID][FAMILY_ID_FIELD], '1')
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_receive_families_table_handler(self, mock_pm_group):
