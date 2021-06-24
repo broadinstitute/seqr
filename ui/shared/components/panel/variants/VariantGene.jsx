@@ -249,7 +249,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
 
   let summaryDetail
   if (compact) {
-    summaryDetail = showInlineDetails ? [geneDetails, geneConsequence] : geneConsequence
+    summaryDetail = showInlineDetails ? <span>{geneDetails} {geneConsequence}</span> : geneConsequence
   } else {
     summaryDetail = (
       <GeneLinks>
