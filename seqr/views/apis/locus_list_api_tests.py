@@ -183,7 +183,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
         # add a locus list
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
-        self.check_manager_login(url)
+        self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
@@ -194,6 +194,10 @@ class LocusListAPITest(AuthenticationTestCase):
 
         # remove a locus list
         url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_manager()
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
