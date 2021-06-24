@@ -13,6 +13,7 @@ import json
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import google_auth_enabled, remove_token
+from settings import LOGIN_URL
 
 logger = SeqrLogger(__name__)
 
@@ -62,7 +63,7 @@ def login_required_error(request):
 
     This is used to redirect AJAX HTTP handlers to the login page.
     """
-    return _unauthorized_error('login')
+    return _unauthorized_error(LOGIN_URL)
 
 
 def policies_required_error(request):
@@ -70,8 +71,9 @@ def policies_required_error(request):
 
     This is used to redirect AJAX HTTP handlers to the accept policies page.
     """
-    return _unauthorized_error('policies')
+    return _unauthorized_error('/accept_policies')
 
 
-def _unauthorized_error(error):
-    return create_json_response({'error': error} , status=401, reason="{} required".format(error))
+def _unauthorized_error(error_redirect):
+    error = error_redirect.split('/')[1]
+    return create_json_response({'error': error, 'redirect': error_redirect} , status=401, reason="{} required".format(error))

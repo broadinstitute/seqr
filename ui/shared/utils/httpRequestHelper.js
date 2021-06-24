@@ -75,9 +75,8 @@ export class HttpRequestHelper {
     return promise.then((response) => {
       if (response.status === 401 && !window.location.href.includes('login')) {
         response.json().then((errorJson) => {
-          const { error } = errorJson
-          const path = error === 'policies' ? 'accept_policies' : 'login' // TODO
-          window.location.href = `${window.location.origin}/${path}?next=${window.location.href.replace(window.location.origin, '')}`
+          const { redirect } = errorJson
+          window.location.href = `${window.location.origin}${redirect}?next=${window.location.href.replace(window.location.origin, '')}`
         })
       }
       if (!response.ok) {
