@@ -83,6 +83,8 @@ def delete_component(component, deployment_target=None):
         component (string): component to delete (eg. 'postgres' or 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
+    check_kubernetes_context(deployment_target)
+
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
     elif component == 'elasticsearch':
@@ -125,6 +127,7 @@ def delete_all(deployment_target):
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
 
     """
+    check_kubernetes_context(deployment_target)
     settings = {}
 
     load_settings([
