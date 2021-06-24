@@ -42,10 +42,7 @@ class JsonLogFormatter(logging.Formatter):
 class SeqrLogger(object):
 
     def __init__(self, name=None):
-        """Custom logger which requires user metadata to be included in the log
-
-        :param name: logger name
-        """
+        """Custom logger which requires user metadata to be included in the log"""
         self._logger = logging.getLogger(name)
 
     def _log(self, level, message, user, **kwargs):
