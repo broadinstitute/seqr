@@ -15,15 +15,15 @@ import { ColoredLink } from '../StyledComponents'
 import Family from '../panel/family'
 
 const FAMILY_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
   { id: FAMILY_FIELD_INTERNAL_NOTES },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-const FamilyLink = React.memo(({ family, fields, path, target, disableEdit, PopupClass = Popup }) =>
+const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass = Popup }) =>
   React.createElement(PopupClass, {
     hoverable: true,
     wide: 'very',
@@ -37,13 +37,12 @@ const FamilyLink = React.memo(({ family, fields, path, target, disableEdit, Popu
         {family.displayName}
       </ColoredLink>
     ),
-    content: <Family family={family} fields={fields || FAMILY_FIELDS} disableEdit={disableEdit} useFullWidth disablePedigreeZoom />,
+    content: <Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} disableInternalEdit useFullWidth disablePedigreeZoom />,
   }),
 )
 
 FamilyLink.propTypes = {
   family: PropTypes.object,
-  fields: PropTypes.array,
   disableEdit: PropTypes.bool,
   path: PropTypes.string,
   target: PropTypes.string,

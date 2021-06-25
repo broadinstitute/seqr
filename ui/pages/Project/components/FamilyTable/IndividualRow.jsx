@@ -665,9 +665,9 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   candidateGenes: GENES_FIELD,
 }
 
-const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, subFields, isEditable, isPrivate }) => {
+const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
   const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-  const formattedField = { field, fieldName: header, isEditable, isPrivate, ...fieldProps }
+  const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
   if (subFields) {
     formattedField.formFields = subFields.map(subField => (
       { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
@@ -752,12 +752,12 @@ const IndividualRow = React.memo((
   return (
     <FamilyLayout
       fields={fields}
-      fieldDisplay={({ component, isEditable, onSubmit, individualFields = () => {}, ...field }) =>
+      fieldDisplay={({ component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field }) =>
         React.createElement(component || BaseFieldView, {
           key: field.field,
-          isEditable: isEditable && project.canEdit,
-          onSubmit: isEditable && dispatchUpdateIndividual,
-          modalTitle: isEditable && `${field.fieldName} for Individual ${displayName}`,
+          isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+          onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
+          modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${displayName}`,
           initialValues: individual,
           idField: 'individualGuid',
           ...individualFields(individual),

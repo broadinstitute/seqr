@@ -4,7 +4,6 @@ import elasticsearch
 from elasticsearch_dsl import Search, Q, MultiSearch
 import hashlib
 import json
-import logging
 from pyliftover.liftover import LiftOver
 from sys import maxsize
 from itertools import combinations
@@ -17,11 +16,12 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
     GRCH38_LOCUS_FIELD
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 class EsSearch(object):
@@ -30,7 +30,7 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, inheritance_search=None,
-                 return_all_queried_families=False):
+                 return_all_queried_families=False, user=None):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
@@ -87,6 +87,7 @@ class EsSearch(object):
 
         self.previous_search_results = previous_search_results or {}
         self._return_all_queried_families = return_all_queried_families
+        self._user = user
 
         self._search = Search()
         self._index_searches = defaultdict(list)
@@ -419,7 +420,7 @@ class EsSearch(object):
     def search(self,  **kwargs):
         indices = self._indices
 
-        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
+        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)), self._user)
 
         is_single_search, search_kwargs = self._should_execute_single_search(**kwargs)
 
@@ -565,7 +566,7 @@ class EsSearch(object):
             return response_hits, response_total, True, index_name
 
         response_total = response.hits.total['value']
-        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
+        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
     def _parse_hit(self, raw_hit):
@@ -762,7 +763,7 @@ class EsSearch(object):
                 compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
-        logger.info('Total compound het hits: {}'.format(total_compound_het_results))
+        logger.info('Total compound het hits: {}'.format(total_compound_het_results), self._user)
 
         compound_het_results = []
         for k, compound_het_pairs in compound_het_pairs_by_gene.items():
@@ -981,7 +982,7 @@ class EsSearch(object):
             if search.aggs.to_dict():
                 # For compound het search get results from aggregation instead of top level hits
                 search = search[:1]
-                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
+                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name), self._user)
             else:
                 end_index = page * num_results
                 if start_index is None:
@@ -994,18 +995,18 @@ class EsSearch(object):
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
-                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index), self._user)
 
             searches.append(search)
         return searches
 
     def _execute_search(self, search):
-        logger.debug(json.dumps(search.to_dict(), indent=2))
+        logger.debug(json.dumps(search.to_dict(), indent=2), self._user)
         try:
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:
             canceled = self._delete_long_running_tasks()
-            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled), self._user)
             raise e
         except elasticsearch.exceptions.TransportError as e:
             if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
@@ -1062,7 +1063,7 @@ def _liftover_grch38_to_grch37():
         try:
             LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
         except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e))
+            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
     return LIFTOVER_GRCH38_TO_GRCH37
 
 
@@ -1073,7 +1074,7 @@ def _liftover_grch37_to_grch38():
         try:
             LIFTOVER_GRCH37_TO_GRCH38 = LiftOver('hg19', 'hg38')
         except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e))
+            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
     return LIFTOVER_GRCH37_TO_GRCH38
 
 
@@ -1211,8 +1212,6 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
                 q |= interval_q
             else:
                 q = interval_q
-
-        logger.info(q.to_dict())
 
     filters = [
         {'geneIds': list((genes or {}).keys())},

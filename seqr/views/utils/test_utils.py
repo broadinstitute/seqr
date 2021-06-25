@@ -426,13 +426,13 @@ PROJECT_FIELDS = {
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
-    'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'mmeNotes',
+    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
 }
 INTERNAL_FAMILY_FIELDS = {
-    'individualGuids', 'successStory', 'successStoryTypes',
+    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 

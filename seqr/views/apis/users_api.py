@@ -1,7 +1,6 @@
 from requests.utils import quote
 
 import json
-import logging
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
@@ -9,6 +8,7 @@ from urllib.parse import unquote
 
 from seqr.models import UserPolicy
 from seqr.utils.communication_utils import send_welcome_email
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
@@ -16,7 +16,7 @@ from seqr.views.utils.permissions_utils import get_local_access_projects, get_pr
     login_and_policies_required, login_active_required
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
@@ -82,7 +82,7 @@ def set_password(request, username):
 
     user.set_password(request_json['password'])
     _update_user_from_json(user, request_json, updated_fields={'password'})
-    logger.info('Set password for user {}'.format(user.email), extra={'user': user})
+    logger.info('Set password for user {}'.format(user.email), user)
 
     u = authenticate(username=username, password=request_json['password'])
     login(request, u)
@@ -136,7 +136,7 @@ def create_project_collaborator(request, project_guid):
         first_name=request_json.get('firstName') or '',
         last_name=request_json.get('lastName') or '',
     )
-    logger.info('Created user {} (local)'.format(request_json['email']), extra={'user': request.user})
+    logger.info('Created user {} (local)'.format(request_json['email']), request.user)
 
     send_welcome_email(user, request.user)
 
