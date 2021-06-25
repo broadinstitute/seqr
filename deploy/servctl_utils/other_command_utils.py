@@ -1,7 +1,4 @@
-import collections
-
 import logging
-import os
 import subprocess
 import sys
 import time
@@ -50,30 +47,6 @@ def check_kubernetes_context(deployment_target):
         sys.exit(-1)
 
     return kubectl_current_context
-
-# TODO use sh command
-def set_environment(deployment_target):
-    """Configure the shell environment to point to the given deployment_target using 'gcloud config set-context' and other commands.
-
-    Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev", etc.
-    """
-
-    settings = collections.OrderedDict()
-    load_settings([
-        "deploy/kubernetes/shared-settings.yaml",
-        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
-        ], settings)
-
-    if deployment_target.startswith("gcloud"):
-        os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
-        run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
-        run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings, print_command=True)
-        run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings, print_command=True)
-    else:
-        raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
-
-    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
 def delete_component(component, deployment_target=None):

@@ -67,7 +67,7 @@ def deploy_init_cluster(settings):
     if not node_name:
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
-    set_environment(settings["DEPLOY_TO"])
+    run('deploy/kubectl_helpers/set_env.sh {}'.format(settings['DEPLOYMENT_TYPE']))
 
     create_namespace(settings)
 
