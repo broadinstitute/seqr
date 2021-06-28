@@ -1,5 +1,4 @@
 from collections import defaultdict
-import logging
 import requests
 
 from datetime import datetime, timedelta

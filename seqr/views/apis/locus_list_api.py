@@ -1,5 +1,4 @@
 import json
-import logging
 
 from django.db.models import Q, Count
 from django.db.utils import IntegrityError
