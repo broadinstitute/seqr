@@ -76,4 +76,4 @@ def policies_required_error(request):
 
 def _unauthorized_error(error_redirect):
     error = error_redirect.split('/')[1]
-    return create_json_response({'error': error, 'redirect': error_redirect} , status=401, reason="{} required".format(error))
+    return create_json_response({'error': error_redirect} , status=401, reason="{} required".format(error))

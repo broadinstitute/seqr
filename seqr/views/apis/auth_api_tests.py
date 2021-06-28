@@ -121,10 +121,10 @@ class AuthAPITest(TestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'login required')
-        self.assertDictEqual(response.json(), {'error': 'login', 'redirect': '/login'})
+        self.assertDictEqual(response.json(), {'error': '/login'})
 
     def test_policies_required_error(self):
         url = reverse(policies_required_error)
         response = self.client.post(url)
         self.assertEqual(response.status_code, 401)
-        self.assertDictEqual(response.json(), {'error': 'accept_policies', 'redirect': '/accept_policies'})
+        self.assertDictEqual(response.json(), {'error': '/accept_policies'})
