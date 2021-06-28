@@ -4,7 +4,7 @@ import mock
 from requests import HTTPError
 import responses
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 from seqr.models import Individual
 
@@ -197,19 +197,6 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
     "projects": []
 }
 
-TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
-    "index": "test_index_no_project",
-    "sampleType": "WGS",
-    "genomeVersion": "37",
-    "sourceFilePath": "test_index_no_project_path",
-    "docsCount": "672312",
-    "storeSize": "233.4mb",
-    "creationDateString": "2019-10-03T19:53:53.846Z",
-    "datasetType": "VARIANTS",
-    "gencodeVersion": "19",
-    "projects": []
-}
-
 EXPECTED_ERRORS = [
     'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)']
 
@@ -282,6 +269,33 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
 
+    @urllib3_responses.activate
+    def test_delete_index(self):
+        url = reverse(delete_index)
+        self.check_data_manager_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
+        self.assertEqual(response.status_code, 403)
+        self.assertDictEqual(
+            response.json(), ({'error': 'Index "test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de'}))
+        self.assertEqual(len(urllib3_responses.calls), 0)
+
+        urllib3_responses.add_json(
+            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
+        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
+        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
+        urllib3_responses.add(urllib3_responses.DELETE, '/unused_index')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'indices'})
+        self.assertEqual(len(response_json['indices']), 5)
+        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
+        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
+        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
+
+        self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     def test_upload_qc_pipeline_output(self, mock_subprocess):

@@ -1,5 +1,4 @@
 import json
-import logging
 
 from django.db.models import Q, Count
 from django.db.utils import IntegrityError
@@ -8,7 +7,7 @@ from django.db.utils import IntegrityError
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
-from seqr.utils.logging_utils import log_model_update
+from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -16,7 +15,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_jso
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions, login_and_policies_required
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
 
@@ -106,7 +105,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 
 @login_and_policies_required
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_permissions(project_guid, request.user)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
