@@ -429,6 +429,187 @@ def _parse_rgp_dsm_export_format(rows):
 
     return pedigree_rows
 
+def _get_detailed_yes_no(row, column, detail_column):
+    val = row[column]
+    formatted_val = val.title()
+    if val == DSMConstants.YES and row[detail_column]:
+        formatted_val = '{}; {}'.format(formatted_val, row[detail_column])
+    return formatted_val
+
+def _bool_condition_val(column_val, yes, no, default, unknown=None):
+    if column_val == DSMConstants.YES:
+        return yes
+    elif column_val == DSMConstants.NO:
+        return no
+    elif unknown and column_val == DSMConstants.UNSURE:
+        return unknown
+    return default
+
+def _test_summary(row, test):
+    test = test.strip()
+    if test == DSMConstants.OTHER:
+        display = 'Other tests: {}'.format(row[DSMConstants.OTHER_TEST_COLUMN] or 'Unspecified')
+    else:
+        display = DSMConstants.TEST_DISPLAYS[test]
+
+    if test not in DSMConstants.TEST_DETAIL_COLUMNS:
+        return display
+
+    def _get_test_detail(column):
+        return row['TESTS_{}_{}'.format(test, column)]
+
+    relatives = _get_test_detail(DSMConstants.RELATIVES_KEY) or 'None Specified'
+
+    return '{name}. Year: {year}, Lab: {lab}, Relatives: {relatives}{other_relatives}'.format(
+        name=display,
+        year=_get_test_detail(DSMConstants.YEAR_KEY) or 'unspecified',
+        lab=_get_test_detail(DSMConstants.LAB_KEY) or 'unspecified',
+        relatives=', '.join([rel.strip().title().replace('_', ' or ') for rel in relatives.split(',')]),
+        other_relatives=': {}'.format(
+            _get_test_detail(DSMConstants.RELATIVE_DETAILS_KEY) or 'not specified') if DSMConstants.OTHER in relatives else '',
+    )
+
+def _get_testing(row):
+    tests = row[DSMConstants.TESTS_COLUMN]
+    if DSMConstants.NONE in tests or not tests:
+        return 'None'
+    elif DSMConstants.NOT_SURE_TEST in tests:
+        return 'Not sure'
+    return 'Yes;\n{tab}{tab}{tests}'.format(tab=DSMConstants.TAB, tests='\n{0}{0}'.format(DSMConstants.TAB).join([
+        _test_summary(row, test) for test in tests.split(',')
+    ]))
+
+def _parent_summary(row, parent):
+    parent_values = {
+        field: row['{}_{}'.format(parent, field)] for field in DSMConstants.PARENT_DETAIL_FIELDS
+    }
+
+    is_affected = parent_values[DSMConstants.AFFECTED_KEY]
+    can_participate = parent_values[DSMConstants.CAN_PARTICIPATE_KEY] == DSMConstants.YES
+    is_deceased = parent_values[DSMConstants.DECEASED_KEY]
+
+    parent_details = [
+        _bool_condition_val(is_affected, 'affected', 'unaffected', 'unknown affected status'),
+        'onset age {}'.format(parent_values[DSMConstants.PARENT_AGE_KEY]) if is_affected == DSMConstants.YES else None,
+        'available' if can_participate else 'unavailable',
+        None if can_participate else _bool_condition_val(
+            is_deceased, yes='deceased', no='living', unknown='unknown deceased status',
+            default='unspecified deceased status'),
+        _bool_condition_val(
+            parent_values[DSMConstants.STORED_DNA_KEY], 'sample available', 'sample not available', 'unknown sample availability')
+        if is_deceased == DSMConstants.YES else None,
+    ]
+
+    return ', '.join(filter(lambda x: x, parent_details))
+
+def _relative_summary(relative, relative_type, all_affected):
+    relative_values = {
+        field: relative.get('{}_{}'.format(relative_type, field)) for field in DSMConstants.RELATIVE_DETAIL_FIELDS
+    }
+    sex_map = DSMConstants.RELATIVE_SEX_MAP[relative_type]
+
+    return ', '.join([
+        sex_map.get(relative_values[DSMConstants.SEX_KEY]) or sex_map['Other'],
+        'age {}'.format(relative_values[DSMConstants.AGE_KEY]),
+        'affected' if all_affected else _bool_condition_val(
+            relative_values[DSMConstants.SAME_CONDITION_KEY], 'affected', 'unaffected', 'unspecified affected status'),
+        _bool_condition_val(relative_values[DSMConstants.CAN_PARTICIPATE_KEY], 'available', 'unavailable', 'unspecified availability'),
+    ])
+
+def _relative_list_summary(row, relative, all_affected=False):
+    relative_list = _get_rgp_dsm_relative_list(row, relative)
+    if relative_list is None:
+        return 'None'
+
+    divider = '\n{tab}{tab}'.format(tab=DSMConstants.TAB)
+    return '{divider}{relatives}'.format(
+        divider=divider,
+        relatives=divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list]),
+    )
+
+def _get_rgp_dsm_relative_list(row, relative):
+    if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
+        return None
+
+    return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]
+
+def _get_dsm_races(race_string):
+    return [race.strip().title() for race in race_string.split(',') if race]
+
+def _get_dsm_ethnicity(ethnicity):
+    return ethnicity.replace('_', ' ').title()
+
+def _get_rgp_dsm_parent_ethnicity(row, parent):
+    races = _get_dsm_races(row['{}_{}'.format(parent, DSMConstants.RACE_COLUMN)])
+    ethnicity = row['{}_{}'.format(parent, DSMConstants.ETHNICITY_COLUMN)]
+    if ethnicity and ethnicity not in {DSMConstants.UNKNOWN, DSMConstants.PREFER_NOT_ANSWER}:
+        races.append(_get_dsm_ethnicity(ethnicity))
+    return races or None
+
+def _get_rgp_dsm_family_notes(row):
+    row = {k: v.encode('ascii', errors='ignore').decode() for k, v in row.items()}
+
+    DC = DSMConstants
+
+    return """#### Clinical Information
+{tab} __Patient is my:__ {specified_relationship}{relationship}
+{tab} __Current Age:__ {age}
+{tab} __Age of Onset:__ {age_of_onset}
+{tab} __Race/Ethnicity:__ {race}; {ethnicity}
+{tab} __Case Description:__ {description}
+{tab} __Clinical Diagnoses:__ {clinical_diagnoses}
+{tab} __Genetic Diagnoses:__ {genetic_diagnoses}
+{tab} __Website/Blog:__ {website}
+{tab} __Additional Information:__ {info}
+#### Prior Testing
+{tab} __Referring Physician:__ {physician}
+{tab} __Doctors Seen:__ {doctors}{other_doctors}
+{tab} __Previous Testing:__ {testing}
+{tab} __Biopsies Available:__ {biopses}{other_biopses}
+{tab} __Other Research Studies:__ {studies}
+#### Family Information
+{tab} __Mother:__ {mother}
+{tab} __Father:__ {father}
+{tab} __Siblings:__ {siblings}
+{tab} __Children:__ {children}
+{tab} __Relatives:__ {relatives}
+    """.format(
+        tab=DC.TAB,
+        specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
+            if row[DC.RELATIONSHIP_COLUMN] == DC.OTHER else '',
+        relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.PREFER_NOT_ANSWER],
+        age='Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
+            deceased_age=row[DC.DECEASED_AGE_COLUMN],
+            cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
+            sample_availability=_bool_condition_val(
+                row[DC.SAMPLE_AVAILABILITY_COLUMN], 'available', 'not available', 'availability unknown'),
+        ) if row[DC.DECEASED_COLUMN] == DC.YES else row[DC.AGE_COLUMN],
+        age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
+        race=', '.join(_get_dsm_races(row[DC.RACE_COLUMN])),
+        ethnicity=_get_dsm_ethnicity(row[DC.ETHNICITY_COLUMN]) or 'Prefer Not To Answer',
+        description=row[DC.DESCRIPTION_COLUMN],
+        clinical_diagnoses=_get_detailed_yes_no(row, DC.CLINICAL_DIAGNOSES_COLUMN, DC.CLINICAL_DIAGNOSES_SPECIFY_COLUMN),
+        genetic_diagnoses=_get_detailed_yes_no(row, DC.GENETIC_DIAGNOSES_COLUMN, DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN),
+        website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
+        info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
+        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'None',
+        doctors=', '.join([DC.DOCTOR_TYPE_MAP[doc.strip()] for doc in row[DC.DOCTOR_TYPES_COLUMN].split(',') if doc]),
+        other_doctors=': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if DC.OTHER in row[DC.DOCTOR_TYPES_COLUMN] else '',
+        testing=_get_testing(row),
+        biopses='None' if (DC.NONE in row[DC.BIOPSY_COLUMN] or not row[DC.BIOPSY_COLUMN]) else ', '.join([
+           '{} Biopsy'.format('Other Tissue' if biopsy.strip() == DC.OTHER else biopsy.strip().title())
+            for biopsy in row[DC.BIOPSY_COLUMN].split(',')]),
+        other_biopses=': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if DC.OTHER in row[DC.BIOPSY_COLUMN] else '',
+        studies='Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
+            study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
+            expecting_results=(row[DC.EXPECTING_RESULTS_COLUMN] or 'Unspecified').title(),
+        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
+        mother=_parent_summary(row, DC.MOTHER),
+        father=_parent_summary(row, DC.FATHER),
+        siblings=_relative_list_summary(row, DC.SIBLINGS),
+        children=_relative_list_summary(row, DC.CHILDREN),
+        relatives=_relative_list_summary(row, DC.OTHER_RELATIVES, all_affected=True),
+    )
 
 def _get_rgp_dsm_proband_fields(row):
     DC = DSMConstants
@@ -475,189 +656,6 @@ def _get_rgp_dsm_proband_fields(row):
         JsonConstants.ONSET_AGE: json.dumps(onset_age),
         JsonConstants.AFFECTED_RELATIVES: json.dumps(affected_relatives),
     }
-
-
-def _get_rgp_dsm_family_notes(row):
-    row = {k: v.encode('ascii', errors='ignore').decode() for k, v in row.items()}
-
-    DC = DSMConstants
-
-    def _get_detailed_yes_no(column, detail_column):
-        val = row[column]
-        formatted_val = val.title()
-        if val == DC.YES and row[detail_column]:
-            formatted_val = '{}; {}'.format(formatted_val, row[detail_column])
-        return formatted_val
-
-    def _bool_condition_val(column_val, yes, no, default, unknown=None):
-        if column_val == DC.YES:
-            return yes
-        elif column_val == DC.NO:
-            return no
-        elif unknown and column_val == DC.UNSURE:
-            return unknown
-        return default
-
-    def _test_summary(test):
-        test = test.strip()
-        if test == DC.OTHER:
-            display = 'Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN] or 'Unspecified')
-        else:
-            display = DC.TEST_DISPLAYS[test]
-
-        if test not in DC.TEST_DETAIL_COLUMNS:
-            return display
-
-        def _get_test_detail(column):
-            return row['TESTS_{}_{}'.format(test, column)]
-
-        relatives = _get_test_detail(DC.RELATIVES_KEY) or 'None Specified'
-
-        return '{name}. Year: {year}, Lab: {lab}, Relatives: {relatives}{other_relatives}'.format(
-            name=display,
-            year=_get_test_detail(DC.YEAR_KEY) or 'unspecified',
-            lab=_get_test_detail(DC.LAB_KEY) or 'unspecified',
-            relatives=', '.join([rel.strip().title().replace('_', ' or ') for rel in relatives.split(',')]),
-            other_relatives=': {}'.format(_get_test_detail(DC.RELATIVE_DETAILS_KEY) or 'not specified') if DC.OTHER in relatives else '',
-        )
-
-    def _parent_summary(parent):
-        parent_values = {
-            field: row['{}_{}'.format(parent, field)] for field in DC.PARENT_DETAIL_FIELDS
-        }
-
-        is_affected = parent_values[DC.AFFECTED_KEY]
-        can_participate = parent_values[DC.CAN_PARTICIPATE_KEY] == DC.YES
-        is_deceased = parent_values[DC.DECEASED_KEY]
-
-        parent_details = [
-            _bool_condition_val(is_affected, 'affected', 'unaffected', 'unknown affected status'),
-            'onset age {}'.format(parent_values[DC.PARENT_AGE_KEY]) if is_affected == DC.YES else None,
-            'available' if can_participate else 'unavailable',
-            None if can_participate else _bool_condition_val(
-                is_deceased, yes='deceased', no='living', unknown='unknown deceased status',
-                default='unspecified deceased status'),
-            _bool_condition_val(
-                parent_values[DC.STORED_DNA_KEY], 'sample available', 'sample not available', 'unknown sample availability')
-            if is_deceased == DC.YES else None,
-        ]
-
-        return ', '.join(filter(lambda x: x, parent_details))
-
-    def _relative_summary(relative, relative_type, all_affected):
-        relative_values = {
-            field: relative.get('{}_{}'.format(relative_type, field)) for field in DC.RELATIVE_DETAIL_FIELDS
-        }
-        sex_map = DC.RELATIVE_SEX_MAP[relative_type]
-
-        return ', '.join([
-            sex_map.get(relative_values[DC.SEX_KEY]) or sex_map['Other'],
-            'age {}'.format(relative_values[DC.AGE_KEY]),
-            'affected' if all_affected else _bool_condition_val(
-                relative_values[DC.SAME_CONDITION_KEY], 'affected', 'unaffected', 'unspecified affected status'),
-            _bool_condition_val(relative_values[DC.CAN_PARTICIPATE_KEY], 'available', 'unavailable', 'unspecified availability'),
-        ])
-
-    def _relative_list_summary(relative, all_affected=False):
-        relative_list = _get_rgp_dsm_relative_list(row, relative)
-        if relative_list is None:
-            return 'None'
-
-        divider = '\n{tab}{tab}'.format(tab=DC.TAB)
-        return '{divider}{relatives}'.format(
-            divider=divider,
-            relatives=divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list]),
-        )
-
-    tests = row[DC.TESTS_COLUMN]
-    if DC.NONE in tests or not tests:
-        testing = 'None'
-    elif DC.NOT_SURE_TEST in tests:
-        testing = 'Not sure'
-    else:
-        testing = 'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join([
-            _test_summary(test) for test in tests.split(',')
-        ]))
-
-
-    return """#### Clinical Information
-{tab} __Patient is my:__ {specified_relationship}{relationship}
-{tab} __Current Age:__ {age}
-{tab} __Age of Onset:__ {age_of_onset}
-{tab} __Race/Ethnicity:__ {race}; {ethnicity}
-{tab} __Case Description:__ {description}
-{tab} __Clinical Diagnoses:__ {clinical_diagnoses}
-{tab} __Genetic Diagnoses:__ {genetic_diagnoses}
-{tab} __Website/Blog:__ {website}
-{tab} __Additional Information:__ {info}
-#### Prior Testing
-{tab} __Referring Physician:__ {physician}
-{tab} __Doctors Seen:__ {doctors}{other_doctors}
-{tab} __Previous Testing:__ {testing}
-{tab} __Biopsies Available:__ {biopses}{other_biopses}
-{tab} __Other Research Studies:__ {studies}
-#### Family Information
-{tab} __Mother:__ {mother}
-{tab} __Father:__ {father}
-{tab} __Siblings:__ {siblings}
-{tab} __Children:__ {children}
-{tab} __Relatives:__ {relatives}
-    """.format(
-        tab=DC.TAB,
-        specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
-            if row[DC.RELATIONSHIP_COLUMN] == DC.OTHER else '',
-        relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.PREFER_NOT_ANSWER],
-        age='Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
-            deceased_age=row[DC.DECEASED_AGE_COLUMN],
-            cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
-            sample_availability=_bool_condition_val(
-                row[DC.SAMPLE_AVAILABILITY_COLUMN], 'available', 'not available', 'availability unknown'),
-        ) if row[DC.DECEASED_COLUMN] == DC.YES else row[DC.AGE_COLUMN],
-        age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
-        race=', '.join(_get_dsm_races(row[DC.RACE_COLUMN])),
-        ethnicity=_get_dsm_ethnicity(row[DC.ETHNICITY_COLUMN]) or 'Prefer Not To Answer',
-        description=row[DC.DESCRIPTION_COLUMN],
-        clinical_diagnoses=_get_detailed_yes_no(DC.CLINICAL_DIAGNOSES_COLUMN, DC.CLINICAL_DIAGNOSES_SPECIFY_COLUMN),
-        genetic_diagnoses=_get_detailed_yes_no(DC.GENETIC_DIAGNOSES_COLUMN, DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN),
-        website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
-        info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
-        physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'None',
-        doctors=', '.join([DC.DOCTOR_TYPE_MAP[doc.strip()] for doc in row[DC.DOCTOR_TYPES_COLUMN].split(',') if doc]),
-        other_doctors=': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if DC.OTHER in row[DC.DOCTOR_TYPES_COLUMN] else '',
-        testing=testing,
-        biopses='None' if (DC.NONE in row[DC.BIOPSY_COLUMN] or not row[DC.BIOPSY_COLUMN]) else ', '.join([
-           '{} Biopsy'.format('Other Tissue' if biopsy.strip() == DC.OTHER else biopsy.strip().title())
-            for biopsy in row[DC.BIOPSY_COLUMN].split(',')]),
-        other_biopses=': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if DC.OTHER in row[DC.BIOPSY_COLUMN] else '',
-        studies='Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
-            study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
-            expecting_results=(row[DC.EXPECTING_RESULTS_COLUMN] or 'Unspecified').title(),
-        ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
-        mother=_parent_summary(DC.MOTHER),
-        father=_parent_summary(DC.FATHER),
-        siblings=_relative_list_summary(DC.SIBLINGS),
-        children=_relative_list_summary(DC.CHILDREN),
-        relatives=_relative_list_summary(DC.OTHER_RELATIVES, all_affected=True),
-    )
-
-def _get_rgp_dsm_relative_list(row, relative):
-    if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
-        return None
-
-    return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]
-
-def _get_dsm_races(race_string):
-    return [race.strip().title() for race in race_string.split(',') if race]
-
-def _get_dsm_ethnicity(ethnicity):
-    return ethnicity.replace('_', ' ').title()
-
-def _get_rgp_dsm_parent_ethnicity(row, parent):
-    races = _get_dsm_races(row['{}_{}'.format(parent, DSMConstants.RACE_COLUMN)])
-    ethnicity = row['{}_{}'.format(parent, DSMConstants.ETHNICITY_COLUMN)]
-    if ethnicity and ethnicity not in {DSMConstants.UNKNOWN, DSMConstants.PREFER_NOT_ANSWER}:
-        races.append(_get_dsm_ethnicity(ethnicity))
-    return races or None
 
 
 class JsonConstants:
