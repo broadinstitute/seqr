@@ -531,7 +531,7 @@ def _get_rgp_dsm_relative_list(row, relative):
     if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
         return None
 
-    return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') or [] if rel]
+    return [rel for rel in json.loads(row[DSMConstants.RELATIVES_LIST_COLUMNS[relative]] or '[]') if rel]
 
 def _get_dsm_races(race_string):
     return [race.strip().title() for race in race_string.split(',') if race]
