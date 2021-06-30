@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
-from seqr.utils.file_utils import file_iter
+from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
 from seqr.views.utils.file_utils import parse_file
@@ -117,7 +117,9 @@ def delete_index(request):
 
 @data_manager_required
 def upload_qc_pipeline_output(request):
-    file_path = json.loads(request.body)['file']
+    file_path = json.loads(request.body)['file'].strip()
+    if not does_file_exist(file_path, user=request.user):
+        return create_json_response({'errors': ['File not found: {}'.format(file_path)]}, status=400)
     raw_records = parse_file(file_path, file_iter(file_path, user=request.user))
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
