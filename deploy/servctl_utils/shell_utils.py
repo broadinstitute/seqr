@@ -7,13 +7,6 @@ from io import StringIO
 logger = logging.getLogger(__name__)
 
 
-def wait_for(procs):
-    """Takes a list of subprocess.Popen objects and doesn't return until all these processes have completed"""
-
-    for proc in procs:
-        proc.wait()
-
-
 def run(command,
         ok_return_codes=(0,),
         errors_to_ignore=None,
