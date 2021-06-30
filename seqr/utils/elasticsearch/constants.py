@@ -99,6 +99,7 @@ POPULATIONS = {
     'gnomad_genomes': {
         'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
+    'gnomad_svs': {},
 }
 POPULATION_FIELD_CONFIGS = {
     'AF': {'format_value': float},
@@ -107,6 +108,8 @@ POPULATION_FIELD_CONFIGS = {
     'AN': {},
     'Hom': {},
     'Hemi': {},
+    'Het': {},
+    'ID': {'format_value': str, 'default_value': None},
 }
 for population, pop_config in POPULATIONS.items():
     for freq_field in POPULATION_FIELD_CONFIGS.keys():
@@ -261,6 +264,11 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    'sv_type_detail': {'response_key': 'svTypeDetail'},
+    'cpx_intervals': {
+      'response_key': 'cpxIntervals',
+      'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
+},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},

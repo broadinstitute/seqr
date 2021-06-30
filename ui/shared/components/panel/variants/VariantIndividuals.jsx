@@ -103,6 +103,20 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
+const svGenotype = (genotype, isHemiX) => {
+  const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0
+  const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
+  if (!hasGenotype) {
+    return <span>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</span>
+  }
+  return (
+    <span>
+      {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
+      {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
+    </span>
+  )
+}
+
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
@@ -112,12 +126,14 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
         content={<div><b>Warning:</b> {warning}</div>}
       />
     }
-    {genotype.numAlt >= 0 ?
+    {variant.svType ?
+      <Header.Content>
+        {svGenotype(genotype, isHemiX)}
+      </Header.Content> :
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-      </Header.Content> :
-      <Header.Content>CN: {genotype.cn === (isHemiX ? 1 : 2) ? genotype.cn : <b><i>{genotype.cn}</i></b>}</Header.Content>
+      </Header.Content>
     }
   </AlleleContainer>,
 )
@@ -166,7 +182,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     return null
   }
 
-  if ((!variant.svType && genotype.numAlt < 0) || (variant.svType && genotype.cn < 0)) {
+  const isNoCall = variant.svType ?
+    (!Number.isInteger(genotype.cn) && (!Number.isInteger(genotype.numAlt) || genotype.numAlt < 0)) :
+    genotype.numAlt < 0
+  if (isNoCall) {
     return <b>NO CALL</b>
   }
 
@@ -205,7 +224,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
       />}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
-      {genotype.gq || genotype.qs || '-'}{genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
+      {genotype.gq || genotype.qs || '-'}{!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
     </span>
   )
