@@ -1,20 +1,9 @@
-/* eslint-disable indent */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
 
 import { SEX_LOOKUP, AFFECTED_LOOKUP } from 'shared/utils/constants'
-
-const iconStyle = { fontSize: '13px !important' }
-const rotate45deg = {
-  msTransform: 'rotate(45deg)', /* IE 9 */
-  WebkitTransform: 'rotate(45deg)', /* Chrome, Safari, Opera */
-  transform: 'rotate(45deg)',
-  fontSize: '0.85em',
-  ...iconStyle,
-}
 
 const ICON_LOOKUP = {
 
@@ -23,7 +12,7 @@ const ICON_LOOKUP = {
   MU: {
     iconGroup: (
       <Icon.Group>
-        <Icon style={iconStyle} name="square outline" />
+        <Icon name="square outline" />
         <Icon size="small" name="question" />
       </Icon.Group>
     ),
@@ -33,15 +22,15 @@ const ICON_LOOKUP = {
   FN: { icon: 'circle outline' },
   FU: { icon: 'question circle outline' },
 
-  UA: { icon: 'square', rotated: true },
-  UN: { icon: 'square outline', rotated: true },
+  UA: { icon: 'clone' },
+  UN: { icon: 'clone outline' },
   UU: { icon: 'question' },
 }
 
 const PedigreeIcon = React.memo((props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
   return <Popup
-    trigger={iconProps.iconGroup || <span><Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />{props.label}</span>}
+    trigger={iconProps.iconGroup || <span><Icon name={iconProps.icon || 'warning sign'} />{props.label}</span>}
     content={
       <div>
         <b>Sex:</b> {SEX_LOOKUP[props.sex] || 'INVALID'} <br />
