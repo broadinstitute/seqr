@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchE
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
-from settings import DEBUG
+from settings import DEBUG, LOGIN_URL
 
 logger = SeqrLogger()
 
@@ -35,7 +35,8 @@ EXCEPTION_ERROR_MAP = {
 
 EXCEPTION_MESSAGE_MAP = {
     elasticsearch.exceptions.ConnectionError: str,
-    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info))
+    elasticsearch.exceptions.TransportError: lambda e: '{}: {} - {} - {}'.format(e.__class__.__name__, e.status_code, repr(e.error), _get_transport_error_type(e.info)),
+    TerraAPIException: lambda e: LOGIN_URL if e.status_code == 401 else str(e),
 }
 
 ERROR_LOG_EXCEPTIONS = {InvalidIndexException}
