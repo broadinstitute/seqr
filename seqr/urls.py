@@ -137,7 +137,8 @@ react_app_pages = [
 
 no_login_react_app_pages = [
     r'^$',
-    'login',
+    'login/',
+    'login/error/.*',
     'users/forgot_password',
     'users/set_password/(?P<user_token>.+)',
     'matchmaker/matchbox',

@@ -3,7 +3,7 @@ import json
 
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.apis.auth_api import login_view, logout_view, login_required_error
+from seqr.views.apis.auth_api import login_view, logout_view, login_required_error, policies_required_error
 from django.contrib.auth.models import User
 
 
@@ -91,36 +91,9 @@ class AuthAPITest(TestCase):
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
     def test_login_view_with_google(self):
         url = reverse(login_view)
-
-        # send login request with a privileged account (data manage or superuser) while Google auth is enabled
-        req_values = {
-            'email': 'test_data_manager@test.com',
-            'password': 'not-a-password'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.reason_phrase, 'Privileged user must login with Google authentication.')
-
-        req_values = {
-            'email': 'test_superuser@test.com',
-            'password': 'not-a-password'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.reason_phrase, 'Privileged user must login with Google authentication.')
-
-        # send login request with a non-privileged user and a correct password
-        req_values = {
-            'email': 'test_new_user@institute.com',
-            'password': 'password123'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertTrue(response_json['success'])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
 
     def test_logout_view(self):
         url = reverse(login_view)
@@ -136,15 +109,22 @@ class AuthAPITest(TestCase):
         # send logout request
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login')
+        self.assertEqual(response.url, '/')
 
         # no error when attempt to log out again
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login')
+        self.assertEqual(response.url, '/')
 
     def test_login_required_error(self):
         url = reverse(login_required_error)
         response = self.client.post(url)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'login required')
+        self.assertDictEqual(response.json(), {'error': '/login'})
+
+    def test_policies_required_error(self):
+        url = reverse(policies_required_error)
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 401)
+        self.assertDictEqual(response.json(), {'error': '/accept_policies'})
