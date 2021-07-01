@@ -22,6 +22,7 @@ def check_kubernetes_context(deployment_target):
     Return:
         string: The output of `kubectl config current-context`
     """
+    # TODO use kubectl helpers
     try:
         cmd = 'kubectl config current-context'
         kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
