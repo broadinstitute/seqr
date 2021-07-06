@@ -20,7 +20,7 @@ const Login = ({ onSubmit }) =>
       fields={FIELDS}
       submitButtonText="Log In"
     />
-    <Link to="/users/forgot_password">Forgot Password?</Link>
+    <Link to="/login/forgot_password">Forgot Password?</Link>
   </UserFormContainer>
 
 

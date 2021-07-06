@@ -61,7 +61,7 @@ def forgot_password(request):
         Hi there {full_name}--
 
         Please click this link to reset your seqr password:
-        {base_url}users/set_password/{password_token}?reset=true
+        {base_url}login/set_password/{password_token}?reset=true
         """.format(
         full_name=user.get_full_name(),
         base_url=BASE_URL,
