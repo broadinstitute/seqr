@@ -258,7 +258,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /users/set_password/{password_token}'
 
     @mock.patch('django.contrib.auth.models.send_mail')
-    def _test_forgot_password(self, url, mock_send_mail):
+    def _test_forgot_password(self, url, mock_send_mail, *args, **kwargs):
         # send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -298,7 +298,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Connection err')
 
-    def _test_set_password(self, set_password_url, password):
+    def _test_set_password(self, set_password_url, password, *args, **kwargs):
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Not authorized to update password')
