@@ -1,9 +1,13 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
+import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
+import { getGoogleLoginEnabled } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { LOCAL_LOGIN_URL, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const PageSegment = styled(Segment).attrs({ padded: 'very' })`
   padding-left: 20% !important;
@@ -14,14 +18,20 @@ const Anchor = styled.a.attrs({ target: '_blank' })`
   font-weight: 400;
 `
 
-export default () =>
+const LOGIN_BUTTON_PROPS = {
+  label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
+}
+
+const LandingPage = ({ googleLoginEnabled }) =>
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
       <VerticalSpacer height={20} />
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
-      <Button as={Link} to="/login" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
+      {googleLoginEnabled ?
+        <Button as="a" href={GOOGLE_LOGIN_URL} {...LOGIN_BUTTON_PROPS} /> :
+        <Button as={Link} to={LOCAL_LOGIN_URL} {...LOGIN_BUTTON_PROPS} />}
     </PageSegment>
     <Segment padded>
       <Grid columns="equal">
@@ -85,3 +95,13 @@ export default () =>
       </List>
     </PageSegment>
   </Segment.Group>
+
+LandingPage.propTypes = {
+  googleLoginEnabled: PropTypes.bool,
+}
+
+const mapStateToProps = state => ({
+  googleLoginEnabled: getGoogleLoginEnabled(state),
+})
+
+export default connect(mapStateToProps)(LandingPage)
