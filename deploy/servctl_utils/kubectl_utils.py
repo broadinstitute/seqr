@@ -7,7 +7,6 @@ logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# TODO use kubectl_helpers
 
 def _get_resource_info(
         resource_type="pod",
