@@ -1,6 +1,4 @@
 import logging
-import subprocess
-import sys
 import time
 
 from deploy.servctl_utils.kubectl_utils import is_pod_running, wait_for_resource, get_resource_name
@@ -10,43 +8,6 @@ from deploy.servctl_utils.shell_utils import run
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def check_kubernetes_context(deployment_target):
-    """
-    Make sure the environment is configured correctly, so that kubectl and other commands
-    are actually aimed at the given deployment target and not some other cluster.
-
-    Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
-    Return:
-        string: The output of `kubectl config current-context`
-    """
-    # TODO use kubectl helpers
-    try:
-        cmd = 'kubectl config current-context'
-        kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
-    except subprocess.CalledProcessError as e:
-        logger.error('Error while running "kubectl config current-context": %s', e)
-        return
-
-    context_is_different = False
-    if deployment_target.startswith("gcloud"):
-        suffix = "-%s" % deployment_target.split("-")[1]  # "dev" or "prod"
-        if not kubectl_current_context.startswith('gke_') or suffix not in kubectl_current_context:
-            logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s' which doesn't match %(deployment_target)s. "
-                          "To fix this, run:\n\n   "
-                          "gcloud container clusters get-credentials <cluster-name>\n\n"
-                          "Using one of these clusters: " + subprocess.check_output("gcloud container clusters list", shell=True) +
-                          "\n\n") % locals())
-            context_is_different = True
-    else:
-        raise ValueError("Unexpected value for deployment_target: %s" % deployment_target)
-
-    if context_is_different:
-        sys.exit(-1)
-
-    return kubectl_current_context
 
 
 def delete_component(component, deployment_target=None):
@@ -100,7 +61,7 @@ def delete_all(deployment_target):
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
 
     """
-    check_kubernetes_context(deployment_target)
+    run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
     settings = {}
 
     load_settings([

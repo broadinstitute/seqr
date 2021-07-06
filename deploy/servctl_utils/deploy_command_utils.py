@@ -5,7 +5,7 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, get_disk_names
+from deploy.servctl_utils.other_command_utils import get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, get_node_name, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
@@ -391,7 +391,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         raise ValueError("components list is empty")
 
     if components and "init-cluster" not in components:
-        check_kubernetes_context(deployment_target)
+        run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
 
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
