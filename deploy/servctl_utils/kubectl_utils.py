@@ -125,22 +125,6 @@ def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_t
             resource_type=resource_type)
 
 
-def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
-    """Takes a pod name label (eg. "phenotips") and returns the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx").
-
-    If there are multiple pods with the given label, it returns the 1st one by default.
-
-    Args:
-          pod_name_label (string): the "name" label of the pod
-          deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
-          pod_number (int): if there are multiple pods with the given label, it returns this one of the pods.
-
-    Returns:
-        string: full name of the pod, or None if such a pod doesn't exist
-    """
-    return get_resource_name(pod_name_label, 'pod', deployment_target=deployment_target, pod_number=pod_number)
-
-
 def get_resource_name(name_label, resource_type, deployment_target=None, pod_number=0):
     """Takes a resource label (eg. "phenotips") and returns the full resource name (eg. "phenotips-cdd4d7dc9-vgmjx").
 

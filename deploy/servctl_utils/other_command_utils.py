@@ -3,7 +3,7 @@ import subprocess
 import sys
 import time
 
-from deploy.servctl_utils.kubectl_utils import get_pod_name, is_pod_running, wait_for_resource, get_resource_name
+from deploy.servctl_utils.kubectl_utils import is_pod_running, wait_for_resource, get_resource_name
 from deploy.servctl_utils.yaml_settings_utils import load_settings
 from deploy.servctl_utils.shell_utils import run
 
@@ -56,7 +56,8 @@ def delete_component(component, deployment_target=None):
         component (string): component to delete (eg. 'postgres' or 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
-    check_kubernetes_context(deployment_target)
+    pod_name = run(
+        'deploy/kubectl_helpers/utils/get_pod_name.sh {} {}'.format(deployment_target.replace('gcloud-', ''), component))
 
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
@@ -79,7 +80,6 @@ def delete_component(component, deployment_target=None):
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
 
-    pod_name = get_pod_name(component, deployment_target=deployment_target)
     if pod_name:
         run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
 
