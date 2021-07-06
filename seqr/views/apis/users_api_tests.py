@@ -185,14 +185,14 @@ class UsersAPITest(object):
         set_password_url = reverse(set_password, args=[username])
         self._test_set_password(set_password_url, user.password)
 
-    def _test_set_password(self, url, *args):
+    def _test_set_password(self, url, *args, **kwargs):
         self._test_password_auth_disabled(url)
 
     def test_forgot_password(self):
         url = reverse(forgot_password)
         self._test_forgot_password(url)
 
-    def _test_forgot_password(self, url, *args):
+    def _test_forgot_password(self, url, *args, **kwargs):
         self._test_password_auth_disabled(url)
 
     def _test_password_auth_disabled(self, url):
