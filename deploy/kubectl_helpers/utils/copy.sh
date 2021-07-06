@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DIR=$(dirname $BASH_SOURCE)
+DIR=$(dirname "$BASH_SOURCE")
 
 set -x -e
 
@@ -9,11 +9,11 @@ COMPONENT=$2
 FILE=$3
 TO_POD=$4
 
-POD_NAME=$(${DIR}/get_pod_name.sh ${DEPLOYMENT_TARGET} seqr)
+POD_NAME=$("${DIR}"/get_pod_name.sh "${DEPLOYMENT_TARGET}" "${COMPONENT}")
 if ${TO_POD}; then
     COMMAND="${FILE} ${POD_NAME}:."
 else
     COMMAND="${POD_NAME}:${FILE} ."
 fi
 
-kubectl cp ${COMMAND}
+kubectl cp "${COMMAND}"

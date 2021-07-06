@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DIR=$(dirname $BASH_SOURCE)
+DIR=$(dirname "$BASH_SOURCE")
 
 set -x -e
 
@@ -31,10 +31,10 @@ case ${COMPONENT} in
 esac
 
 if [[ ! ${NAME} ]] ; then
-  NAME=$(${DIR}/utils/get_pod_name.sh ${DEPLOYMENT_TARGET} ${COMPONENT})
+  NAME=$("${DIR}"/utils/get_pod_name.sh "${DEPLOYMENT_TARGET}" "${COMPONENT}")
 fi
 
-kubectl port-forward ${NAME} ${PORT} &
+kubectl port-forward "${NAME}" "${PORT}" &
 
 if [[ ${OPEN_BROWSER} ]] ; then
   sleep 3

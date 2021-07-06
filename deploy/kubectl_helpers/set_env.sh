@@ -6,7 +6,6 @@ GCLOUD_PROJECT=seqr-project
 GCLOUD_ZONE=us-central1-b
 
 DEPLOYMENT_TARGET=$1
-DIR=$(dirname $BASH_SOURCE)
 
 case ${DEPLOYMENT_TARGET} in
   dev)
