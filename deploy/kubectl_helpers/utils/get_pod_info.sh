@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -u
+
 DEPLOYMENT_TARGET=$1
 COMPONENT=$2
 JSON_PATH=$3
