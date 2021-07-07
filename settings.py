@@ -69,7 +69,7 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 CSP_INCLUDE_NONCE_IN = ['script-src']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
-CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com', 'https://igv.org', 'https://s3.amazonaws.com') # used by IGV
+CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com', 'https://igv.org', 'https://data.broadinstitute.org') # used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
 IGV_CSS_HASH = "'sha256-D1ouVPg7bXVEm/f4h9NNmEBwWO5vkjlDOIHPeV3tFPg='"
