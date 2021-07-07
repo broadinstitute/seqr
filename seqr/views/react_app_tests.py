@@ -60,11 +60,11 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test set password page correctly includes user from token
         response = self.client.get(
-            '/users/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
+            '/login/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
         self.assertEqual(response.status_code, 200)
         self._check_page_html(response, 'test_user_manager', user_key='newUser')
 
-        response = self.client.get('/users/set_password/invalid_pwd')
+        response = self.client.get('/login/set_password/invalid_pwd')
         self.assertEqual(response.status_code, 404)
 
         # Even if page does not require login, include user metadata if logged in
