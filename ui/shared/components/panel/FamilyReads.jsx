@@ -96,12 +96,12 @@ const IGV_OPTIONS = {
   showCommandBar: true,
 }
 
-const BASE_REFERENCE_URL = 'https://s3.amazonaws.com' //'/api/igv_genomes'
+const BASE_REFERENCE_URL = '/api/igv_genomes'
 
 const REFERENCE_URLS = [
   {
     key: 'fastaURL',
-    baseUrl: `${BASE_REFERENCE_URL}/igv.broadinstitute.org/genomes/seq`,
+    baseUrl: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq`,
     path: {
       37: 'hg19/hg19.fasta',
       38: 'hg38/hg38.fa',
@@ -111,13 +111,13 @@ const REFERENCE_URLS = [
     key: 'cytobandURL',
     baseUrl: BASE_REFERENCE_URL,
     path: {
-      37: 'igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-      38: 'igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
+      37: 'broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
+      38: 'org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
     },
   },
   {
     key: 'aliasURL',
-    baseUrl: `${BASE_REFERENCE_URL}/igv.org.genomes`,
+    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
     path: {
       37: 'hg19/hg19_alias.tab',
       38: 'hg38/hg38_alias.tab',
@@ -137,8 +137,7 @@ const REFERENCE_TRACKS = [
   },
   {
     name: 'Refseq',
-    //baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
-    baseUrl: 'https://s3.amazonaws.com/igv.org.genomes',
+    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
     path: {
       37: 'hg19/ncbiRefGene.txt.gz',
       38: 'hg38/ncbiRefGene.txt.gz',
