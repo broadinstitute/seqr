@@ -95,6 +95,8 @@ const mapDeleteDispatchToProps = (dispatch, ownProps) => {
 
 const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
 
+const MIN_INDIVS_PER_PEDIGREE = 2
+
 const PedigreeImage = ({ family, ...props }) => (
   family.pedigreeImage ? <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : 'PLACEHOLDER'
 )
@@ -114,13 +116,14 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
   }
 
   const modalId = `Pedigree-${family.familyGuid}`
+  const numIndivs = family.individualGuids.length
   return (
     <Modal
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
         <span>
-          {compact && `(${family.individualGuids.length}) `} <a role="button" tabIndex="0">{image}</a>
+          {compact && numIndivs >= MIN_INDIVS_PER_PEDIGREE && `(${numIndivs}) `} {image}
         </span>
       }
     >
