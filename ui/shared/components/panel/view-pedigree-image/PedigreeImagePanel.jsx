@@ -12,8 +12,8 @@ import { XHRUploaderWithEvents } from '../../form/XHRUploaderField'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
 
-const PedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
-  max-height: ${props => (props.compact ? '35px' : '150px')};
+const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
+  max-height: ${props => props.maxHeight};
   max-width: 225px;
   vertical-align: top;
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
@@ -32,12 +32,12 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
       this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` }))
 
   render() {
-    const { family, buttonText } = this.props
+    const { family } = this.props
     return (
       <Modal
         title={`Upload Pedigree for Family ${family.familyId}`}
         modalName={this.modalId}
-        trigger={<ButtonLink content={buttonText} icon="upload" labelPosition="right" />}
+        trigger={<ButtonLink content="Upload New Image" icon="upload" labelPosition="right" />}
       >
         <XHRUploaderWithEvents
           onUploadFinished={this.onFinished}
@@ -56,7 +56,6 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
 BaseEditPedigreeImageButton.propTypes = {
   family: PropTypes.object,
   onSuccess: PropTypes.func,
-  buttonText: PropTypes.string,
 }
 
 const mapDispatchToProps = (dispatch) => {
@@ -97,37 +96,46 @@ const mapDeleteDispatchToProps = (dispatch, ownProps) => {
 
 const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
 
-const PedigreeImagePanel = React.memo((props) => {
-  if (!props.family.pedigreeImage) {
-    return props.isEditable && !props.compact ?
-      <EditPedigreeImageButton family={props.family} buttonText="Upload Pedigree" /> : null
-  }
+const PedigreeImage = ({ family, ...props }) => (
+  family.pedigreeImage ? <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : 'PLACEHOLDER'
+)
+
+PedigreeImage.propTypes = {
+  family: PropTypes.object.isRequired,
+}
+
+const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const image = <PedigreeImage
-    src={props.family.pedigreeImage}
-    disablePedigreeZoom={props.disablePedigreeZoom}
-    compact={props.compact}
+    family={family}
+    disablePedigreeZoom={disablePedigreeZoom}
+    maxHeight={compact ? '35px' : '150px'}
   />
-  const modalId = `Pedigree-${props.family.familyGuid}`
-  return props.disablePedigreeZoom ? image : (
+  if (disablePedigreeZoom) {
+    return image
+  }
+
+  const modalId = `Pedigree-${family.familyGuid}`
+  const buttons = [
+    family.pedigreeImage && <a key="zoom" href={family.pedigreeImage} target="_blank">Original Size <Icon name="zoom" /></a>,
+    isEditable && <EditPedigreeImageButton key="upload" family={family} />,
+    isEditable && family.pedigreeImage && <DeletePedigreeImageButton familyGuid={family.familyGuid} modalId={modalId} />,
+  ].filter(button => button).reduce((acc, button, i) =>
+    [...acc, button, <HorizontalSpacer width={20} key={i} />], [], //eslint-disable-line react/no-array-index-key
+  )
+  return (
     <Modal
       modalName={modalId}
-      title={`Family ${props.family.displayName}`}
+      title={`Family ${family.displayName}`}
       trigger={
         <span>
-          {props.compact && `(${props.family.individualGuids.length}) `} <a role="button" tabIndex="0">{image}</a>
+          {compact && `(${family.individualGuids.length}) `} <a role="button" tabIndex="0">{image}</a>
         </span>
       }
     >
       <Segment basic textAlign="center">
-        <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px' }} /><br />
+        <PedigreeImage family={family} disablePedigreeZoom maxHeight="250px" /><br />
       </Segment>
-      <a href={props.family.pedigreeImage} target="_blank">
-        Original Size <Icon name="zoom" />
-      </a>
-      <HorizontalSpacer width={20} />
-      <EditPedigreeImageButton family={props.family} buttonText="Upload New Image" />
-      <HorizontalSpacer width={20} />
-      <DeletePedigreeImageButton familyGuid={props.family.familyGuid} modalId={modalId} />
+      {buttons}
     </Modal>
   )
 })

@@ -254,7 +254,7 @@ const Family = React.memo((
     />
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
-      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
     ]
   }
 
