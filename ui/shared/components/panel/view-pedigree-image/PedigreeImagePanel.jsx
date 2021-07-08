@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Icon, Message, Segment } from 'semantic-ui-react'
+import { Icon, Message, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateFamily, RECEIVE_DATA } from 'redux/rootReducer'
@@ -9,8 +9,7 @@ import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../../buttons/DeleteButton'
 import Modal from '../../modal/Modal'
 import { XHRUploaderWithEvents } from '../../form/XHRUploaderField'
-import { HorizontalSpacer } from '../../Spacers'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, NoBorderTable } from '../../StyledComponents'
 
 const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
   max-height: ${props => props.maxHeight};
@@ -115,13 +114,6 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
   }
 
   const modalId = `Pedigree-${family.familyGuid}`
-  const buttons = [
-    family.pedigreeImage && <a key="zoom" href={family.pedigreeImage} target="_blank">Original Size <Icon name="zoom" /></a>,
-    isEditable && <EditPedigreeImageButton key="upload" family={family} />,
-    isEditable && family.pedigreeImage && <DeletePedigreeImageButton familyGuid={family.familyGuid} modalId={modalId} />,
-  ].filter(button => button).reduce((acc, button, i) =>
-    [...acc, button, <HorizontalSpacer width={20} key={i} />], [], //eslint-disable-line react/no-array-index-key
-  )
   return (
     <Modal
       modalName={modalId}
@@ -135,7 +127,21 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       <Segment basic textAlign="center">
         <PedigreeImage family={family} disablePedigreeZoom maxHeight="250px" /><br />
       </Segment>
-      {buttons}
+      <NoBorderTable basic="very" compact="very" collapsing>
+        <Table.Body>
+          <Table.Row>
+            {family.pedigreeImage &&
+              <Table.Cell>
+                <a key="zoom" href={family.pedigreeImage} target="_blank">Original Size <Icon name="zoom" /></a>
+              </Table.Cell>
+            }
+            {isEditable && <Table.Cell><EditPedigreeImageButton key="upload" family={family} /></Table.Cell>}
+            {isEditable && family.pedigreeImage &&
+              <Table.Cell><DeletePedigreeImageButton familyGuid={family.familyGuid} modalId={modalId} /></Table.Cell>
+            }
+          </Table.Row>
+        </Table.Body>
+      </NoBorderTable>
     </Modal>
   )
 })
