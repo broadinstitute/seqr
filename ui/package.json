@@ -70,7 +70,7 @@
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "igv": "^2.8.6",
     "js-cookie": "^2.2.1",
-    "jsoneditor": "^7.5.0",
+    "jsoneditor": "^9.5.1",
     "jsoneditor-react": "^3.0.0",
     "lodash": "^4.17.21",
     "minimatch": "^3.0.4",
