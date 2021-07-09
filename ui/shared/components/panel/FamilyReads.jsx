@@ -127,15 +127,6 @@ const REFERENCE_URLS = [
 
 const REFERENCE_TRACKS = [
   {
-    name: 'Gencode v27',
-    baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
-    path: {
-      37: 'GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
-      38: 'GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
-    },
-    order: 1000,
-  },
-  {
     name: 'Refseq',
     baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
     path: {
