@@ -1,104 +1,69 @@
 import React from 'react'
-import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Icon, Message, Segment, Table } from 'semantic-ui-react'
+import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
+import { build as buildPedigeeJs } from 'pedigreejs/es/pedigree'
 
-import { updateFamily, RECEIVE_DATA } from 'redux/rootReducer'
-import { closeModal } from 'redux/utils/modalReducer'
-import DeleteButton from '../../buttons/DeleteButton'
 import Modal from '../../modal/Modal'
-import { XHRUploaderWithEvents } from '../../form/XHRUploaderField'
-import { ButtonLink, NoBorderTable } from '../../StyledComponents'
+import { NoBorderTable } from '../../StyledComponents'
+import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
 
 const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
-  max-height: ${props => props.maxHeight};
+  max-height: ${props => props.height}px;
   max-width: 225px;
   vertical-align: top;
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
 `
 
-class BaseEditPedigreeImageButton extends React.PureComponent {
+const MIN_INDIVS_PER_PEDIGREE = 2
+
+class PedigreeJs extends React.PureComponent {
+
+  static propTypes = {
+    family: PropTypes.object,
+  }
 
   constructor(props) {
     super(props)
-    this.state = { error: null }
-    this.modalId = `uploadPedigree-${props.family.familyGuid}`
+    this.containerId = `pedigreeJS-${props.family.familyGuid}`
   }
-
-  onFinished = xhr => (
-    xhr.status === 200 ? this.props.onSuccess(JSON.parse(xhr.response), this.modalId) :
-      this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` }))
 
   render() {
-    const { family } = this.props
-    return (
-      <Modal
-        title={`Upload Pedigree for Family ${family.familyId}`}
-        modalName={this.modalId}
-        trigger={<ButtonLink content="Upload New Image" icon="upload" labelPosition="right" />}
-      >
-        <XHRUploaderWithEvents
-          onUploadFinished={this.onFinished}
-          url={`/api/family/${family.familyGuid}/update_pedigree_image`}
-          clearTimeOut={0}
-          auto
-          maxFiles={1}
-          dropzoneLabel="Drag and drop or click to upload pedigree image"
-        />
-        {this.state.error && <Message error content={this.state.error} />}
-      </Modal>
-    )
+    return <div id={this.containerId} />
+  }
+
+  componentDidMount() {
+    const dataset = [
+      { name: 'm21', sex: 'M', top_level: true },
+      { name: 'f21', sex: 'F', top_level: true },
+      { name: 'ch1', sex: 'F', mother: 'f21', father: 'm21', breast_cancer: true, proband: true },
+    ]
+    const opts = {
+      dataset,
+      targetDiv: this.containerId,
+      height: this.props.height,
+      width: this.props.height * 1.5,
+      // zoomOut: 3,
+      symbol_size: 30,
+      // 'btn_target': 'pedigree_history',
+      // 'width': 450,
+      // 'height': 320,
+      // 'symbol_size': 35,
+      // 'store_type': 'array',
+      // 'diseases': [],
+      // labels: ['age', 'yob'],
+      // font_size: '.75em',
+      // font_family: 'Helvetica',
+      // font_weight: 700,
+    }
+    buildPedigeeJs(opts)
   }
 }
 
-BaseEditPedigreeImageButton.propTypes = {
-  family: PropTypes.object,
-  onSuccess: PropTypes.func,
-}
-
-const mapDispatchToProps = (dispatch) => {
-  return {
-    onSuccess: (responseJson, modalId) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
-      dispatch(closeModal(modalId))
-    },
-  }
-}
-
-const EditPedigreeImageButton = connect(null, mapDispatchToProps)(BaseEditPedigreeImageButton)
-
-const BaseDeletePedigreeImageButton = React.memo(({ onSubmit, onSuccess }) =>
-  <DeleteButton
-    onSubmit={onSubmit}
-    onSuccess={onSuccess}
-    confirmDialog="Are you sure you want to delete the pedigree image for this family?"
-    buttonText="Delete Pedigree Image"
-  />,
-)
-
-BaseDeletePedigreeImageButton.propTypes = {
-  onSubmit: PropTypes.func,
-  onSuccess: PropTypes.func,
-}
-
-const mapDeleteDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: () => {
-      return dispatch(updateFamily({ familyField: 'pedigree_image', familyGuid: ownProps.familyGuid }))
-    },
-    onSuccess: () => {
-      dispatch(closeModal(ownProps.modalId))
-    },
-  }
-}
-
-const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
-
-const MIN_INDIVS_PER_PEDIGREE = 2
 
 const PedigreeImage = ({ family, ...props }) => (
-  family.pedigreeImage ? <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : 'PLACEHOLDER'
+  family.pedigreeImage ?
+    <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : <PedigreeJs family={family} {...props} />
 )
 
 PedigreeImage.propTypes = {
@@ -109,7 +74,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
   const image = <PedigreeImage
     family={family}
     disablePedigreeZoom={disablePedigreeZoom}
-    maxHeight={compact ? '35px' : '150px'}
+    height={compact ? 35 : 150}
   />
   if (disablePedigreeZoom) {
     return image
@@ -128,7 +93,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       }
     >
       <Segment basic textAlign="center">
-        <PedigreeImage family={family} disablePedigreeZoom maxHeight="250px" /><br />
+        <PedigreeImage family={family} disablePedigreeZoom height={250} /><br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>
