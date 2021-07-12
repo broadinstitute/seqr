@@ -87,6 +87,7 @@ const TRACK_TYPE_OPTIONS = [
 ]
 
 const IGV_OPTIONS = {
+  loadDefaultGenomes: false,
   showKaryo: false,
   showIdeogram: true,
   showNavigation: true,
