@@ -100,7 +100,7 @@ export const SectionHeader = styled.div`
 
 // Map font-awesome icons to semantic-ui icons
 export const FontAwesomeIconsContainer = styled.div`
-  i.fa {
+  .fa {
     display: inline-block;
     opacity: 1;
     margin: 0em 0.25rem 0em 0em;
@@ -119,92 +119,85 @@ export const FontAwesomeIconsContainer = styled.div`
     backface-visibility: hidden;
   }
   
-  i.fa:before {
+  .fa:before {
     background: none !important;
   }
   
-  i.fa-fw {
+  .fa-fw {
     width: 1.2857142857142858em;
     text-align: center;
   }
   
-  i.fa-lg {
-    line-height: 1;
-    vertical-align: middle;
-    font-size: 1.5em;
+  .fa-lg {
+    font-size: 1.33333333em;
+    line-height: .75em;
+    vertical-align: -15%;
   }
   
-  i.fa-2x {
+  .fa-2x {
     font-size: 2em;
   }
   
-  i.fa-spin  {
+  .fa.pull-right {
+    margin-left: .3em;
+    float: right;
+  }
+  
+  .fa.pull-left {
+    margin-right: .3em;
+    float: left;
+  }
+  
+  .fa-spin  {
     height: 1em;
     line-height: 1;
     -webkit-animation: icon-loading 2s linear infinite;
     animation: icon-loading 2s linear infinite;
   }
   
-  i.fa-check:before {
+  .fa-check:before {
     content: "\\f00c";
   }
-  i.fa-square:before {
+  .fa-square:before {
     content: "\\f098";
   } 
-  i.fa-search:before {
+  .fa-search:before {
     content: "\\f002";
   }
-  i.fa-minus-circle:before {
+  .fa-minus-circle:before {
     content: "\\f056";
   } 
-  i.fa-plus-circle:before  {
+  .fa-plus-circle:before  {
     content: "\\f055";
   }
-  i.fa-times:before  {
+  .fa-times:before  {
     content: "\\f00d";
   }  
-  i.fa-times-circle:before  {
+  .fa-times-circle:before  {
     content: "\\f057";
   } 
-  i.fa-gear:before  {
+  .fa-gear:before  {
     content: "\\f013";
   }
-  i.fa-exclamation-triangle:before  {
+  .fa-exclamation-triangle:before  {
     content: "\\f071";
   }  
-  i.fa-spinner:before  {
+  .fa-spinner:before  {
     content: "\\f110";
   }
-  i.fa-undo:before  {
-    content: "TODO";
+  .fa-undo:before  {
+    content: "\\f0e2";
   }  
-  i.fa-repeat:before  {
-    content: "TODO";
+  .fa-repeat:before  {
+    content: "\\f01e";
   } 
-  i.fa-refresh:before  {
-    content: "TODO";
+  .fa-refresh:before  {
+    content: "\\f021";
   } 
-  i.fa-arrows-alt:before  {
-    content: "TODO";
-  } 
-  i.fa-circle:before  {
-    content: "TODO";
-  } 
-  i.fa-crosshairs:before  {
-    content: "TODO";
-  } 
-  i.fa-unspecified:before  {
-    content: "TODO";
-  } 
-  i.fa-angle-up:before  {
-    content: "TODO";
+  .fa-arrows-alt:before  {
+    content: "\\f31e";
   }  
-  i.fa-caret-up:before  {
-    content: "TODO";
-  }
-
-  .igv-zoom-widget i {
-    line-height: 24px;
-  }
-  
+  .fa-crosshairs:before  {
+    content: "\\f05b";
+  } 
 `

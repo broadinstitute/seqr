@@ -22,6 +22,16 @@ const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
 `
 
+const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
+  .addchild, .addsibling, .addpartner, .addparents, .delete, .settings, .popup_selection {
+    font-family: Icons !important;
+    
+    &.fa-circle, &.fa-square, &.fa-unspecified {
+      font-family: outline-icons !important;
+    }
+  }
+`
+
 const MIN_INDIVS_PER_PEDIGREE = 2
 
 class PedigreeJs extends React.PureComponent {
@@ -29,8 +39,8 @@ class PedigreeJs extends React.PureComponent {
   static propTypes = {
     family: PropTypes.object,
     size: PropTypes.string,
-    disablePedigreeZoom: PropTypes.bool,
-    isEditable: PropTypes.bool,
+    // disablePedigreeZoom: PropTypes.bool,
+    // isEditable: PropTypes.bool,
   }
 
   constructor(props) {
@@ -41,15 +51,16 @@ class PedigreeJs extends React.PureComponent {
   render() {
     // TODO fix display in family label hover (i.e. saved variant page)
     return (
-      <FontAwesomeIconsContainer>
+      <PedigreeJsContainer>
         <div id={`${this.containerId}-buttons`} />
         <div id={this.containerId} />
-      </FontAwesomeIconsContainer>)
+      </PedigreeJsContainer>)
   }
 
   componentDidMount() {
-    const { size, disablePedigreeZoom, isEditable } = this.props
-    const dataset = [
+    const { size } = this.props
+    // const { size, disablePedigreeZoom, isEditable } = this.props
+    const dataset = [ // TODO
       { name: 'm21', sex: 'M', top_level: true },
       { name: 'f21', sex: 'F', top_level: true },
       { name: 'ch1', sex: 'F', mother: 'f21', father: 'm21', affected: true },
@@ -58,7 +69,7 @@ class PedigreeJs extends React.PureComponent {
       dataset,
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
-      edit: !!(disablePedigreeZoom && isEditable),
+      // edit: !!(disablePedigreeZoom && isEditable), TODO
       background: '#fff',
       diseases: [{ type: 'affected', colour: '#111' }],
       labels: ['name'],
@@ -69,6 +80,14 @@ class PedigreeJs extends React.PureComponent {
     }
     const builtOpts = buildPedigeeJs(opts)
     scalePedigreeToFit(builtOpts)
+    this.resetIconContent()
+  }
+
+  resetIconContent = () => {
+    // Because of how text content is set for these icons, there is no way to override the unicode value with css
+    d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
+    d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
+    d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
   }
 }
 

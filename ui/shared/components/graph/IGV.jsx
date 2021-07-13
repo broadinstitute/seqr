@@ -1,8 +1,21 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import igv from 'igv'
 
 import { FontAwesomeIconsContainer } from '../StyledComponents'
+
+const IGVContainer = styled(FontAwesomeIconsContainer)`
+  .fa-lg {
+    line-height: 1;
+    vertical-align: middle;
+    font-size: 1.5em;
+  }
+  
+  .igv-zoom-widget i {
+    line-height: 24px;
+  }
+`
 
 const getTrackId = track =>
   // merged tracks do not have a URL
@@ -25,7 +38,7 @@ class IGV extends React.PureComponent {
   }
 
   render() {
-    return <FontAwesomeIconsContainer><div ref={this.setContainerElement} /></FontAwesomeIconsContainer>
+    return <IGVContainer><div ref={this.setContainerElement} /></IGVContainer>
   }
 
   componentDidMount() {
