@@ -30,7 +30,6 @@ DEPLOYMENT_TARGETS = [
     "kibana",
     "redis",
     "seqr",
-    "kube-scan",
     "elasticsearch-snapshot-infra",
     "elasticsearch-snapshot-config",
 ]
@@ -362,18 +361,6 @@ def deploy_pipeline_runner(settings):
     docker_build("pipeline-runner", settings, [
         "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
     ])
-
-
-def deploy_kube_scan(settings):
-    print_separator("kube-scan")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl delete -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
-
-        if settings["ONLY_PUSH_TO_REGISTRY"]:
-            return
-
-    run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
 
 
 def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
