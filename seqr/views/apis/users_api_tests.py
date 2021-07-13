@@ -365,16 +365,6 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
 
-    def test_set_password(self):
-        super(AnvilUsersAPITest, self).test_set_password()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_forgot_password(self, *args, **kwargs):
-        super(AnvilUsersAPITest, self).test_forgot_password(*args, **kwargs)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
     def test_update_policies(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
@@ -429,16 +419,6 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
             "my-seqr-billing",
             "anvil-1kg project n\u00e5me with uni\u00e7\u00f8de",
         )
-
-    def test_set_password(self):
-        super(MixUsersAPITest, self).test_set_password()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_forgot_password(self, *args, **kwargs):
-        super(MixUsersAPITest, self).test_forgot_password(*args, **kwargs)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
 
     def test_update_policies(self, *args, **kwargs):
         super(MixUsersAPITest, self).test_update_policies(*args, **kwargs)
