@@ -217,28 +217,26 @@ FamilyLayout.propTypes = {
 
 const Family = React.memo((
   { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
 
-  const isEditable = !disableEdit && project.canEdit
-
   const familyField = (field) => {
-    const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
-    const submitFunc = renderDetails.submitArgs ?
-      values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
-    return React.createElement(renderDetails.component || TextFieldView, {
+    const { submitArgs, component, canEdit, internal, name } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const submitFunc = submitArgs ?
+      values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
+    return React.createElement(component || TextFieldView, {
       key: field.id,
-      isEditable: field.collaboratorEdit || (isEditable && field.canEdit),
-      isPrivate: renderDetails.internal,
-      fieldName: compact ? null : renderDetails.name,
+      isEditable: !disableEdit && (canEdit || (!disableInternalEdit && internal)),
+      isPrivate: internal,
+      fieldName: compact ? null : name,
       field: field.id,
       idField: 'familyGuid',
       initialValues: family,
       onSubmit: submitFunc,
-      modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
+      modalTitle: `${name} for Family ${family.displayName}`,
       compact,
       ...(familyFieldRenderProps[field.id] || {}),
     })
@@ -256,7 +254,7 @@ const Family = React.memo((
     />
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
-      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={isEditable} />,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
     ]
   }
 
@@ -286,6 +284,7 @@ Family.propTypes = {
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   disableEdit: PropTypes.bool,
+  disableInternalEdit: PropTypes.bool,
 }
 
 

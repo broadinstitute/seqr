@@ -1,8 +1,6 @@
 """
 APIs for retrieving, updating, creating, and deleting Individual records
 """
-
-import logging
 from collections import defaultdict
 
 from seqr.models import Sample, IgvSample, Individual, Family
@@ -11,7 +9,6 @@ from seqr.views.utils.json_to_orm_utils import update_individual_from_json, upda
     create_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
-logger = logging.getLogger(__name__)
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
 _SEX_TO_EXPORTED_VALUE['U'] = ''
@@ -54,7 +51,6 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
         families_by_id[family_id] = family
         updated_families.add(family)
-        logger.info('Created family: {}'.format(family))
 
     individual_models = Individual.objects.filter(family__project=project).prefetch_related(
         'family', 'mother', 'father')

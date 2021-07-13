@@ -12,6 +12,17 @@ STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc
 PROJECT_GUID = 'R0001_1kg'
 
 
+def Any(cls=object):
+    """
+    Trick assert_called_with for parameters we don't care about
+    Source: https://stackoverflow.com/a/21611963
+    """
+    class Any(cls):
+        def __eq__(self, other):
+            return True
+    return Any()
+
+
 @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
 @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -27,7 +38,7 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True)
+        mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True, user=Any(object))
 
     @mock.patch('seqr.views.apis.igv_api.file_iter')
     def test_proxy_local_to_igv(self, mock_file_iter):
@@ -38,14 +49,14 @@ class IgvAPITest(AuthenticationTestCase):
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('/project_A/sample_1.bai', byte_range=(100, 200), raw_content=True)
+        mock_file_iter.assert_called_with('/project_A/sample_1.bai', byte_range=(100, 200), raw_content=True, user=Any(object))
 
         # test no byte range
         mock_file_iter.reset_mock()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('/project_A/sample_1.bai', raw_content=True)
+        mock_file_iter.assert_called_with('/project_A/sample_1.bai', raw_content=True, user=Any(object))
 
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_igv_table_handler, args=[PROJECT_GUID])

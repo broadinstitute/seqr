@@ -1,7 +1,6 @@
 from abc import abstractmethod
 import uuid
 import json
-import logging
 import random
 
 from django.contrib.auth.models import User, Group
@@ -14,12 +13,12 @@ from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.logging_utils import log_model_update, log_model_bulk_update
+from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -311,10 +310,10 @@ class Family(ModelWithGUID):
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
             'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst', 'mme_notes'
+            'post_discovery_omim_number', 'assigned_analyst', 'mme_notes'
         ]
         internal_json_fields = [
-            'success_story_types', 'success_story'
+            'success_story_types', 'success_story', 'pubmed_ids',
         ]
 
 

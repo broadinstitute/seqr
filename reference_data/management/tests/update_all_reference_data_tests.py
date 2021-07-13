@@ -46,6 +46,9 @@ class UpdateAllReferenceDataTest(TestCase):
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.OmimReferenceDataHandler')
         self.mock_omim = patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.management.commands.update_all_reference_data.CachedOmimReferenceDataHandler')
+        self.mock_cached_omim = patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.management.commands.update_all_reference_data.update_gencode')
         self.mock_update_gencode = patcher.start()
         self.addCleanup(patcher.stop)
@@ -64,7 +67,7 @@ class UpdateAllReferenceDataTest(TestCase):
         # Test missing required arguments
         with self.assertRaises(CommandError) as err:
             call_command('update_all_reference_data')
-        self.assertEqual(str(err.exception), 'Error: one of the arguments --omim-key --skip-omim is required')
+        self.assertEqual(str(err.exception), 'Error: one of the arguments --omim-key --use-cached-omim --skip-omim is required')
 
         # Test update all gencode, no skips, fail primate_ai and mgi
         self.mock_omim.return_value = 'omim'
@@ -80,6 +83,7 @@ class UpdateAllReferenceDataTest(TestCase):
         self.mock_update_gencode.assert_has_calls(calls)
 
         self.mock_omim.assert_called_with('test_key')
+        self.mock_cached_omim.assert_not_called()
 
         self.assertEqual(self.mock_update_records.call_count, 4)
         calls = [
@@ -111,9 +115,29 @@ class UpdateAllReferenceDataTest(TestCase):
 
         self.mock_update_gencode.assert_not_called()
         self.mock_omim.assert_not_called()
+        self.mock_cached_omim.assert_not_called()
         self.mock_update_records.assert_not_called()
         self.mock_update_hpo.assert_not_called()
         self.mock_logger.info.assert_called_with("Done")
+
+    def test_cached_omim_update_reference_data_command(self):
+        self.mock_cached_omim.return_value = 'cached_omim'
+
+        call_command(
+            'update_all_reference_data', '--use-cached-omim', *SKIP_ARGS)
+
+        self.mock_cached_omim.assert_called_with()
+        self.mock_update_records.assert_called_with('cached_omim')
+
+        self.mock_omim.assert_not_called()
+        self.mock_update_gencode.assert_not_called()
+        self.mock_update_hpo.assert_not_called()
+
+        calls = [
+            mock.call('Done'),
+            mock.call('Updated: omim')
+        ]
+        self.mock_logger.info.assert_has_calls(calls)
 
     def test_omim_exception(self):
         self.mock_omim.side_effect = omim_exception

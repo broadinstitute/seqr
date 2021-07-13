@@ -87,6 +87,7 @@ const TRACK_TYPE_OPTIONS = [
 ]
 
 const IGV_OPTIONS = {
+  loadDefaultGenomes: false,
   showKaryo: false,
   showIdeogram: true,
   showNavigation: true,
@@ -128,6 +129,7 @@ const REFERENCE_URLS = [
 const REFERENCE_TRACKS = [
   {
     name: 'Gencode v27',
+    indexPostfix: 'tbi',
     baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
     path: {
       37: 'GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
@@ -153,7 +155,10 @@ const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   ...acc,
   [genome]: {
     id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
-    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, ...track }) => ({ url: `${baseUrl}/${path[genome]}`, ...track })),
+    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, indexPostfix, ...track }) => ({
+      url: `${baseUrl}/${path[genome]}`,
+      indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
+      ...track })),
     ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
   },
 }), {})

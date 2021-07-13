@@ -426,13 +426,13 @@ PROJECT_FIELDS = {
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
-    'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'mmeNotes',
+    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
 }
 INTERNAL_FAMILY_FIELDS = {
-    'individualGuids', 'successStory', 'successStoryTypes',
+    'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
@@ -719,6 +719,7 @@ PARSED_VARIANTS = [
         'chrom': '1',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
+        'cpxIntervals': None,
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
@@ -734,13 +735,14 @@ PARSED_VARIANTS = [
         'mainTranscriptId': TRANSCRIPT_3['transcriptId'],
         'originalAltAlleles': ['T'],
         'populations': {
-            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
-            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0, 'filter_af': 0.000437},
-            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661},
-            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753},
-            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None},
-            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0, 'filter_af': 0.000437, 'het': 0, 'id': None},
+            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661, 'het': 0, 'id': None},
+            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753, 'het': 0, 'id': None},
+            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None, 'het': None, 'id': None},
         },
         'pos': 248367227,
         'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
@@ -757,6 +759,7 @@ PARSED_VARIANTS = [
         'xpos': 1248367227,
         'end': None,
         'svType': None,
+        'svTypeDetail': None,
         'numExon': None,
         '_sort': [1248367227],
     },
@@ -765,6 +768,7 @@ PARSED_VARIANTS = [
         'chrom': '2',
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
+        'cpxIntervals': None,
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
@@ -792,13 +796,14 @@ PARSED_VARIANTS = [
         'mainTranscriptId': TRANSCRIPT_1['transcriptId'],
         'originalAltAlleles': ['G'],
         'populations': {
-            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
-            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
-            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614},
-            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0, 'filter_af': 0.00016269686320447742},
-            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None},
-            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
+            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614, 'het': 0, 'id': None},
+            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0, 'filter_af': 0.00016269686320447742, 'het': 0, 'id': None},
+            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None, 'het': None, 'id': None},
         },
         'pos': 103343353,
         'predictions': {
@@ -816,6 +821,7 @@ PARSED_VARIANTS = [
         'xpos': 2103343353,
         'end': None,
         'svType': None,
+        'svTypeDetail': None,
         'numExon': None,
         '_sort': [2103343353],
     },
@@ -824,6 +830,8 @@ PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
     'familyGuids': ['F000002_2'],
+    'cpxIntervals': [{'chrom': '1', 'end': 3000, 'start': 1000, 'type': 'DUP'},
+                     {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INS'}],
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
@@ -845,13 +853,14 @@ PARSED_SV_VARIANT = {
     'mainTranscriptId': None,
     'originalAltAlleles': [],
     'populations': {
-        'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None},
-        'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None},
+        'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': 'gnomAD-SV_v2.1_BND_1_1'},
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
@@ -878,6 +887,7 @@ PARSED_SV_VARIANT = {
     'xpos': 1049045487,
     'end': 49045899,
     'svType': 'DEL',
+    'svTypeDetail': None,
     'numExon': 2,
     '_sort': [1049045387],
 }

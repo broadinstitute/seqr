@@ -1,4 +1,3 @@
-import logging
 import elasticsearch_dsl
 from django.utils import timezone
 import random
@@ -6,25 +5,23 @@ import random
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
-from seqr.utils.logging_utils import log_model_bulk_update
+from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
-SAMPLE_FIELDS_MAP = {
-    Sample.DATASET_TYPE_VARIANT_CALLS: 'samples_num_alt_1',
-    Sample.DATASET_TYPE_SV_CALLS: 'samples',
-}
+SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 
 
-def get_elasticsearch_index_samples(elasticsearch_index, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
+def get_elasticsearch_index_samples(elasticsearch_index):
     es_client = get_es_client()
 
-    index_metadata = get_index_metadata(elasticsearch_index, es_client).get(elasticsearch_index)
+    index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True).get(elasticsearch_index)
 
+    sample_field = next((field for field in SAMPLE_FIELDS_LIST if field in index_metadata['fields'].keys()))
     s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
     s = s.params(size=0)
-    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=SAMPLE_FIELDS_MAP[dataset_type], size=10000))
+    s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field=sample_field, size=10000))
     response = s.execute()
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
@@ -45,9 +42,9 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
     dataset_path = index_metadata['sourceFilePath']
-    dataset_suffixes = ('.vds', '.vcf.gz', '.vcf.bgz', '.bed')
+    dataset_suffixes = ('.vds', '.vcf.gz', '.bgz', '.bed')
     if not dataset_path.endswith(dataset_suffixes):
-        raise Exception("Variant call dataset path must end with .vcf.gz or .vds or .bed")
+        raise Exception("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
 
     if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
         raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
@@ -55,8 +52,8 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index, genome
         ))
 
 
-def load_mapping_file(mapping_file_path):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
+def load_mapping_file(mapping_file_path, user):
+    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
     return _load_mapping_file(file_content)
 
 
@@ -109,7 +106,7 @@ def match_sample_ids_to_sample_records(
     sample_id_to_sample_record = find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
-    logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
+    logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
@@ -134,7 +131,7 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
             del remaining_individuals_dict[individual_id]
 
-        logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
+        logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         # create new Sample records for Individual records that matches
         if create_sample_records:

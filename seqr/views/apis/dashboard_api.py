@@ -1,9 +1,6 @@
 """
 APIs used by the main seqr dashboard page
 """
-
-import logging
-
 from django.db import models
 
 from seqr.models import ProjectCategory, Sample, Family, Project
@@ -11,8 +8,6 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
 from settings import ANALYST_PROJECT_CATEGORY
-
-logger = logging.getLogger(__name__)
 
 
 @login_and_policies_required

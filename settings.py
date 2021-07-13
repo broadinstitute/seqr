@@ -1,4 +1,3 @@
-import logging
 import json
 import os
 import random
@@ -6,8 +5,6 @@ import string
 import subprocess
 
 from ssl import create_default_context
-
-logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.CacheControlMiddleware',
     'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
@@ -74,8 +72,9 @@ CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com') # used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
-IGV_CSS_HASH = "'sha256-D1ouVPg7bXVEm/f4h9NNmEBwWO5vkjlDOIHPeV3tFPg='"
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS_HASH)
+IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
+IGV_CSS2_HASH = "'sha256-m7BbAVh3TyZH136+WARZw8eulS+0pHbppq98KGFYbhA='"
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -193,7 +192,6 @@ AUTHENTICATION_BACKENDS = (
 
 ROOT_URLCONF = 'seqr.urls'
 
-LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
 
 POSTGRES_DB_CONFIG = {
@@ -276,7 +274,6 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
-GOOGLE_LOGIN_REQUIRED_URL = '/login/google-oauth2'
 
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
@@ -341,12 +338,15 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 
 SOCIAL_AUTH_PROVIDER = 'google-oauth2'
+GOOGLE_LOGIN_REQUIRED_URL = '/login/{}'.format(SOCIAL_AUTH_PROVIDER)
+
 
 # Use Google sub ID as the user ID, safer than using email
 USE_UNIQUE_USER_ID = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
 
 
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True

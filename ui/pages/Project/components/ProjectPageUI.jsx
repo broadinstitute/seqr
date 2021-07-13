@@ -32,13 +32,13 @@ import VariantTags from './VariantTags'
 import VariantTagTypeBar from './VariantTagTypeBar'
 
 
-const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project }) => {
+const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,
     <div key="content">
       {loading ? <Loader key="content" inline active /> : children}
     </div>,
-    editButton && project.canEdit ? (
+    editButton && (project.canEdit || collaboratorEdit) ? (
       <div key="edit">
         <VerticalSpacer height={15} />
         {editButton}
@@ -62,6 +62,7 @@ ProjectSectionComponent.propTypes = {
   linkPath: PropTypes.string,
   linkText: PropTypes.string,
   project: PropTypes.object,
+  collaboratorEdit: PropTypes.bool,
 }
 
 const mapSectionStateToProps = state => ({
@@ -94,7 +95,7 @@ const ProjectPageUI = React.memo((props) => {
             <AnalysisGroups />
           </ProjectSection>}
           <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />}>
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
             <GeneLists project={props.project} />
           </ProjectSection>
         </Grid.Column>
