@@ -12,7 +12,7 @@ import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeIm
 const PED_IMAGE_SIZES = {
   small: { height: 35, width: 50 },
   medium: { height: 150, width: 250 },
-  large: { height: 250, width: 350 },
+  large: { height: 250 },
 }
 
 const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
@@ -23,8 +23,15 @@ const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
 `
 
 const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
+  cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
+
+  i.fa {
+    cursor: pointer;
+  }
+  
   .addchild, .addsibling, .addpartner, .addparents, .delete, .settings, .popup_selection {
     font-family: Icons !important;
+    cursor: pointer;
     
     &.fa-circle, &.fa-square, &.fa-unspecified {
       font-family: outline-icons !important;
@@ -39,8 +46,8 @@ class PedigreeJs extends React.PureComponent {
   static propTypes = {
     family: PropTypes.object,
     size: PropTypes.string,
-    // disablePedigreeZoom: PropTypes.bool,
-    // isEditable: PropTypes.bool,
+    disablePedigreeZoom: PropTypes.bool,
+    isEditable: PropTypes.bool,
   }
 
   constructor(props) {
@@ -51,15 +58,14 @@ class PedigreeJs extends React.PureComponent {
   render() {
     // TODO fix display in family label hover (i.e. saved variant page)
     return (
-      <PedigreeJsContainer>
-        <div id={`${this.containerId}-buttons`} />
+      <PedigreeJsContainer disablePedigreeZoom={this.props.disablePedigreeZoom}>
+        {this.props.disablePedigreeZoom && this.props.isEditable && <div id={`${this.containerId}-buttons`} />}
         <div id={this.containerId} />
       </PedigreeJsContainer>)
   }
 
   componentDidMount() {
-    const { size } = this.props
-    // const { size, disablePedigreeZoom, isEditable } = this.props
+    const { size, disablePedigreeZoom, isEditable } = this.props
     const dataset = [ // TODO
       { name: 'm21', sex: 'M', top_level: true },
       { name: 'f21', sex: 'F', top_level: true },
@@ -69,25 +75,31 @@ class PedigreeJs extends React.PureComponent {
       dataset,
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
-      // edit: !!(disablePedigreeZoom && isEditable), TODO
+      edit: !!(disablePedigreeZoom && isEditable),
       background: '#fff',
       diseases: [{ type: 'affected', colour: '#111' }],
       labels: ['name'],
-      zoomIn: 5,
-      zoomOut: 5,
-      store_type: 'array', // TODO remove?
+      zoomIn: 100,
+      zoomOut: 100,
+      store_type: 'array', // TODO remove
       ...PED_IMAGE_SIZES[size],
     }
     const builtOpts = buildPedigeeJs(opts)
     scalePedigreeToFit(builtOpts)
-    this.resetIconContent()
+    this.setWidgets()
   }
 
-  resetIconContent = () => {
-    // Because of how text content is set for these icons, there is no way to override the unicode value with css
-    d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
-    d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
-    d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
+  setWidgets = () => {
+    // TODO shim this
+    if (this.props.disablePedigreeZoom && this.props.isEditable) {
+      // Because of how text content is set for these icons, there is no way to override the unicode value with css
+      d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
+      d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
+      d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
+    } else {
+      d3.selectAll('.addchild, .addsibling, .addpartner, .addparents, .delete, .settings, .popup_selection, .indi_rect').remove() //eslint-disable-line no-undef
+    }
+
   }
 }
 
