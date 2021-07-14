@@ -11,14 +11,8 @@ import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
 import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
 
-const PED_IMAGE_SIZES = {
-  small: { height: 35, width: 50 },
-  medium: { height: 150, width: 250 },
-  large: { height: 250 },
-}
-
-const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
-  max-height: ${props => PED_IMAGE_SIZES[props.size].height}px;
+const PedigreeImg = styled.img.attrs({ alt: 'pedigree' })`
+  max-height: ${props => props.maxHeight}px;
   max-width: 225px;
   vertical-align: top;
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
@@ -44,19 +38,18 @@ const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
 
 const MIN_INDIVS_PER_PEDIGREE = 2
 
-class PedigreeJs extends React.PureComponent {
+class PedigreeImage extends React.PureComponent {
 
   static propTypes = {
     family: PropTypes.object,
-    size: PropTypes.string,
     disablePedigreeZoom: PropTypes.bool,
     isEditable: PropTypes.bool,
   }
 
   constructor(props) {
     super(props)
-    this.containerId = `pedigreeJS-${props.family.familyGuid}-${props.size}`
-    this.state = { imgSrc: null }
+    this.containerId = `pedigreeJS-${props.family.familyGuid}`
+    this.state = { imgSrc: props.family.pedigreeImage }
   }
 
   setContainerElement = (element) => {
@@ -65,8 +58,8 @@ class PedigreeJs extends React.PureComponent {
 
   render() {
     const { family, ...props } = this.props
-    return this.state.imgSrc ? <UploadedPedigreeImage src={this.state.imgSrc} {...props} /> : (
-      <PedigreeJsContainer disablePedigreeZoom={this.props.disablePedigreeZoom} isEditable={this.props.isEditable}>
+    return this.state.imgSrc ? <PedigreeImg src={this.state.imgSrc} {...props} /> : (
+      <PedigreeJsContainer {...props}>
         <div id={`${this.containerId}-buttons`} />
         <div ref={this.setContainerElement} id={this.containerId} />
       </PedigreeJsContainer>)
@@ -87,7 +80,7 @@ class PedigreeJs extends React.PureComponent {
       dataset,
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
-      edit: !!(disablePedigreeZoom && isEditable),
+      edit: true,
       background: '#fff',
       diseases: [{ type: 'affected', colour: '#111' }],
       labels: ['name'],
@@ -96,7 +89,6 @@ class PedigreeJs extends React.PureComponent {
       font_size: '1.5em',
       symbol_size: 40,
       store_type: 'array', // TODO remove
-      // ...PED_IMAGE_SIZES[size], // TODO undo sizes
     }
     const builtOpts = buildPedigeeJs(opts)
     if (disablePedigreeZoom && isEditable) {
@@ -119,21 +111,11 @@ class PedigreeJs extends React.PureComponent {
   }
 }
 
-
-const PedigreeImage = ({ family, ...props }) => (
-  family.pedigreeImage ? // TODO single component
-    <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : <PedigreeJs family={family} {...props} />
-)
-
-PedigreeImage.propTypes = {
-  family: PropTypes.object.isRequired,
-}
-
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const image = <PedigreeImage
     family={family}
     disablePedigreeZoom={disablePedigreeZoom}
-    size={compact ? 'small' : 'medium'}
+    maxHeight={compact ? '35' : '150'}
   />
   if (disablePedigreeZoom) {
     return image
@@ -152,7 +134,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       }
     >
       <Segment basic textAlign="center">
-        <PedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} size="large" /><br />
+        <PedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} maxHeight="250" /><br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>
