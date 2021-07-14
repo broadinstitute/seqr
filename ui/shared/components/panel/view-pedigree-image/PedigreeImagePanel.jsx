@@ -1,7 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import $ from 'jquery'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
+import { svg2img } from 'pedigreejs/es/io'
 import { build as buildPedigeeJs } from 'pedigreejs/es/pedigree'
 import { scale_to_fit as scalePedigreeToFit } from 'pedigreejs/es/zoom'
 
@@ -23,6 +25,7 @@ const UploadedPedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
 `
 
 const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
+  display: ${props => ((props.disablePedigreeZoom && props.isEditable) ? 'auto' : 'none')};
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
 
   i.fa {
@@ -53,19 +56,28 @@ class PedigreeJs extends React.PureComponent {
   constructor(props) {
     super(props)
     this.containerId = `pedigreeJS-${props.family.familyGuid}-${props.size}`
+    this.state = { imgSrc: null }
+  }
+
+  setContainerElement = (element) => {
+    this.container = element
   }
 
   render() {
-    // TODO fix display in family label hover (i.e. saved variant page)
-    return (
-      <PedigreeJsContainer disablePedigreeZoom={this.props.disablePedigreeZoom}>
-        {this.props.disablePedigreeZoom && this.props.isEditable && <div id={`${this.containerId}-buttons`} />}
-        <div id={this.containerId} />
+    const { family, ...props } = this.props
+    return this.state.imgSrc ? <UploadedPedigreeImage src={this.state.imgSrc} {...props} /> : (
+      <PedigreeJsContainer disablePedigreeZoom={this.props.disablePedigreeZoom} isEditable={this.props.isEditable}>
+        <div id={`${this.containerId}-buttons`} />
+        <div ref={this.setContainerElement} id={this.containerId} />
       </PedigreeJsContainer>)
   }
 
   componentDidMount() {
-    const { size, disablePedigreeZoom, isEditable } = this.props
+    if (this.state.imgSrc) {
+      return
+    }
+
+    const { disablePedigreeZoom, isEditable } = this.props
     const dataset = [ // TODO
       { name: 'm21', sex: 'M', top_level: true },
       { name: 'f21', sex: 'F', top_level: true },
@@ -81,31 +93,35 @@ class PedigreeJs extends React.PureComponent {
       labels: ['name'],
       zoomIn: 100,
       zoomOut: 100,
+      font_size: '1.5em',
+      symbol_size: 40,
       store_type: 'array', // TODO remove
-      ...PED_IMAGE_SIZES[size],
+      // ...PED_IMAGE_SIZES[size], // TODO undo sizes
     }
     const builtOpts = buildPedigeeJs(opts)
-    scalePedigreeToFit(builtOpts)
-    this.setWidgets()
+    if (disablePedigreeZoom && isEditable) {
+      scalePedigreeToFit(builtOpts)
+      this.setWidgets()
+    } else {
+      const svg = $(this.container.children[0])
+      svg2img(svg, 'pedigree', { resolution: 10 }).done((args) => {
+        this.setState({ imgSrc: args.img })
+      })
+    }
   }
 
   setWidgets = () => {
-    // TODO shim this
-    if (this.props.disablePedigreeZoom && this.props.isEditable) {
-      // Because of how text content is set for these icons, there is no way to override the unicode value with css
-      d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
-      d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
-      d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
-    } else {
-      d3.selectAll('.addchild, .addsibling, .addpartner, .addparents, .delete, .settings, .popup_selection, .indi_rect').remove() //eslint-disable-line no-undef
-    }
-
+    // TODO shim this? use jquery?
+    // Because of how text content is set for these icons, there is no way to override the unicode value with css
+    d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
+    d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
+    d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
   }
 }
 
 
 const PedigreeImage = ({ family, ...props }) => (
-  family.pedigreeImage ?
+  family.pedigreeImage ? // TODO single component
     <UploadedPedigreeImage src={family.pedigreeImage} {...props} /> : <PedigreeJs family={family} {...props} />
 )
 
