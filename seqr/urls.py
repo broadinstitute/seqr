@@ -99,7 +99,8 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana, \
+    delete_index
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -136,9 +137,10 @@ react_app_pages = [
 
 no_login_react_app_pages = [
     r'^$',
-    'login',
-    'users/forgot_password',
-    'users/set_password/(?P<user_token>.+)',
+    'login/',
+    'login/error/.*',
+    'login/forgot_password',
+    'login/set_password/(?P<user_token>.+)',
     'matchmaker/matchbox',
     'matchmaker/disclaimer',
     'privacy_policy',
@@ -259,6 +261,7 @@ api_endpoints = {
     'report/seqr_stats': seqr_stats,
 
     'data_management/elasticsearch_status': elasticsearch_status,
+    'data_management/delete_index': delete_index,
     'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'data_management/get_all_users': get_all_users,
 

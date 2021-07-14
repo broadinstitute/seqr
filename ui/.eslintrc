@@ -3,7 +3,6 @@
     "airbnb",
     "plugin:react-perf/recommended"
   ],
-
   "parser": "babel-eslint",
   "parserOptions": {
     "ecmaFeatures": {
@@ -23,8 +22,18 @@
     }
   },
   "rules": {
-    "semi": [2, "never"],
-    "no-shadow": ["error", { "allow": ["error"] }],
+    "semi": [
+      2,
+      "never"
+    ],
+    "no-shadow": [
+      "error",
+      {
+        "allow": [
+          "error"
+        ]
+      }
+    ],
     "arrow-body-style": 0,
     "func-names": 0,
     "function-paren-newline": 0,
@@ -39,17 +48,25 @@
     "react/jsx-first-prop-new-line": 0,
     "react/jsx-wrap-multilines": 0,
     "react/prefer-stateless-function": 0,
-    "react/sort-comp": 0,  // more freedom in arranging class functions
+    "react/sort-comp": 0, // more freedom in arranging class functions
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,
     "no-class-assign": 0,
-    "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
+    "react/jsx-filename-extension": [
+      1,
+      {
+        "extensions": [
+          ".js",
+          ".jsx"
+        ]
+      }
+    ],
     "react/require-default-props": 0,
     "react/require-optimization": 2,
     "react/jsx-max-props-per-line": 0,
     "react/jsx-no-target-blank": 0,
     "spaced-comment": 0,
-
+    "no-empty-pattern": 0,
     "jsx-a11y/iframe-has-title": 0,
     "jsx-a11y/tabindex-no-positive": 0,
     "jsx-a11y/click-events-have-key-events": 0,

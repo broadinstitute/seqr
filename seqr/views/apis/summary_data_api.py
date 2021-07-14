@@ -1,5 +1,4 @@
 from django.db.models import prefetch_related_objects, Q
-import logging
 
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
@@ -14,8 +13,6 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
     login_and_policies_required
 from seqr.views.utils.variant_utils import saved_variant_genes
 from settings import ANALYST_PROJECT_CATEGORY
-
-logger = logging.getLogger(__name__)
 
 MAX_SAVED_VARIANTS = 10000
 

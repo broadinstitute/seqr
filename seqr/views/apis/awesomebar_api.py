@@ -1,6 +1,4 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-import logging
-
 from django.db.models import Q, ExpressionWrapper, BooleanField
 from django.views.decorators.http import require_GET
 
@@ -11,8 +9,6 @@ from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, 
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
 from settings import ANALYST_PROJECT_CATEGORY
 
-
-logger = logging.getLogger(__name__)
 
 MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100

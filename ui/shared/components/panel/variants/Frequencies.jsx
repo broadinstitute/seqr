@@ -40,9 +40,12 @@ FreqLink.propTypes = {
 }
 
 const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
-  const isRegion = parseFloat(value, 10) <= 0
+  const floatValue = parseFloat(value, 10)
+  const isRegion = floatValue <= 0
   let coords
-  if (isRegion) {
+  if (Number.isNaN(floatValue)) {
+    coords = value
+  } else if (isRegion) {
     const posInt = parseInt(pos, 10)
     coords = `${chrom}-${posInt - 100}-${posInt + 100}`
   } else {
@@ -59,8 +62,9 @@ const FreqSummary = React.memo((props) => {
   if (population.af === null || population.af === undefined) {
     return null
   }
-  const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
-  const filterValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : null
+  const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
+  const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
+  const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
   return (
     <div>
@@ -72,14 +76,17 @@ const FreqSummary = React.memo((props) => {
               urls={urls}
               queryParams={queryParams}
               value={value}
-              displayValue={filterValue}
+              displayValue={displayValue}
               variant={variant}
               getPath={getFreqLinkPath}
-            /> : (filterValue || value)
+            /> : displayValue
           }
         </b>
         {population.hom !== null && population.hom !== undefined &&
           <span><HorizontalSpacer width={5} />Hom={population.hom}</span>
+        }
+        {population.het !== null && population.het !== undefined &&
+          <span><HorizontalSpacer width={5} />Het={population.het}</span>
         }
         {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined &&
           <span><HorizontalSpacer width={5} />Hemi={population.hemi}</span>
@@ -149,6 +156,13 @@ const POPULATIONS = [
       [GENOME_VERSION_37]: 'bravo.sph.umich.edu/freeze3a/hg19',
       [GENOME_VERSION_38]: 'bravo.sph.umich.edu/freeze5/hg38',
     },
+  },
+  {
+    field: 'gnomad_svs',
+    fieldTitle: 'gnomAD SVs',
+    precision: 3,
+    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_sv_r2_1' },
   },
 ]
 

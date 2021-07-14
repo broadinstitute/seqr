@@ -1,7 +1,6 @@
 from datetime import timedelta
 import elasticsearch
 from elasticsearch_dsl import Q
-import logging
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
@@ -11,8 +10,6 @@ from seqr.utils.elasticsearch.es_gene_agg_search import EsGeneAggSearch
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
-
-logger = logging.getLogger(__name__)
 
 
 class InvalidIndexException(Exception):
@@ -62,17 +59,17 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id, return_all_queried_families=False):
+def get_single_es_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = EsSearch(
-        families, return_all_queried_families=return_all_queried_families,
+        families, return_all_queried_families=return_all_queried_families, user=user,
     ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
-def get_es_variants_for_variant_ids(families, variant_ids, dataset_type=None):
-    variants = EsSearch(families).filter_by_location(variant_ids=variant_ids)
+def get_es_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
+    variants = EsSearch(families, user=user).filter_by_location(variant_ids=variant_ids)
     if dataset_type:
         variants = variants.update_dataset_type(dataset_type)
     return variants.search(num_results=len(variant_ids))
@@ -88,7 +85,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return get_es_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
-def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, **kwargs):
+def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, **kwargs):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     previous_search_results = safe_redis_get_json(cache_key) or {}
     total_results = previous_search_results.get('total_results')
@@ -113,6 +110,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         search_model.families.all(),
         previous_search_results=previous_search_results,
         inheritance_search=search.get('inheritance'),
+        user=user,
     )
 
     if search.get('customQuery'):
@@ -149,8 +147,8 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     return variant_results, es_search.previous_search_results.get('total_results')
 
 
-def get_es_variant_gene_counts(search_model):
-    gene_counts, _ = get_es_variants(search_model, es_search_cls=EsGeneAggSearch, sort=None)
+def get_es_variant_gene_counts(search_model, user):
+    gene_counts, _ = get_es_variants(search_model, es_search_cls=EsGeneAggSearch, sort=None, user=user)
     return gene_counts
 
 

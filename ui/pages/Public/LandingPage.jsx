@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const PageSegment = styled(Segment).attrs({ padded: 'very' })`
   padding-left: 20% !important;
@@ -13,14 +14,18 @@ const Anchor = styled.a.attrs({ target: '_blank' })`
   font-weight: 400;
 `
 
-export default () =>
+const LOGIN_BUTTON_PROPS = {
+  label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
+}
+
+const LandingPage = ({ }) =>
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
       <VerticalSpacer height={20} />
       An open source software platform for rare disease genomics
       <VerticalSpacer height={40} />
-      <Button as={Anchor} href="/login/google-oauth2" label="Already a seqr user?" content="Sign In" primary size="big" labelPosition="left" />
+      <Button as={Anchor} href={GOOGLE_LOGIN_URL} {...LOGIN_BUTTON_PROPS} />
     </PageSegment>
     <Segment padded>
       <Grid columns="equal">
@@ -102,3 +107,6 @@ export default () =>
       </List>
     </PageSegment>
   </Segment.Group>
+
+
+export default LandingPage

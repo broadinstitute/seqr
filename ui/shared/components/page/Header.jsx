@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 
 import { updateUser } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-import { USER_NAME_FIELDS } from 'shared/utils/constants'
+import { USER_NAME_FIELDS, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 import UpdateButton from '../buttons/UpdateButton'
 
 import AwesomeBar from './AwesomeBar'
@@ -40,8 +40,8 @@ const PageHeader = React.memo(({ user, onSubmit }) =>
         </Dropdown.Menu>
       </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
-    ] : <Menu.Item as="a" href="/login/google-oauth2" position="right">Log in</Menu.Item>}
-  </HeaderMenu>,
+    ] : <Menu.Item as="a" href={GOOGLE_LOGIN_URL} position="right">Log in</Menu.Item>}
+  </HeaderMenu >,
 )
 
 PageHeader.propTypes = {

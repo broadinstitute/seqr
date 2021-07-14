@@ -746,7 +746,7 @@ class SavedVariantAPITest(object):
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
     @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
     def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
-        mock_get_variants.side_effect = lambda families, variant_ids: \
+        mock_get_variants.side_effect = lambda families, variant_ids, **kwargs: \
             [{'variantId': variant_id, 'familyGuids': [family.guid for family in families]}
              for variant_id in variant_ids]
 
@@ -764,7 +764,7 @@ class SavedVariantAPITest(object):
 
         mock_get_variants.assert_called_with(
             [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')],
-            ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G']
+            ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'], user=self.manager_user,
         )
         mock_logger.error.assert_not_called()
 

@@ -3,20 +3,11 @@ import io
 import jinja2
 import logging
 import os
-import socket
 import time
 import yaml
 
 
 logger = logging.getLogger()
-
-
-def _get_ip_address():
-    """Returns the localhost ip address as a string (eg. "192.168.0.6")."""
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    return s.getsockname()[0]
 
 
 def _parse_jinja_template(jinja_template_path, template_variables):
@@ -47,9 +38,7 @@ def load_settings(settings_file_paths, settings=None):
         settings = collections.OrderedDict()
 
     # add generic global options
-    settings["HOME"] = os.path.expanduser("~")
     settings["TIMESTAMP"] = time.strftime("%Y%m%d_%H%M%S")
-    settings["HOST_MACHINE_IP"] = _get_ip_address()
 
     # process settings_file_paths
     for settings_path in settings_file_paths:

@@ -1,5 +1,4 @@
 import json
-import logging
 
 from seqr.models import AnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response
@@ -7,8 +6,6 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required
 
-
-logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 

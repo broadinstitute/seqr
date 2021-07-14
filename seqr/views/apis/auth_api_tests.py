@@ -3,7 +3,7 @@ import json
 
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.apis.auth_api import login_view, logout_view, login_required_error
+from seqr.views.apis.auth_api import login_view, logout_view, login_required_error, policies_required_error
 from django.contrib.auth.models import User
 
 
@@ -116,15 +116,22 @@ class AuthAPITest(TestCase):
         # send logout request
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login')
+        self.assertEqual(response.url, '/')
 
         # no error when attempt to log out again
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login')
+        self.assertEqual(response.url, '/')
 
     def test_login_required_error(self):
         url = reverse(login_required_error)
         response = self.client.post(url)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'login required')
+        self.assertDictEqual(response.json(), {'error': '/login'})
+
+    def test_policies_required_error(self):
+        url = reverse(policies_required_error)
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 401)
+        self.assertDictEqual(response.json(), {'error': '/accept_policies'})
