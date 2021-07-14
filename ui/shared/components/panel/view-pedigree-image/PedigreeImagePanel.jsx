@@ -5,7 +5,6 @@ import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { svg2img } from 'pedigreejs/es/io'
 import { build as buildPedigeeJs } from 'pedigreejs/es/pedigree'
-import { scale_to_fit as scalePedigreeToFit } from 'pedigreejs/es/zoom'
 
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
@@ -90,24 +89,19 @@ class PedigreeImage extends React.PureComponent {
       symbol_size: 40,
       store_type: 'array', // TODO remove
     }
-    const builtOpts = buildPedigeeJs(opts)
+    buildPedigeeJs(opts)
+
     if (disablePedigreeZoom && isEditable) {
-      scalePedigreeToFit(builtOpts)
-      this.setWidgets()
+      // Because of how text content is set for these icons, there is no way to override the unicode value with css
+      $('.fa-circle').text('\uf111 ')
+      $('.fa-square').text('\uf0c8 ')
+      $('.fa-unspecified').text('\uf0c8 ')
     } else {
       const svg = $(this.container.children[0])
       svg2img(svg, 'pedigree', { resolution: 10 }).done((args) => {
         this.setState({ imgSrc: args.img })
       })
     }
-  }
-
-  setWidgets = () => {
-    // TODO shim this? use jquery?
-    // Because of how text content is set for these icons, there is no way to override the unicode value with css
-    d3.select('.fa-circle').text('\uf111 ') //eslint-disable-line no-undef
-    d3.select('.fa-square').text('\uf0c8 ') //eslint-disable-line no-undef
-    d3.select('.fa-unspecified').text('\uf0c8 ') //eslint-disable-line no-undef
   }
 }
 
