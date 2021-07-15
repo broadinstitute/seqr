@@ -134,7 +134,7 @@ const ANNOTATION_PANEL_MAP = {
 const ANNOTATION_FILTER_PANEL_MAP = {
   ...ANNOTATION_FILTER_PANEL,
   headerProps: {
-    title: 'Custom Annotation Filter',
+    title: 'In Silico Filters',
     name: 'custom_annotation_filter',
   },
 }

@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent, Search, Icon, Popup } from 'semantic-ui-react'
+import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
@@ -148,75 +148,32 @@ const updateFilterPredictionOperator = (prediction, operator) => {
 }
 
 export const InputGroup = React.memo((props) => {
-  const { inputGroupId, isDefaultGroup, options, handleOptionDelete, handleOptionValueUpdate, handleOptionOperatorUpdate, compareOptions } = props
+  const { inputGroupId, isDefaultGroup, options, handleOptionValueUpdate, handleOptionOperatorUpdate, compareOptions, nonNumericCompareOptions } = props
   const inputGroupStyle = {
     padding: '10px',
   }
-
   const dropdownGroupStyle = {
     paddingTop: '35px',
   }
-
-  const iconStyle = {
-    zIndex: '2',
-    position: 'absolute',
-    right: '0',
-    top: '0',
+  const searchStyle = {
+    padding: '10px',
   }
 
   return (
     <div key={`inputGroup-${inputGroupId}`}>
       {options.map(option =>
-        <div style={{ float: 'left', width: '33%' }} key={option.label}>
-          <div style={{ gridTemplateColumns: '20% 80%', gridGap: '5px', display: 'grid' }}>
-            <BaseSemanticInput
-              inputType="Dropdown"
-              inputStyle={dropdownGroupStyle}
-              options={compareOptions}
-              noResultsMessage={null}
-              value={!isDefaultGroup ? option.operator : undefined}
-              tabIndex="0"
-              onClick={() => { }}
-              onFocus={() => { }}
-              onChange={(operator) => {
-                updateFilterPredictionOperator(option.name, operator)
-                if (operator === null) {
-                  document.getElementById(option.name).value = ''
-                }
-                if (!isDefaultGroup) {
-                  handleOptionOperatorUpdate(option, operator)
-                }
-              }}
-            />
-            <div>
-              {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-              <label style={{ fontWeight: 'bold', whiteSpace: 'noWrap' }}>{helpLabel(option.label, option.labelHelp)}</label>
-              <div style={{ position: 'relative' }}>
-                <BaseSemanticInput
-                  id={option.name}
-                  inputType="Input"
-                  inputStyle={inputGroupStyle}
-                  key={option.name}
-                  value={!isDefaultGroup ? option.value : undefined}
-                  onChange={(value) => {
-                    updateFilterPredictionValue(option.name, value)
-                    if (!isDefaultGroup) {
-                      handleOptionValueUpdate(option.name)
-                    }
-                  }}
-                  onFocus={() => { }}
-                />
-                {(option.isDefault !== undefined || false) &&
-                  <Icon name="times circle outline" style={iconStyle}
-                    onClick={() => {
-                      handleOptionDelete(option.name)
-                    }}
-                  />
-                }
-              </div>
-            </div>
-          </div>
-        </div>,
+        <AnnotationElement
+          option={option}
+          key={option.label}
+          dropdownGroupStyle={dropdownGroupStyle}
+          compareOptions={compareOptions}
+          nonNumericCompareOptions={nonNumericCompareOptions}
+          isDefaultGroup={isDefaultGroup}
+          handleOptionOperatorUpdate={handleOptionOperatorUpdate}
+          handleOptionValueUpdate={handleOptionValueUpdate}
+          inputGroupStyle={inputGroupStyle}
+          searchStyle={searchStyle}
+        />,
       )}
     </div>
   )
@@ -226,14 +183,14 @@ InputGroup.propTypes = {
   options: PropTypes.array,
   inputGroupId: PropTypes.string,
   compareOptions: PropTypes.array,
-  handleOptionDelete: PropTypes.func,
+  nonNumericCompareOptions: PropTypes.array,
   handleOptionValueUpdate: PropTypes.func,
   handleOptionOperatorUpdate: PropTypes.func,
   isDefaultGroup: PropTypes.bool,
 }
 
 export const GridInputGroup = React.memo((props) => {
-  const { options, gridGroupName, isDefaultGroup, compareOptions, topSpacing, handleOptionDelete, handleOptionValueUpdate, handleOptionOperatorUpdate, ...baseProps } = props
+  const { options, gridGroupName, isDefaultGroup, compareOptions, nonNumericCompareOptions, topSpacing, handleOptionValueUpdate, handleOptionOperatorUpdate, ...baseProps } = props
   const inputOptions = options[0] !== undefined ? options[0].options : []
   const optionChunks = []
   const optionChunkCount = 5
@@ -251,7 +208,7 @@ export const GridInputGroup = React.memo((props) => {
         <VerticalSpacer height={30} />
       }
       {optionChunks.map((chunk) => {
-        return <InputGroup inputGroupId={chunk.id} key={chunk.key} options={chunk.chunk} isDefaultGroup={isDefaultGroup} handleOptionDelete={handleOptionDelete} handleOptionValueUpdate={handleOptionValueUpdate} handleOptionOperatorUpdate={handleOptionOperatorUpdate} compareOptions={compareOptions} {...baseProps} />
+        return <InputGroup inputGroupId={chunk.id} key={chunk.key} options={chunk.chunk} isDefaultGroup={isDefaultGroup} handleOptionValueUpdate={handleOptionValueUpdate} handleOptionOperatorUpdate={handleOptionOperatorUpdate} compareOptions={compareOptions} nonNumericCompareOptions={nonNumericCompareOptions} {...baseProps} />
       })}
       <div style={floatStyle} />
       <VerticalSpacer height={40} />
@@ -263,43 +220,15 @@ GridInputGroup.propTypes = {
   options: PropTypes.array,
   gridGroupName: PropTypes.string,
   topSpacing: PropTypes.bool,
-  handleOptionDelete: PropTypes.func,
   compareOptions: PropTypes.array,
+  nonNumericCompareOptions: PropTypes.array,
   handleOptionValueUpdate: PropTypes.func,
   handleOptionOperatorUpdate: PropTypes.func,
   isDefaultGroup: PropTypes.bool,
 }
 
-let searchOptions = []
-const getElasticSearchIndicies = async () => {
-  // Clear searchOptions and get new data
-  searchOptions = []
-
-  // Get all keys from Elasticsearch
-  let response = await fetch('/api/data_management/elasticsearch_mapping')
-  let data = await response.json()
-
-  // Include only index names that are not from ElasticSearch (the ones that start with dot)
-  const indexNames = Object.keys(data).filter(key => key[0] !== '.')
-
-  // For each index name get properties
-  /* eslint-disable no-await-in-loop */
-  for (let indexNameIdx = 0; indexNameIdx < indexNames.length; indexNameIdx++) {
-    const indexName = indexNames[indexNameIdx]
-    response = await fetch(`/api/data_management/elasticsearch_index_data/${indexName}`)
-    data = await response.json()
-
-    /* eslint-disable no-loop-func */
-    Object.keys(data[indexName].mappings.properties).forEach((property) => {
-      searchOptions.push({ title: property })
-    })
-  }
-}
-
 export const InlineInputGroup = React.memo((props) => {
-  const { options, compareOptions, searchHelpText, ...baseProps } = props
-
-  getElasticSearchIndicies()
+  const { options, compareOptions, nonNumericCompareOptions, ...baseProps } = props
 
   return (
     <div>
@@ -310,20 +239,11 @@ export const InlineInputGroup = React.memo((props) => {
         gridGroupName="baseAnnotationsGridGroup"
         isDefaultGroup
         compareOptions={compareOptions}
-        handleOptionDelete={() => { }}
+        nonNumericCompareOptions={nonNumericCompareOptions}
         handleOptionValueUpdate={() => { }}
         handleOptionOperatorUpdate={() => { }}
       />
       <VerticalSpacer height={50} />
-      <SearchAnnotations
-        {...baseProps}
-        onChange={() => { }}
-        searchOptions={searchOptions}
-        onResultSelect={() => { }}
-        compareOptions={compareOptions}
-        searchHelpText={searchHelpText}
-        gridGroupName="customAnnotationsGridGroup"
-      />
     </div>
   )
 })
@@ -331,7 +251,7 @@ export const InlineInputGroup = React.memo((props) => {
 InlineInputGroup.propTypes = {
   options: PropTypes.array,
   compareOptions: PropTypes.array,
-  searchHelpText: PropTypes.string,
+  nonNumericCompareOptions: PropTypes.array,
 }
 
 export const Select = props =>
@@ -342,114 +262,155 @@ Select.propTypes = {
   options: PropTypes.array,
 }
 
-export class SearchAnnotations extends React.PureComponent {
+export class AnnotationElement extends React.PureComponent {
+    static propTypes = {
+      option: PropTypes.any,
+      dropdownGroupStyle: PropTypes.any,
+      compareOptions: PropTypes.array,
+      nonNumericCompareOptions: PropTypes.array,
+      isDefaultGroup: PropTypes.bool,
+      handleOptionOperatorUpdate: PropTypes.func,
+      handleOptionValueUpdate: PropTypes.func,
+      inputGroupStyle: PropTypes.any,
+      searchStyle: PropTypes.any,
+    }
+    state = {
+      resetSearchValueToggle: false,
+    }
+
+    render() {
+    // eslint-disable-next-line no-shadow
+      return (
+        <div style={{ float: 'left', width: '33%' }} key={`${this.props.option.label}Element`}>
+          <div style={{ gridTemplateColumns: '20% 80%', gridGap: '5px', display: 'grid' }}>
+            <StyledSemanticInput
+              inputType="Dropdown"
+              inputStyle={this.props.dropdownGroupStyle}
+              options={this.props.option.numericOption ? this.props.compareOptions : this.props.nonNumericCompareOptions}
+              noResultsMessage={null}
+              value={!this.props.isDefaultGroup ? this.props.option.operator : undefined}
+              tabIndex="0"
+              onClick={() => { }}
+              onFocus={() => { }}
+              onChange={(operator) => {
+                updateFilterPredictionOperator(this.props.option.name, operator)
+                if (operator === null) {
+                  document.getElementById(this.props.option.name).value = null
+                  this.setState({
+                    resetSearchValueToggle: !this.state.resetSearchValueToggle,
+                  })
+                }
+                if (!this.props.isDefaultGroup) {
+                  this.props.handleOptionOperatorUpdate(this.props.option, operator)
+                }
+              }}
+            />
+            <div>
+              {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+              <label style={{ fontWeight: 'bold', whiteSpace: 'noWrap' }}>{helpLabel(this.props.option.label, this.props.option.labelHelp)}</label>
+              <div style={{ position: 'relative' }}>
+                {this.props.option.numericOption &&
+                <StyledSemanticInput
+                  inputType="Input"
+                  inputStyle={this.props.inputGroupStyle}
+                  key={this.props.option.name}
+                  value={!this.props.isDefaultGroup ? this.props.option.value : undefined}
+                  id={this.props.option.name}
+                  onChange={(value) => {
+                    updateFilterPredictionValue(this.props.option.name, value)
+                    if (!this.props.isDefaultGroup) {
+                      this.props.handleOptionValueUpdate(this.props.option.name)
+                    }
+                  }}
+                  onFocus={() => {
+                  }}
+                />
+                }
+                {!this.props.option.numericOption &&
+                <NonNumericAnnotation
+                  id={this.props.option.name}
+                  key={this.props.option.name}
+                  searchStyle={this.props.searchStyle}
+                  searchOptions={this.props.option.possibleValues}
+                  resetSearchValueToggle={this.state.resetSearchValueToggle}
+                  onChange={() => {}}
+                  onResultSelect={(e, result) => {
+                    updateFilterPredictionValue(this.props.option.name, result.value)
+                    if (!this.props.isDefaultGroup) {
+                      this.props.handleOptionValueUpdate(this.props.option.name)
+                    }
+                  }}
+                />
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      ) }
+}
+
+export class NonNumericAnnotation extends React.PureComponent {
   static propTypes = {
+    id: PropTypes.string,
     onChange: PropTypes.func,
     searchOptions: PropTypes.array,
     onResultSelect: PropTypes.func,
-    compareOptions: PropTypes.array,
-    searchHelpText: PropTypes.string,
-    gridGroupName: PropTypes.string,
+    searchStyle: PropTypes.object,
+    // eslint-disable-next-line react/no-unused-prop-types
+    resetSearchValueToggle: PropTypes.bool,
   }
 
   state = {
     searchResults: this.props.searchOptions,
-    options: [{ options: [] }],
-    compareOptions: this.props.compareOptions,
+    // eslint-disable-next-line react/no-unused-state
+    resetSearchResultsToggle: true,
+    value: '',
+  }
+
+  static getDerivedStateFromProps(props, currentState) {
+    if (currentState.resetSearchResultsToggle !== props.resetSearchValueToggle) {
+      return {
+        searchResults: [],
+        resetSearchResultsToggle: props.resetSearchValueToggle,
+        value: '',
+      }
+    }
+    return null
   }
 
   handleResultSelect = (e, { result }) => {
-    this.props.onResultSelect(e, result.title)
-    this.setState((prevState) => {
-      const previousOptions = prevState.options[0].options
-      const newOptions = [...previousOptions]
-      const optionResult = newOptions.filter((option) => { return option.name === result.title })
-      if (optionResult.length === 0) {
-        const newOption = {
-          name: result.title.toLowerCase(),
-          label: result.title,
-          isDefault: false,
-          value: '',
-          operator: '',
-        }
-        newOptions.push(newOption)
-      }
-      return { options: [{ options: newOptions }] }
-    })
-  }
-
-  handleOptionOperatorUpdate = (option, operator) => {
-    this.setState((prevState) => {
-      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
-      const index = inputOptions.findIndex(opt => opt.name === option.name)
-      if (index > -1) {
-        inputOptions[index].operator = operator
-      }
-      return { options: [{ options: inputOptions }] }
-    })
-  }
-
-  handleOptionValueUpdate = (optionName) => {
-    const optionValue = filteredPredictions[optionName].value
-    this.setState((prevState) => {
-      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
-      const index = inputOptions.findIndex(opt => opt.name === optionName)
-      if (index > -1) {
-        inputOptions[index].value = optionValue
-      }
-      return { options: [{ options: inputOptions }] }
+    this.props.onResultSelect(e, result)
+    this.setState({
+      value: result.title,
     })
   }
 
   handleSearchChange = (e, data) => {
     this.setState({
       searchResults: this.props.searchOptions.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+      value: data.value,
     })
     this.props.onChange(e, data)
-  }
-  handleOptionDelete = (optionName) => {
-    this.setState((prevState) => {
-      const inputOptions = prevState.options[0] !== undefined ? prevState.options[0].options : []
-      const index = inputOptions.findIndex(option => option.name === optionName)
-      if (index > -1) {
-        inputOptions.splice(index, 1)
-      }
-      delete filteredPredictions[optionName]
-      return { options: [{ options: inputOptions }] }
-    })
   }
 
   render() {
     // eslint-disable-next-line no-shadow
-    const { onChange, searchOptions, onResultSelect, compareOptions, searchHelpText, ...props } = this.props
     return (
-      <div>
-        {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-        <label> Search for additional annotations <Popup trigger={<Icon name="question circle outline" />} content={searchHelpText} size="small" position="top center" /></label>
-        <CustomAnnotationSearch
-          results={this.state.searchResults}
-          onResultSelect={this.handleResultSelect}
-          onSearchChange={this.handleSearchChange}
-        />
-        <GridInputGroup
-          {...props}
-          options={this.state.options}
-          compareOptions={this.state.compareOptions}
-          gridGroupName={this.props.gridGroupName}
-          topSpacing
-          handleOptionDelete={this.handleOptionDelete}
-          handleOptionValueUpdate={this.handleOptionValueUpdate}
-          handleOptionOperatorUpdate={this.handleOptionOperatorUpdate}
-        />
-      </div>
+      <Search
+        id={this.props.id}
+        results={this.state.searchResults}
+        onResultSelect={this.handleResultSelect}
+        onSearchChange={this.handleSearchChange}
+        style={this.props.searchStyle}
+        value={this.state.value}
+      />
     )
   }
 }
 
-export const CustomAnnotationSearch = styled(Search)`
-  .input + .results {
-    max-height: 210px;
-    overflow-y: scroll;
+export const StyledSemanticInput = styled(BaseSemanticInput)`
+  div.ui.input > input {
+    padding: 0.3em 1em;
   }
 `
 
