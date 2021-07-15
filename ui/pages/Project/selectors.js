@@ -590,7 +590,9 @@ export const getPageHeaderEntityLinks = createSelector(
       to: `/variant_search/${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,
       disabled,
-      popup: disabled ? 'Search is disabled until data is loaded' : null,
+      popup: disabled ?
+        `Search is disabled until data is loaded${project.workspaceName ? '. Loading data from AnVIL to seqr is a slow process, and generally takes a week.' : ''}`
+        : null,
 
     }]
     if (project.hasCaseReview) {
