@@ -375,8 +375,6 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const SEARCH_HELP_CONTENT = 'Using this search, you can find additional annotations that are relevant to you and filter the data by them'
-
 export const ANNOTATION_FILTER_OPTIONS_LIST = [
   {
     name: 'cadd',
@@ -384,6 +382,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Cadd value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'revel',
@@ -391,6 +390,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Revel value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'primate_ai',
@@ -398,6 +398,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Primate AI value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'mpc',
@@ -405,6 +406,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'MPC value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'splice_ai',
@@ -412,6 +414,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Splice AI value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'eigen',
@@ -419,6 +422,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Eigen value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'dann',
@@ -426,6 +430,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Dann value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'strvctvre',
@@ -433,6 +438,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'STRVCTVRE value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'polyphen',
@@ -440,6 +446,19 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Polyphen value',
     value: '',
     operator: '',
+    numericOption: false,
+    possibleValues: [{
+      title: 'benign',
+      value: 'B',
+    },
+    {
+      title: 'possibly damaging',
+      value: 'P',
+    },
+    {
+      title: 'probably damaging',
+      value: 'D',
+    }],
   },
   {
     name: 'sift',
@@ -447,6 +466,15 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Sift value',
     value: '',
     operator: '',
+    numericOption: false,
+    possibleValues: [{
+      title: 'tolerated',
+      value: 'T',
+    },
+    {
+      title: 'damaging',
+      value: 'D',
+    }],
   },
   {
     name: 'mut_taster',
@@ -454,6 +482,23 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Mut Taster value',
     value: '',
     operator: '',
+    numericOption: false,
+    possibleValues: [{
+      title: 'polymorphism (N)',
+      value: 'N',
+    },
+    {
+      title: 'polymorphism (P)',
+      value: 'P',
+    },
+    {
+      title: 'damaging',
+      value: 'D',
+    },
+    {
+      title: 'disease causing',
+      value: 'A',
+    }],
   },
   {
     name: 'fathmm',
@@ -461,6 +506,15 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'FATHMM value',
     value: '',
     operator: '',
+    numericOption: false,
+    possibleValues: [{
+      title: 'tolerated',
+      value: 'T',
+    },
+    {
+      title: 'damaging',
+      value: 'D',
+    }],
   },
   {
     name: 'metasvm',
@@ -468,6 +522,15 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'METASVM value',
     value: '',
     operator: '',
+    numericOption: false,
+    possibleValues: [{
+      title: 'tolerated',
+      value: 'T',
+    },
+    {
+      title: 'damaging',
+      value: 'D',
+    }],
   },
   {
     name: 'gerp_rs',
@@ -475,6 +538,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'GERP RS value',
     value: '',
     operator: '',
+    numericOption: true,
   },
   {
     name: 'phastcons_100_vert',
@@ -482,6 +546,7 @@ export const ANNOTATION_FILTER_OPTIONS_LIST = [
     labelHelp: 'Phastcons 100 Vert value',
     value: '',
     operator: '',
+    numericOption: true,
   },
 ]
 
@@ -519,6 +584,19 @@ export const COMPARE_OPTIONS = [
   },
 ]
 
+export const NON_NUMERIC_COMPARE_OPTIONS = [
+  {
+    key: 'Option_is_None',
+    text: '',
+    value: null,
+  },
+  {
+    key: 'Option_is',
+    text: 'is',
+    value: 'EQ',
+  },
+]
+
 
 export const ANNOTATION_FILTER_OPTION_LIST = [
   {
@@ -531,7 +609,7 @@ const ANNOTATION_FILTER_FIELD = {
   name: 'annotationFilterField',
   options: ANNOTATION_FILTER_OPTION_LIST,
   compareOptions: COMPARE_OPTIONS,
-  searchHelpText: SEARCH_HELP_CONTENT,
+  nonNumericCompareOptions: NON_NUMERIC_COMPARE_OPTIONS,
   width: 9,
 }
 
