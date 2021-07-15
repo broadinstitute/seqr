@@ -73,21 +73,22 @@ class PedigreeImage extends React.PureComponent {
     }
 
     const { disablePedigreeZoom, isEditable } = this.props
-    const dataset = [ // TODO
-      { name: 'm21', sex: 'M', top_level: true },
-      { name: 'f21', sex: 'F', top_level: true },
-      { name: 'ch1', sex: 'F', mother: 'f21', father: 'm21', affected: true },
+    const dataset = [ // TODO from family, map yob to age
+      { name: 'm21', display_name: 'mom', sex: 'M', top_level: true, yob: 1983 },
+      { name: 'f21', display_name: 'dad', sex: 'F', top_level: true, age: 30 },
+      { name: 'ch1', sex: 'F', display_name: 'proband', mother: 'f21', father: 'm21', affected: true, age: 2 },
     ]
     const opts = {
       dataset,
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
-      edit: true,
+      edit: true, // TODO configure editable fields
       background: '#fff',
-      diseases: [{ type: 'affected', colour: '#111' }],
-      labels: ['name'],
-      zoomIn: 100,
-      zoomOut: 100,
+      diseases: [{ type: 'affected', colour: '#11111191' }],
+      labels: ['age'],
+      zoomIn: 3,
+      zoomOut: 3,
+      zoomSrc: ['button'],
       font_size: '1.5em',
       symbol_size: 40,
       store_type: 'array', // TODO remove
@@ -95,15 +96,18 @@ class PedigreeImage extends React.PureComponent {
     buildPedigeeJs(opts)
 
     if (disablePedigreeZoom && isEditable) {
-      // Because of how text content is set for these icons, there is no way to override the unicode value with css
-      $('.fa-circle').text('\uf111 ')
-      $('.fa-square').text('\uf0c8 ')
-      $('.fa-unspecified').text('\uf0c8 ')
-      // TODO remove reste pedigree button. It does not do what you expect
+      // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
+      // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
+      $('.fa-refresh').remove()
+      // Because of how text content is set for these icons, there is no way to override the unicode value with css TODO does not work after edit
+      // $('.fa-circle').text('\uf111 ')
+      // $('.fa-square').text('\uf0c8 ')
+      // $('.fa-unspecified').text('\uf0c8 ')
     } else {
+      // For un-editable pedigrees, display as an img
       const svg = $(this.container.children[0])
-      svg2img(svg, 'pedigree', { resolution: 10 }).done((args) => {
-        this.setState({ imgSrc: args.img })
+      svg2img(svg, 'pedigree', { resolution: 10 }).done(({ img }) => {
+        this.setState({ imgSrc: img })
       })
     }
   }
