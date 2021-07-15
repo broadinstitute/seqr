@@ -1,6 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import $ from 'jquery'
+import 'jquery-ui/ui/widgets/dialog'
+import 'jquery-ui/themes/base/all.css'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { svg2img } from 'pedigreejs/es/io'
@@ -61,6 +63,7 @@ class PedigreeImage extends React.PureComponent {
       <PedigreeJsContainer {...props}>
         <div id={`${this.containerId}-buttons`} />
         <div ref={this.setContainerElement} id={this.containerId} />
+        <div id="node_properties" />
       </PedigreeJsContainer>)
   }
 
@@ -96,6 +99,7 @@ class PedigreeImage extends React.PureComponent {
       $('.fa-circle').text('\uf111 ')
       $('.fa-square').text('\uf0c8 ')
       $('.fa-unspecified').text('\uf0c8 ')
+      // TODO remove reste pedigree button. It does not do what you expect
     } else {
       const svg = $(this.container.children[0])
       svg2img(svg, 'pedigree', { resolution: 10 }).done((args) => {

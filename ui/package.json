@@ -69,6 +69,7 @@
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "igv": "^2.8.6",
     "jquery": "^3.6.0",
+    "jquery-ui": "^1.12.1",
     "js-cookie": "^2.2.1",
     "jsoneditor": "^9.0.2",
     "jsoneditor-react": "^3.0.0",
