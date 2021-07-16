@@ -6,7 +6,10 @@ import 'jquery-ui/themes/base/all.css'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { svg2img } from 'pedigreejs/es/io'
-import { build as buildPedigeeJs } from 'pedigreejs/es/pedigree'
+import {
+  build as buildPedigeeJs, rebuild as rebuildPedigeeJs, validate_pedigree as validatePedigree,
+} from 'pedigreejs/es/pedigree'
+import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
@@ -80,17 +83,17 @@ class PedigreeImage extends React.PureComponent {
 
     const { disablePedigreeZoom, isEditable } = this.props
     const dataset = [ // TODO from family, map yob to age
-      { name: 'm21', display_name: 'mom', sex: 'M', top_level: true, yob: 1983 },
-      { name: 'f21', display_name: 'dad', sex: 'F', top_level: true, age: 30 },
+      { name: 'm21', display_name: 'dad', sex: 'M', top_level: true, yob: 1983 },
+      { name: 'f21', display_name: 'mom', sex: 'F', top_level: true, age: 30 },
       { name: 'ch1', sex: 'F', display_name: 'proband', mother: 'f21', father: 'm21', affected: true, age: 2 },
     ]
     const opts = {
       dataset,
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
-      edit: true, // TODO configure editable fields
+      edit: this.editIndividual,
       background: '#fff',
-      diseases: [{ type: 'affected', colour: '#11111191' }],
+      diseases: [],
       labels: ['age'],
       zoomIn: 3,
       zoomOut: 3,
@@ -105,10 +108,6 @@ class PedigreeImage extends React.PureComponent {
       // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
       // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
       $('.fa-refresh').remove()
-      // Because of how text content is set for these icons, there is no way to override the unicode value with css TODO does not work after edit
-      // $('.fa-circle').text('\uf111 ')
-      // $('.fa-square').text('\uf0c8 ')
-      // $('.fa-unspecified').text('\uf0c8 ')
     } else {
       // For un-editable pedigrees, display as an img
       const svg = $(this.container.children[0])
@@ -116,6 +115,25 @@ class PedigreeImage extends React.PureComponent {
         this.setState({ imgSrc: img })
       })
     }
+  }
+
+  editIndividual = (opts, { data }) => {
+    data.display_name = 'edited'
+    data.sex = 'M'
+    data.affected = true
+
+    const save = () => {
+      opts.dataset = copyPedigreeDataset(opts.dataset)
+      try {
+        validatePedigree(opts)
+      } catch (err) {
+        pedigreeMessages('Error', err.message)
+        throw err
+      }
+      rebuildPedigeeJs(opts)
+    }
+    save()
+
   }
 }
 
