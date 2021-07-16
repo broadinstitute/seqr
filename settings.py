@@ -68,7 +68,7 @@ SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src-elem']
-CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com') # used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
 CSP_STYLE_SRC = ("'unsafe-inline'") # TODO remove

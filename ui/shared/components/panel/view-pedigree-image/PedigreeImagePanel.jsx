@@ -27,12 +27,18 @@ const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
     cursor: pointer;
   }
   
+  @font-face {
+    font-family: 'ped-icon-overrides';
+    src: url("/static/fonts/icon-overrides.eot");
+    src: url("/static/fonts/icon-overrides.eot?#iefix") format('embedded-opentype'), url("/static/fonts/icon-overrides.woff") format('woff'), url("/static/fonts/icon-overrides.ttf") format('truetype'), url("/static/fonts/icon-overrides.svg#icons") format('svg');
+  }
+  
   .addchild, .addsibling, .addpartner, .addparents, .delete, .settings, .popup_selection {
     font-family: Icons !important;
     cursor: pointer;
     
     &.fa-circle, &.fa-square, &.fa-unspecified {
-      font-family: outline-icons !important;
+      font-family: ped-icon-overrides !important;
     }
   }
 `
