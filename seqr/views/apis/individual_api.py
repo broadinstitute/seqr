@@ -2,7 +2,6 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 import json
-import logging
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -15,11 +14,9 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    get_project_and_check_pm_permissions, login_and_policies_required
+    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
-
-logger = logging.getLogger(__name__)
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
 _SEX_TO_EXPORTED_VALUE['U'] = ''
@@ -62,11 +59,13 @@ def update_individual_handler(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_permissions(project, request.user)
+    can_edit = has_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
+    update_json = request_json if can_edit else {k: v for k, v in request_json.items() if k in {'notes'}}
 
-    update_individual_from_json(individual, request_json, user=request.user, allow_unknown_keys=True)
+    update_individual_from_json(individual, update_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
@@ -210,8 +209,6 @@ def delete_individuals_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="Invalid request: 'individuals' not in request_json")
 
-    logger.info("delete_individuals_handler %s", request_json)
-
     individual_guids_to_delete = [ind['individualGuid'] for ind in individuals_list]
 
     # delete the individuals
@@ -326,7 +323,6 @@ def receive_individuals_table_handler(request, project_guid):
         'warnings': [],
         'info': info,
     }
-    logger.info(response)
     return create_json_response(response)
 
 

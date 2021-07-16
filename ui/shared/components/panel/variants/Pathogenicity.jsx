@@ -103,7 +103,7 @@ const Pathogenicity = React.memo(({ variant, user }) => {
           <b>HGMD:<HorizontalSpacer width={5} /></b>
           <PathogenicityLink
             significance={variant.hgmd.class}
-            href={`https://portal.biobase-international.com/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
+            href={`https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
             formatName={hgmdName}
           />
         </span>

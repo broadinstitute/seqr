@@ -122,6 +122,23 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ) : null,
 ].filter(fields => fields)
 
+const MAX_FREQ_COMPONENTS_PER_ROW = 6
+
+//Layout the frequency filter fields into two rows.
+const freqFieldLayout = fieldComponents =>
+  <Form.Field>
+    <Form.Group widths="equal">
+      {fieldComponents.slice(0, MAX_FREQ_COMPONENTS_PER_ROW)}
+    </Form.Group>
+    <Form.Group widths="equal">
+      {// add empty fields to pad out the second row so the "equal" widths are the same
+        Array.from({ length: (2 * MAX_FREQ_COMPONENTS_PER_ROW) - fieldComponents.length }, (x, i) => i).map(e =>
+          <Form.Field key={e} />)
+      }
+      {fieldComponents.slice(MAX_FREQ_COMPONENTS_PER_ROW)}
+    </Form.Group>
+  </Form.Field>
+
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
@@ -142,6 +159,7 @@ export const FREQUENCY_PANEL = {
   },
   fields: FREQUENCIES,
   fieldProps: { control: FrequencyFilter, format: val => val || {} },
+  fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
 }
 

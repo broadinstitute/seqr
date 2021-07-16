@@ -3,7 +3,6 @@ APIs for updating project metadata, as well as creating or deleting projects
 """
 
 import json
-import logging
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -21,9 +20,6 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions, \
     login_and_policies_required
 from settings import ANALYST_PROJECT_CATEGORY
-
-
-logger = logging.getLogger(__name__)
 
 
 @pm_required

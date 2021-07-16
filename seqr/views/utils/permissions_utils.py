@@ -1,11 +1,10 @@
-import logging
-
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
@@ -13,7 +12,7 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
@@ -135,7 +134,7 @@ def check_workspace_perm(user, permission_level, namespace, name, can_share=Fals
 
     message = "User does not have sufficient permissions for workspace {namespace}/{name}".format(
         namespace=namespace, name=name)
-    logger.warning(message)
+    logger.warning(message, user)
     raise PermissionDenied(message)
 
 

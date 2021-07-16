@@ -222,7 +222,7 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -251,6 +251,7 @@ const Annotations = React.memo(({ variant }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
+              {svType && svTypeDetail && `:${svTypeDetail}`}
             </ButtonLink>
           }
           popup={transcriptPopupProps}
@@ -306,6 +307,9 @@ const Annotations = React.memo(({ variant }) => {
           : <div>hg19: liftover failed</div>
         )
       }
+      {cpxIntervals && cpxIntervals.length > 0 &&
+      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e =>
+        <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />

@@ -3,7 +3,6 @@ Utility functions for converting Django ORM object to JSON
 """
 
 import json
-import logging
 import os
 from collections import defaultdict
 from copy import copy, deepcopy
@@ -18,8 +17,6 @@ from seqr.views.utils.permissions_utils import has_project_permissions, has_case
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
-
-logger = logging.getLogger(__name__)
 
 
 def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None, process_result=None, guid_key=None, additional_model_fields=None):

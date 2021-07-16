@@ -1,5 +1,4 @@
 import json
-import logging
 
 from seqr.models import GeneNote
 from seqr.utils.gene_utils import get_gene, get_genes_with_detail
@@ -7,9 +6,6 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_mo
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import check_user_created_object_permissions, login_and_policies_required
-
-
-logger = logging.getLogger(__name__)
 
 
 @login_and_policies_required
