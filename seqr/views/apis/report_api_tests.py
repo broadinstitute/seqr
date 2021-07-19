@@ -371,6 +371,7 @@ class ReportAPITest(AuthenticationTestCase):
         ]), family_file)
 
         discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
+        self.assertEqual(len(discovery_file), 6)
         self.assertEqual(discovery_file[0], '\t'.join([
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
@@ -386,8 +387,13 @@ class ReportAPITest(AuthenticationTestCase):
             '-', '-', '-', '-']), discovery_file)
         self.assertIn('\t'.join([
             'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
-            '1912632', 'GC', 'TT', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT: 19-1912634-C-T, 19-1912633-G-T']),
+            '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912634-C-T, 19-1912633-G-T']),
+            discovery_file)
+        self.assertIn('\t'.join([
+            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+            '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912634-C-T, 19-1912633-G-T']),
             discovery_file)
 
         # Test non-broad analysts do not have access
