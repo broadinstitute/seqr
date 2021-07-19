@@ -8,6 +8,7 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -75,7 +76,7 @@ def create_project_from_workspace(request, namespace, name):
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
 
-    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId', 'dataPath'] if not request_json.get(field)]
+    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId', 'dataPath', 'sampleType'] if not request_json.get(field)]
     if missing_fields:
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
@@ -121,7 +122,7 @@ def create_project_from_workspace(request, namespace, name):
 
     # Send an email to all seqr data managers
     try:
-        _send_load_data_email(project, updated_individuals, data_path, request.user)
+        _send_load_data_email(project, updated_individuals, data_path, request_json['sampleType'], request.user)
     except Exception as ee:
         message = 'AnVIL loading request email exception: {}'.format(str(ee))
         logger.error(message, request.user)
@@ -136,10 +137,10 @@ def _wait_for_service_account_access(user, namespace, name):
             return True
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
 
-def _send_load_data_email(project, updated_individuals, data_path, user):
+def _send_load_data_email(project, updated_individuals, data_path, sample_type, user):
     email_content = """
-        {user} requested to load data from AnVIL workspace "{namespace}/{name}" at "{path}" to seqr project
-        <a href="{base_url}project/{guid}/project_page">{project_name}</a> (guid: {guid})
+        {user} requested to load {sample_type} data ({genome_version}) from AnVIL workspace "{namespace}/{name}" at 
+        "{path}" to seqr project <a href="{base_url}project/{guid}/project_page">{project_name}</a> (guid: {guid})
 
         The sample IDs to load are attached.    
         """.format(
@@ -150,6 +151,8 @@ def _send_load_data_email(project, updated_individuals, data_path, user):
         base_url=BASE_URL,
         guid=project.guid,
         project_name=project.name,
+        sample_type=sample_type,
+        genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
     )
 
     send_html_email(
