@@ -34,6 +34,11 @@ const EXT_CONFIG = {
 
 const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : item)
 
+const acmgCriteria = {}
+export const updateAcmgCriteriaForFileDownload = (variantId, score, criteria) => {
+  acmgCriteria[variantId] = { score, criteria }
+}
+
 export const FileLink = React.memo(({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
@@ -59,7 +64,9 @@ export const FileLink = React.memo(({ url, data, ext, linkContent }) => {
   if (!url.endsWith('?')) {
     url += '&'
   }
-  return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
+
+  const newUrl = `${url}file_format=${ext}&acmg_criteria=${btoa(JSON.stringify(acmgCriteria))}}`
+  return <a href={`${newUrl}`}>{linkContent}</a>
 })
 
 FileLink.propTypes = {
