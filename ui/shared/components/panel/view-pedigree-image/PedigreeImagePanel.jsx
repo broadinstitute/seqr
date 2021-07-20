@@ -17,7 +17,7 @@ import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
-import { BooleanCheckbox, InlineToggle, RadioGroup, IntegerInput } from '../../form/Inputs'
+import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
 import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
@@ -60,13 +60,13 @@ const EDIT_INDIVIDUAL_FIELDS = [
   { name: 'display_name', label: 'Individual ID' },
   { name: 'affected', label: 'Affected?', component: InlineToggle, fullHeight: true, asFormInput: true },
   { name: INDIVIDUAL_FIELD_SEX, label: 'Sex', ...INDIVIDUAL_FIELD_CONFIGS[INDIVIDUAL_FIELD_SEX].formFieldProps },
+  { name: 'yob', label: 'Birth Year', component: YearSelector, width: 6 },
   {
     name: 'status',
     label: 'Living?',
     component: RadioGroup,
     options: [{ value: 0, text: 'Alive' }, { value: 1, text: 'Deceased' }],
   },
-  { name: 'age', label: 'Age', component: IntegerInput, width: 4 }, //TODO yob and normalize to age?
   ...['adopted_in', 'adopted_out', 'miscarriage', 'termination'].map(name => (
     { name, label: snakecaseToTitlecase(name), component: BooleanCheckbox, inline: true }
   )),
@@ -117,11 +117,11 @@ class BasePedigreeImage extends React.PureComponent {
     }
 
     const { disablePedigreeZoom, isEditable } = this.props
-    const dataset = [ // TODO from family, map yob to age
+    const dataset = this.yobToAge([ // TODO from family
       { name: 'm21', display_name: 'dad', sex: 'M', top_level: true, yob: 1983 },
-      { name: 'f21', display_name: 'mom', sex: 'F', top_level: true, age: 30 },
-      { name: 'ch1', sex: 'F', display_name: 'proband', mother: 'f21', father: 'm21', affected: true, age: 2 },
-    ]
+      { name: 'f21', display_name: 'mom', sex: 'F', top_level: true },
+      { name: 'ch1', sex: 'F', display_name: 'proband', mother: 'f21', father: 'm21', affected: true, yob: 2018 },
+    ])
     const opts = {
       dataset,
       targetDiv: this.containerId,
@@ -152,13 +152,15 @@ class BasePedigreeImage extends React.PureComponent {
     }
   }
 
+  yobToAge = dataset => dataset.map(o => ({ ...o, age: o.yob && new Date().getFullYear() - o.yob }))
+
   editIndividual = (opts, { data }) => {
     this.setState({
       editIndividual: {
         data,
         save: (newData) => {
           Object.assign(data, newData)
-          opts.dataset = copyPedigreeDataset(opts.dataset)
+          opts.dataset = copyPedigreeDataset(this.yobToAge(opts.dataset))
           try {
             validatePedigree(opts)
           } catch (err) {

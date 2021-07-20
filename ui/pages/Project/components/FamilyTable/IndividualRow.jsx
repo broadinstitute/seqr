@@ -7,7 +7,7 @@ import { Field } from 'redux-form'
 import { Label, Popup, Form, Input, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { Select, SearchInput, RadioGroup } from 'shared/components/form/Inputs'
+import { SearchInput, RadioGroup, YearSelector } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -478,12 +478,9 @@ class HpoTermsEditor extends React.PureComponent {
   }
 }
 
-const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
 const YEAR_SELECTOR_PROPS = {
-  component: Select,
-  options: YEAR_OPTIONS,
-  search: true,
-  inline: true,
+  component: YearSelector,
+  includeUnknown: true,
   width: 8,
 }
 
@@ -523,7 +520,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
         normalize: val => (val < 0 ? null : val),
-        options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
+        includeAlive: true,
       },
     },
     fieldDisplay: AgeDetails,
