@@ -399,8 +399,12 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-const BaseInlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
-  margin-bottom: 0 !important;
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+  ${props => (props.asFormInput ?
+    `label {
+      font-weight: 700;
+    }` : 'margin-bottom: 0 !important;')}
+  
   &:last-child {
     padding-right: 0 !important;
   }

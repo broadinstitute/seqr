@@ -1,16 +1,23 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import $ from 'jquery'
 import 'jquery-ui/ui/widgets/dialog'
 import 'jquery-ui/themes/base/all.css'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
+
 import { svg2img } from 'pedigreejs/es/io'
 import {
   build as buildPedigeeJs, rebuild as rebuildPedigeeJs, validate_pedigree as validatePedigree,
 } from 'pedigreejs/es/pedigree'
 import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
+import { openModal } from 'redux/utils/modalReducer'
+import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX } from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import { BooleanCheckbox, InlineToggle, RadioGroup, IntegerInput } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
 import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
@@ -48,12 +55,30 @@ const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
 
 const MIN_INDIVS_PER_PEDIGREE = 2
 
-class PedigreeImage extends React.PureComponent {
+const EDIT_INDIVIDUAL_MODAL_ID = 'editPedIndividual'
+const EDIT_INDIVIDUAL_FIELDS = [
+  { name: 'display_name', label: 'Individual ID' },
+  { name: 'affected', label: 'Affected?', component: InlineToggle, fullHeight: true, asFormInput: true },
+  { name: INDIVIDUAL_FIELD_SEX, label: 'Sex', ...INDIVIDUAL_FIELD_CONFIGS[INDIVIDUAL_FIELD_SEX].formFieldProps },
+  {
+    name: 'status',
+    label: 'Living?',
+    component: RadioGroup,
+    options: [{ value: 0, text: 'Alive' }, { value: 1, text: 'Deceased' }],
+  },
+  { name: 'age', label: 'Age', component: IntegerInput, width: 4 }, //TODO yob and normalize to age?
+  ...['adopted_in', 'adopted_out', 'miscarriage', 'termination'].map(name => (
+    { name, label: snakecaseToTitlecase(name), component: BooleanCheckbox, inline: true }
+  )),
+]//
+
+class BasePedigreeImage extends React.PureComponent {
 
   static propTypes = {
     family: PropTypes.object,
     disablePedigreeZoom: PropTypes.bool,
     isEditable: PropTypes.bool,
+    openIndividualModal: PropTypes.func,
   }
 
   constructor(props) {
@@ -68,11 +93,21 @@ class PedigreeImage extends React.PureComponent {
 
   render() {
     const { family, ...props } = this.props
-    return this.state.imgSrc ? <PedigreeImg src={this.state.imgSrc} {...props} /> : (
+    const { imgSrc, editIndividual = {} } = this.state
+    return imgSrc ? <PedigreeImg src={imgSrc} {...props} /> : (
       <PedigreeJsContainer {...props}>
         <div id={`${this.containerId}-buttons`} />
         <div ref={this.setContainerElement} id={this.containerId} />
-        <div id="node_properties" />
+        <Modal title={(editIndividual.data || {}).display_name} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
+          <ReduxFormWrapper
+            onSubmit={editIndividual.save}
+            form={EDIT_INDIVIDUAL_MODAL_ID}
+            initialValues={editIndividual.data}
+            fields={EDIT_INDIVIDUAL_FIELDS}
+            submitButtonText="Update"
+            confirmCloseIfNotSaved
+          />
+        </Modal>
       </PedigreeJsContainer>)
   }
 
@@ -118,24 +153,32 @@ class PedigreeImage extends React.PureComponent {
   }
 
   editIndividual = (opts, { data }) => {
-    data.display_name = 'edited'
-    data.sex = 'M'
-    data.affected = true
-
-    const save = () => {
-      opts.dataset = copyPedigreeDataset(opts.dataset)
-      try {
-        validatePedigree(opts)
-      } catch (err) {
-        pedigreeMessages('Error', err.message)
-        throw err
-      }
-      rebuildPedigeeJs(opts)
-    }
-    save()
-
+    this.setState({
+      editIndividual: {
+        data,
+        save: (newData) => {
+          Object.assign(data, newData)
+          opts.dataset = copyPedigreeDataset(opts.dataset)
+          try {
+            validatePedigree(opts)
+          } catch (err) {
+            pedigreeMessages('Error', err.message)
+            throw err
+          }
+          rebuildPedigeeJs(opts)
+        },
+      } })
+    this.props.openIndividualModal()
   }
 }
+
+const mapDispatchToProps = dispatch => ({
+  openIndividualModal: () => {
+    dispatch(openModal(EDIT_INDIVIDUAL_MODAL_ID))
+  },
+})
+
+const PedigreeImage = connect(null, mapDispatchToProps)(BasePedigreeImage)
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const image = <PedigreeImage
