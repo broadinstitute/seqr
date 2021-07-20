@@ -13,8 +13,9 @@ import {
 } from 'pedigreejs/es/pedigree'
 import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
+import { getIndividualsByGuid } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
-import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX } from 'shared/utils/constants'
+import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
@@ -70,7 +71,18 @@ const EDIT_INDIVIDUAL_FIELDS = [
   ...['adopted_in', 'adopted_out', 'miscarriage', 'termination'].map(name => (
     { name, label: snakecaseToTitlecase(name), component: BooleanCheckbox, inline: true }
   )),
-]//
+]
+
+const INDIVIDUAL_FIELD_MAP = {
+  name: 'individualGuid',
+  display_name: 'displayName',
+  sex: 'sex',
+  affected: 'affected',
+  yob: 'birthYear',
+  mother: 'maternalGuid',
+  father: 'paternalGuid',
+  status: 'deathYear',
+}
 
 class BasePedigreeImage extends React.PureComponent {
 
@@ -78,6 +90,7 @@ class BasePedigreeImage extends React.PureComponent {
     family: PropTypes.object,
     disablePedigreeZoom: PropTypes.bool,
     isEditable: PropTypes.bool,
+    individualsByGuid: PropTypes.object,
     openIndividualModal: PropTypes.func,
   }
 
@@ -94,6 +107,7 @@ class BasePedigreeImage extends React.PureComponent {
   render() {
     const { family, ...props } = this.props
     const { imgSrc, editIndividual = {} } = this.state
+    // TODO add save button for update pedigree
     return imgSrc ? <PedigreeImg src={imgSrc} {...props} /> : (
       <PedigreeJsContainer {...props}>
         <div id={`${this.containerId}-buttons`} />
@@ -117,13 +131,8 @@ class BasePedigreeImage extends React.PureComponent {
     }
 
     const { disablePedigreeZoom, isEditable } = this.props
-    const dataset = this.yobToAge([ // TODO from family
-      { name: 'm21', display_name: 'dad', sex: 'M', top_level: true, yob: 1983 },
-      { name: 'f21', display_name: 'mom', sex: 'F', top_level: true },
-      { name: 'ch1', sex: 'F', display_name: 'proband', mother: 'f21', father: 'm21', affected: true, yob: 2018 },
-    ])
     const opts = {
-      dataset,
+      dataset: this.getFamilyDataset(),
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
       edit: this.editIndividual,
@@ -152,6 +161,27 @@ class BasePedigreeImage extends React.PureComponent {
     }
   }
 
+  getFamilyDataset = () => {
+    const { family, individualsByGuid } = this.props
+    // TODO MIN_INDIVS_PER_PEDIGREE
+    const dataset = family.individualGuids.map(
+      individualGuid => Object.entries(INDIVIDUAL_FIELD_MAP).reduce((acc, [key, mappedKey]) => {
+        let val = individualsByGuid[individualGuid][mappedKey]
+        if (key === 'affected') {
+          val = val === AFFECTED
+        } else if (key === 'status') {
+          val = (!!val || val === 0) ? 1 : 0
+        } else if (!val && (key === 'mother' || key === 'father')) {
+          return acc
+        }
+
+        return { ...acc, [key]: val }
+      }, {}),
+    ).map(row => ({ ...row, top_level: !row.mother && !row.father }))
+
+    return this.yobToAge(dataset)
+  }
+
   yobToAge = dataset => dataset.map(o => ({ ...o, age: o.yob && new Date().getFullYear() - o.yob }))
 
   editIndividual = (opts, { data }) => {
@@ -174,13 +204,18 @@ class BasePedigreeImage extends React.PureComponent {
   }
 }
 
+const mapStateToProps = state => ({
+  individualsByGuid: getIndividualsByGuid(state),
+})
+
 const mapDispatchToProps = dispatch => ({
   openIndividualModal: () => {
     dispatch(openModal(EDIT_INDIVIDUAL_MODAL_ID))
   },
 })
 
-const PedigreeImage = connect(null, mapDispatchToProps)(BasePedigreeImage)
+const PedigreeImage = connect(mapStateToProps, mapDispatchToProps)(BasePedigreeImage)
+
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const image = <PedigreeImage
