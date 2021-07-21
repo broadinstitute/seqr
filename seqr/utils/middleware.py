@@ -8,6 +8,7 @@ from django.utils.deprecation import MiddlewareMixin
 from django.urls import get_resolver, get_urlconf
 import elasticsearch.exceptions
 from requests import HTTPError
+from social_core.exceptions import AuthException
 import json
 import traceback
 
@@ -26,6 +27,7 @@ EXCEPTION_ERROR_MAP = {
     Http404: 404,
     InvalidIndexException: 400,
     InvalidSearchException: 400,
+    AuthException: 401,
     elasticsearch.exceptions.ConnectionError: 504,
     elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
