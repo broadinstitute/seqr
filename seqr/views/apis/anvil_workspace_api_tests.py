@@ -20,6 +20,7 @@ BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female",
 
 REQUEST_BODY = {
     'genomeVersion': '38',
+    'sampleType': 'WES',
     'uploadedFileId': 'test_temp_file_id',
     'description': 'A test project',
     'agreeSeqrAccess': True,
@@ -27,6 +28,8 @@ REQUEST_BODY = {
 }
 REQUEST_BODY_NO_SLASH_DATA_PATH = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path'
+REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
+REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -106,15 +109,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId, dataPath" are required')
+        self.assertEqual(response.reason_phrase, 'Field(s) "genomeVersion, uploadedFileId, dataPath, sampleType" are required')
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.bucketName'])
 
-        data = {
-            'genomeVersion': '38',
-            'uploadedFileId': 'test_temp_file_id',
-            'dataPath': '/test_path',
-        }
-        response = self.client.post(url, content_type='application/json', data=json.dumps(data))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_NO_AGREE_ACCESS))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Must agree to grant seqr access to the data in the associated workspace.')
 
@@ -177,8 +175,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.assert_called_with('gs://test_bucket/test_path', user=self.manager_user)
 
         email_body = """
-        test_user_manager@test.com requested to load data from AnVIL workspace "{namespace}/{name}" at "gs://test_bucket/test_path" to seqr project
-        {{project_name}} (guid: {guid})
+        test_user_manager@test.com requested to load WES data (GRCh38) from AnVIL workspace "{namespace}/{name}" at 
+        "gs://test_bucket/test_path" to seqr project {{project_name}} (guid: {guid})
 
         The sample IDs to load are attached.    
         """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)

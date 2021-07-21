@@ -14,10 +14,11 @@ import {
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
+  SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
-import { BooleanCheckbox } from 'shared/components/form/Inputs'
+import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
@@ -69,6 +70,14 @@ const AGREE_CHECKBOX = {
   validate: validators.required,
 }
 
+const SAMPLE_TYPE_FIELD = {
+  name: 'sampleType',
+  label: 'Sample Type',
+  component: RadioGroup,
+  options: SAMPLE_TYPE_OPTIONS.slice(0, 2),
+  validate: validators.required,
+}
+
 const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
@@ -79,7 +88,9 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const FORM_FIELDS = [DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX]
+const FORM_FIELDS = [
+  DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
+]
 
 const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
   return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,

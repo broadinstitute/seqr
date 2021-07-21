@@ -14,6 +14,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
 from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
     login_and_policies_required, login_active_required
+from seqr.views.utils.terra_api_utils import google_auth_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
 
 logger = SeqrLogger(__name__)
@@ -44,6 +45,9 @@ def get_all_analyst_options(request):
 
 
 def forgot_password(request):
+    if google_auth_enabled():
+        raise PermissionDenied('Username/ password authentication is disabled')
+
     request_json = json.loads(request.body)
     if not request_json.get('email'):
         return create_json_response({}, status=400, reason='Email is required')
@@ -57,7 +61,7 @@ def forgot_password(request):
         Hi there {full_name}--
 
         Please click this link to reset your seqr password:
-        {base_url}users/set_password/{password_token}?reset=true
+        {base_url}login/set_password/{password_token}?reset=true
         """.format(
         full_name=user.get_full_name(),
         base_url=BASE_URL,
@@ -70,6 +74,8 @@ def forgot_password(request):
 
 
 def set_password(request, username):
+    if google_auth_enabled():
+        raise PermissionDenied('Username/ password authentication is disabled')
     user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)

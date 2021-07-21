@@ -87,6 +87,7 @@ const TRACK_TYPE_OPTIONS = [
 ]
 
 const IGV_OPTIONS = {
+  loadDefaultGenomes: false,
   showKaryo: false,
   showIdeogram: true,
   showNavigation: true,
@@ -127,23 +128,25 @@ const REFERENCE_URLS = [
 
 const REFERENCE_TRACKS = [
   {
-    name: 'Gencode v27',
+    name: 'Gencode v32',
+    indexPostfix: 'tbi',
     baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
     path: {
-      37: 'GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
-      38: 'GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
+      37: 'GRCh37/gencode/gencode.v32lift37.annotation.sorted.bed.gz',
+      38: 'GRCh38/gencode/gencode_v32_knownGene.sorted.txt.gz',
     },
+    format: 'refgene',
     order: 1000,
   },
   {
     name: 'Refseq',
+    indexPostfix: 'tbi',
     baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
     path: {
-      37: 'hg19/ncbiRefGene.txt.gz',
-      38: 'hg38/ncbiRefGene.txt.gz',
+      37: 'hg19/refGene.sorted.txt.gz',
+      38: 'hg38/refGene.sorted.txt.gz',
     },
     format: 'refgene',
-    indexed: false,
     visibilityWindow: -1,
     order: 1001,
   },
@@ -153,7 +156,10 @@ const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   ...acc,
   [genome]: {
     id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
-    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, ...track }) => ({ url: `${baseUrl}/${path[genome]}`, ...track })),
+    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, indexPostfix, ...track }) => ({
+      url: `${baseUrl}/${path[genome]}`,
+      indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
+      ...track })),
     ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
   },
 }), {})

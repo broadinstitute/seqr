@@ -119,7 +119,8 @@
             "mainTranscriptId": "ENST00000371839",
             "transcripts": {
                 "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
+                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361",
+                    "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"}
                 ]
             }
         },

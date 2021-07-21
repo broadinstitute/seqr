@@ -6,93 +6,24 @@ import logging
 import os
 import sys
 
-from deploy.servctl_utils.deploy_command_utils import deploy, redeploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
+from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
     DEPLOYMENT_ENVS, SECRETS
-from deploy.servctl_utils.other_command_utils import print_log, port_forward, show_dashboard, \
-    show_status, wait_for, troubleshoot_component, delete_component, delete_all, \
-    get_component_port_pairs, check_kubernetes_context, set_environment, open_shell_in_component, \
-    copy_files_to_or_from_pod, restore_local_db
+from deploy.servctl_utils.other_command_utils import delete_component, delete_all
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-SET_ENVIRONMENT_COMMAND = 'set-env'
-STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
-REDEPLOY_COMMAND = 'redeploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
-LOG_COMMAND = 'logs'
-TROUBLESHOOT_COMMAND = 'troubleshoot'
-PORT_FORWARD_COMMAND = 'port-forward'
-PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
-COPY_TO_POD_COMMAND = 'copy-to'
-COPY_FROM_POD_COMMAND = 'copy-from'
-SHELL_COMMAND = 'shell'
-DASHBOARD_COMMAND = 'dashboard'
 DELETE_COMMAND = 'delete'
 DELETE_ALL_COMMAND = 'delete-all'
-RESTORE_LOCAL_DB = 'restore-local-db'
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
 DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_ENVS)
-
-## ENVIRONMENT_COMMAND
-sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'gcloud-dev', 'gcloud-prod', etc.)")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## LOG_COMMAND
-sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
-sp.add_argument("-f", "--stream-log", action="store_true", help="continue printing new logs - similar to tail -f")
-sp.add_argument("--previous", action="store_true", help="Prints logs from a previous instance of the container. "
-    "This is useful for debugging pods that don't start or immediately enter crash-loop.")
-sp.add_argument("components", nargs="+", help="show log", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## TROUBLESHOOT_COMMAND
-sp = subparsers.add_parser(TROUBLESHOOT_COMMAND, description="Print detailed debugging info to troubleshoot components not starting")
-sp.add_argument("component", help="print detailed debugging info", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## PORT_FORWARD_COMMAND
-sp = subparsers.add_parser(PORT_FORWARD_COMMAND, description="Start port-forwarding for service(s) running inside one or more containers, "
-    "allowing connections via localhost. After starting port-forwarding as a background process, start streaming logs from these components. ")
-sp.add_argument("components", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## PORT_FORWARD_AND_LOG_COMMAND
-sp = subparsers.add_parser(PORT_FORWARD_AND_LOG_COMMAND, description="Start port-forwarding for service(s) running inside one or more containers, allowing connections via localhost")
-sp.add_argument("components", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## COPY_COMMAND
-for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
-    sp = subparsers.add_parser(command, description="Copy files to or from a container")
-    sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
-    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-    if command == COPY_TO_POD_COMMAND:
-        sp.add_argument("source_path", help="source file path")
-        sp.add_argument("dest_path", nargs="?", help="destination file path", default="/root")
-    elif command == COPY_FROM_POD_COMMAND:
-        sp.add_argument("source_path", help="source file path")
-        sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
-
-## SHELL_COMMAND
-sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
-sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## STATUS_COMMAND
-sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
-sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## DASHBOARD_COMMAND
-sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## DELETE_COMMAND
 sp = subparsers.add_parser(DELETE_COMMAND, description="Terminate any live deployments, services, and pods for a given component")
@@ -102,16 +33,6 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kuber
 ## DELETE_ALL_COMMAND
 sp = subparsers.add_parser(DELETE_ALL_COMMAND, description="Delete all components + the cluster")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
-
-## RESTORE_LOCAL_DB
-sp = subparsers.add_parser(RESTORE_LOCAL_DB, description="Restore local postgres DBs from Cloud SQL")
-sp.add_argument("dbs", nargs="+", help="one or more databases to restore", choices=['seqrdb', 'reference_data_db'])
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which SQL instance to copy from")
-
-## REDEPLOY_COMMAND
-sp = subparsers.add_parser(REDEPLOY_COMMAND, description="Re-deploy one or more components in their existing pod")
-sp.add_argument("components", nargs="+", help="one or more components to re-deploy", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
 
 
 for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
@@ -146,28 +67,11 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 args = p.parse_args()
 
 # process command-line args
-if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
-    commands_that_call_init_cluster = set([
-        DEPLOY_ALL_COMMAND,
-    ])
-
-    commands_that_dont_modify_kubernetes_state = set([
-        SHELL_COMMAND,
-        PORT_FORWARD_COMMAND,
-        PORT_FORWARD_AND_LOG_COMMAND,
-        LOG_COMMAND,
-        DASHBOARD_COMMAND,
-    ])
-
-    if args.command not in commands_that_call_init_cluster and (args.command != DEPLOY_COMMAND or (args.components and "init-cluster" not in args.components)):
-        set_context = (args.command in commands_that_dont_modify_kubernetes_state)
-        check_kubernetes_context(args.deployment_target, set_if_different=set_context)
-
-runtime_settings = {}
-runtime_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
 if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     # transfer args to runtime_settings
+    runtime_settings = {}
+    runtime_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
     runtime_settings['FORCE_BUILD_DOCKER_IMAGES'] = bool(args.force)
     runtime_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.force else None
     runtime_settings["BUILD_DOCKER_IMAGES"] = True if args.build_docker_images or args.force else None
@@ -188,79 +92,9 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     logger.info("==> Deployed " + ", ".join(components_to_deploy))
 
-    if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
-        if args.command == DEPLOY_ALL_COMMAND:
-            if "seqr" in components_to_deploy:
-                components_to_connect_to = ["seqr"]
-            elif "es-kibana" in components_to_deploy:
-                components_to_connect_to = ["es-kibana"]
-            else:
-                components_to_connect_to = []
-        elif components_to_deploy[0] == 'secrets':
-            components_to_connect_to = ['secrets']
-        else:
-            components_to_connect_to = components_to_deploy
-
-        component_port_pairs = get_component_port_pairs(components_to_connect_to)
-        if component_port_pairs:
-            logger.info("=============")
-            print_los_for_components = [pair[0] for pair in component_port_pairs]
-            logger.info("tail %s logs ..." % components_to_connect_to)
-            os.system("sleep 10")
-
-            procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-            procs2 = print_log(components_to_connect_to, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
-            wait_for(procs1 + procs2)
-
-    logger.info("==> Done")
-
-elif args.command == REDEPLOY_COMMAND:
-    components = args.components
-    redeploy(args.deployment_target, components)
-
-elif args.command == LOG_COMMAND:
-    components = args.components
-    print_log(components, args.deployment_target, args.stream_log, previous=args.previous)
-
-elif args.command == PORT_FORWARD_COMMAND:
-    component_port_pairs = get_component_port_pairs(args.components)
-    port_forward(component_port_pairs, deployment_target=args.deployment_target)
-
-elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
-    component_port_pairs = get_component_port_pairs(args.components)
-    if component_port_pairs:
-        procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-        procs2 = print_log(args.components, args.deployment_target, enable_stream_log=True, wait=False)
-
-        wait_for(procs1 + procs2)
-
-elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
-    direction = 1 if args.command == COPY_TO_POD_COMMAND else -1
-    copy_files_to_or_from_pod(args.component, args.deployment_target, args.source_path, args.dest_path, direction=direction)
-
-elif args.command == SHELL_COMMAND:
-    open_shell_in_component(args.component, args.deployment_target)
-
-elif args.command == SET_ENVIRONMENT_COMMAND:
-    set_environment(args.deployment_target)
-
-
-elif args.command == STATUS_COMMAND:
-    show_status()
-
-elif args.command == DASHBOARD_COMMAND:
-    show_dashboard()
-
 elif args.command == DELETE_COMMAND:
     for component in args.components:
         delete_component(component, deployment_target=args.deployment_target)
-
-elif args.command == RESTORE_LOCAL_DB:
-    for db in args.dbs:
-        restore_local_db(db, args.deployment_target)
-
-elif args.command == TROUBLESHOOT_COMMAND:
-    troubleshoot_component(args.component, deployment_target=args.deployment_target)
 
 elif args.command == DELETE_ALL_COMMAND:
     delete_all(args.deployment_target)
