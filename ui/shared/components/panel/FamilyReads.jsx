@@ -128,24 +128,25 @@ const REFERENCE_URLS = [
 
 const REFERENCE_TRACKS = [
   {
-    name: 'Gencode v27',
+    name: 'Gencode v32',
     indexPostfix: 'tbi',
     baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
     path: {
-      37: 'GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
-      38: 'GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz',
+      37: 'GRCh37/gencode/gencode.v32lift37.annotation.sorted.bed.gz',
+      38: 'GRCh38/gencode/gencode_v32_knownGene.sorted.txt.gz',
     },
+    format: 'refgene',
     order: 1000,
   },
   {
     name: 'Refseq',
+    indexPostfix: 'tbi',
     baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
     path: {
-      37: 'hg19/ncbiRefGene.txt.gz',
-      38: 'hg38/ncbiRefGene.txt.gz',
+      37: 'hg19/refGene.sorted.txt.gz',
+      38: 'hg38/refGene.sorted.txt.gz',
     },
     format: 'refgene',
-    indexed: false,
     visibilityWindow: -1,
     order: 1001,
   },
