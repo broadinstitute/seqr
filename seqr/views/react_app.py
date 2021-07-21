@@ -57,6 +57,14 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         '<script type="text/javascript" nonce="{}">'.format(request.csp_nonce)
     )
 
+    # initialize Google Analytics
+    GA_TOKEN_ID = '' # TODO from secret
+    if GA_TOKEN_ID:
+        html = html.replace(
+            'window.gaTrackingId=null',
+            'window.gaTrackingId="{}"'.format(GA_TOKEN_ID),
+        )
+
     if request.get_host() == 'localhost:3000':
         html = re.sub(r'static/app(-.*)js', 'app.js', html)
         html = re.sub(r'<link\s+href="/static/app.*css"[^>]*>', '', html)
