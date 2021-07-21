@@ -43,7 +43,7 @@
                 },
                 "callset": {
                     "ac": null,
-                    "af": 0.01
+                    "af": 0.1
                 }
             },
             "annotations": {
@@ -126,7 +126,7 @@
                 },
                 "callset": {
                     "ac": null,
-                    "af": 0.03
+                    "af": 0.1
                 }
             },
             "annotations": {
@@ -210,7 +210,7 @@
                 },
                 "callset": {
                     "ac": null,
-                    "af": 0.01
+                    "af": 0.1
                 }
             },
             "annotations": {
