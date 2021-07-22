@@ -95,7 +95,7 @@ class BasePedigreeImage extends React.PureComponent {
   constructor(props) {
     super(props)
     this.containerId = `pedigreeJS-${props.family.familyGuid}`
-    this.state = { imgSrc: props.family.pedigreeImage }
+    this.state = {}
   }
 
   setContainerElement = (element) => {
@@ -104,9 +104,10 @@ class BasePedigreeImage extends React.PureComponent {
 
   render() {
     const { family, ...props } = this.props
-    const { imgSrc, editIndividual = {} } = this.state
+    const { editIndividual = {} } = this.state
+    const pedImgSrc = this.getImageSrc()
     // TODO add save button for update pedigree
-    return imgSrc ? <PedigreeImg src={imgSrc} {...props} /> : (
+    return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
       <PedigreeJsContainer {...props}>
         <div id={`${this.containerId}-buttons`} />
         <div ref={this.setContainerElement} id={this.containerId} />
@@ -124,7 +125,17 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   componentDidMount() {
-    if (this.state.imgSrc) {
+    this.setImage()
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.family.pedigreeImage !== this.props.family.pedigreeImage) {
+      this.setImage()
+    }
+  }
+
+  setImage() {
+    if (this.getImageSrc()) {
       return
     }
 
@@ -158,6 +169,8 @@ class BasePedigreeImage extends React.PureComponent {
       })
     }
   }
+
+  getImageSrc = () => this.props.family.pedigreeImage || this.state.imgSrc
 
   getFamilyDataset = () => {
     const { family, individualsByGuid } = this.props
