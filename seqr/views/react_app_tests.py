@@ -4,7 +4,7 @@ import mock
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
-MOCK_GA_TOKEN = 'mock_ga_token'
+MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
