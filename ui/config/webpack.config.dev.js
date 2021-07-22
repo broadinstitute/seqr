@@ -6,8 +6,8 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
-const WebpackCleanupPlugin = require('webpack-cleanup-plugin');
-const Purify = require('purifycss-webpack');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const PurgeCSSPlugin = require('purgecss-webpack-plugin');
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const glob = require('glob');
 const paths = require('./paths');
@@ -82,6 +82,15 @@ module.exports = {
     // some tools, although we do not recommend using it, see:
     // https://github.com/facebookincubator/create-react-app/issues/290
     extensions: ['.mjs', '.js', '.json', '.jsx', '.css'],
+    // Some libraries import Node modules but don't use them in the browser.
+    // Tell Webpack to provide empty mocks for them so importing them works.
+    fallback: {
+      dgram: 'empty',
+      fs: 'empty',
+      net: 'empty',
+      tls: 'empty',
+      child_process: 'empty',
+    },
   },
   module: {
     strictExportPresence: true,
@@ -208,9 +217,9 @@ module.exports = {
   },
   plugins: [
     new webpack.LoaderOptionsPlugin({ options: {} }),
-    new WebpackCleanupPlugin(),
+    new CleanWebpackPlugin(),
 
-    new Purify({
+    new PurgeCSSPlugin({
       paths: glob.sync(path.join(__dirname, 'pages/*.html')),
     }),
 
@@ -248,15 +257,7 @@ module.exports = {
       $: "jquery",
     })
   ],
-  // Some libraries import Node modules but don't use them in the browser.
-  // Tell Webpack to provide empty mocks for them so importing them works.
-  node: {
-    dgram: 'empty',
-    fs: 'empty',
-    net: 'empty',
-    tls: 'empty',
-    child_process: 'empty',
-  },
+
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become
   // cumbersome.
