@@ -13,7 +13,7 @@ import {
 } from 'pedigreejs/es/pedigree'
 import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { getIndividualsByFamily } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -88,7 +88,7 @@ class BasePedigreeImage extends React.PureComponent {
     family: PropTypes.object,
     disablePedigreeZoom: PropTypes.bool,
     isEditable: PropTypes.bool,
-    individualsByGuid: PropTypes.object,
+    individuals: PropTypes.array,
     openIndividualModal: PropTypes.func,
   }
 
@@ -125,20 +125,22 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   componentDidMount() {
-    this.setImage()
-  }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.family.pedigreeImage !== this.props.family.pedigreeImage) {
+    if (!this.getImageSrc()) {
       this.setImage()
     }
   }
 
-  setImage() {
-    if (this.getImageSrc()) {
-      return
+  componentDidUpdate(prevProps) {
+    if (!this.props.family.pedigreeImage) {
+      if (prevProps.family.pedigreeImage) {
+        this.setImage()
+      } else if (prevProps.individuals !== this.props.individuals) {
+        this.setImage()
+      }
     }
+  }
 
+  setImage() {
     const { disablePedigreeZoom, isEditable } = this.props
     const opts = {
       dataset: this.getFamilyDataset(),
@@ -173,10 +175,10 @@ class BasePedigreeImage extends React.PureComponent {
   getImageSrc = () => this.props.family.pedigreeImage || this.state.imgSrc
 
   getFamilyDataset = () => {
-    const { family, individualsByGuid } = this.props
-    const dataset = family.pedigreeDataset || family.individualGuids.map(
-      individualGuid => Object.entries(INDIVIDUAL_FIELD_MAP).reduce((acc, [key, mappedKey]) => {
-        let val = individualsByGuid[individualGuid][mappedKey]
+    const { family, individuals } = this.props
+    const dataset = family.pedigreeDataset || individuals.map(
+      individual => Object.entries(INDIVIDUAL_FIELD_MAP).reduce((acc, [key, mappedKey]) => {
+        let val = individual[mappedKey]
         if (key === 'affected') {
           val = val === AFFECTED
         } else if (key === 'status') {
@@ -214,8 +216,8 @@ class BasePedigreeImage extends React.PureComponent {
   }
 }
 
-const mapStateToProps = state => ({
-  individualsByGuid: getIndividualsByGuid(state),
+const mapStateToProps = (state, ownProps) => ({
+  individuals: getIndividualsByFamily(state)[ownProps.family.familyGuid],
 })
 
 const mapDispatchToProps = dispatch => ({
