@@ -264,6 +264,7 @@ SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.0))
 SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.1))
 
 BASE_URL = os.environ.get("BASE_URL", "/")
+GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
