@@ -20,7 +20,7 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
-import { NoBorderTable, FontAwesomeIconsContainer } from '../../StyledComponents'
+import { NoBorderTable, FontAwesomeIconsContainer, ButtonLink } from '../../StyledComponents'
 import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
 
 const PedigreeImg = styled.img.attrs({ alt: 'pedigree' })`
@@ -53,8 +53,6 @@ const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
     }
   }
 `
-
-const MIN_INDIVS_PER_PEDIGREE = 2
 
 const EDIT_INDIVIDUAL_MODAL_ID = 'editPedIndividual'
 const EDIT_INDIVIDUAL_FIELDS = [
@@ -163,8 +161,7 @@ class BasePedigreeImage extends React.PureComponent {
 
   getFamilyDataset = () => {
     const { family, individualsByGuid } = this.props
-    // TODO MIN_INDIVS_PER_PEDIGREE
-    const dataset = family.individualGuids.map(
+    const dataset = family.pedigreeDataset || family.individualGuids.map(
       individualGuid => Object.entries(INDIVIDUAL_FIELD_MAP).reduce((acc, [key, mappedKey]) => {
         let val = individualsByGuid[individualGuid][mappedKey]
         if (key === 'affected') {
@@ -218,7 +215,12 @@ const PedigreeImage = connect(mapStateToProps, mapDispatchToProps)(BasePedigreeI
 
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
-  const image = <PedigreeImage
+  const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1
+  if (!hasPedImage && (!isEditable || compact)) {
+    return null
+  }
+
+  const image = hasPedImage && <PedigreeImage
     family={family}
     disablePedigreeZoom={disablePedigreeZoom}
     maxHeight={compact ? '35' : '150'}
@@ -228,15 +230,13 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
   }
 
   const modalId = `Pedigree-${family.familyGuid}`
-  const numIndivs = family.individualGuids.length
   return (
     <Modal
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        <span>
-          {compact && numIndivs >= MIN_INDIVS_PER_PEDIGREE && `(${numIndivs}) `} {image}
-        </span>
+        image ? <span>{compact && `(${family.individualGuids.length}) `} {image}</span>
+          : <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">
