@@ -82,6 +82,18 @@ const INDIVIDUAL_FIELD_MAP = {
   status: 'deathYear',
 }
 
+const PEDIGREE_JS_OPTS = {
+  background: '#fff',
+  diseases: [],
+  labels: ['age'],
+  zoomIn: 3,
+  zoomOut: 3,
+  zoomSrc: ['button'],
+  font_size: '1.5em',
+  symbol_size: 40,
+  store_type: 'array', // TODO remove
+}
+
 class BasePedigreeImage extends React.PureComponent {
 
   static propTypes = {
@@ -130,46 +142,69 @@ class BasePedigreeImage extends React.PureComponent {
     }
   }
 
-  componentDidUpdate(prevProps) {
-    if (!this.props.family.pedigreeImage) {
-      if (prevProps.family.pedigreeImage || prevProps.individuals !== this.props.individuals) {
-        // TODO whole component is unmounting and remounting, causing errors
-        this.drawPedigree()
+  componentDidUpdate(prevProps, prevState) {
+    if (!this.props.family.pedigreeImage) { // If has an uploaded pedigree image, that is displayed so no need to draw
+      if (prevProps.family.pedigreeImage || // If uploaded pedigree image was deleted, draw
+        (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) || // If individual data changed, redraw
+        (prevState.imgSrc && !this.state.imgSrc)) // If computed image src was cleared, redraw
+      {
+        if (this.state.imgSrc) {
+          this.unsetPedigreeImage() // Cannot redraw pedigree if not rendering the svg container, so unset image first
+        } else {
+          const pedigreeOpts = this.redrawPedigree(this.state.pedigreeOpts, this.getFamilyDataset())
+          if (!this.isEditablePedigree()) {
+            this.setPedigreeImage(pedigreeOpts)
+          }
+        }
       }
     }
   }
 
   drawPedigree() {
-    const { disablePedigreeZoom, isEditable } = this.props
     const opts = {
       dataset: this.getFamilyDataset(),
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
       edit: this.editIndividual,
-      background: '#fff',
-      diseases: [],
-      labels: ['age'],
-      zoomIn: 3,
-      zoomOut: 3,
-      zoomSrc: ['button'],
-      font_size: '1.5em',
-      symbol_size: 40,
-      store_type: 'array', // TODO remove
+      ...PEDIGREE_JS_OPTS,
     }
-    buildPedigeeJs(opts)
+    const pedigreeOpts = buildPedigeeJs(opts)
 
-    if (disablePedigreeZoom && isEditable) {
+    if (this.isEditablePedigree()) {
       // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
       // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
       $('.fa-refresh').remove()
+      this.setState({ pedigreeOpts })
     } else {
       // For un-editable pedigrees, display as an img
-      const svg = $(this.container.children[0])
-      svg2img(svg, 'pedigree', { resolution: 10 }).done(({ img }) => {
-        this.setState({ imgSrc: img })
-      })
+      this.setPedigreeImage(pedigreeOpts)
     }
   }
+
+  redrawPedigree = (opts, dataset) => {
+    opts.dataset = copyPedigreeDataset(this.yobToAge(dataset || opts.dataset))
+    try {
+      validatePedigree(opts)
+    } catch (err) {
+      pedigreeMessages('Error', err.message)
+      throw err
+    }
+    rebuildPedigeeJs(opts)
+    return opts
+  }
+
+  setPedigreeImage = (pedigreeOpts) => {
+    const svg = $(this.container.children[0])
+    svg2img(svg, 'pedigree', { resolution: 10 }).done(({ img }) => {
+      this.setState({ pedigreeOpts, imgSrc: img })
+    })
+  }
+
+  unsetPedigreeImage = () => {
+    this.setState({ imgSrc: null })
+  }
+
+  isEditablePedigree = () => this.props.disablePedigreeZoom && this.props.isEditable
 
   getFamilyDataset = () => {
     const { family, individuals } = this.props
@@ -198,15 +233,9 @@ class BasePedigreeImage extends React.PureComponent {
       editIndividual: {
         data,
         save: (newData) => {
+          // TODO IndivID for family member RGP_2021_3 (IndivID: I0081536_rgp_2021_3) is not unique.
           Object.assign(data, newData)
-          opts.dataset = copyPedigreeDataset(this.yobToAge(opts.dataset))
-          try {
-            validatePedigree(opts)
-          } catch (err) {
-            pedigreeMessages('Error', err.message)
-            throw err
-          }
-          rebuildPedigeeJs(opts)
+          this.redrawPedigree(opts)
         },
       } })
     this.props.openIndividualModal()
