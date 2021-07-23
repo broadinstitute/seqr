@@ -223,7 +223,27 @@ class BasePedigreeImage extends React.PureComponent {
       }, {}),
     ).map(row => ({ ...row, top_level: !row.mother && !row.father }))
 
-    return this.yobToAge(dataset)
+    // pedigree js does not support having only one parent for an individual
+    const newParents = {}
+    dataset.filter(
+      ({ mother, father }) => (mother && !father) || ((!mother && father)),
+    ).forEach((indiv) => {
+      const placeholderId = `${indiv.mother || indiv.father}-spouse-placeholder`
+      if (!newParents[placeholderId]) {
+        newParents[placeholderId] = {
+          name: placeholderId,
+          sex: indiv.mother ? 'M' : 'F',
+          top_level: true,
+        }
+      }
+      if (indiv.mother) {
+        indiv.father = placeholderId
+      } else {
+        indiv.mother = placeholderId
+      }
+    })
+
+    return this.yobToAge([...dataset, ...Object.values(newParents)])
   }
 
   yobToAge = dataset => dataset.map(o => ({ ...o, age: o.yob && new Date().getFullYear() - o.yob }))
