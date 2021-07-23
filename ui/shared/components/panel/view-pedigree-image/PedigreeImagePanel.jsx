@@ -222,7 +222,7 @@ class BasePedigreeImage extends React.PureComponent {
 
         return { ...acc, [key]: val }
       }, {}),
-    ).map(row => ({ ...row, top_level: !row.mother && !row.father }))
+    ).map(row => (row.mother || row.father ? row : { ...row, top_level: true }))
 
     // pedigree js does not support having only one parent for an individual
     const newParents = {}
@@ -254,7 +254,6 @@ class BasePedigreeImage extends React.PureComponent {
       editIndividual: {
         data,
         save: (newData) => {
-          // TODO IndivID for family member RGP_2021_3 (IndivID: I0081536_rgp_2021_3) is not unique.
           Object.assign(data, newData)
           this.redrawPedigree(opts)
         },
