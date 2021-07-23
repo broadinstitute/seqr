@@ -14,10 +14,12 @@ import {
 } from 'pedigreejs/es/pedigree'
 import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
+import { updateFamily } from 'redux/rootReducer'
 import { getIndividualsByFamily } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
@@ -103,6 +105,7 @@ class BasePedigreeImage extends React.PureComponent {
     isEditable: PropTypes.bool,
     individuals: PropTypes.array,
     openIndividualModal: PropTypes.func,
+    updateFamily: PropTypes.func,
   }
 
   constructor(props) {
@@ -119,10 +122,25 @@ class BasePedigreeImage extends React.PureComponent {
     const { family, ...props } = this.props
     const { editIndividual = {} } = this.state
     const pedImgSrc = this.props.family.pedigreeImage || this.state.imgSrc
-    // TODO add save button for update pedigree
     return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
       <PedigreeJsContainer {...props}>
-        <div id={`${this.containerId}-buttons`} />
+        <NoBorderTable basic="very" compact="very">
+          <Table.Body>
+            <Table.Row>
+              <Table.Cell>
+                <div id={`${this.containerId}-buttons`} />
+              </Table.Cell>
+              <Table.Cell collapsing>
+                <DispatchRequestButton
+                  onSubmit={this.savePedigree}
+                  icon="save"
+                  size="huge"
+                  confirmDialog="Are you sure you want to save this pedigree?"
+                />
+              </Table.Cell>
+            </Table.Row>
+          </Table.Body>
+        </NoBorderTable>
         <div ref={this.setContainerElement} id={this.containerId} />
         <Modal title={(editIndividual.data || {}).display_name} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
           <ReduxFormWrapper
@@ -260,6 +278,14 @@ class BasePedigreeImage extends React.PureComponent {
       } })
     this.props.openIndividualModal()
   }
+
+  savePedigree = () => {
+    this.props.updateFamily({
+      familyField: 'pedigree_dataset',
+      pedigreeDataset: copyPedigreeDataset(this.state.pedigreeOpts.dataset),
+      familyGuid: this.props.family.familyGuid,
+    })
+  }
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -269,6 +295,9 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = dispatch => ({
   openIndividualModal: () => {
     dispatch(openModal(EDIT_INDIVIDUAL_MODAL_ID))
+  },
+  updateFamily: (update) => {
+    return dispatch(updateFamily(update))
   },
 })
 
