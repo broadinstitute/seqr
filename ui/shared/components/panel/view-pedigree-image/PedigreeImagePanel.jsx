@@ -105,7 +105,7 @@ class BasePedigreeImage extends React.PureComponent {
   render() {
     const { family, ...props } = this.props
     const { editIndividual = {} } = this.state
-    const pedImgSrc = this.getImageSrc()
+    const pedImgSrc = this.props.family.pedigreeImage || this.state.imgSrc
     // TODO add save button for update pedigree
     return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
       <PedigreeJsContainer {...props}>
@@ -125,22 +125,21 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   componentDidMount() {
-    if (!this.getImageSrc()) {
-      this.setImage()
+    if (!this.props.family.pedigreeImage) {
+      this.drawPedigree()
     }
   }
 
   componentDidUpdate(prevProps) {
     if (!this.props.family.pedigreeImage) {
-      if (prevProps.family.pedigreeImage) {
-        this.setImage()
-      } else if (prevProps.individuals !== this.props.individuals) {
-        this.setImage()
+      if (prevProps.family.pedigreeImage || prevProps.individuals !== this.props.individuals) {
+        // TODO whole component is unmounting and remounting, causing errors
+        this.drawPedigree()
       }
     }
   }
 
-  setImage() {
+  drawPedigree() {
     const { disablePedigreeZoom, isEditable } = this.props
     const opts = {
       dataset: this.getFamilyDataset(),
@@ -171,8 +170,6 @@ class BasePedigreeImage extends React.PureComponent {
       })
     }
   }
-
-  getImageSrc = () => this.props.family.pedigreeImage || this.state.imgSrc
 
   getFamilyDataset = () => {
     const { family, individuals } = this.props
