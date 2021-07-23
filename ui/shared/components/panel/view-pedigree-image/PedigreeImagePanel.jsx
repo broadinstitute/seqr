@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { ErrorBoundary } from 'react-error-boundary'
 import $ from 'jquery'
 import 'jquery-ui/ui/widgets/dialog'
 import 'jquery-ui/themes/base/all.css'
@@ -274,6 +275,10 @@ const mapDispatchToProps = dispatch => ({
 
 const PedigreeImage = connect(mapStateToProps, mapDispatchToProps)(BasePedigreeImage)
 
+// Do not crash the entire page if pedigree js is breaking
+const PedigreeError = () => <Icon name="picture" />
+const SafePedigreeImage = props =>
+  <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1
@@ -281,7 +286,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
     return null
   }
 
-  const image = hasPedImage && <PedigreeImage
+  const image = hasPedImage && <SafePedigreeImage
     family={family}
     disablePedigreeZoom={disablePedigreeZoom}
     maxHeight={compact ? '35' : '150'}
@@ -301,7 +306,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       }
     >
       <Segment basic textAlign="center">
-        <PedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} maxHeight="250" /><br />
+        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} maxHeight="250" /><br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>
