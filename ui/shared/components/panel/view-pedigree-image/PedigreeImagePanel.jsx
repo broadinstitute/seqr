@@ -9,6 +9,7 @@ import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { svg2img } from 'pedigreejs/es/io'
+import { current as currentDataset } from 'pedigreejs/es/pedcache'
 import {
   build as buildPedigeeJs, rebuild as rebuildPedigeeJs, validate_pedigree as validatePedigree,
 } from 'pedigreejs/es/pedigree'
@@ -94,7 +95,6 @@ const PEDIGREE_JS_OPTS = {
   zoomSrc: ['button'],
   font_size: '1.5em',
   symbol_size: 40,
-  store_type: 'array', // TODO remove
 }
 
 class BasePedigreeImage extends React.PureComponent {
@@ -282,7 +282,7 @@ class BasePedigreeImage extends React.PureComponent {
   savePedigree = () => {
     this.props.updateFamily({
       familyField: 'pedigree_dataset',
-      pedigreeDataset: copyPedigreeDataset(this.state.pedigreeOpts.dataset),
+      pedigreeDataset: currentDataset(this.state.pedigreeOpts),
       familyGuid: this.props.family.familyGuid,
     })
   }
