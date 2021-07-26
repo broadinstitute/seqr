@@ -113,7 +113,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.reason_phrase,
-            'Invalid file extension for "invalid_path.txt" - valid extensions are bam, cram, bigWig, junctions.bed.gz, dcr.bed.gz')
+            'Invalid file extension for "invalid_path.txt" - valid extensions are bam, cram, bigWig, junctions.bed.gz, bed.gz')
 
         mock_local_file_exists.return_value = False
         mock_subprocess.return_value.wait.return_value = 1
@@ -159,6 +159,18 @@ class IgvAPITest(AuthenticationTestCase):
             {'S000145_na19675', sample_guid}
         )
         mock_subprocess.assert_called_with('gsutil ls gs://readviz/batch_10.dcr.bed.gz', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675',
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
+        junctions_sample_guid = next(iter(response_json['igvSamplesByGuid']))
+        self.assertNotEqual(sample_guid, junctions_sample_guid)
+        self.assertDictEqual(response_json['igvSamplesByGuid'][junctions_sample_guid], {
+            'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': junctions_sample_guid,
+            'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'spliceJunctions'})
 
         # test data manager access
         self.login_data_manager_user()
