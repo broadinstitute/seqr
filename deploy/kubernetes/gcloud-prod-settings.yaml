@@ -21,6 +21,8 @@ REDIS_POD_MEMORY_LIMIT: 10Gi
 
 TERRA_API_ROOT_URL: 'https://api.firecloud.org'
 
+CLOUDSQL_AVAILABILITY_TYPE: 'regional'
+
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
