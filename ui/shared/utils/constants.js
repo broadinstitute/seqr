@@ -505,6 +505,7 @@ export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
+export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
 
 
 const ORDERED_VEP_CONSEQUENCES = [
@@ -589,6 +590,12 @@ const ORDERED_VEP_CONSEQUENCES = [
     text: 'Inversion',
     value: 'INV',
     group: VEP_GROUP_SV,
+  },
+  {
+    description: 'Loss of function consequence',
+    text: 'Loss of function',
+    value: 'LOF',
+    group: VEP_GROUP_SV_CONSEQUENCES,
   },
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
