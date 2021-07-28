@@ -123,7 +123,7 @@ const ANNOTATION_PANEL_MAP = {
   ...ANNOTATION_PANEL,
   [DATASET_TYPE_SV_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES]], true),
+    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]], true),
   },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
@@ -171,7 +171,11 @@ SVFrequecyHeaderFilter.propTypes = {
 const QS_FILTER_FIELD = {
   name: 'min_qs',
   label: 'SV Quality Score',
-  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplications > 50; deletions > 100; homdel (CN=0) > 400',
+  labelHelp: (
+    <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
+      {'1) on Exome data: duplication >=50, deletion>=100 and homozygous deletion>=400;'}<br />
+      {'2) on Genome data, any SV > 10'}
+    </span>),
   min: 0,
   max: 1000,
   step: 10,

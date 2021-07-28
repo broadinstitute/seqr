@@ -1274,8 +1274,8 @@ def _annotations_filter(annotations):
 
 
 def _dataset_type_for_annotations(annotations):
-    sv = bool(annotations.get('structural')) or bool(annotations.get('structural consequence'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural consequence')
+    sv = bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
+    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:
