@@ -173,8 +173,8 @@ const QS_FILTER_FIELD = {
   label: 'SV Quality Score',
   labelHelp: (
     <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
-      {'1) on Exome data: duplication >=50, deletion>=100 and homozygous deletion>=400;'}<br />
-      {'2) on Genome data, any SV > 10'}
+      WGS: &gt; 10; <br />
+      WES: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
     </span>),
   min: 0,
   max: 1000,
