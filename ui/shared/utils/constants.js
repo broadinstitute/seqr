@@ -628,7 +628,7 @@ const ORDERED_VEP_CONSEQUENCES = [
     group: VEP_GROUP_SV_CONSEQUENCES,
   },
   {
-    description: 'An SV\'s inversion entirely spanning the gene',
+    description: 'An inversion entirely spanning the gene',
     text: 'Inversion Span',
     value: 'INV_SPAN',
     group: VEP_GROUP_SV_CONSEQUENCES,
