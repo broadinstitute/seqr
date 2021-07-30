@@ -161,6 +161,7 @@ class BasePedigreeImage extends React.PureComponent {
   componentDidUpdate(prevProps, prevState) {
     if (!this.props.family.pedigreeImage) { // If has an uploaded pedigree image, that is displayed so no need to draw
       if (prevProps.family.pedigreeImage || // If uploaded pedigree image was deleted, draw
+        (prevProps.family.pedigreeDataset !== this.props.family.pedigreeDataset) || // If saved dataset was updated, redraw
         (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) || // If individual data changed, redraw
         (prevState.imgSrc && !this.state.imgSrc)) // If computed image src was cleared, redraw
       {
