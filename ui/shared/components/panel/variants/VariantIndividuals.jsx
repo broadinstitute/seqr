@@ -111,7 +111,7 @@ const svGenotype = (genotype, isHemiX) => {
   }
   return (
     <span>
-      {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
+      {genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}/{isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}
       {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
     </span>
   )

@@ -861,6 +861,31 @@ export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc
   ({ ...acc, [consequence.value]: i }),
 {})
 
+export const SVTYPE_TEXT_MAPPING = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence) =>
+  ((consequence.group && consequence.group === VEP_GROUP_SV) ? { ...acc, [consequence.value]: consequence.text } : acc),
+{})
+
+export const CPX_SVTYPE_DETAILS = {
+  CPX_INS_iDEL: 'Insertion with deletion at insertion site',
+  CPX_INVdel: 'Complex inversion with 3\' flanking deletion',
+  CPX_INVdup: 'Complex inversion with 3\' flanking duplication',
+  CPX_dDUP: 'Dispersed duplication',
+  CPX_dDUP_iDEL: 'Dispersed duplication with deletion at insertion site',
+  CPX_delINV: 'Complex inversion with 5\' flanking deletion',
+  CPX_delINVdel: 'Complex inversion with 5\' and 3\' flanking deletions',
+  CPX_delINVdup: 'Complex inversion with 5\' flanking deletion and 3\' flanking duplication',
+  CPX_dupINV: 'Complex inversion with 5\' flanking duplication',
+  CPX_dupINVdel: 'Complex inversion with 5\' flanking duplication and 3\' flanking deletion',
+  CPX_dupINVdup: 'Complex inversion with 5\' and 3\' flanking duplications',
+  CPX_piDUP_FR: 'Palindromic inverted tandem duplication, forward-reverse orientation',
+  CPX_piDUP_RF: 'Palindromic inverted tandem duplication, reverse-forward orientation',
+  INS_ME: 'Mobile element',
+  'INS_ME:ALU': 'Alu element insertion',
+  'INS_ME:LINE1': 'LINE1 element insertion',
+  'INS_ME:SVA': 'SVA element insertion',
+  'INS_ME:UNK': 'Unspecified origin insertion',
+}
+
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'
