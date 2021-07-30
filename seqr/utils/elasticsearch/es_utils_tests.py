@@ -1520,6 +1520,9 @@ class EsUtilsTest(TestCase):
             }}
         ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
 
+        # Test sort does not error on pagination
+        get_es_variants(results_model, sort='cadd', num_results=2, page=2)
+
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
         setup_responses()

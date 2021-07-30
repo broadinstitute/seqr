@@ -133,7 +133,7 @@ class EsSearch(object):
         return self
 
     def sort(self, sort):
-        self._sort = SORT_FIELDS.get(sort, [])
+        self._sort = deepcopy(SORT_FIELDS.get(sort, []))
 
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
