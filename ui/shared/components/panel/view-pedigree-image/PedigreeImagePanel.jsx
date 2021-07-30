@@ -15,17 +15,15 @@ import {
 } from 'pedigreejs/es/pedigree'
 import { copy_dataset as copyPedigreeDataset, messages as pedigreeMessages } from 'pedigreejs/es/pedigree_utils'
 
-import { updateFamily } from 'redux/rootReducer'
 import { getIndividualsByFamily } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer, ButtonLink } from '../../StyledComponents'
-import { EditPedigreeImageButton, DeletePedigreeImageButton } from './PedigreeImageButtons'
+import { EditPedigreeImageButton, DeletePedigreeImageButton, SavePedigreeDatasetButton } from './PedigreeImageButtons'
 
 const PedigreeImg = styled.img.attrs({ alt: 'pedigree' })`
   max-height: ${props => props.maxHeight}px;
@@ -105,7 +103,7 @@ class BasePedigreeImage extends React.PureComponent {
     isEditable: PropTypes.bool,
     individuals: PropTypes.array,
     openIndividualModal: PropTypes.func,
-    updateFamily: PropTypes.func,
+    modalId: PropTypes.string,
   }
 
   constructor(props) {
@@ -119,7 +117,7 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   render() {
-    const { family, ...props } = this.props
+    const { family, modalId, ...props } = this.props
     const { editIndividual = {} } = this.state
     const pedImgSrc = this.props.family.pedigreeImage || this.state.imgSrc
     return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
@@ -131,11 +129,10 @@ class BasePedigreeImage extends React.PureComponent {
                 <div id={`${this.containerId}-buttons`} />
               </Table.Cell>
               <Table.Cell collapsing>
-                <DispatchRequestButton
-                  onSubmit={this.savePedigree}
-                  icon="save"
-                  size="huge"
-                  confirmDialog="Are you sure you want to save this pedigree?"
+                <SavePedigreeDatasetButton
+                  modalId={modalId}
+                  familyGuid={family.familyGuid}
+                  getPedigreeDataset={this.getPedigreeDataset}
                 />
               </Table.Cell>
             </Table.Row>
@@ -279,11 +276,8 @@ class BasePedigreeImage extends React.PureComponent {
     this.props.openIndividualModal()
   }
 
-  savePedigree = () => {
-    this.props.updateFamily({
-      pedigreeDataset: currentDataset(this.state.pedigreeOpts),
-      familyGuid: this.props.family.familyGuid,
-    })
+  getPedigreeDataset = () => {
+    return currentDataset(this.state.pedigreeOpts)
   }
 }
 
@@ -294,9 +288,6 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = dispatch => ({
   openIndividualModal: () => {
     dispatch(openModal(EDIT_INDIVIDUAL_MODAL_ID))
-  },
-  updateFamily: (update) => {
-    return dispatch(updateFamily(update))
   },
 })
 
@@ -333,7 +324,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       }
     >
       <Segment basic textAlign="center">
-        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} maxHeight="250" /><br />
+        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} modalId={modalId} maxHeight="250" /><br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>

@@ -6,6 +6,7 @@ import { Message } from 'semantic-ui-react'
 import { updateFamily, RECEIVE_DATA } from 'redux/rootReducer'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../../buttons/DeleteButton'
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import Modal from '../../modal/Modal'
 import { XHRUploaderWithEvents } from '../../form/XHRUploaderField'
 import { ButtonLink } from '../../StyledComponents'
@@ -86,3 +87,32 @@ const mapDeleteDispatchToProps = (dispatch, ownProps) => {
 }
 
 export const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
+
+
+const BaseSavePedigreeDatasetButton = React.memo(({ onSubmit, onSuccess }) =>
+  <DispatchRequestButton
+    onSubmit={onSubmit}
+    onSuccess={onSuccess}
+    icon="save"
+    size="huge"
+    confirmDialog="Are you sure you want to save this pedigree?"
+  />,
+)
+
+BaseSavePedigreeDatasetButton.propTypes = {
+  onSubmit: PropTypes.func,
+  onSuccess: PropTypes.func,
+}
+
+const mapSaveDispatchToProps = (dispatch, ownProps) => {
+  return {
+    onSubmit: () => {
+      return dispatch(updateFamily({ pedigreeDataset: ownProps.getPedigreeDataset(), familyGuid: ownProps.familyGuid }))
+    },
+    onSuccess: () => {
+      dispatch(closeModal(ownProps.modalId))
+    },
+  }
+}
+
+export const SavePedigreeDatasetButton = connect(null, mapSaveDispatchToProps)(BaseSavePedigreeDatasetButton)
