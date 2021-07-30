@@ -707,9 +707,9 @@ const NON_CASE_REVIEW_FIELDS = [
 ]
 
 const IndividualRow = React.memo((
-  { project, family, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
+  { project, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
 ) => {
-  const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids } = individual
+  const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
   let loadedSamples = sampleGuids.map(
     sampleGuid => samplesByGuid[sampleGuid],
@@ -724,15 +724,6 @@ const IndividualRow = React.memo((
         <PedigreeIcon sex={sex} affected={affected} /> {displayName}
       </div>
       <div>
-        {
-          (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-            <Detail>
-              child of &nbsp;
-              <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
-              <br />
-            </Detail>
-          ) : null
-        }
         <Detail>
           ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
         </Detail>
@@ -769,7 +760,6 @@ const IndividualRow = React.memo((
 
 IndividualRow.propTypes = {
   project: PropTypes.object.isRequired,
-  family: PropTypes.object.isRequired,
   individual: PropTypes.object.isRequired,
   mmeSubmission: PropTypes.object,
   samplesByGuid: PropTypes.object.isRequired,
