@@ -269,6 +269,7 @@ class Family(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
 
     pedigree_image = models.ImageField(null=True, blank=True, upload_to='pedigree_images')
+    pedigree_dataset = JSONField(null=True, blank=True)
 
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
@@ -310,7 +311,7 @@ class Family(ModelWithGUID):
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
             'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'assigned_analyst', 'mme_notes'
+            'post_discovery_omim_number', 'assigned_analyst', 'mme_notes', 'pedigree_dataset',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',

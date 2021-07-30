@@ -281,7 +281,6 @@ class BasePedigreeImage extends React.PureComponent {
 
   savePedigree = () => {
     this.props.updateFamily({
-      familyField: 'pedigree_dataset',
       pedigreeDataset: currentDataset(this.state.pedigreeOpts),
       familyGuid: this.props.family.familyGuid,
     })
