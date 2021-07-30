@@ -91,7 +91,6 @@ const PEDIGREE_JS_OPTS = {
   zoomIn: 3,
   zoomOut: 3,
   zoomSrc: ['button'],
-  font_size: '1.5em',
   symbol_size: 40,
 }
 
@@ -178,11 +177,13 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   drawPedigree() {
+    const dataset = this.getFamilyDataset()
     const opts = {
       dataset: this.getFamilyDataset(),
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
       edit: this.editIndividual,
+      font_size: dataset.length < 6 ? '1.5em' : '.7em',
       ...PEDIGREE_JS_OPTS,
     }
     const pedigreeOpts = buildPedigeeJs(opts)
