@@ -137,6 +137,7 @@
       "igv": "<rootDir>/config/jest/fileTransform.js",
       "jsoneditor-react": "<rootDir>/config/jest/fileTransform.js",
       "gtex-d3": "<rootDir>/config/jest/fileTransform.js",
+      "pedigreejs": "<rootDir>/config/jest/fileTransform.js",
       "^react-native$": "react-native-web"
     },
     "moduleFileExtensions": [
