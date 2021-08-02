@@ -255,9 +255,17 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
       <GeneLinks>
         <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank">Decipher</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>
+        <Popup
+          trigger={<NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
+          content="Show all previously saved variants in this gene across all your seqr projects"
+          size="tiny"
+        />
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} />
+        <Popup
+          trigger={<SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} />}
+          content="Search for all variants in this gene present in any affected individual"
+          size="tiny"
+        />
       </GeneLinks>
     )
   }
