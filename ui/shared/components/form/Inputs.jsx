@@ -239,7 +239,7 @@ export class SearchInput extends React.PureComponent {
   }
 }
 
-const YEAR_OPTIONS = [...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
+const YEAR_OPTIONS = [...Array(130).keys()].map(i => ({ value: i + 1900 }))
 const YEAR_OPTIONS_UNKNOWN = [{ value: 0, text: 'Unknown' }, ...YEAR_OPTIONS]
 const YEAR_OPTIONS_ALIVE = [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS_UNKNOWN]
 const yearOptions = (includeAlive, includeUnknown) => {
