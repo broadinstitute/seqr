@@ -7,7 +7,7 @@ import { VEP_GROUP_SV } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType, familyGuids, projectFamilies, ...props }) =>
-  <ButtonLink content={buttonText} onClick={openSearchResults} {...props} />
+  <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
