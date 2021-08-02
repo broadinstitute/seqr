@@ -31,6 +31,9 @@ docker run --name seqr -p 80:8000 \
     -e POSTGRES_SERVICE_HOSTNAME=10.94.145.3 \
     -e POSTGRES_SERVICE_PORT=5432 \
     -e POSTGRES_PASSWORD=sm://seqr-308602/postgres-password \
+    -e ANALYST_PROJECT_CATEGORY=analyst-projects \
+    -e ANALYST_USER_GROUP=analysts \
+    -e PM_USER_GROUP=project-managers \
     -e PYTHONPATH=/seqr \
     -e STATIC_MEDIA_BUCKET=cpg-seqr-static-files \
     -e STATIC_MEDIA_DIR=/seqr_static_files \
