@@ -78,5 +78,6 @@ body {
 
 /* jquery UI dialogs should display over semantic UI modals. Used for pedigree editing */
 .ui-dialog.ui-widget {
-  z-index: 2000 !important;
+  z-index: 2000 !important; /* csslint allow: important */
 }
+
