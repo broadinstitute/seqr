@@ -117,7 +117,7 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-export const Alleles = React.memo(({ genotype, variant, isHemiX, warning}) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
   <AlleleContainer>
     {warning &&
       <Popup
