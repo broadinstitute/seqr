@@ -104,7 +104,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        self._check_login_permissions(url, mock_utils_logger)
+        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
+        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
+                                               self.collaborator_user)
 
         # Test missing required fields in the request body
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -229,11 +232,8 @@ class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
 
     def test_create_project_from_workspace(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+        self.check_require_login(url, login_redirect_url='/login/google-oauth2')
 
-        self.login_base_user()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')

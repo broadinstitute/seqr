@@ -50,8 +50,8 @@ def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
         return decorator(wrapped_func)
     return decorator
 
-def login_and_policies_required(view_func):
-    return login_active_required(_current_policies_required(view_func))
+def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL):
+    return login_active_required(_current_policies_required(view_func), login_url=login_url)
 
 def _user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):

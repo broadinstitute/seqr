@@ -73,8 +73,8 @@ class AuthenticationTestCase(TestCase):
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
-    def check_manager_login(self, url):
-        self._check_login(url, self.MANAGER)
+    def check_manager_login(self, url, **request_kwargs):
+        self._check_login(url, self.MANAGER, **request_kwargs)
 
     def check_analyst_login(self, url):
         self._check_login(url, self.ANALYST)

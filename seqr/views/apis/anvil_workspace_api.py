@@ -21,12 +21,15 @@ from seqr.views.utils.individual_utils import add_or_update_individuals_and_fami
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm
+from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
+
+def anvil_auth_and_permission_required(view_func):
+    return login_and_policies_required(anvil_auth_required(view_func), login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
 @anvil_auth_required
 def anvil_workspace_page(request, namespace, name):
@@ -53,8 +56,7 @@ def anvil_workspace_page(request, namespace, name):
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
 
-
-@anvil_auth_required
+@anvil_auth_and_permission_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
