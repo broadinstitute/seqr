@@ -6,7 +6,7 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
-import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD } from '../../../utils/constants'
+import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED } from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ButtonLink } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
@@ -295,7 +295,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
         />
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
         <Popup
-          trigger={<SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} />}
+          trigger={<SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />}
           content="Search for all variants in this gene present in any affected individual"
           size="tiny"
         />
