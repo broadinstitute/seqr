@@ -72,13 +72,13 @@ def receive_igv_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-SAMPLE_TYPE_MAP = {
-    'bam': IgvSample.SAMPLE_TYPE_ALIGNMENT,
-    'cram': IgvSample.SAMPLE_TYPE_ALIGNMENT,
-    'bigWig': IgvSample.SAMPLE_TYPE_COVERAGE,
-    'junctions.bed.gz': IgvSample.SAMPLE_TYPE_JUNCTION,
-    'dcr.bed.gz': IgvSample.SAMPLE_TYPE_GCNV,
-}
+SAMPLE_TYPE_MAP = [
+    ('bam', IgvSample.SAMPLE_TYPE_ALIGNMENT),
+    ('cram', IgvSample.SAMPLE_TYPE_ALIGNMENT),
+    ('bigWig', IgvSample.SAMPLE_TYPE_COVERAGE),
+    ('junctions.bed.gz', IgvSample.SAMPLE_TYPE_JUNCTION),
+    ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
+]
 
 @pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
@@ -93,10 +93,10 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP.items() if file_path.endswith(suffix)), None)
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
+                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
         if not does_file_exist(file_path, user=request.user):
             raise Exception('Error accessing "{}"'.format(file_path))
 

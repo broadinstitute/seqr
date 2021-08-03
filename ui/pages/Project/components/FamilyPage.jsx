@@ -57,7 +57,11 @@ const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, g
       <div>
         <VerticalSpacer height={20} />
         <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /> Variant Search</SearchLink>
-        {!hasActiveVariantSample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        {!hasActiveVariantSample &&
+          <Popup
+            trigger={<HelpIcon />}
+            content={`Search is disabled until data is loaded${project.workspaceName ? '. Loading data from AnVIL to seqr is a slow process, and generally takes a week.' : ''}`}
+          />}
         <VerticalSpacer height={10} />
         <CreateVariantButton family={family} />
         <VerticalSpacer height={10} />

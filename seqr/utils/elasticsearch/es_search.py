@@ -133,7 +133,7 @@ class EsSearch(object):
         return self
 
     def sort(self, sort):
-        self._sort = SORT_FIELDS.get(sort, [])
+        self._sort = deepcopy(SORT_FIELDS.get(sort, []))
 
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
@@ -1274,8 +1274,8 @@ def _annotations_filter(annotations):
 
 
 def _dataset_type_for_annotations(annotations):
-    sv = bool(annotations.get('structural'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural')
+    sv = bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
+    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:

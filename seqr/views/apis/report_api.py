@@ -356,12 +356,16 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
             nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
             mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
+            parent_transcript = parent_mnv.get('main_transcript') or {}
+            parent_details = [parent_transcript[key] for key in ['hgvsc', 'hgvsp'] if parent_transcript.get(key)]
+            parent_name = _get_nested_variant_name(parent_mnv)
             discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
                 variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
-                parent=_get_nested_variant_name(parent_mnv),
+                parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
                 nested=', '.join([_get_nested_variant_name(v) for v in nested_mnvs]))
-            for variant in mnvs:
+            for variant in nested_mnvs:
                 variant['discovery_notes'] = discovery_notes
+            saved_variants.remove(parent_mnv)
         for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
             if gene_id in mnv_genes:
                 continue

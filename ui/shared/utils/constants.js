@@ -505,6 +505,7 @@ export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
+export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
 
 
 const ORDERED_VEP_CONSEQUENCES = [
@@ -589,6 +590,66 @@ const ORDERED_VEP_CONSEQUENCES = [
     text: 'Inversion',
     value: 'INV',
     group: VEP_GROUP_SV,
+  },
+  {
+    description: 'A loss of function effect',
+    text: 'Loss of function',
+    value: 'LOF',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'A loss of function effect via intragenic exonic duplication',
+    text: 'Loss of function via Duplication',
+    value: 'DUP_LOF',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'A copy-gain effect',
+    text: 'Copy Gain',
+    value: 'COPY_GAIN',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'A duplication partially overlapping the gene',
+    text: 'Duplication Partial',
+    value: 'DUP_PARTIAL',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
+    text: 'Multiallelic SV',
+    value: 'MSV_EXON_OVR',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'An SV contained entirely within an intron',
+    text: 'Intronic',
+    value: 'INTRONIC',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'An inversion entirely spanning the gene',
+    text: 'Inversion Span',
+    value: 'INV_SPAN',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'An SV which disrupts an untranslated region',
+    text: 'UTR',
+    value: 'UTR',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'An SV that does not overlap coding sequence',
+    text: 'Intergenic',
+    value: 'INTERGENIC',
+    group: VEP_GROUP_SV_CONSEQUENCES,
+  },
+  {
+    description: 'An SV which disrupts a promoter sequence (within 1kb)',
+    text: 'Promoter',
+    value: 'PROMOTER',
+    group: VEP_GROUP_SV_CONSEQUENCES,
   },
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
