@@ -117,20 +117,13 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-export const Alleles = React.memo(({ genotype, variant, isHemiX, warning, cnSvtypeMissmatch }) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning}) =>
   <AlleleContainer>
     {warning &&
       <Popup
         flowing
         trigger={<Icon name="warning sign" color="yellow" />}
         content={<div><b>Warning:</b> {warning}</div>}
-      />
-    }
-    {cnSvtypeMissmatch &&
-      <Popup
-        flowing
-        trigger={<Icon name="warning sign" color="yellow" />}
-        content={<div><b>Warning:</b> Copy Number and Call Type do not match</div>}
       />
     }
     {variant.svType ?
@@ -149,7 +142,6 @@ Alleles.propTypes = {
   genotype: PropTypes.object,
   variant: PropTypes.object,
   warning: PropTypes.string,
-  cnSvtypeMissmatch: PropTypes.string,
   isHemiX: PropTypes.bool,
 }
 
@@ -208,7 +200,9 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     warning = 'Variant absent in parents'
   }
 
-  const cnSvtypeMissmatch = (variant.svType === 'DUP' && genotype.cn < 2) || (variant.svType === 'DEL' && genotype.cn > 2)
+  if ((variant.svType === 'DUP' && genotype.cn < 2) || (variant.svType === 'DEL' && genotype.cn > 2)) {
+    warning = [warning, 'Copy Number does not match Call Type.'].join(warning ? '. ' : '')
+  }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
   const details = genotypeDetails(genotype, variant)
@@ -232,7 +226,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
           </div>
         }
       />}
-      <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} cnSvtypeMissmatch={cnSvtypeMissmatch} />
+      <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
       {genotype.gq || genotype.qs || '-'}{!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
