@@ -508,6 +508,102 @@ export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
 
 
+const VEP_SV_TYPES = [
+  {
+    description: 'A large deletion',
+    text: 'Deletion',
+    value: 'DEL',
+  },
+  {
+    description: 'A large duplication',
+    text: 'Duplication',
+    value: 'DUP',
+  },
+  {
+    description: 'A translocation variant',
+    text: 'Translocation',
+    value: 'BND',
+  },
+  {
+    description: 'A copy number polymorphism variant',
+    text: 'Copy Number',
+    value: 'CNV',
+  },
+  {
+    description: 'A Complex Structural Variant',
+    text: 'Complex SV',
+    value: 'CPX',
+  },
+  {
+    description: 'A reciprocal chromosomal translocation',
+    text: 'Reciprocal Translocation',
+    value: 'CTX',
+  },
+  {
+    description: 'A large insertion',
+    text: 'Insertion',
+    value: 'INS',
+  },
+  {
+    description: 'A large inversion',
+    text: 'Inversion',
+    value: 'INV',
+  },
+]
+
+const VEP_SV_CONSEQUENCES = [
+  {
+    description: 'A loss of function effect',
+    text: 'Loss of function',
+    value: 'LOF',
+  },
+  {
+    description: 'A loss of function effect via intragenic exonic duplication',
+    text: 'Loss of function via Duplication',
+    value: 'DUP_LOF',
+  },
+  {
+    description: 'A copy-gain effect',
+    text: 'Copy Gain',
+    value: 'COPY_GAIN',
+  },
+  {
+    description: 'A duplication partially overlapping the gene',
+    text: 'Duplication Partial',
+    value: 'DUP_PARTIAL',
+  },
+  {
+    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
+    text: 'Multiallelic SV',
+    value: 'MSV_EXON_OVR',
+  },
+  {
+    description: 'An SV contained entirely within an intron',
+    text: 'Intronic',
+    value: 'INTRONIC',
+  },
+  {
+    description: 'An inversion entirely spanning the gene',
+    text: 'Inversion Span',
+    value: 'INV_SPAN',
+  },
+  {
+    description: 'An SV which disrupts an untranslated region',
+    text: 'UTR',
+    value: 'UTR',
+  },
+  {
+    description: 'An SV that does not overlap coding sequence',
+    text: 'Intergenic',
+    value: 'INTERGENIC',
+  },
+  {
+    description: 'An SV which disrupts a promoter sequence (within 1kb)',
+    text: 'Promoter',
+    value: 'PROMOTER',
+  },
+]
+
 const ORDERED_VEP_CONSEQUENCES = [
   {
     description: 'A feature ablation whereby the deleted region includes a transcript feature',
@@ -543,114 +639,8 @@ const ORDERED_VEP_CONSEQUENCES = [
     group: VEP_GROUP_FRAMESHIFT,
     so: 'SO:0001589',
   },
-  {
-    description: 'A large deletion',
-    text: 'Deletion',
-    value: 'DEL',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A large duplication',
-    text: 'Duplication',
-    value: 'DUP',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A translocation variant',
-    text: 'Translocation',
-    value: 'BND',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A copy number polymorphism variant',
-    text: 'Copy Number',
-    value: 'CNV',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A Complex Structural Variant',
-    text: 'Complex SV',
-    value: 'CPX',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A reciprocal chromosomal translocation',
-    text: 'Reciprocal Translocation',
-    value: 'CTX',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A large insertion',
-    text: 'Insertion',
-    value: 'INS',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A large inversion',
-    text: 'Inversion',
-    value: 'INV',
-    group: VEP_GROUP_SV,
-  },
-  {
-    description: 'A loss of function effect',
-    text: 'Loss of function',
-    value: 'LOF',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'A loss of function effect via intragenic exonic duplication',
-    text: 'Loss of function via Duplication',
-    value: 'DUP_LOF',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'A copy-gain effect',
-    text: 'Copy Gain',
-    value: 'COPY_GAIN',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'A duplication partially overlapping the gene',
-    text: 'Duplication Partial',
-    value: 'DUP_PARTIAL',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
-    text: 'Multiallelic SV',
-    value: 'MSV_EXON_OVR',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'An SV contained entirely within an intron',
-    text: 'Intronic',
-    value: 'INTRONIC',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'An inversion entirely spanning the gene',
-    text: 'Inversion Span',
-    value: 'INV_SPAN',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'An SV which disrupts an untranslated region',
-    text: 'UTR',
-    value: 'UTR',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'An SV that does not overlap coding sequence',
-    text: 'Intergenic',
-    value: 'INTERGENIC',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
-  {
-    description: 'An SV which disrupts a promoter sequence (within 1kb)',
-    text: 'Promoter',
-    value: 'PROMOTER',
-    group: VEP_GROUP_SV_CONSEQUENCES,
-  },
+  ...VEP_SV_TYPES.map(v => ({ ...v, group: VEP_GROUP_SV })),
+  ...VEP_SV_CONSEQUENCES.map(v => ({ ...v, group: VEP_GROUP_SV_CONSEQUENCES })),
   {
     description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
     text: 'Stop lost',
@@ -860,6 +850,33 @@ export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, co
 export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence, i) =>
   ({ ...acc, [consequence.value]: i }),
 {})
+
+export const SVTYPE_LOOKUP = VEP_SV_TYPES.reduce((acc, { value, text }) => ({ ...acc, [value]: text }), {})
+
+export const SVTYPE_DETAILS = {
+  CPX: {
+    INS_iDEL: 'Insertion with deletion at insertion site',
+    INVdel: 'Complex inversion with 3\' flanking deletion',
+    INVdup: 'Complex inversion with 3\' flanking duplication',
+    dDUP: 'Dispersed duplication',
+    dDUP_iDEL: 'Dispersed duplication with deletion at insertion site',
+    delINV: 'Complex inversion with 5\' flanking deletion',
+    delINVdel: 'Complex inversion with 5\' and 3\' flanking deletions',
+    delINVdup: 'Complex inversion with 5\' flanking deletion and 3\' flanking duplication',
+    dupINV: 'Complex inversion with 5\' flanking duplication',
+    dupINVdel: 'Complex inversion with 5\' flanking duplication and 3\' flanking deletion',
+    dupINVdup: 'Complex inversion with 5\' and 3\' flanking duplications',
+    piDUP_FR: 'Palindromic inverted tandem duplication, forward-reverse orientation',
+    piDUP_RF: 'Palindromic inverted tandem duplication, reverse-forward orientation',
+  },
+  INS: {
+    ME: 'Mobile element',
+    'ME:ALU': 'Alu element insertion',
+    'ME:LINE1': 'LINE1 element insertion',
+    'ME:SVA': 'SVA element insertion',
+    'ME:UNK': 'Unspecified origin insertion',
+  },
+}
 
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'

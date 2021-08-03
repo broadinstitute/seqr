@@ -12,7 +12,7 @@ import { ButtonLink } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
-import { GENOME_VERSION_37, getVariantMainTranscript } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
 
 
 const SequenceContainer = styled.span`
@@ -254,8 +254,12 @@ const Annotations = React.memo(({ variant }) => {
           size="large"
           trigger={
             <ButtonLink size={svType && 'big'}>
-              {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && `:${svTypeDetail}`}
+              {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
+              {svType && svTypeDetail &&
+              <Popup trigger={<Icon name="info circle" size="small" corner="top right" />}
+                content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                position="top center"
+              />}
             </ButtonLink>
           }
           popup={transcriptPopupProps}

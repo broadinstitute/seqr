@@ -362,7 +362,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
                 variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
                 parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
-                nested=', '.join([_get_nested_variant_name(v) for v in nested_mnvs]))
+                nested=', '.join(sorted([_get_nested_variant_name(v) for v in nested_mnvs])))
             for variant in nested_mnvs:
                 variant['discovery_notes'] = discovery_notes
             saved_variants.remove(parent_mnv)
