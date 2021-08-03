@@ -21,4 +21,6 @@ Object.assign = require('object-assign')
 // We don't polyfill it in the browser--this is user's responsibility.
 if (process.env.NODE_ENV === 'test') {
   require('raf').polyfill(global)
+  global.jQuery = require('jquery')
+  require('jquery-ui/ui/widget')
 }

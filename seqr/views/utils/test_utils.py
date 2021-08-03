@@ -426,7 +426,7 @@ PROJECT_FIELDS = {
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
-    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes',
+    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes', 'pedigreeDataset',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'

@@ -44,27 +44,6 @@ RUN rm -rf ./Python-$PYTHON_VERSION \
     && ln -s /usr/local/bin/pip$PYTHON_MAIN_VER /usr/local/bin/pip \
     && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
 
-# install dependencies of the HaploPainter.pl script used to generate static pedigree images
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    perl \
-    build-essential \
-    libcairo2-dev \
-    libglib2.0-bin \
-    libglib2.0-0 \
-    libgtk2.0-dev \
-    libpango1.0-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -L0 https://raw.github.com/miyagawa/cpanminus/master/cpanm -o /usr/bin/cpanm \
-    && chmod +x /usr/bin/cpanm \
-    && cpanm --notest \
-        Cairo \
-        DBI \
-        Gtk2 \
-        Tk \
-        Sort::Naturally
-
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
