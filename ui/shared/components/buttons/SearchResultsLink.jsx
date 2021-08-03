@@ -31,6 +31,9 @@ const mapDispatchToProps = (dispatch, ownProps) => {
       if (ownProps.svType) {
         search.annotations = { [VEP_GROUP_SV]: [ownProps.svType] }
       }
+      if (ownProps.inheritanceMode) {
+        search.inheritance = { mode: ownProps.inheritanceMode }
+      }
       const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
       dispatch(navigateSavedHashedSearch(
         { allProjectFamilies: !projectFamilies, projectFamilies, search },
