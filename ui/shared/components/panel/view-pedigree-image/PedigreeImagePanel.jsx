@@ -226,7 +226,7 @@ class BasePedigreeImage extends React.PureComponent {
 
   getFamilyDataset = () => {
     const { family, individuals } = this.props
-    const dataset = family.pedigreeDataset || individuals.map(
+    const dataset = family.pedigreeDataset || (individuals || []).map(
       individual => Object.entries(INDIVIDUAL_FIELD_MAP).reduce((acc, [key, mappedKey]) => {
         let val = individual[mappedKey]
         if (key === 'affected') {

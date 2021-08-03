@@ -297,7 +297,7 @@ export const getIndividualsExportData = createSelector(
   getSortedIndividualsByFamily,
   getSamplesByGuid,
   (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) =>
-    [...acc, ...individualsByFamily[family.familyGuid].map(individual => ({
+    [...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
       [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
