@@ -6,12 +6,18 @@ import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { VEP_GROUP_SV } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
-const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults, padding }) =>
-  <ButtonLink content={buttonText} onClick={openSearchResults} padding={padding} />
+const SearchResultsLink = ({ buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType, familyGuids, projectFamilies, ...props }) =>
+  <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
-  padding: PropTypes.string,
+  initialSearch: PropTypes.object,
+  location: PropTypes.string,
+  variantId: PropTypes.string,
+  genomeVersion: PropTypes.string,
+  svType: PropTypes.string,
+  familyGuids: PropTypes.array,
+  projectFamilies: PropTypes.array,
   openSearchResults: PropTypes.func,
 }
 
