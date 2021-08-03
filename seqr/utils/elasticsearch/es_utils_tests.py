@@ -631,7 +631,6 @@ MAPPING_FIELDS = [
     'topmed_Hemi',
     'topmed_AF',
     'topmed_AN',
-    'topmed_Het',
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
