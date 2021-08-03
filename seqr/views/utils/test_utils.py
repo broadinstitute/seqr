@@ -74,7 +74,7 @@ class AuthenticationTestCase(TestCase):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
     def check_manager_login(self, url, **request_kwargs):
-        self._check_login(url, self.MANAGER, **request_kwargs)
+        return self._check_login(url, self.MANAGER, **request_kwargs)
 
     def check_analyst_login(self, url):
         self._check_login(url, self.ANALYST)
@@ -159,7 +159,7 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
-            return
+            return response
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, permission_denied_error)

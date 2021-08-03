@@ -36,27 +36,14 @@ REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def _check_login_permissions(self, url, mock_logger):
-        # Test user doesn't login
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next={}'.format(url))
-
-        # Test the user needs sufficient workspace permissions
-        self.login_collaborator()
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 403)
-        mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
-                                               self.collaborator_user)
-
-        self.login_manager()
-        return response
-
     def test_anvil_workspace_page(self, mock_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        collaborator_response = self._check_login_permissions(url, mock_logger)
+        collaborator_response = self.check_manager_login(url, login_redirect_url='/login/google-oauth2', policy_redirect_url='/accept_policies')
+
+        mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
+                                               self.collaborator_user)
         self.assertEqual(collaborator_response.get('Content-Type'), 'text/html')
         initial_json = self.get_initial_page_json(collaborator_response)
         self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
@@ -221,11 +208,8 @@ class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
 
     def test_anvil_workspace_page(self):
         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
+        self.check_require_login(url, login_redirect_url='/login/google-oauth2', policy_redirect_url='/accept_policies')
 
-        self.login_base_user()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')

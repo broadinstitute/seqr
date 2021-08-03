@@ -41,7 +41,8 @@ def _require_permission(user_permission_test_func, error='User has insufficient 
     return test_user
 
 _active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
-_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
+def _current_policies_required(view_func, policy_url=API_POLICY_REQUIRED_URL):
+    return user_passes_test(_has_current_policies, login_url=policy_url)(view_func)
 
 def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
     def decorator(view_func):
@@ -50,8 +51,8 @@ def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
         return decorator(wrapped_func)
     return decorator
 
-def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL):
-    return login_active_required(_current_policies_required(view_func), login_url=login_url)
+def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL, policy_url=API_POLICY_REQUIRED_URL):
+    return login_active_required(_current_policies_required(view_func, policy_url=policy_url), login_url=login_url)
 
 def _user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):
