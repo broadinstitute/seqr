@@ -251,9 +251,9 @@ const Annotations = React.memo(({ variant }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && SVTYPE_DETAILS[svType] &&
+              {svType && svTypeDetail &&
               <Popup trigger={<Icon name="info circle" size="small" corner="top right" />}
-                content={SVTYPE_DETAILS[svType][svTypeDetail]}
+                content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
                 position="top center"
               />}
             </ButtonLink>
