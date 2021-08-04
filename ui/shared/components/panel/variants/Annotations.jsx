@@ -225,6 +225,16 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
+const svSizeDisplay = (size) => {
+  if (size < 1000) {
+    return `${size}bp`
+  } else if (size < 1000000) {
+    // dividing by 1 removes trailing 0s
+    return `${((size) / 1000).toPrecision(3) / 1}kb`
+  }
+  return `${(size / 1000000).toFixed(2) / 1}mb`
+}
+
 const Annotations = React.memo(({ variant }) => {
   const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
   const mainTranscript = getVariantMainTranscript(variant)
@@ -267,7 +277,7 @@ const Annotations = React.memo(({ variant }) => {
           <Transcripts variant={variant} />
         </Modal>
       }
-      {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
+      {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
       {numExon && <b>, {numExon} exons</b>}
       { lofDetails &&
         <span>
