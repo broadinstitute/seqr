@@ -200,6 +200,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     warning = 'Variant absent in parents'
   }
 
+  if ((variant.svType === 'DUP' && genotype.cn < 2) || (variant.svType === 'DEL' && genotype.cn > 2)) {
+    warning = [warning, 'Copy Number does not match Call Type.'].join(warning ? '. ' : '')
+  }
+
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
   const details = genotypeDetails(genotype, variant)
 
