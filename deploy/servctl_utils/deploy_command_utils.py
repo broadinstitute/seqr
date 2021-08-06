@@ -49,7 +49,7 @@ SECRETS = {
     'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
+        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
     ],
 }
 
@@ -259,8 +259,8 @@ def deploy_postgres(settings):
         '--root-password={}'.format(password),
         '--project={}'.format(settings['GCLOUD_PROJECT']),
         '--zone={}'.format(settings['GCLOUD_ZONE']),
-        '--availability-type=regional',
-        '--cpu=4', '--memory=26',
+        '--availability-type={}'.format(settings['CLOUDSQL_AVAILABILITY_TYPE']),
+        '--cpu=2', '--memory=4',
         '--assign-ip',
         '--backup',
         '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',

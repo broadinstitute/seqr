@@ -108,7 +108,7 @@ ScoreDetails.propTypes = {
 }
 
 const STAT_DETAILS = [
-  { title: 'Coding Size', content: gene => ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
+  { title: 'Coding Size', content: gene => `${((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2)}kb` },
   {
     title: 'Missense Constraint',
     scoreField: 'constraints',

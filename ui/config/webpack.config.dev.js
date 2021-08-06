@@ -246,6 +246,7 @@ module.exports = {
 
     new webpack.ProvidePlugin({
       $: "jquery",
+      d3: "d3",
     })
   ],
   // Some libraries import Node modules but don't use them in the browser.

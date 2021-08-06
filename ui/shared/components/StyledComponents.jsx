@@ -96,3 +96,108 @@ export const SectionHeader = styled.div`
   font-weight: 300;
   font-size: 18px; 
 `
+
+
+// Map font-awesome icons to semantic-ui icons
+export const FontAwesomeIconsContainer = styled.div`
+  .fa {
+    display: inline-block;
+    opacity: 1;
+    margin: 0em 0.25rem 0em 0em;
+    width: 1.18em;
+    height: 1em;
+    font-family: 'Icons';
+    font-style: normal;
+    font-weight: normal;
+    text-decoration: inherit;
+    text-align: center;
+    speak: none;
+    font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  
+  .fa:before {
+    background: none !important;
+  }
+  
+  .fa-fw {
+    width: 1.2857142857142858em;
+    text-align: center;
+  }
+  
+  .fa-lg {
+    font-size: 1.33333333em;
+    line-height: .75em;
+    vertical-align: -15%;
+  }
+  
+  .fa-2x {
+    font-size: 2em;
+  }
+  
+  .fa.pull-right {
+    margin-left: .3em;
+    float: right;
+  }
+  
+  .fa.pull-left {
+    margin-right: .3em;
+    float: left;
+  }
+  
+  .fa-spin  {
+    height: 1em;
+    line-height: 1;
+    -webkit-animation: icon-loading 2s linear infinite;
+    animation: icon-loading 2s linear infinite;
+  }
+  
+  .fa-check:before {
+    content: "\\f00c";
+  }
+  .fa-square:before {
+    content: "\\f098";
+  } 
+  .fa-search:before {
+    content: "\\f002";
+  }
+  .fa-minus-circle:before {
+    content: "\\f056";
+  } 
+  .fa-plus-circle:before  {
+    content: "\\f055";
+  }
+  .fa-times:before  {
+    content: "\\f00d";
+  }  
+  .fa-times-circle:before  {
+    content: "\\f057";
+  } 
+  .fa-gear:before  {
+    content: "\\f013";
+  }
+  .fa-exclamation-triangle:before  {
+    content: "\\f071";
+  }  
+  .fa-spinner:before  {
+    content: "\\f110";
+  }
+  .fa-undo:before  {
+    content: "\\f0e2";
+  }  
+  .fa-repeat:before  {
+    content: "\\f01e";
+  } 
+  .fa-refresh:before  {
+    content: "\\f021";
+  } 
+  .fa-arrows-alt:before  {
+    content: "\\f31e";
+  }  
+  .fa-crosshairs:before  {
+    content: "\\f05b";
+  } 
+`

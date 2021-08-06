@@ -133,7 +133,7 @@ class EsSearch(object):
         return self
 
     def sort(self, sort):
-        self._sort = SORT_FIELDS.get(sort, [])
+        self._sort = deepcopy(SORT_FIELDS.get(sort, []))
 
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
@@ -391,6 +391,7 @@ class EsSearch(object):
                     COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], samples_by_id, affected_status, index_fields,
                 )
 
+                family_index = index
                 if paired_index:
                     pair_index_fields = self.index_metadata[paired_index]['fields']
                     pair_samples_by_id = self.samples_by_family_index[paired_index][family_guid]
@@ -398,15 +399,15 @@ class EsSearch(object):
                         COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], pair_samples_by_id, affected_status,
                         pair_index_fields,
                     )
-                    index = ','.join(sorted([index, paired_index]))
+                    family_index = ','.join(sorted([index, paired_index]))
 
                 samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
-                index_comp_het_q = comp_het_q_by_index.get(index)
+                index_comp_het_q = comp_het_q_by_index.get(family_index)
                 if not index_comp_het_q:
-                    comp_het_q_by_index[index] = samples_q
+                    comp_het_q_by_index[family_index] = samples_q
                 else:
-                    comp_het_q_by_index[index] |= samples_q
+                    comp_het_q_by_index[family_index] |= samples_q
 
         for index, compound_het_q in comp_het_q_by_index.items():
             compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
@@ -1274,8 +1275,8 @@ def _annotations_filter(annotations):
 
 
 def _dataset_type_for_annotations(annotations):
-    sv = bool(annotations.get('structural'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural')
+    sv = bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
+    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:

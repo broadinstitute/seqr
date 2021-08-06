@@ -82,6 +82,7 @@ POPULATIONS = {
     },
     'topmed': {
         'filter_AF': [],
+        'Het': [],
     },
     'g1k': {
         'filter_AF': ['g1k_POPMAX_AF'],

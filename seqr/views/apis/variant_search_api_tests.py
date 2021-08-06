@@ -6,7 +6,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
+from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch, ProjectCategory
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
@@ -345,10 +345,18 @@ class VariantSearchAPITest(object):
 
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
-
-        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100,
+        mock_get_variants.assert_called_with(result_model, sort='xpos', page=1, num_results=100,
                                              skip_genotype_filter=True, user=self.collaborator_user)
+
+        # Test local install (no demo category)
+        result_model.delete()
+        ProjectCategory.objects.get(name='Demo').delete()
+        expected_searched_families.update({'F000011_11', 'F000012_12'})
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
@@ -623,7 +631,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 11)
         self.mock_get_ws_acl.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):

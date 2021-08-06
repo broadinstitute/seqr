@@ -65,6 +65,19 @@ export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid,
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
+export const getIndividualsByFamily = createSelector(
+  getIndividualsByGuid,
+  (individualsByGuid) => {
+    return Object.values(individualsByGuid).reduce((acc, individual) => {
+      if (!acc[individual.familyGuid]) {
+        acc[individual.familyGuid] = []
+      }
+      acc[individual.familyGuid].push(individual)
+      return acc
+    }, {})
+  },
+)
+
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.
  * The array of individuals is in sorted order.
@@ -72,10 +85,9 @@ export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, g
  * @param state {object} global Redux state
  */
 export const getSortedIndividualsByFamily = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
+  getIndividualsByFamily,
   getMmeSubmissionsByGuid,
-  (familiesByGuid, individualsByGuid, mmeSubmissionsByGuid) => {
+  (familyIndividuals, mmeSubmissionsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
     const getIndivMmeSort = ({ mmeSubmissionGuid }) => {
@@ -83,10 +95,10 @@ export const getSortedIndividualsByFamily = createSelector(
       return deletedDate ? '2000-01-01' : createdDate
     }
 
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
+    return Object.entries(familyIndividuals).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
       [familyGuid]: orderBy(
-        (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]),
+        individuals,
         [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
       ),
     }), {})
