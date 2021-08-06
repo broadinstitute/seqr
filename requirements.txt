@@ -24,3 +24,6 @@ slugify==0.0.1                   # used for encoding names for guids
 tqdm==4.42.1                     # convenient way to create progress bar for long-running command-line operations
 whitenoise==5.2.0                # simplified static file handling. Behind a major version due to missing Python 2 support
 
+django-oauth-toolkit==1.5.0      # Enable API access from non browswer clients using access tokens
+environs==9.3.2                  # Conveniently manage environment variables with types
+social-auth-core[openidconnect]  # Extra, required for openid
