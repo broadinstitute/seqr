@@ -1,6 +1,7 @@
 """APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
+import subprocess
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
@@ -19,7 +20,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
-from seqr.utils.file_utils import does_file_exist
+from seqr.utils.file_utils import does_file_exist, get_vcf_samples
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL
@@ -110,6 +111,13 @@ def create_project_from_workspace(request, namespace, name):
     if errors:
         return create_json_response({'errors': errors}, status=400)
 
+    # Validate the VCF to see if it contains all the required samples
+    samples = get_vcf_samples(data_path)
+    missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in samples]
+    if missing_samples:
+        return create_json_response(
+            {'errors': 'There are missing samples in the data: {}'.format(', '.join(missing_samples))}, status=400)
+
     # Create a new Project in seqr
     project_args = {
         'name': name,
@@ -142,6 +150,7 @@ def _wait_for_service_account_access(user, namespace, name):
         if has_service_account_access(user, namespace, name):
             return True
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
+
 
 def _send_load_data_email(project, updated_individuals, data_path, sample_type, user):
     email_content = """

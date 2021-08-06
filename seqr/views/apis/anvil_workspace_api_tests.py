@@ -86,7 +86,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
-    def test_create_project_from_workspace(self, mock_file_exist, mock_email, mock_add_service_account,
+    @mock.patch('seqr.views.apis.anvil_workspace_api.get_vcf_samples')
+    def test_create_project_from_workspace(self, mock_samples, mock_file_exist, mock_email, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_sleep,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
@@ -151,6 +152,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
         mock_file_exist.return_value = True
+        mock_samples.return_value = ['NA19675', 'NA19678', 'HG00735']
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
