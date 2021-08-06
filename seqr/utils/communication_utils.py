@@ -37,7 +37,7 @@ def send_welcome_email(user, referrer):
         )
         setup_message += ' Once you are registered in AnVIL, you will be able to access seqr at {}'.format(BASE_URL)
     else:
-        setup_message = 'Please click this link to set up your account:\n    {}users/set_password/{}'.format(
+        setup_message = 'Please click this link to set up your account:\n    {}login/set_password/{}'.format(
             BASE_URL, user.password)
 
     email_content = """
