@@ -7,6 +7,7 @@ on:
     branches:
       - master
       - dev
+      - 'mcri/*'
   pull_request:
     types: [opened, synchronize, reopened]
 
