@@ -72,7 +72,7 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 
 export const getProjectAnalysisGroupIndividualsCount = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  (familiesByGuid) =>
+  familiesByGuid =>
     Object.values(familiesByGuid).reduce((acc, family) => acc + family.individualGuids.length, 0),
 )
 
@@ -93,7 +93,7 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   (samplesByFamily, familiesByGuid) =>
     Object.keys(familiesByGuid).reduce((acc, familyGuid) => {
-      (samplesByFamily[familyGuid] || []).forEach(sample => {
+      (samplesByFamily[familyGuid] || []).forEach((sample) => {
         const loadedDate = (sample.loadedDate).split('T')[0]
         if (!acc[sample.sampleType]) {
           acc[sample.sampleType] = {}
@@ -107,7 +107,7 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
         }
       })
       return acc
-    }, {})
+    }, {}),
 )
 
 export const getProjectAnalysisGroupMmeSubmissions = createSelector(
@@ -129,8 +129,8 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
             geneId => (genesById[geneId] || {}).geneSymbol || geneId),
           ...submissionsByGuid[individual.mmeSubmissionGuid],
         }
-      )).filter(submission => submission)
-  ]), []),
+      )).filter(submission => submission),
+    ]), []),
 )
 
 export const getTaggedVariantsByFamily = createSelector(
