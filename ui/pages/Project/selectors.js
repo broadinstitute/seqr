@@ -288,7 +288,7 @@ export const getEntityExportConfig = (project, rawData, tableName, fileName, fie
   }),
 })
 
-export const getFamiliesExportData = createSelector(
+const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getFirstSampleByFamily,
   (visibleFamilies, firstSampleByFamily) =>
@@ -296,19 +296,7 @@ export const getFamiliesExportData = createSelector(
       [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: firstSampleByFamily[family.familyGuid] }], []),
 )
 
-export const getFamiliesExportConfig = createSelector(
-  getCurrentProject,
-  getFamiliesExportData,
-  (project, rawData) => getEntityExportConfig(project, rawData, null, 'families', FAMILY_EXPORT_DATA),
-)
-
-export const getCaseReviewFamiliesExportConfig = createSelector(
-  getCurrentProject,
-  getFamiliesExportData,
-  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'families', CASE_REVIEW_FAMILY_EXPORT_DATA),
-)
-
-export const getIndividualsExportData = createSelector(
+const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
   getSamplesByGuid,
@@ -321,18 +309,6 @@ export const getIndividualsExportData = createSelector(
       ),
     }))], [],
   ),
-)
-
-export const getIndividualsExportConfig = createSelector(
-  getCurrentProject,
-  getIndividualsExportData,
-  (project, rawData) => getEntityExportConfig(project, rawData, null, 'individuals', INDIVIDUAL_EXPORT_DATA),
-)
-
-export const getCaseReviewIndividualsExportConfig = createSelector(
-  getCurrentProject,
-  getIndividualsExportData,
-  (project, rawData) => getEntityExportConfig(project, rawData, CASE_REVIEW_TABLE_NAME, 'individuals', CASE_REVIEW_INDIVIDUAL_EXPORT_DATA),
 )
 
 const getSamplesExportData = createSelector(
@@ -348,13 +324,29 @@ const getSamplesExportData = createSelector(
       }))], []),
 )
 
-export const getSamplesExportConfig = createSelector(
+export const getProjectExportUrls = createSelector(
   getCurrentProject,
+  getFamiliesExportData,
+  getIndividualsExportData,
   getSamplesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
-  () => 'samples',
-  () => SAMPLE_EXPORT_DATA,
-  getEntityExportConfig,
+  (project, familyData, individualData, sampleData, tableName) => {
+    const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
+    console.log('compute export data - TODO should only be on download')
+    return [
+      {
+        name: 'Families',
+        data: getEntityExportConfig(
+          project, familyData, tableName, 'families', isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA),
+      },
+      {
+        name: 'Individuals',
+        data: getEntityExportConfig(
+          project, individualData, tableName, 'individuals', isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA),
+      },
+      { name: 'Samples', data: getEntityExportConfig(project, sampleData, tableName, 'samples', SAMPLE_EXPORT_DATA) },
+    ]
+  },
 )
 
 export const getCaseReviewStatusCounts = createSelector(
