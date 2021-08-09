@@ -80,7 +80,6 @@ const NO_DETAIL_FIELDS = [
 ]
 
 const ProjectPageUI = React.memo((props) => {
-  return <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },

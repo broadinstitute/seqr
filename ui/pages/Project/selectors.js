@@ -19,7 +19,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily,
 } from 'redux/selectors'
 
 import {
@@ -113,13 +113,13 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
 export const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsByGuid,
+  getIndividualsByFamily,
   getGenesById,
-  (submissionsByGuid, familiesByGuid, individualsByGuid, genesById) =>
-    Object.values(individualsByGuid).reduce((acc, individual) => (
-      individual.mmeSubmissionGuid ? [
-        ...acc,
-        {
+  (submissionsByGuid, familiesByGuid, individualsByFamily, genesById) =>
+    Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
+      ...acc,
+      ...(individualsByFamily[familyGuid] || []).map(individual => (
+        individual.mmeSubmissionGuid && {
           mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes,
           familyName: familiesByGuid[individual.familyGuid].displayName,
           individualName: individual.displayName,
@@ -128,9 +128,9 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
           geneSymbols: (submissionsByGuid[individual.mmeSubmissionGuid].geneIds || []).map(
             geneId => (genesById[geneId] || {}).geneSymbol || geneId),
           ...submissionsByGuid[individual.mmeSubmissionGuid],
-        },
-      ] : acc
-    ), []),
+        }
+      )).filter(submission => submission)
+  ]), []),
 )
 
 export const getTaggedVariantsByFamily = createSelector(
