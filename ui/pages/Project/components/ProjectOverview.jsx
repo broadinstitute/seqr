@@ -22,7 +22,7 @@ import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
-  getProjectAnalysisGroupSamplesByGuid,
+  getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
@@ -173,25 +173,11 @@ const mapMatchmakerStateToProps = (state, ownProps) => ({
 
 const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
-const Dataset = React.memo(({ project, samplesByGuid, user }) => {
-  const loadedProjectSamples = Object.values(samplesByGuid).reduce((acc, sample) => {
-    const loadedDate = (sample.loadedDate).split('T')[0]
-    if (!acc[sample.sampleType]) {
-      acc[sample.sampleType] = {}
-    }
-    if (!acc[sample.sampleType][sample.datasetType]) {
-      acc[sample.sampleType][sample.datasetType] = {}
-    }
-    acc[sample.sampleType][sample.datasetType] = {
-      ...acc[sample.sampleType][sample.datasetType],
-      [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
-    }
-    return acc
-  }, {})
+const Dataset = React.memo(({ project, samplesByType, user }) => {
 
-  const datasetSections = Object.keys(loadedProjectSamples).sort().reduce((acc, sampleType) => ([
+  const datasetSections = Object.keys(samplesByType).sort().reduce((acc, sampleType) => ([
     ...acc,
-    ...Object.entries(loadedProjectSamples[sampleType]).map(([datasetType, loadedSampleCounts]) => ({
+    ...Object.entries(samplesByType[sampleType]).map(([datasetType, loadedSampleCounts]) => ({
       key: `${sampleType}-${datasetType}`,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: Object.keys(loadedSampleCounts).sort().map(loadedDate =>
@@ -236,13 +222,13 @@ const Dataset = React.memo(({ project, samplesByGuid, user }) => {
 
 Dataset.propTypes = {
   project: PropTypes.object.isRequired,
-  samplesByGuid: PropTypes.object.isRequired,
+  samplesByType: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
 }
 
 const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  samplesByGuid: getProjectAnalysisGroupSamplesByGuid(state, ownProps),
+  samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
 })
 
 const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
@@ -305,7 +291,6 @@ const ProjectOverview = React.memo(props =>
 
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,
-  user: PropTypes.object.isRequired,
 }
 
 export default ProjectOverview

@@ -19,7 +19,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily,
 } from 'redux/selectors'
 
 import {
@@ -82,16 +82,26 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
     }), {}),
 )
 
-export const getProjectAnalysisGroupSamplesByGuid = createSelector(
-  getSamplesByGuid,
-  getProjectAnalysisGroupIndividualsByGuid,
-  (samplesByGuid, individualsByGuid) =>
-    Object.values(individualsByGuid).reduce((acc, individual) => ({
-      ...acc,
-      ...individual.sampleGuids.reduce((sampleAcc, sampleGuid) => (
-        { ...sampleAcc, [sampleGuid]: samplesByGuid[sampleGuid] }
-      ), {}),
-    }), {}),
+export const getProjectAnalysisGroupSamplesByTypes = createSelector(
+  getSamplesByFamily,
+  getProjectAnalysisGroupFamiliesByGuid,
+  (samplesByFamily, familiesByGuid) =>
+    Object.keys(familiesByGuid).reduce((acc, familyGuid) => {
+      (samplesByFamily[familyGuid] || []).forEach(sample => {
+        const loadedDate = (sample.loadedDate).split('T')[0]
+        if (!acc[sample.sampleType]) {
+          acc[sample.sampleType] = {}
+        }
+        if (!acc[sample.sampleType][sample.datasetType]) {
+          acc[sample.sampleType][sample.datasetType] = {}
+        }
+        acc[sample.sampleType][sample.datasetType] = {
+          ...acc[sample.sampleType][sample.datasetType],
+          [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
+        }
+      })
+      return acc
+    }, {})
 )
 
 export const getProjectAnalysisGroupMmeSubmissions = createSelector(

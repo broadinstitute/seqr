@@ -105,19 +105,25 @@ export const getSortedIndividualsByFamily = createSelector(
   },
 )
 
-export const getFirstSampleByFamily = createSelector(
+export const getSamplesByFamily = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
   getSamplesByGuid,
   (familiesByGuid, individualsByGuid, samplesByGuid) => {
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => {
-      const familySamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
+      ...acc,
+      [familyGuid]: familyVariantSamples(family, individualsByGuid, samplesByGuid),
+    }), {})
+  },
+)
 
-      return {
-        ...acc,
-        [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
-      }
-    }, {})
+export const getFirstSampleByFamily = createSelector(
+  getSamplesByFamily,
+  (samplesByFamily) => {
+    return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
+      ...acc,
+      [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
+    }), {})
   },
 )
 
