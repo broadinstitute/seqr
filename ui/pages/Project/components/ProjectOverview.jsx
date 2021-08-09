@@ -226,16 +226,11 @@ const Dataset = React.memo(({ project, samplesByGuid, user }) => {
       key: 'blank' })
   }
 
-  return (
-    <div>
-      <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[project.genomeVersion]} />
-      {datasetSections.map((sectionProps, i) =>
-        <DetailSection
-          {...sectionProps}
-          button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
-        />,
-      )}
-    </div>
+  return datasetSections.map((sectionProps, i) =>
+    <DetailSection
+      {...sectionProps}
+      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
+    />,
   )
 })
 
@@ -290,7 +285,7 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
-export default React.memo(props =>
+const ProjectOverview = React.memo(props =>
   <Grid>
     <Grid.Column width={5}>
       <FamiliesIndividualsOverview {...props} />
@@ -298,6 +293,7 @@ export default React.memo(props =>
       <MatchmakerOverview {...props} />
     </Grid.Column>
     <Grid.Column width={5}>
+      <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
       <DatasetOverview {...props} />
     </Grid.Column>
     <Grid.Column width={6}>
@@ -306,3 +302,10 @@ export default React.memo(props =>
     </Grid.Column>
   </Grid>,
 )
+
+ProjectOverview.propTypes = {
+  project: PropTypes.object.isRequired,
+  user: PropTypes.object.isRequired,
+}
+
+export default ProjectOverview
