@@ -24,10 +24,12 @@ REQUEST_BODY = {
     'uploadedFileId': 'test_temp_file_id',
     'description': 'A test project',
     'agreeSeqrAccess': True,
-    'dataPath': '/test_path'
+    'dataPath': '/test_path.vcf.gz'
 }
 REQUEST_BODY_NO_SLASH_DATA_PATH = deepcopy(REQUEST_BODY)
-REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path'
+REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path.vcf.bgz'
+REQUEST_BODY_BAD_DATA_PATH = deepcopy(REQUEST_BODY)
+REQUEST_BODY_BAD_DATA_PATH['dataPath'] = 'test_path.vcf.tar'
 REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
@@ -86,8 +88,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.get_vcf_samples')
-    def test_create_project_from_workspace(self, mock_samples, mock_file_exist, mock_email, mock_add_service_account,
+    @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
+    def test_create_project_from_workspace(self, mock_file_iter, mock_file_exist, mock_email, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_sleep,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
@@ -141,18 +143,28 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_NO_SLASH_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path test_no_slash_path is not found.')
-        mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path', user=self.manager_user)
+        self.assertEqual(response.json()['error'], 'Data file or path test_no_slash_path.vcf.bgz is not found.')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path.vcf.bgz', user=self.manager_user)
         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         self.assertEqual(mock_has_service_account.call_count, 1)
         self.assertEqual(mock_sleep.call_count, 1)
+
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'The data file must have a postfix of ".vcf", ".vcf.gz", or ".vcf.bgz".')
+
+        mock_file_exist.return_value = True
+        mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL']  # incomplete header line
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Bad VCF file or no sample found in the data file.')
 
         # Test valid operation
         mock_sleep.reset_mock()
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
-        mock_file_exist.return_value = True
-        mock_samples.return_value = ['NA19675', 'NA19678', 'HG00735']
+        mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n']
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -164,11 +176,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_sleep.assert_not_called()
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path', user=self.manager_user)
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         email_body = """
         test_user_manager@test.com requested to load WES data (GRCh38) from AnVIL workspace "{namespace}/{name}" at 
-        "gs://test_bucket/test_path" to seqr project {{project_name}} (guid: {guid})
+        "gs://test_bucket/test_path.vcf.gz" to seqr project {{project_name}} (guid: {guid})
 
         The sample IDs to load are attached.    
         """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)

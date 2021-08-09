@@ -63,26 +63,3 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
         if not raw_content:
             line = line.decode('utf-8')
         yield line
-
-
-def get_vcf_filename(vcf_path):
-    if vcf_path.endswith('.vcf') or vcf_path.endswith('.vcf.gz') or vcf_path.endswith('.vcf.bgz'):
-        return vcf_path
-    process = subprocess.Popen('gsutil ls ' + vcf_path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-    if process.wait() != 0:
-        return None
-    for line in process.stdout:
-        file = line.decode('utf-8').strip()
-        if file.endswith('.vcf') or file.endswith('.vcf.gz') or file.endswith('.vcf.bgz'):
-            return file
-    return None
-
-
-def get_vcf_samples(vcf_path):
-    vcf_filename = get_vcf_filename(vcf_path)
-    if not vcf_filename:
-        return {}
-    for line in file_iter(vcf_filename, byte_range=(0, 65536)):
-        if line.startswith('#CHROM'):
-            return set(line.rstrip().split('\tFORMAT\t', 2)[1].split('\t') if line.endswith('\n') else [])
-    return {}
