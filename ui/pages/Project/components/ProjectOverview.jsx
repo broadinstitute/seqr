@@ -21,7 +21,7 @@ import {
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsByGuid,
+  getProjectAnalysisGroupIndividualsCount,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
@@ -93,7 +93,7 @@ MatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.array,
 }
 
-const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsByGuid, user }) => {
+const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -109,7 +109,7 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsBy
 
   return (
     <DetailSection
-      title={`${Object.keys(familiesByGuid).length} Families, ${Object.keys(individualsByGuid).length} Individuals`}
+      title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size =>
           <div key={size}>
@@ -124,14 +124,14 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsBy
 FamiliesIndividuals.propTypes = {
   project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
-  individualsByGuid: PropTypes.object.isRequired,
+  individualsCount: PropTypes.number,
   user: PropTypes.object.isRequired,
 }
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
   user: getUser(state),
   familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-  individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
+  individualsCount: getProjectAnalysisGroupIndividualsCount(state, ownProps),
 })
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
