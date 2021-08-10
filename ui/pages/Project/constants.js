@@ -364,7 +364,7 @@ const FAMILY_FIELD_CONFIGS = {
     label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst' },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst', format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
