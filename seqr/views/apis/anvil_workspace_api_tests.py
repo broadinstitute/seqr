@@ -30,6 +30,8 @@ REQUEST_BODY_NO_SLASH_DATA_PATH = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_SLASH_DATA_PATH['dataPath'] = 'test_no_slash_path.vcf.bgz'
 REQUEST_BODY_BAD_DATA_PATH = deepcopy(REQUEST_BODY)
 REQUEST_BODY_BAD_DATA_PATH['dataPath'] = 'test_path.vcf.tar'
+REQUEST_BODY_VCF_DATA_PATH = deepcopy(REQUEST_BODY)
+REQUEST_BODY_VCF_DATA_PATH['dataPath'] = 'test_path.vcf'
 REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
@@ -159,14 +161,19 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'No samples found in the provided VCF. This may be due to a malformed file')
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
         mock_sleep.reset_mock()
+        mock_file_exist.reset_mock()
+        mock_file_iter.reset_mock()
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
+        mock_file_exist.return_value = True
         mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
                                        'chr1	1000	test\n']
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
         response_json = response.json()
@@ -177,11 +184,12 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_sleep.assert_not_called()
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf', user=self.manager_user)
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf', byte_range=None)
 
         email_body = """
         test_user_manager@test.com requested to load WES data (GRCh38) from AnVIL workspace "{namespace}/{name}" at 
-        "gs://test_bucket/test_path.vcf.gz" to seqr project {{project_name}} (guid: {guid})
+        "gs://test_bucket/test_path.vcf" to seqr project {{project_name}} (guid: {guid})
 
         The sample IDs to load are attached.    
         """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)
