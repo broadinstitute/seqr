@@ -278,9 +278,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   },
 )
 
-export const getEntityExportConfig = ({ project, rawData, tableName, fileName, fields }) => ({
+export const getEntityExportConfig = ({ project, tableName, fileName, fields }) => ({
   filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
-  rawData,
   headers: fields.map(config => config.header),
   processRow: family => fields.map((config) => {
     const val = family[config.field]
@@ -300,18 +299,15 @@ const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
   getSamplesByGuid,
-  (families, individualsByFamily, samplesByGuid) => {
-    console.log('compute indiv export data TODO')
-    return families.reduce((acc, family) =>
-      [...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
-        ...individual,
-        [FAMILY_FIELD_ID]: family.familyId,
-        [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
-          samplesByGuid[sampleGuid].isActive,
-        ),
-      }))], [],
-    )
-  },
+  (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) =>
+    [...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
+      ...individual,
+      [FAMILY_FIELD_ID]: family.familyId,
+      [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
+        samplesByGuid[sampleGuid].isActive,
+      ),
+    }))], [],
+  ),
 )
 
 const getSamplesExportData = createSelector(
@@ -329,28 +325,29 @@ const getSamplesExportData = createSelector(
 
 export const getProjectExportUrls = createSelector(
   getCurrentProject,
-  getFamiliesExportData,
-  getIndividualsExportData,
-  getSamplesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
-  (project, familyData, individualData, sampleData, tableName) => {
+  (state, ownProps) => ((ownProps || {}).match ? ownProps.match.params.analysisGroupGuid : (ownProps || {}).analysisGroupGuid),
+  (project, tableName, analysisGroupGuid) => {
+    const ownProps = { tableName, analysisGroupGuid }
     const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
-    console.log('compute export urls TODO')
     return [
       {
         name: 'Families',
+        getRawData: state => getFamiliesExportData(state, ownProps),
         ...getEntityExportConfig({
-          project, rawData: familyData, tableName, fileName: 'families', fields: isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA }),
+          project, tableName, fileName: 'families', fields: isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA }),
       },
       {
         name: 'Individuals',
+        getRawData: state => getIndividualsExportData(state, ownProps),
         ...getEntityExportConfig({
-          project, rawData: individualData, tableName, fileName: 'individuals', fields: isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA }),
+          project, tableName, fileName: 'individuals', fields: isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA }),
       },
       {
         name: 'Samples',
+        getRawData: state => getSamplesExportData(state, ownProps),
         ...getEntityExportConfig({
-          project, rawData: sampleData, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
+          project, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
       },
     ]
   },

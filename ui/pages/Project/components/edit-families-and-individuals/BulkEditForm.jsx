@@ -33,15 +33,14 @@ const mapStateToProps = (state, ownProps) => {
   const fields = ownProps.requiredFields.concat(ownProps.optionalFields)
   return {
     project,
-    exportConfig: getEntityExportConfig({
-      project,
-      rawData: Object.values(ownProps.rawData || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
-      fileName: ownProps.name,
-      fields,
-    }),
-    blankExportConfig: ownProps.blankDownload && getEntityExportConfig({
-      project, rawData: [], fileName: 'template', fields,
-    }),
+    exportConfig: {
+      getRawData: state2 => Object.values((ownProps.getRawData || getProjectAnalysisGroupIndividualsByGuid)(state2, ownProps)),
+      ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
+    },
+    blankExportConfig: ownProps.blankDownload && {
+      rawData: [],
+      ...getEntityExportConfig({ project, fileName: 'template', fields }),
+    },
   }
 }
 
@@ -71,10 +70,6 @@ EditBulkForm.propTypes = {
 const FAMILY_ID_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(0, 1)
 const FAMILY_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1)
 
-const mapFamiliesStateToProps = (state, ownProps) => ({
-  rawData: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-})
-
 const FamiliesBulkForm = React.memo(props =>
   <EditBulkForm
     name="families"
@@ -90,6 +85,7 @@ const FamiliesBulkForm = React.memo(props =>
     optionalFields={FAMILY_EXPORT_DATA}
     uploadFormats={FILE_FORMATS}
     blankDownload
+    getRawData={getProjectAnalysisGroupFamiliesByGuid}
     {...props}
   />,
 )
@@ -98,7 +94,7 @@ const mapFamiliesDispatchToProps = {
   onSubmit: updateFamilies,
 }
 
-export const EditFamiliesBulkForm = connect(mapFamiliesStateToProps, mapFamiliesDispatchToProps)(FamiliesBulkForm)
+export const EditFamiliesBulkForm = connect(null, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
 const IndividualsBulkForm = React.memo(({ user, ...props }) =>
   <EditBulkForm

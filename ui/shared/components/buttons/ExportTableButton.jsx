@@ -3,7 +3,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-
+import { connect } from 'react-redux'
 import { Table, Popup } from 'semantic-ui-react'
 
 import { NoBorderTable, ButtonLink } from '../StyledComponents'
@@ -34,7 +34,7 @@ const EXT_CONFIG = {
 
 const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : item)
 
-export const FileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
+export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
     linkContent =
@@ -62,7 +62,7 @@ export const FileLink = React.memo(({ url, rawData, processRow, headers, filenam
   return <a href={href} download={`${filename}.${extConfig.dataExt || ext}`}>{linkContent}</a>
 })
 
-FileLink.propTypes = {
+BaseFileLink.propTypes = {
   ext: PropTypes.string.isRequired,
   url: PropTypes.string,
   rawData: PropTypes.array,
@@ -71,6 +71,12 @@ FileLink.propTypes = {
   filename: PropTypes.string,
   linkContent: PropTypes.node,
 }
+
+const mapStateToProps = (state, ownProps) => ({
+  rawData: ownProps.getRawData ? ownProps.getRawData(state) : ownProps.rawData,
+})
+
+export const FileLink = connect(mapStateToProps)(BaseFileLink)
 
 const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) =>
   <Popup
