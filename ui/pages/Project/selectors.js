@@ -20,6 +20,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily,
+  getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 
 import {
@@ -55,16 +56,24 @@ export const getCurrentProject = createSelector(
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+export const getProjectSamplesByGuid = createSelector(getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+
+const getAnalysisGroupGuid = (state, props) => ((props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid)
+
+const getCurrentAnalysisGroup = createSelector(
+  getProjectAnalysisGroupsByGuid,
+  getAnalysisGroupGuid,
+  (projectAnalysisGroupsByGuid, analysisGroupGuid) => analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid],
+)
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
-  getProjectAnalysisGroupsByGuid,
-  (state, props) => (props.match ? props.match.params.analysisGroupGuid : props.analysisGroupGuid),
-  (projectFamiliesByGuid, projectAnalysisGroupsByGuid, analysisGroupGuid) => {
-    if (!analysisGroupGuid || !projectAnalysisGroupsByGuid[analysisGroupGuid]) {
+  getCurrentAnalysisGroup,
+  (projectFamiliesByGuid, analysisGroup) => {
+    if (!analysisGroup) {
       return projectFamiliesByGuid
     }
-    return projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.reduce(
+    return analysisGroup.familyGuids.reduce(
       (acc, familyGuid) => ({ ...acc, [familyGuid]: projectFamiliesByGuid[familyGuid] }), {},
     )
   },
@@ -89,23 +98,25 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
 )
 
 export const getProjectAnalysisGroupSamplesByTypes = createSelector(
+  getProjectSamplesByGuid,
   getSamplesByFamily,
+  getCurrentAnalysisGroup,
   getProjectAnalysisGroupFamiliesByGuid,
-  (samplesByFamily, familiesByGuid) =>
-    Object.keys(familiesByGuid).reduce((acc, familyGuid) => {
-      (samplesByFamily[familyGuid] || []).forEach((sample) => {
-        const loadedDate = (sample.loadedDate).split('T')[0]
-        if (!acc[sample.sampleType]) {
-          acc[sample.sampleType] = {}
-        }
-        if (!acc[sample.sampleType][sample.datasetType]) {
-          acc[sample.sampleType][sample.datasetType] = {}
-        }
-        acc[sample.sampleType][sample.datasetType] = {
-          ...acc[sample.sampleType][sample.datasetType],
-          [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
-        }
-      })
+  (projectSamplesByGuid, samplesByFamily, analysisGroup) =>
+    (analysisGroup ? analysisGroup.familyGuids.reduce(
+      (acc, familyGuid) => ([...acc, ...(samplesByFamily[familyGuid] || [])]), [],
+    ) : Object.values(projectSamplesByGuid)).reduce((acc, sample) => {
+      const loadedDate = (sample.loadedDate).split('T')[0]
+      if (!acc[sample.sampleType]) {
+        acc[sample.sampleType] = {}
+      }
+      if (!acc[sample.sampleType][sample.datasetType]) {
+        acc[sample.sampleType][sample.datasetType] = {}
+      }
+      acc[sample.sampleType][sample.datasetType] = {
+        ...acc[sample.sampleType][sample.datasetType],
+        [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
+      }
       return acc
     }, {}),
 )
@@ -326,7 +337,7 @@ const getSamplesExportData = createSelector(
 export const getProjectExportUrls = createSelector(
   getCurrentProject,
   (state, ownProps) => (ownProps || {}).tableName,
-  (state, ownProps) => ((ownProps || {}).match ? ownProps.match.params.analysisGroupGuid : (ownProps || {}).analysisGroupGuid),
+  getAnalysisGroupGuid,
   (project, tableName, analysisGroupGuid) => {
     const ownProps = { tableName, analysisGroupGuid }
     const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
