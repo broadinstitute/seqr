@@ -278,7 +278,7 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   },
 )
 
-export const getEntityExportConfig = (project, rawData, tableName, fileName, fields) => ({
+export const getEntityExportConfig = ({ project, rawData, tableName, fileName, fields }) => ({
   filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
   rawData,
   headers: fields.map(config => config.header),
@@ -300,15 +300,18 @@ const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
   getSamplesByGuid,
-  (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) =>
-    [...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
-      ...individual,
-      [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
-        samplesByGuid[sampleGuid].isActive,
-      ),
-    }))], [],
-  ),
+  (families, individualsByFamily, samplesByGuid) => {
+    console.log('compute indiv export data TODO')
+    return families.reduce((acc, family) =>
+      [...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
+        ...individual,
+        [FAMILY_FIELD_ID]: family.familyId,
+        [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
+          samplesByGuid[sampleGuid].isActive,
+        ),
+      }))], [],
+    )
+  },
 )
 
 const getSamplesExportData = createSelector(
@@ -332,19 +335,23 @@ export const getProjectExportUrls = createSelector(
   (state, ownProps) => (ownProps || {}).tableName,
   (project, familyData, individualData, sampleData, tableName) => {
     const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
-    console.log('compute export data - TODO should only be on download')
+    console.log('compute export urls TODO')
     return [
       {
         name: 'Families',
-        data: getEntityExportConfig(
-          project, familyData, tableName, 'families', isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA),
+        ...getEntityExportConfig({
+          project, rawData: familyData, tableName, fileName: 'families', fields: isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA }),
       },
       {
         name: 'Individuals',
-        data: getEntityExportConfig(
-          project, individualData, tableName, 'individuals', isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA),
+        ...getEntityExportConfig({
+          project, rawData: individualData, tableName, fileName: 'individuals', fields: isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA }),
       },
-      { name: 'Samples', data: getEntityExportConfig(project, sampleData, tableName, 'samples', SAMPLE_EXPORT_DATA) },
+      {
+        name: 'Samples',
+        ...getEntityExportConfig({
+          project, rawData: sampleData, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
+      },
     ]
   },
 )

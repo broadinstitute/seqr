@@ -28,17 +28,22 @@ const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const mapStateToProps = (state, ownProps) => ({
-  project: getCurrentProject(state),
-  exportConfig: getEntityExportConfig(
-    getCurrentProject(state),
-    Object.values(ownProps.rawData || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
-    null,
-    ownProps.name,
-    ownProps.requiredFields.concat(ownProps.optionalFields),
-  ),
-  blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getCurrentProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
-})
+const mapStateToProps = (state, ownProps) => {
+  const project = getCurrentProject(state)
+  const fields = ownProps.requiredFields.concat(ownProps.optionalFields)
+  return {
+    project,
+    exportConfig: getEntityExportConfig({
+      project,
+      rawData: Object.values(ownProps.rawData || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
+      fileName: ownProps.name,
+      fields,
+    }),
+    blankExportConfig: ownProps.blankDownload && getEntityExportConfig({
+      project, rawData: [], fileName: 'template', fields,
+    }),
+  }
+}
 
 const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 

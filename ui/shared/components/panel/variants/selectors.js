@@ -194,24 +194,22 @@ export const getSavedVariantExportConfig = createSelector(
     const analysisGroupName = (analysisGroupsByGuid[params.analysisGroupGuid] || {}).name
     const tagName = params.tag || tableState.categoryFilter || 'All'
 
-    return [{
+    return [{ // TODO?
       name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analysisGroupName ? ` in Analysis Group ${analysisGroupName}` : ''}`,
-      data: {
-        filename: toSnakecase(`saved_${tagName}_variants${project ? `_${project.name}` : ''}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
-        rawData: familyVariants,
-        headers: [
-          ...VARIANT_EXPORT_DATA.map(config => config.header),
-          ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
-            [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
-        ],
-        processRow: variant => ([
-          ...VARIANT_EXPORT_DATA.map(config => (
-            config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
-          ),
-          ...Object.values(variant.genotypes).reduce(
-            (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
-        ]),
-      },
+      filename: toSnakecase(`saved_${tagName}_variants${project ? `_${project.name}` : ''}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
+      rawData: familyVariants,
+      headers: [
+        ...VARIANT_EXPORT_DATA.map(config => config.header),
+        ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
+          [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
+      ],
+      processRow: variant => ([
+        ...VARIANT_EXPORT_DATA.map(config => (
+          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
+        ),
+        ...Object.values(variant.genotypes).reduce(
+          (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
+      ]),
     }]
   },
 )
