@@ -81,7 +81,7 @@ const SAMPLE_TYPE_FIELD = {
 const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
-  labelHelp: 'File path for a joint called VCF available in the AnVIL workspace\'s "Files" folder.',
+  labelHelp: 'File path for a joint called VCF available in the workspace "Files".',
   placeholder: '/path-under-Files-of-the-workspace',
   validate: validators.required,
 }

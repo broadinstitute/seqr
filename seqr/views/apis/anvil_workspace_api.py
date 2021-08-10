@@ -37,7 +37,7 @@ def get_vcf_samples(vcf_filename):
         if line[0] != '#':
             break
         if line.startswith('#CHROM'):
-            return set(line.rstrip().split('FORMAT\t', 2)[1].split('\t') if line.endswith('\n') else [])
+            return set(line.rstrip().split('FORMAT\t', 2)[1].split('\t'))
     return {}
 
 
@@ -114,7 +114,7 @@ def create_project_from_workspace(request, namespace, name):
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
     if not (data_path.endswith('.vcf') or data_path.endswith('.vcf.gz') or data_path.endswith('.vcf.bgz')):
-        error = 'The data file must have a postfix of ".vcf", ".vcf.gz", or ".vcf.bgz".'
+        error = 'Invalid VCF file format - file path must end with .vcf, .vcf.gz, or .vcf.bgz'
         return create_json_response({'error': error}, status=400, reason=error)
     if not does_file_exist(data_path, user=request.user):
         error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
@@ -131,7 +131,7 @@ def create_project_from_workspace(request, namespace, name):
     samples = get_vcf_samples(data_path)
     if not samples:
         return create_json_response(
-            {'error': 'Bad VCF file or no sample found in the data file.'}, status=400)
+            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
 
     missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in samples]
     if missing_samples:
