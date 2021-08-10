@@ -74,6 +74,7 @@ BaseFileLink.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   rawData: ownProps.getRawData ? ownProps.getRawData(state) : ownProps.rawData,
+  headers: ownProps.getHeaders ? ownProps.getHeaders(state) : ownProps.headers,
 })
 
 export const FileLink = connect(mapStateToProps)(BaseFileLink)
