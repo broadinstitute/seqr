@@ -37,7 +37,8 @@ def get_vcf_samples(vcf_filename):
         if line[0] != '#':
             break
         if line.startswith('#CHROM'):
-            return set(line.rstrip().split('FORMAT\t', 2)[1].split('\t'))
+            header = line.rstrip().split('FORMAT\t', 2)
+            return set(header[1].split('\t')) if len(header) == 2 else {}
     return {}
 
 
