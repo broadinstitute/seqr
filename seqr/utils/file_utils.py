@@ -63,4 +63,3 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
         if not raw_content:
             line = line.decode('utf-8')
         yield line
-

@@ -19,7 +19,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import send_html_email
-from seqr.utils.file_utils import does_file_exist
+from seqr.utils.file_utils import does_file_exist, file_iter
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL
@@ -28,12 +28,27 @@ logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
+BLOCK_SIZE = 65536
+
+
+def get_vcf_samples(vcf_filename):
+    byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
+    for line in file_iter(vcf_filename, byte_range=byte_range):
+        if line[0] != '#':
+            break
+        if line.startswith('#CHROM'):
+            header = line.rstrip().split('FORMAT\t', 2)
+            return set(header[1].split('\t')) if len(header) == 2 else {}
+    return {}
+
+
 def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
     def decorator(view_func):
         return login_and_policies_required(anvil_auth_required(view_func), login_url=GOOGLE_LOGIN_REQUIRED_URL, policy_url=policy_url)
     if wrapped_func:
         return decorator(wrapped_func)
     return decorator
+
 
 @anvil_auth_and_policies_required(policy_url=POLICY_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
@@ -94,11 +109,14 @@ def create_project_from_workspace(request, namespace, name):
     # Add the seqr service account to the corresponding AnVIL workspace
     added_account_to_workspace = add_service_account(request.user, namespace, name)
     if added_account_to_workspace:
-        _wait_for_service_account_access(request.user,namespace, name)
+        _wait_for_service_account_access(request.user, namespace, name)
 
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
+    if not (data_path.endswith('.vcf') or data_path.endswith('.vcf.gz') or data_path.endswith('.vcf.bgz')):
+        error = 'Invalid VCF file format - file path must end with .vcf, .vcf.gz, or .vcf.bgz'
+        return create_json_response({'error': error}, status=400, reason=error)
     if not does_file_exist(data_path, user=request.user):
         error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
         return create_json_response({'error': error}, status=400, reason=error)
@@ -109,6 +127,17 @@ def create_project_from_workspace(request, namespace, name):
     errors += ped_warnings
     if errors:
         return create_json_response({'errors': errors}, status=400)
+
+    # Validate the VCF to see if it contains all the required samples
+    samples = get_vcf_samples(data_path)
+    if not samples:
+        return create_json_response(
+            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
+
+    missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in samples]
+    if missing_samples:
+        return create_json_response(
+            {'error': 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(', '.join(missing_samples))}, status=400)
 
     # Create a new Project in seqr
     project_args = {
@@ -142,6 +171,7 @@ def _wait_for_service_account_access(user, namespace, name):
         if has_service_account_access(user, namespace, name):
             return True
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
+
 
 def _send_load_data_email(project, updated_individuals, data_path, sample_type, user):
     email_content = """
