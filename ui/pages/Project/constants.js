@@ -1,4 +1,5 @@
 /* eslint-disable no-multi-spaces */
+import orderBy from 'lodash/orderBy'
 
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
@@ -37,7 +38,6 @@ import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   INDIVIDUAL_FIELD_CONFIGS,
   SHOW_ALL,
-  familyVariantSamples,
   exportConfigForField,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
@@ -148,6 +148,16 @@ const ASSIGNED_TO_ME_FILTER = {
   name: 'Assigned To Me',
   createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
+
+// TODO should be passing familiesBySample instead
+const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
+  const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(
+    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
+  )]
+  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
+  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
+}
+
 
 export const FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,

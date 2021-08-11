@@ -8,7 +8,6 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
-  familyVariantSamples,
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
@@ -56,7 +55,7 @@ export const getCurrentProject = createSelector(
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
-export const getProjectSamplesByGuid = createSelector(getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+const getProjectSamplesByGuid = createSelector(getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 
 const getAnalysisGroupGuid = (state, props) => ((props || {}).match ? props.match.params.analysisGroupGuid : (props || {}).analysisGroupGuid)
 
@@ -339,10 +338,10 @@ const getIndividualsExportData = createSelector(
 const getSamplesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getIndividualsByGuid,
-  getSamplesByGuid,
-  (visibleFamilies, individualsByGuid, samplesByGuid) =>
+  getSamplesByFamily,
+  (visibleFamilies, individualsByGuid, samplesByFamily) =>
     visibleFamilies.reduce((acc, family) =>
-      [...acc, ...familyVariantSamples(family, individualsByGuid, samplesByGuid).map(sample => ({
+      [...acc, ...(samplesByFamily[family.familyGuid] || []).map(sample => ({
         ...sample,
         [FAMILY_FIELD_ID]: family.familyId,
         [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid].individualId,

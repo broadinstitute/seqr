@@ -3,7 +3,7 @@ import orderBy from 'lodash/orderBy'
 import uniqBy from 'lodash/uniqBy'
 
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME, familyVariantSamples } from 'shared/utils/constants'
+import { NOTE_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -105,37 +105,42 @@ export const getSortedIndividualsByFamily = createSelector(
   },
 )
 
-export const getSamplesByFamily = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
+const getSortedSamples = createSelector(
   getSamplesByGuid,
-  (familiesByGuid, individualsByGuid, samplesByGuid) => {
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
-      ...acc,
-      [familyGuid]: familyVariantSamples(family, individualsByGuid, samplesByGuid),
-    }), {})
-  },
+  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)), // TODO replace orderBy with sort
 )
 
+export const getSamplesByFamily = createSelector(
+  getIndividualsByGuid,
+  getSortedSamples,
+  (individualsByGuid, sortedSamples) =>
+    sortedSamples.reduce((acc, sample) => {
+      const { familyGuid } = individualsByGuid[sample.individualGuid]
+      if (!acc[familyGuid]) {
+        acc[familyGuid] = []
+      }
+      acc[familyGuid].push(sample)
+      return acc
+    }, {}),
+)
+
+// TODO should we just use getSamplesByFamily
 export const getFirstSampleByFamily = createSelector(
   getSamplesByFamily,
   (samplesByFamily) => {
     return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
+      [familyGuid]: familySamples[0],
     }), {})
   },
 )
 
 export const getHasActiveVariantSampleByFamily = createSelector(
-  getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (individualsByFamily, samplesByGuid) => {
-    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+  getSamplesByFamily,
+  (samplesByFamily) => {
+    return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
-        sampleGuid => samplesByGuid[sampleGuid].isActive,
-      )),
+      [familyGuid]: familySamples.some(({ isActive }) => isActive),
     }), {})
   },
 )
