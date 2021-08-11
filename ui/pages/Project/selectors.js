@@ -101,7 +101,6 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   getProjectSamplesByGuid,
   getSamplesByFamily,
   getCurrentAnalysisGroup,
-  getProjectAnalysisGroupFamiliesByGuid,
   (projectSamplesByGuid, samplesByFamily, analysisGroup) =>
     (analysisGroup ? analysisGroup.familyGuids.reduce(
       (acc, familyGuid) => ([...acc, ...(samplesByFamily[familyGuid] || [])]), [],
@@ -234,27 +233,43 @@ export const getFamiliesSortDirection = createSelector(
   familyTableState => familyTableState.familiesSortDirection || 1,
 )
 
-/**
- * function that returns an array of family guids that pass the currently-selected
- * familiesFilter.
- *
- * @param state {object} global Redux state
- */
+const hasFamilySearch = createSelector(
+  getFamiliesSearch,
+  familiesSearch => !!familiesSearch,
+)
+
+const getFamilySearchFields = (family, individualsByGuid) => ([
+  family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
+  ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
+  ...family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';')),
+])
+
+const getFamiliesBySearchString = createSelector(
+  getProjectAnalysisGroupFamiliesByGuid,
+  getIndividualsByGuid,
+  hasFamilySearch,
+  (familiesByGuid, individualsByGuid, shouldSearch) => {
+    if (!shouldSearch) {
+      return null
+    }
+
+    return Object.values(familiesByGuid).reduce((acc, family) => (
+      { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
+  },
+)
+
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
+  getFamiliesBySearchString,
   getIndividualsByGuid,
   getSamplesByGuid,
   getUser,
   getFamiliesFilter,
   getFamiliesSearch,
-  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
-    const searchFilter = familiesSearch ? family =>
-      `${family.displayName};${family.familyId};${(family.assignedAnalyst || {}).fullName};${
-        (family.assignedAnalyst || {}).email};${family.analysedBy.map(({ createdBy }) =>
-        `${createdBy.fullName}${createdBy.email}`)};${family.individualGuids.map(individualGuid =>
-        (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';'),
-      ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
-    const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
+  (familiesByGuid, familiesBySearchString, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
+    const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
+      familySearchString => familySearchString.includes(familiesSearch),
+    ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies
