@@ -165,8 +165,8 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_DATA_LOADED,
     category: 'Data Status:',
     name: 'Data Loaded',
-    createFilter: (individualsByGuid, samplesByGuid) => family =>
-      familyVariantSamples(family, individualsByGuid, samplesByGuid).filter(sample => sample.isActive).length > 0,
+    createFilter: (individualsByGuid, user, samplesByFamily) => family =>
+      (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0,
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
@@ -187,14 +187,14 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Analysed By Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
@@ -265,7 +265,7 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       familyIsAssignedToMe(family, user) && familyIsInReview(family, individualsByGuid),
   },
   { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },

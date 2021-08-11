@@ -256,11 +256,11 @@ export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getFamiliesBySearchString,
   getIndividualsByGuid,
-  getSamplesByGuid,
+  getSamplesByFamily,
   getUser,
   getFamiliesFilter,
   getFamiliesSearch,
-  (familiesByGuid, familiesBySearchString, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
+  (familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesFilter, familiesSearch) => {
     const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
       familySearchString => familySearchString.includes(familiesSearch),
     ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
@@ -269,7 +269,7 @@ export const getVisibleFamilies = createSelector(
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, samplesByGuid, user)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, user, samplesByFamily)
     return searchedFamilies.filter(familyFilter)
   },
 )
