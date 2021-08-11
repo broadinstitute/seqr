@@ -3,10 +3,13 @@ from social_core.backends.open_id_connect import OpenIdConnectAuth
 
 
 class McriOktaMixin(OktaMixin):
+
     """
-    Overridden to fix paths to authorisation server.  At MCRI, we're using Org level authorisation server but
+    Overridden to fix paths to authorisation server.
+
+    At MCRI, we're using Org level authorisation server but
     social_core.backends.okta.OktaMixin assumes Custom Authorisation Server.  See differences between the two:
-    https://support.okta.com/help/s/article/Difference-Between-Okta-as-An-Authorization-Server-vs-Custom-Authorization-Server?language=en_US 
+    https://support.okta.com/help/s/article/Difference-Between-Okta-as-An-Authorization-Server-vs-Custom-Authorization-Server?language=en_US
     """
 
     def authorization_url(self):
@@ -17,8 +20,10 @@ class McriOktaMixin(OktaMixin):
 
 
 class McriOktaOAuth2(McriOktaMixin, OktaOAuth2):
+
     """
     Overridden for following reasons:
+
     * Include custom idp_groups from groups claim
     * Include groups as default scope
     * Fix path to /userinfo as using Org level authorisation server
@@ -32,7 +37,8 @@ class McriOktaOAuth2(McriOktaMixin, OktaOAuth2):
     ]
 
     def get_user_details(self, response):
-        """Return user details from Okta account"""
+        """Return user details from Okta account."""
+
         return {'username': response.get('preferred_username'),
                 'email': response.get('email') or '',
                 'first_name': response.get('given_name'),
@@ -41,7 +47,8 @@ class McriOktaOAuth2(McriOktaMixin, OktaOAuth2):
                 }
 
     def user_data(self, access_token, *args, **kwargs):
-        """Loads user data from Okta"""
+        """Loads user data from Okta."""
+
         return self.get_json(
             self._url('oauth2/v1/userinfo'),
             headers={
