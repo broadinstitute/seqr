@@ -1,5 +1,4 @@
 import { createSelector } from 'reselect'
-import orderBy from 'lodash/orderBy'
 import uniqBy from 'lodash/uniqBy'
 
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -97,17 +96,20 @@ export const getSortedIndividualsByFamily = createSelector(
 
     return Object.entries(familyIndividuals).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: orderBy(
-        individuals,
-        [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
-      ),
+      [familyGuid]: individuals.sort((a, b) => {
+        const compareVal = getIndivAffectedSort(a) - getIndivAffectedSort(b)
+        if (compareVal === 0) {
+          return getIndivMmeSort(b).localeCompare(getIndivMmeSort(a))
+        }
+        return compareVal
+      }),
     }), {})
   },
 )
 
 const getSortedSamples = createSelector(
   getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)), // TODO replace orderBy with sort
+  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
 )
 
 export const getSamplesByFamily = createSelector(
