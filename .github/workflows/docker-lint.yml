@@ -8,7 +8,7 @@ on:
     branches:
       - docker-rework
     paths:
-      - deploy/docker/*/Dockerfile
+      - deploy/docker/**/Dockerfile
   # pull_request:
   #   types: [opened, synchronize, reopened]
 
