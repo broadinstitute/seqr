@@ -3,12 +3,11 @@ from social_core.backends.open_id_connect import OpenIdConnectAuth
 
 
 class McriOktaMixin(OktaMixin):
-
-    """
-    Overridden to fix paths to authorisation server.
+    """Overridden to fix paths to authorisation server.
 
     At MCRI, we're using Org level authorisation server but
-    social_core.backends.okta.OktaMixin assumes Custom Authorisation Server.  See differences between the two:
+    social_core.backends.okta.OktaMixin assumes Custom Authorisation Server.
+    See differences between the two:
     https://support.okta.com/help/s/article/Difference-Between-Okta-as-An-Authorization-Server-vs-Custom-Authorization-Server?language=en_US
     """
 
@@ -20,9 +19,7 @@ class McriOktaMixin(OktaMixin):
 
 
 class McriOktaOAuth2(McriOktaMixin, OktaOAuth2):
-
-    """
-    Overridden for following reasons:
+    """Overridden for following reasons:
 
     * Include custom idp_groups from groups claim
     * Include groups as default scope

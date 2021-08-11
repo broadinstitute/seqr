@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
     ]
 
     def update_username_match_email(apps, schema_editor):
-        """
-        Ensure username matches email.
+        """Ensure username matches email.
 
         oauth2_provider associates user access tokens (oauth2_provider_accesstoken) using username field and the
         username from MCRI Okta is email so we bulk set usernames to match their emails.
