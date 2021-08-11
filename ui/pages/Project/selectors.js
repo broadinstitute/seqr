@@ -105,16 +105,11 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
       (acc, familyGuid) => ([...acc, ...(samplesByFamily[familyGuid] || [])]), [],
     ) : Object.values(projectSamplesByGuid)).reduce((acc, sample) => {
       const loadedDate = (sample.loadedDate).split('T')[0]
-      if (!acc[sample.sampleType]) {
-        acc[sample.sampleType] = {}
+      const typeKey = `${sample.sampleType}__${sample.datasetType}`
+      if (!acc[typeKey]) {
+        acc[typeKey] = {}
       }
-      if (!acc[sample.sampleType][sample.datasetType]) {
-        acc[sample.sampleType][sample.datasetType] = {}
-      }
-      acc[sample.sampleType][sample.datasetType] = {
-        ...acc[sample.sampleType][sample.datasetType],
-        [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
-      }
+      acc[typeKey][loadedDate] = (acc[typeKey][loadedDate] || 0) + 1
       return acc
     }, {}),
 )

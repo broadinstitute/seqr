@@ -175,17 +175,18 @@ const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
 const Dataset = React.memo(({ project, samplesByType, user }) => {
 
-  const datasetSections = Object.keys(samplesByType).sort().reduce((acc, sampleType) => ([
-    ...acc,
-    ...Object.entries(samplesByType[sampleType]).map(([datasetType, loadedSampleCounts]) => ({
-      key: `${sampleType}-${datasetType}`,
+  const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
+    const [sampleType, datasetType] = sampleTypeKey.split('__')
+    return {
+      key: sampleTypeKey,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: Object.keys(loadedSampleCounts).sort().map(loadedDate =>
         <div key={loadedDate}>
           { new Date(loadedDate).toLocaleDateString()} - {loadedSampleCounts[loadedDate]} samples
         </div>,
       ),
-    }))]), [])
+    } }).sort((a, b) => a.title.localeCompare(b.title))
+
   if (!datasetSections.length) {
     datasetSections.push({
       title: 'Datasets',
