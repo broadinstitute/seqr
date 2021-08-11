@@ -309,10 +309,10 @@ export const getEntityExportConfig = ({ project, tableName, fileName, fields }) 
 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getFirstSampleByFamily,
-  (visibleFamilies, firstSampleByFamily) =>
+  getSamplesByFamily,
+  (visibleFamilies, samplesByFamily) =>
     visibleFamilies.reduce((acc, family) =>
-      [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: firstSampleByFamily[family.familyGuid] }], []),
+      [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0] }], []),
 )
 
 const getIndividualsExportData = createSelector(

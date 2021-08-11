@@ -124,17 +124,6 @@ export const getSamplesByFamily = createSelector(
     }, {}),
 )
 
-// TODO should we just use getSamplesByFamily
-export const getFirstSampleByFamily = createSelector(
-  getSamplesByFamily,
-  (samplesByFamily) => {
-    return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
-      ...acc,
-      [familyGuid]: familySamples[0],
-    }), {})
-  },
-)
-
 export const getHasActiveVariantSampleByFamily = createSelector(
   getSamplesByFamily,
   (samplesByFamily) => {
