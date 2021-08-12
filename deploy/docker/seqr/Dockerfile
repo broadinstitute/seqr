@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 #  install the packages necessary to build Python source:
-RUN apt update && apt install -y --no-install-recommends build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
     libnss3-dev libssl-dev libreadline-dev libffi-dev libbz2-dev \
     libncursesw5-dev libsqlite3-dev tk-dev libc6-dev ca-certificates \
     && apt-get clean \
@@ -45,6 +45,7 @@ RUN rm -rf ./Python-$PYTHON_VERSION \
     && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y --no-install-recommends \
@@ -55,41 +56,43 @@ RUN apt-get update \
 # install database clients for debugging (https://www.postgresql.org/download/linux/debian/)
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && curl -L0 -o - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
         postgresql-12 \
         postgresql-client-12 \
         libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y \
-    redis-tools \
+        redis-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # install gcloud tools
+# ignore the multiple consecutive runs lint rule, since we want to keep this in a separate layer.
+# ignore the unused environment variable, because the gcloud CLI install uses it
+# hadolint ignore=SC2034,DL3013
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
         gcc \
         libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install gsutil
+    && pip install --no-cache-dir gsutil
 
+# ignore the unused environment variable, because the gcloud sdk install uses it
+# hadolint ignore=SC2034
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
         google-cloud-sdk \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
+# ignore the multiple consecutive runs lint rule, since we want to keep this in a separate layer.
+# hadolint ignore=DL3059
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/"$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" \
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
-
 
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
@@ -102,7 +105,8 @@ RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
 WORKDIR /seqr
 
 # install seqr dependencies
-RUN pip install wheel && pip install -r requirements.txt
+# hadolint ignore=DL3013
+RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
