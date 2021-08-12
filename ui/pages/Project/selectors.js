@@ -1,4 +1,3 @@
-import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import {
@@ -284,17 +283,16 @@ export const getVisibleFamilies = createSelector(
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
   getIndividualsByGuid,
-  getSamplesByGuid,
+  getSamplesByFamily,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid)
-    // TODO implement a array.sort
-    return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByFamily)
+    return visibleFamilies.slice(0).sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)) * familiesSortDirection)
   },
 )
 

@@ -1,5 +1,4 @@
 /* eslint-disable no-multi-spaces */
-import orderBy from 'lodash/orderBy'
 
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
@@ -149,16 +148,6 @@ const ASSIGNED_TO_ME_FILTER = {
   createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
 
-// TODO should be passing familiesBySample instead
-const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
-  const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
-  )]
-  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
-  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
-}
-
-
 export const FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
@@ -297,6 +286,9 @@ const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
+const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+  (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {})
+
 export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_NAME,
@@ -318,24 +310,23 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
+      const loadedSamples = samplesByFamily[family.familyGuid] || []
       return loadedSamples.length ? loadedSamples[loadedSamples.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
+      const loadedSamples = samplesByFamily[family.familyGuid] || []
       return loadedSamples.length ? loadedSamples[0].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
     value: SORT_BY_ANALYSIS_STATUS,
     name: 'Analysis Status',
-    createSortKeyGetter: () => family =>
-      FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
+    createSortKeyGetter: () => family => FAMILY_ANALYSIS_STATUS_SORT_LOOKUP[family.analysisStatus] || '',
   },
   {
     value: SORT_BY_ANALYSED_DATE,
