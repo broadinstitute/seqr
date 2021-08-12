@@ -35,7 +35,6 @@ docker run --name seqr -p 80:8000 \
     -e ANALYST_USER_GROUP=analysts \
     -e PM_USER_GROUP=project-managers \
     -e PYTHONPATH=/seqr \
-    -e STATIC_MEDIA_BUCKET=cpg-seqr-static-files \
     -e STATIC_MEDIA_DIR=/seqr_static_files \
     -e ELASTICSEARCH_PROTOCOL=https \
     -e ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch.es.australia-southeast1.gcp.elastic-cloud.com \
