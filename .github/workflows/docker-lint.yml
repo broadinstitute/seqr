@@ -9,6 +9,7 @@ on:
       - docker-rework
     paths:
       - deploy/docker/seqr/Dockerfile
+      - .hadolint.yaml
   # pull_request:
   #   types: [opened, synchronize, reopened]
 
