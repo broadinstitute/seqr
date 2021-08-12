@@ -64,29 +64,24 @@ export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid,
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
+const groupIndividualsByFamilyGuid = individuals =>
+  individuals.reduce((acc, individual) => {
+    if (!acc[individual.familyGuid]) {
+      acc[individual.familyGuid] = []
+    }
+    acc[individual.familyGuid].push(individual)
+    return acc
+  }, {})
+
 export const getIndividualsByFamily = createSelector(
   getIndividualsByGuid,
-  (individualsByGuid) => {
-    return Object.values(individualsByGuid).reduce((acc, individual) => {
-      if (!acc[individual.familyGuid]) {
-        acc[individual.familyGuid] = []
-      }
-      acc[individual.familyGuid].push(individual)
-      return acc
-    }, {})
-  },
+  individualsByGuid => groupIndividualsByFamilyGuid(Object.values(individualsByGuid)),
 )
 
-/**
- * function that returns a mapping of each familyGuid to an array of individuals in that family.
- * The array of individuals is in sorted order.
- *
- * @param state {object} global Redux state
- */
-export const getSortedIndividualsByFamily = createSelector(
-  getIndividualsByFamily,
+const getSortedIndividuals = createSelector(
+  getIndividualsByGuid,
   getMmeSubmissionsByGuid,
-  (familyIndividuals, mmeSubmissionsByGuid) => {
+  (individualsByGuid, mmeSubmissionsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
     const getIndivMmeSort = ({ mmeSubmissionGuid }) => {
@@ -94,17 +89,19 @@ export const getSortedIndividualsByFamily = createSelector(
       return deletedDate ? '2000-01-01' : createdDate
     }
 
-    return Object.entries(familyIndividuals).reduce((acc, [familyGuid, individuals]) => ({
-      ...acc,
-      [familyGuid]: individuals.sort((a, b) => {
-        const compareVal = getIndivAffectedSort(a) - getIndivAffectedSort(b)
-        if (compareVal === 0) {
-          return getIndivMmeSort(b).localeCompare(getIndivMmeSort(a))
-        }
-        return compareVal
-      }),
-    }), {})
+    return Object.values(individualsByGuid).sort((a, b) => {
+      const compareVal = getIndivAffectedSort(a) - getIndivAffectedSort(b)
+      if (compareVal === 0) {
+        return getIndivMmeSort(b).localeCompare(getIndivMmeSort(a))
+      }
+      return compareVal
+    })
   },
+)
+
+export const getSortedIndividualsByFamily = createSelector(
+  getSortedIndividuals,
+  groupIndividualsByFamilyGuid,
 )
 
 const getSortedSamples = createSelector(
