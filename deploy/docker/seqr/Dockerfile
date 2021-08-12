@@ -65,9 +65,8 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg m
     && rm -rf /var/lib/apt/lists/*
 
 # install gcloud tools
-# ignore the multiple consecutive runs lint rule, since we want to keep this in a separate layer.
 # ignore the unused environment variable, because the gcloud CLI install uses it
-# hadolint ignore=SC2034,DL3013
+# hadolint ignore=SC2034
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get update && apt-get install -y --no-install-recommends \
@@ -88,8 +87,6 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# ignore the multiple consecutive runs lint rule, since we want to keep this in a separate layer.
-# hadolint ignore=DL3059
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/"$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" \
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
@@ -105,7 +102,6 @@ RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
 WORKDIR /seqr
 
 # install seqr dependencies
-# hadolint ignore=DL3013
 RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
 
 ARG SEQR_SERVICE_PORT
