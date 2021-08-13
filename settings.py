@@ -40,11 +40,17 @@ INSTALLED_APPS = [
     'guardian',
     'anymail',
     'seqr',
-    'panelapp',
     'reference_data',
     'matchmaker',
     'social_django',
 ]
+
+###########
+# PanelApp
+###########
+ENABLE_PANEL_APP = os.environ.get('ENABLE_PANEL_APP', 'False') == 'True'
+if ENABLE_PANEL_APP:
+    INSTALLED_APPS += ['panelapp']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
