@@ -268,7 +268,7 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
 
   const sampleTypeFamilies = familyGuids.reduce(
     (acc, fGuid) => {
-      Object.keys(igvSamplesByFamilySampleIndividual[fGuid] || {}).forEach((type) => {
+      Object.keys((igvSamplesByFamilySampleIndividual || {})[fGuid] || {}).forEach((type) => {
         if (!acc[type]) {
           acc[type] = []
         }
@@ -393,7 +393,7 @@ class FamilyReads extends React.PureComponent {
       showReads={this.showReads}
     />
 
-    const igvSampleIndividuals = this.state.openFamily && igvSamplesByFamilySampleIndividual[this.state.openFamily]
+    const igvSampleIndividuals = this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]
     const reads = igvSampleIndividuals ?
       <Segment.Group horizontal>
         {Object.keys(igvSampleIndividuals).length > 1 &&
