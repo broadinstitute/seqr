@@ -63,3 +63,15 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
         if not raw_content:
             line = line.decode('utf-8')
         yield line
+
+
+def save_data_to_gs(gs_path, data, user=None):
+    if not _is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected')
+    if does_file_exist(gs_path, user=user):
+        raise Exception('Can\'t overwrite existing file {}.'.format(gs_path))
+    command = 'echo "{data}" | gsutil cp - {gs_path}'.format(data=data, gs_path=gs_path)
+    process = _run_command(command, user=user)
+    if process.wait() != 0:
+        errors = [line.decode('utf-8').strip() for line in process.stdout]
+        raise Exception('Run command failed: ' + ' '.join(errors))
