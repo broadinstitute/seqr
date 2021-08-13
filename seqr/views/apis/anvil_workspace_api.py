@@ -155,7 +155,7 @@ def create_project_from_workspace(request, namespace, name):
     )
 
     # Upload sample IDs to a file on Google Storage
-    ids_path = _get_loading_project_path(project, request_json['sampleType']) + '/{guid}_ids.txt'.format(guid=project.guid)
+    ids_path = _get_loading_project_path(project, request_json['sampleType']) + 'base/{guid}_ids.txt'.format(guid=project.guid)
     try:
         save_data_to_gs(ids_path, '\n'.join(['s'] + [individual.individual_id for individual in updated_individuals]),
                         user=request.user)
@@ -181,7 +181,7 @@ def _wait_for_service_account_access(user, namespace, name):
 
 
 def _get_loading_project_path(project, sample_type):
-    return 'gs://seqr-datasets/v02/{genome_version}/AnVIL_{sample_type}/{guid}/base'.format(
+    return 'gs://seqr-datasets/v02/{genome_version}/AnVIL_{sample_type}/{guid}/'.format(
         guid=project.guid,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
@@ -192,7 +192,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
     pipeline_dag = {
         "active_projects": [project.guid],
         "vcf_path": data_path,
-        "project_path": _get_loading_project_path(project, sample_type),
+        "project_path": _get_loading_project_path(project, sample_type) + 'v1',
         "projects_to_run": [project.guid],
     }
     message_content = """
