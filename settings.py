@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'guardian',
     'anymail',
     'seqr',
+    'panelapp',
     'reference_data',
     'matchmaker',
     'social_django',
