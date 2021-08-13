@@ -1,11 +1,11 @@
-import React, { createElement } from 'react'
+import React from 'react'
 import { Table } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 
 import { FamilyLayout } from 'shared/components/panel/family'
-import { helpLabel, StyledForm } from 'shared/components/form/ReduxFormWrapper'
+import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
 import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
@@ -107,17 +107,11 @@ const TableHeaderRow = React.memo((
           &nbsp; families
         </RegularFontHeaderCell>
         <OverflowHeaderCell width={16} textAlign="right">
-          <StyledForm inline hasSubmitButton={false}>
-            {(tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS).map(({ component, name, label, labelHelp, ...fieldProps }) =>
-              createElement(component, {
-                key: name,
-                value: familiesTableState[name],
-                label: helpLabel(label, labelHelp),
-                onChange: updateFamiliesTableField(name),
-                ...fieldProps,
-              }),
-            )}
-          </StyledForm>
+          <StateChangeForm
+            initialValues={familiesTableState}
+            updateField={updateFamiliesTableField}
+            fields={(tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS)}
+          />
         </OverflowHeaderCell>
       </Table.Row>
       {fields &&
