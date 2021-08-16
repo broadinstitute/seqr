@@ -69,20 +69,7 @@ class DatasetAPITest(object):
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
-
-        self.assertEqual(len(urllib3_responses.calls), 2)
-        self.assertDictEqual(
-            urllib3_responses.call_request_json(),
-            {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
-        )
-
-        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
-            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}
-        }, method=urllib3_responses.POST)
-        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
+            'errors': ['Index metadata must contain fields: genomeVersion, sampleType, sourceFilePath']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             INDEX_NAME: {'mappings': {'_meta': {
@@ -131,6 +118,19 @@ class DatasetAPITest(object):
                 'genomeVersion': '37',
                 'sourceFilePath': 'test_data.vds',
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['No samples found in the index. Make sure the specified caller type is correct']})
+
+        self.assertDictEqual(
+            urllib3_responses.call_request_json(),
+            {'aggs': {'sample_ids': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}}}}
+        )
+
+        urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19679'}, {'key': 'NA19678_1'}]}}
+        }, method=urllib3_responses.POST)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})

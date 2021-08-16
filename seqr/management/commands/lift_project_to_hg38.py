@@ -37,7 +37,7 @@ class Command(BaseCommand):
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
-            elasticsearch_index, project=project, genome_version=GENOME_VERSION_GRCh38)
+            elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
         matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,

@@ -19,7 +19,7 @@ def validate_index_metadata_and_get_elasticsearch_index_samples(elasticsearch_in
     all_index_metadata = get_index_metadata(elasticsearch_index, es_client, include_fields=True)
     if elasticsearch_index in all_index_metadata:
         index_metadata = all_index_metadata.get(elasticsearch_index)
-        validate_index_metadata(index_metadata, **kwargs)
+        validate_index_metadata(index_metadata, elasticsearch_index, **kwargs)
         sample_field = _get_samples_field(index_metadata)
         sample_type = index_metadata['sampleType']
     else:
@@ -28,7 +28,7 @@ def validate_index_metadata_and_get_elasticsearch_index_samples(elasticsearch_in
         sample_field = _get_samples_field(metadatas[0])
         sample_type = metadatas[0]['sampleType']
         for metadata in metadatas[1:]:
-            validate_index_metadata(metadata, elasticsearch_index=elasticsearch_index, **kwargs)
+            validate_index_metadata(metadata, elasticsearch_index, **kwargs)
             if sample_field != _get_samples_field(metadata):
                 raise ValueError('Found mismatched sample fields for indices in alias')
             if sample_type != metadata['sampleType']:
@@ -45,7 +45,7 @@ def _get_samples_field(index_metadata):
     return next((field for field in SAMPLE_FIELDS_LIST if field in index_metadata['fields'].keys()))
 
 
-def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None,
+def validate_index_metadata(index_metadata, elasticsearch_index, project=None, genome_version=None,
                             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS):
     metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
     if any(field not in (index_metadata or {}) for field in metadata_fields):
