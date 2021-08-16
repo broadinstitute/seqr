@@ -92,8 +92,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.save_data_to_gs')
-    def test_create_project_from_workspace(self, mock_save_data, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
+    @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
+    def test_create_project_from_workspace(self, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
@@ -203,7 +203,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_slack.side_effect = Exception('Something wrong while sending the slack message.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('AnVIL loading request slack exception: Something wrong while sending the slack message.', self.manager_user)
+        mock_api_logger.error.assert_called_with('AnVIL loading request slack exception: Something wrong while sending the slack message.', self.manager_user, detail=mock.ANY)
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

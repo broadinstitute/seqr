@@ -12,13 +12,13 @@ from seqr.models import Project, CAN_EDIT
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.file_utils import load_uploaded_file
+from seqr.views.utils.file_utils import load_uploaded_file, save_temp_data
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack
-from seqr.utils.file_utils import does_file_exist, file_iter, save_data_to_gs
+from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
@@ -156,18 +156,16 @@ def create_project_from_workspace(request, namespace, name):
 
     # Upload sample IDs to a file on Google Storage
     ids_path = _get_loading_project_path(project, request_json['sampleType']) + 'base/{guid}_ids.txt'.format(guid=project.guid)
+    sample_ids = '\n'.join(['s'] + [individual.individual_id for individual in updated_individuals])
     try:
-        save_data_to_gs(ids_path, '\n'.join(['s'] + [individual.individual_id for individual in updated_individuals]),
-                        user=request.user)
+        temp_path = save_temp_data(sample_ids)
+        mv_file_to_gs(temp_path, ids_path, user=request.user)
     except Exception as ee:
-        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user)
+        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,
+                     detail=sample_ids)
 
     # Send a slack message to the slack channel
-    try:
-        _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
-    except Exception as ee:
-        message = 'AnVIL loading request slack exception: {}'.format(str(ee))
-        logger.error(message, request.user)
+    _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
 
     return create_json_response({'projectGuid':  project.guid})
 
@@ -217,4 +215,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         dag=json.dumps(pipeline_dag, indent=4),
     )
 
-    safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+    try:
+        safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+    except Exception as ee:
+        logger.error('AnVIL loading request slack exception: {}'.format(str(ee)), user, detail=message_content)
