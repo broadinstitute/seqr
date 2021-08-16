@@ -681,7 +681,7 @@ FIELD_TYPE_MAP = {
 }
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
-INDEX_METADATA = {
+CORE_INDEX_METADATA = {
     INDEX_NAME: {
         '_meta': {'genomeVersion': '37'},
         'properties': MAPPING_PROPERTIES,
@@ -695,6 +695,7 @@ INDEX_METADATA = {
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
     },
 }
+INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
@@ -2394,7 +2395,7 @@ class EsUtilsTest(TestCase):
 
         setup_search_response()
         urllib3_responses.add_json(
-            '/{}/_mapping'.format(INDEX_ALIAS), {k: {'mappings': v} for k, v in INDEX_METADATA.items()})
+            '/{}/_mapping'.format(INDEX_ALIAS), {k: {'mappings': v} for k, v in CORE_INDEX_METADATA.items()})
         urllib3_responses.add_json('/_aliases', {'success': True}, method=urllib3_responses.POST)
 
         get_es_variants(results_model, num_results=2)
