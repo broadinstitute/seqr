@@ -79,6 +79,15 @@ class EsSearch(object):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
                 ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
             ))
+        elif len(self.index_metadata) > len(self.samples_by_family_index):
+            # One of the indices is an alias
+            additional_meta_indices = set(self.index_metadata.keys()) - set(self._indices)
+            alias = next(ind for ind in self._indices if ind not in self.index_metadata)
+            self._indices.remove(alias)
+            self._indices += additional_meta_indices
+            alias_samples = self.samples_by_family_index.pop(alias)
+            for alias_index in additional_meta_indices:
+                self.samples_by_family_index[alias_index] = alias_samples
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
