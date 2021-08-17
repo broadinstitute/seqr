@@ -103,7 +103,7 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertListEqual(
             new_locus_list['items'],
             [
-                {'geneId': 'ENSG00000223972'},
+                {'geneId': 'ENSG00000223972', 'pagene': None},
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'genomeVersion': '37', 'locusListIntervalGuid': mock.ANY}
             ]
         )

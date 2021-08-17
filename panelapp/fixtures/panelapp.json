@@ -1,0 +1,241 @@
+[
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 50,
+    "fields": {
+      "gene_id": "ENSG00000182197",
+      "gene_symbol": "EXT1",
+      "chrom_grch37": "8",
+      "start_grch37": 118806729,
+      "end_grch37": 119124092,
+      "strand_grch37": "-",
+      "coding_region_size_grch37": 2238,
+      "chrom_grch38": "8",
+      "start_grch38": 117794490,
+      "end_grch38": 118111853,
+      "strand_grch38": "-",
+      "coding_region_size_grch38": 2238,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 51,
+    "fields": {
+      "gene_id": "ENSG00000151348",
+      "gene_symbol": "EXT2",
+      "chrom_grch37": "11",
+      "start_grch37": 44117223,
+      "end_grch37": 44273531,
+      "strand_grch37": "+",
+      "coding_region_size_grch37": 2253,
+      "chrom_grch38": "11",
+      "start_grch38": 44095673,
+      "end_grch38": 44251981,
+      "strand_grch38": "+",
+      "coding_region_size_grch38": 2253,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 52,
+    "fields": {
+      "gene_id": "ENSG00000139567",
+      "gene_symbol": "ACVRL1",
+      "chrom_grch37": "12",
+      "start_grch37": 52300692,
+      "end_grch37": 52317145,
+      "strand_grch37": "+",
+      "coding_region_size_grch37": 1551,
+      "chrom_grch38": "12",
+      "start_grch38": 51906908,
+      "end_grch38": 51923361,
+      "strand_grch38": "+",
+      "coding_region_size_grch38": 1551,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 53,
+    "fields": {
+      "gene_id": "ENSG00000106991",
+      "gene_symbol": "ENG",
+      "chrom_grch37": "9",
+      "start_grch37": 130577291,
+      "end_grch37": 130617035,
+      "strand_grch37": "-",
+      "coding_region_size_grch37": 1974,
+      "chrom_grch38": "9",
+      "start_grch38": 127815012,
+      "end_grch38": 127854756,
+      "strand_grch38": "-",
+      "coding_region_size_grch38": 1974,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 54,
+    "fields": {
+      "gene_id": "ENSG00000090861",
+      "gene_symbol": "AARS",
+      "chrom_grch37": "16",
+      "start_grch37": 70286198,
+      "end_grch37": 70323446,
+      "strand_grch37": "-",
+      "coding_region_size_grch37": 2904,
+      "chrom_grch38": "16",
+      "start_grch38": 70252295,
+      "end_grch38": 70289543,
+      "strand_grch38": "-",
+      "coding_region_size_grch38": 2904,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "seqr.locuslist",
+    "pk": 3,
+    "fields": {
+      "guid": "LL01705_sarcoma",
+      "projects": [
+        3
+      ],
+      "created_date": "2017-02-07T12:55:30.700Z",
+      "created_by": 11,
+      "last_modified_date": "2018-05-01T00:02:38.733Z",
+      "name": "Sarcoma",
+      "description": "Cancer susceptibility",
+      "is_public": true
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 31,
+    "fields": {
+      "guid": "LL01705_ENSG00000182197",
+      "created_date": "2018-04-28T00:03:25.341Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.341Z",
+      "locus_list": 3,
+      "gene_id": "ENSG00000182197"
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 32,
+    "fields": {
+      "guid": "LL01705_ENSG00000151348",
+      "created_date": "2018-04-28T00:03:25.347Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.347Z",
+      "locus_list": 3,
+      "gene_id": "ENSG00000151348"
+    }
+  },
+  {
+    "model": "panelapp.palocuslist",
+    "pk": 3,
+    "fields": {
+      "panel_app_id": "3281",
+      "disease_group": null,
+      "disease_sub_group": "2017-02-07T12:55:30.700Z",
+      "status": "public",
+      "version": "0.2",
+      "version_created": "2017-02-07T12:55:30.700Z",
+      "raw_data": {
+        "id": 3281,
+        "name": "Sarcoma",
+        "stats": {
+          "number_of_strs": 0,
+          "number_of_genes": 4,
+          "number_of_regions": 0
+        },
+        "types": [
+          {
+            "name": "Adult Genetics Unit, Royal Adelaide Hospital",
+            "slug": "adult-genetics-unit-royal-adelaide-hospital",
+            "description": "Adult Genetics Unit, Royal Adelaide Hospital"
+          },
+          {
+            "name": "SA Pathology",
+            "slug": "sa-pathology",
+            "description": "SA Pathology"
+          },
+          {
+            "name": "Cancer Germline",
+            "slug": "cancer-germline",
+            "description": "Germline cancer panel"
+          }
+        ],
+        "status": "public",
+        "hash_id": null,
+        "version": "0.2",
+        "disease_group": "Cancer susceptibility",
+        "version_created": "2020-08-10T07:04:06.291247Z",
+        "disease_sub_group": "",
+        "relevant_disorders": []
+      }
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 31,
+    "fields": {
+      "confidence_level": "3",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal",
+      "raw_data": {
+        "tags": [],
+        "evidence": [
+          "Expert Review Green",
+          "SA Pathology"
+        ],
+        "penetrance": null,
+        "phenotypes": [],
+        "transcript": null,
+        "entity_name": "EXT1",
+        "entity_type": "gene",
+        "publications": [],
+        "confidence_level": "3",
+        "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
+        "mode_of_pathogenicity": ""
+      }
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 32,
+    "fields": {
+      "confidence_level": "3",
+      "biotype": null,
+      "penetrance": "complete",
+      "mode_of_pathogenicity": "Other",
+      "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
+      "raw_data": {
+        "tags": [],
+        "evidence": [
+          "Expert Review Green",
+          "SA Pathology"
+        ],
+        "penetrance": null,
+        "phenotypes": [],
+        "transcript": null,
+        "entity_name": "EXT2",
+        "entity_type": "gene",
+        "publications": [],
+        "confidence_level": "3",
+        "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
+        "mode_of_pathogenicity": ""
+      }
+    }
+  }
+]

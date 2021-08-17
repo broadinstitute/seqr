@@ -41,10 +41,13 @@ def locus_list_info(request, locus_list_guid):
         check_multi_project_permissions(locus_list, request.user)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
-    gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
+    pagenes_by_id = {item['geneId']: item.get('pagene', None) for item in locus_list_json['items']
+                     if item.get('geneId')}
+
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_genes(gene_ids)
+        'genesById': get_genes(pagenes_by_id.keys()),
+        'pagenesById': pagenes_by_id,
     })
 
 
