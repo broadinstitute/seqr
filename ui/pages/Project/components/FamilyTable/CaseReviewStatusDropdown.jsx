@@ -76,7 +76,10 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     updateIndividualField: individualField => (value) => {
       dispatch(updateIndividual({
-        individualGuid: ownProps.individual.individualGuid, individualField: toSnakecase(camelcaseToTitlecase(individualField)), [individualField]: value }))
+        individualGuid: ownProps.individual.individualGuid,
+        individualField: toSnakecase(camelcaseToTitlecase(individualField)),
+        [individualField]: value,
+      }))
     },
     updateIndividualDiscussion: (updates) => {
       dispatch(updateIndividual({
