@@ -8,6 +8,10 @@ POSTGRES_VERSION: '12'
 DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-8'
 DEFAULT_POOL_NUM_NODES: 2
 NODE_POOLS:
+  es-data:
+    num_nodes: 11
+    machine_type: n1-highmem-8
+    labels: nodeType=data
   es-data-nodes:
     num_nodes: 3
     machine_type: n1-highmem-8
