@@ -67,7 +67,7 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
 
 def mv_file_to_gs(local_path, gs_path, user=None):
     if not _is_google_bucket_file_path(gs_path):
-        raise Exception('A Google Storage path is expected')
+        raise Exception('A Google Storage path is expected.')
     command = 'gsutil mv {} {}'.format(local_path, gs_path)
     process = _run_command(command, user=user)
     if process.wait() != 0:

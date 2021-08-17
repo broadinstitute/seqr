@@ -227,14 +227,20 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Project "{name}" for workspace "{namespace}/{name}" exists.'
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
-        # Test sending slack message exception
+        # Test saving ID file and sending slack message exception
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
+        mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         mock_slack.side_effect = Exception('Something wrong while sending the slack message.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('AnVIL loading request slack exception: Something wrong while sending the slack message.', self.manager_user, detail=mock.ANY)
+        mock_api_logger.error.has_calls([
+            mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+                      self.manager_user, detail='s\nNA19675\nNA19678\nHG00735'),
+            mock.call('AnVIL loading request slack exception: Something wrong while sending the slack message.',
+                      self.manager_user, detail=slack_message),
+        ])
 
-        # Test logged in locally
+            # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
