@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Header } from 'semantic-ui-react'
@@ -12,6 +13,13 @@ import {
   LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
   LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
 } from '../../utils/constants'
+
+const FilterContainer = styled.div`
+  position: relative;
+  top: -60px;
+  margin-bottom: -60px;
+  text-align: right;
+`
 
 const EDIT_FIELD = 'edit'
 const NAME_WITH_LINK_FIELD = 'nameWithLink'
@@ -62,6 +70,9 @@ const PUBLIC_TABLE = {
 }
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
 
+const getLocusListFilterVal = list =>
+  [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD].map(key => list[key] || '').join()
+
 const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, tableButtons, ...tableProps }) => {
   let data = Object.values(locusListsByGuid)
   if (omitLocusLists) {
@@ -89,6 +100,8 @@ const LocusListTables = React.memo(({ locusListsByGuid, fields, omitLocusLists, 
           defaultSortColumn="name"
           columns={(fields || tableFields).map(field => FIELD_LOOKUP[field])}
           data={tableData[name]}
+          getRowFilterVal={getLocusListFilterVal}
+          filterContainer={FilterContainer}
           {...tableProps}
         />
         {tableButtons && tableButtons[name]}
