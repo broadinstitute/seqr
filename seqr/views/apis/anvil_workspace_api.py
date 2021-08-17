@@ -164,7 +164,7 @@ def create_project_from_workspace(request, namespace, name):
     )
 
     # Upload sample IDs to a file on Google Storage
-    ids_path = _get_loading_project_path(project, request_json['sampleType']) + 'base/{guid}_ids.txt'.format(guid=project.guid)
+    ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, request_json['sampleType']), guid=project.guid)
     sample_ids = '\n'.join(['s'] + [individual.individual_id for individual in updated_individuals])
     try:
         temp_path = save_temp_data(sample_ids)
@@ -199,7 +199,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
     pipeline_dag = {
         "active_projects": [project.guid],
         "vcf_path": data_path,
-        "project_path": _get_loading_project_path(project, sample_type) + 'v1',
+        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
         "projects_to_run": [project.guid],
     }
     message_content = """
