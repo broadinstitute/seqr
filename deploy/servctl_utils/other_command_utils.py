@@ -79,9 +79,12 @@ def delete_all(deployment_target):
 
 
 def get_disk_names(disk, settings):
-    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
+    disk_setting_prefix = disk.upper().replace('-', '_')
+    num_disks = settings.get('{}_NUM_DISKS'.format(disk_setting_prefix)) or 1
+    name_suffix = settings.get('{}_DISK_NAME_SUFFIX'.format(disk_setting_prefix)) or ''
     return [
-        '{cluster_name}-{disk}-disk{suffix}'.format(
-            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+        '{cluster_name}-{disk}{name_suffix}-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], disk=disk, name_suffix=name_suffix,
+            suffix='-{}'.format(i + 1) if num_disks > 1 else '')
     for i in range(num_disks)]
 

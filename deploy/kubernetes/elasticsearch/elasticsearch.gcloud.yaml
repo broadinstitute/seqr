@@ -111,7 +111,7 @@ spec:
             resources:
               requests:
                 storage: {{ ES_POD_VOLUME_SIZE }}
-  - name: data
+  - name: data-nodes
     count:  {{ ES_DATA_NUM_PODS }}
     config:
       node.master: false
@@ -166,6 +166,61 @@ spec:
         resources:
           requests:
             storage: {{ ES_DATA_DISK_SIZE }}
+  - name: data
+    count:  {{ ES_DATA_OLD_NUM_PODS }}
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      node.remote_cluster_client: false
+      cluster.routing.allocation.disk.watermark.low: "91%"
+      cluster.routing.allocation.disk.watermark.high: "95%"
+      cluster.routing.allocation.disk.watermark.flood_stage: "97%"
+      cluster.routing.allocation.total_shards_per_node: {{ ELASTICSEARCH_MAX_SHARDS_PER_NODE }}
+    podTemplate:
+      metadata:
+        labels:
+          name: elasticsearch
+          deployment: {{ DEPLOY_TO }}
+      spec:
+      {% if ES_DATA_OLD_NUM_PODS > 1 %}
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: nodeType
+                  operator: In
+                  values:
+                  - data
+      {% endif %}
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+          env:
+          - name: ES_JAVA_OPTS
+            value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
+          resources:
+            requests:
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
+            limits:
+              memory: {{ ELASTICSEARCH_CONTAINER_MEMORY }}
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ ES_DATA_DISK_TYPE }}-storage-class
+        resources:
+          requests:
+            storage: {{ ES_DATA_OLD_DISK_SIZE }}
 {% if ES_LOADING_NUM_PODS > 0 %}
   - name: data-loading-node
     count: {{ ES_LOADING_NUM_PODS }}
