@@ -96,7 +96,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
     @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile.NamedTemporaryFile')
     def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
@@ -179,7 +179,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = True
         mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
                                        'chr1	1000	test\n']
-        mock_tempfile.NamedTemporaryFile.return_value.__enter__.return_value.name = TEMP_PATH
+        mock_tempfile.return_value.__enter__.return_value.name = TEMP_PATH
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -193,8 +193,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_time.sleep.assert_not_called()
         mock_file_exist.assert_called_with(TEST_VCF_PATH, user=self.manager_user)
         mock_file_iter.assert_called_with(TEST_VCF_PATH, byte_range=None)
-        mock_tempfile.NamedTemporaryFile.assert_called_with(mode='wb', delete=False)
-        mock_tempfile.NamedTemporaryFile.return_value.__enter__.return_value.write.assert_called_with(b's\nNA19675\nNA19678\nHG00735')
+        mock_tempfile.assert_called_with(mode='wb', delete=False)
+        mock_tempfile.return_value.__enter__.return_value.write.assert_called_with(b's\nNA19675\nNA19678\nHG00735')
         mock_mv_file.assert_called_with(
             TEMP_PATH, 'gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt'.format(guid=project.guid),
             user=self.manager_user
@@ -227,18 +227,13 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Project "{name}" for workspace "{namespace}/{name}" exists.'
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
-        # Test saving ID file and sending slack message exception
+        # Test saving ID file exception
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
-        mock_slack.side_effect = Exception('Something wrong while sending the slack message.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.has_calls([
-            mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
-                      self.manager_user, detail='s\nNA19675\nNA19678\nHG00735'),
-            mock.call('AnVIL loading request slack exception: Something wrong while sending the slack message.',
-                      self.manager_user, detail=slack_message),
-        ])
+        mock_api_logger.error.has_called_with('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+                      self.manager_user, detail='s\nNA19675\nNA19678\nHG00735')
 
             # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

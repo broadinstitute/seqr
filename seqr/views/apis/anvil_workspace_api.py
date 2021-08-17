@@ -224,7 +224,4 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         dag=json.dumps(pipeline_dag, indent=4),
     )
 
-    try:
-        safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
-    except Exception as ee:
-        logger.error('AnVIL loading request slack exception: {}'.format(str(ee)), user, detail=message_content)
+    safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
