@@ -36,6 +36,9 @@ REQUEST_BODY_VCF_DATA_PATH['dataPath'] = 'test_path.vcf'
 REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
+TEMP_PATH = '/temp_path/temp_filename'
+TEST_VCF_PATH = 'gs://test_bucket/test_path.vcf'
+
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
@@ -93,7 +96,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
     @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
-    def test_create_project_from_workspace(self, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
+    @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile')
+    def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
@@ -175,6 +179,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = True
         mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
                                        'chr1	1000	test\n']
+        mock_tempfile.NamedTemporaryFile.return_value.__enter__.return_value.name = TEMP_PATH
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -186,10 +191,34 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf', user=self.manager_user)
-        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf', byte_range=None)
-
-        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, mock.ANY)
+        mock_file_exist.assert_called_with(TEST_VCF_PATH, user=self.manager_user)
+        mock_file_iter.assert_called_with(TEST_VCF_PATH, byte_range=None)
+        mock_tempfile.NamedTemporaryFile.assert_called_with(mode='wb', delete=False)
+        mock_tempfile.NamedTemporaryFile.return_value.__enter__.return_value.write.assert_called_with(b's\nNA19675\nNA19678\nHG00735')
+        mock_mv_file.assert_called_with(
+            TEMP_PATH, 'gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt'.format(guid=project.guid),
+            user=self.manager_user
+        )
+        slack_message = """
+        *{user}* requested to load WES data (GRCh38) from AnVIL workspace *{namespace}/{name}* at 
+        {vcf_path} to seqr project <http://testserver/project/{guid}/project_page|*anvil-no-project-workspace1*> (guid: {guid})  
+  
+        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
+  
+        DAG for the loading pipeline:
+        ```{{
+    "active_projects": [
+        "{guid}"
+    ],
+    "vcf_path": "{vcf_path}",
+    "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
+    "projects_to_run": [
+        "{guid}"
+    ]
+}}```
+        """.format(user=self.manager_user.email, namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME,
+                   guid=project.guid, vcf_path=TEST_VCF_PATH)
+        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
 
         # Test project exist
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])

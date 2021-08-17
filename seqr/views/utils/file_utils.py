@@ -110,13 +110,3 @@ def load_uploaded_file(upload_file_id):
     os.remove(serialized_file_path)
 
     return json_records
-
-
-def save_temp_data(data):
-    if isinstance(data, str):  # bytes type is expected
-        data = data.encode('utf-8')
-    file_id = hashlib.md5(data).hexdigest()
-    file_path = _compute_serialized_file_path(file_id)
-    with open(file_path, 'wb') as fp:
-        fp.write(data)
-    return file_path

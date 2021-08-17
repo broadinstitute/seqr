@@ -1,6 +1,7 @@
 """APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
+import tempfile
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -12,7 +13,7 @@ from seqr.models import Project, CAN_EDIT
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.file_utils import load_uploaded_file, save_temp_data
+from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
@@ -39,6 +40,14 @@ def get_vcf_samples(vcf_filename):
             header = line.rstrip().split('FORMAT\t', 2)
             return set(header[1].split('\t')) if len(header) == 2 else {}
     return {}
+
+
+def save_temp_data(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    with tempfile.NamedTemporaryFile(mode='wb', delete=False) as fp:
+        fp.write(data)
+        return fp.name
 
 
 def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
