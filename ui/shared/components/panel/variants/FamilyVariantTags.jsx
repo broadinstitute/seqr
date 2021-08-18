@@ -18,7 +18,7 @@ import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import { StyledForm } from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
@@ -72,38 +72,20 @@ ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
-  const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = ((variantTagNotes || {}).tags || []).find(tag => tag.name === tagName)
-    return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
-  }, {})
-  const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
-    name: tagName,
-    label: tagName,
-    component: ShortcutTagToggle,
-    tag: appliedShortcutTags[tagName],
-  }))
-
-  const onSubmit = (values) => {
-    const updatedTags = Object.keys(values).reduce((allTags, tagName) => {
-      const applied = values[tagName]
-      if (applied) {
-        return [...allTags, { name: tagName }]
-      }
-      return allTags.filter(tag => tag.name !== tagName)
-    }, (variantTagNotes || {}).tags || [])
-    return dispatchUpdateFamilyVariantTags({ ...variantTagNotes, tags: updatedTags })
+const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
+  const { tags = [], ...variantMeta } = variantTagNotes
+  const onSubmit = tagName => (value) => {
+    return dispatchUpdateFamilyVariantTags({
+      ...variantMeta,
+      tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
+    })
   }
 
   return (
-    <ReduxFormWrapper
-      onSubmit={onSubmit}
-      form={`editShorcutTags-${variantId}-${familyGuid}`}
-      initialValues={appliedShortcutTags}
-      closeOnSuccess={false}
-      submitOnChange
-      fields={shortcutTagFields}
-    />
+    <StyledForm inline hasSubmitButton={false}>
+      {SHORTCUT_TAGS.map(tagName =>
+        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />)}
+    </StyledForm>
   )
 })
 

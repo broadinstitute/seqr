@@ -32,12 +32,12 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
                   download &nbsp;
                   {blankExportConfig &&
                   <span>
-                    template: <FileLink data={blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
+                    template: <FileLink {...blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
                   </span>
                   }
                   {exportConfig &&
                   <span>
-                    {blankExportConfig && 'or'} <FileLink data={exportConfig} ext={ext} linkContent="current individuals" />
+                    {blankExportConfig && 'or'} <FileLink {...exportConfig} ext={ext} linkContent="current individuals" />
                   </span>
                   }
                 </span>
