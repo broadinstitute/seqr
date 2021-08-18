@@ -436,6 +436,7 @@ export const LOCUS_LIST_FIELDS = [
     name: LOCUS_LIST_DESCRIPTION_FIELD,
     label: 'Description',
     labelHelp: 'Some background on how this list is curated',
+    validate: value => (value ? undefined : 'Description is required'),
     width: 9,
     isEditable: true,
   },

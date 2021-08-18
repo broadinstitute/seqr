@@ -57,7 +57,7 @@ const TABLES = [MY_TABLE, PUBLIC_TABLE]
 const getLocusListFilterVal = list =>
   [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD].map(key => list[key] || '').join()
 
-const LocusListTables = React.memo(({ tableData, basicFields, omitLocusLists, tableButtons, ...tableProps }) => {
+const LocusListTables = React.memo(({ tableData, basicFields, omitLocusLists, tableButtons, dispatch, ...tableProps }) => {
   return TABLES.map(
     ({ name, tableFields }) =>
       <div key={name}>
@@ -83,7 +83,8 @@ LocusListTables.propTypes = {
   tableData: PropTypes.object,
   basicFields: PropTypes.bool,
   omitLocusLists: PropTypes.array,
-  tableButtons: PropTypes.node,
+  tableButtons: PropTypes.object,
+  dispatch: PropTypes.func,
 }
 
 

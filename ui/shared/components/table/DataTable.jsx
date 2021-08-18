@@ -63,7 +63,7 @@ class DataTable extends React.PureComponent {
     downloadFileName: PropTypes.string,
     downloadAlign: PropTypes.string,
     loadingProps: PropTypes.object,
-    filterContainer: PropTypes.node,
+    filterContainer: PropTypes.object,
   }
 
   static defaultProps = {
