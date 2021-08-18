@@ -1,6 +1,5 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
-import orderBy from 'lodash/orderBy'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/ReduxFormWrapper'
@@ -388,14 +387,6 @@ export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
 export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
 )
-
-export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
-  const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
-  )]
-  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
-  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
-}
 
 // CLINVAR
 

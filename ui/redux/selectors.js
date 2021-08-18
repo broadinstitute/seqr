@@ -1,9 +1,8 @@
 import { createSelector } from 'reselect'
-import orderBy from 'lodash/orderBy'
 import uniqBy from 'lodash/uniqBy'
 
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME, familyVariantSamples } from 'shared/utils/constants'
+import { NOTE_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -65,29 +64,24 @@ export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid,
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
+const groupIndividualsByFamilyGuid = individuals =>
+  individuals.reduce((acc, individual) => {
+    if (!acc[individual.familyGuid]) {
+      acc[individual.familyGuid] = []
+    }
+    acc[individual.familyGuid].push(individual)
+    return acc
+  }, {})
+
 export const getIndividualsByFamily = createSelector(
   getIndividualsByGuid,
-  (individualsByGuid) => {
-    return Object.values(individualsByGuid).reduce((acc, individual) => {
-      if (!acc[individual.familyGuid]) {
-        acc[individual.familyGuid] = []
-      }
-      acc[individual.familyGuid].push(individual)
-      return acc
-    }, {})
-  },
+  individualsByGuid => groupIndividualsByFamilyGuid(Object.values(individualsByGuid)),
 )
 
-/**
- * function that returns a mapping of each familyGuid to an array of individuals in that family.
- * The array of individuals is in sorted order.
- *
- * @param state {object} global Redux state
- */
-export const getSortedIndividualsByFamily = createSelector(
-  getIndividualsByFamily,
+const getSortedIndividuals = createSelector(
+  getIndividualsByGuid,
   getMmeSubmissionsByGuid,
-  (familyIndividuals, mmeSubmissionsByGuid) => {
+  (individualsByGuid, mmeSubmissionsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
     const getIndivMmeSort = ({ mmeSubmissionGuid }) => {
@@ -95,64 +89,65 @@ export const getSortedIndividualsByFamily = createSelector(
       return deletedDate ? '2000-01-01' : createdDate
     }
 
-    return Object.entries(familyIndividuals).reduce((acc, [familyGuid, individuals]) => ({
-      ...acc,
-      [familyGuid]: orderBy(
-        individuals,
-        [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
-      ),
-    }), {})
+    return Object.values(individualsByGuid).sort((a, b) => {
+      const compareVal = getIndivAffectedSort(a) - getIndivAffectedSort(b)
+      if (compareVal === 0) {
+        return getIndivMmeSort(b).localeCompare(getIndivMmeSort(a))
+      }
+      return compareVal
+    })
   },
 )
 
-export const getFirstSampleByFamily = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-  (familiesByGuid, individualsByGuid, samplesByGuid) => {
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => {
-      const familySamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+export const getSortedIndividualsByFamily = createSelector(
+  getSortedIndividuals,
+  groupIndividualsByFamilyGuid,
+)
 
-      return {
-        ...acc,
-        [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
+const getSortedSamples = createSelector(
+  getSamplesByGuid,
+  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
+)
+
+export const getSamplesByFamily = createSelector(
+  getIndividualsByGuid,
+  getSortedSamples,
+  (individualsByGuid, sortedSamples) =>
+    sortedSamples.reduce((acc, sample) => {
+      const { familyGuid } = individualsByGuid[sample.individualGuid]
+      if (!acc[familyGuid]) {
+        acc[familyGuid] = []
       }
-    }, {})
-  },
+      acc[familyGuid].push(sample)
+      return acc
+    }, {}),
 )
 
 export const getHasActiveVariantSampleByFamily = createSelector(
-  getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (individualsByFamily, samplesByGuid) => {
-    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+  getSamplesByFamily,
+  (samplesByFamily) => {
+    return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
-        sampleGuid => samplesByGuid[sampleGuid].isActive,
-      )),
+      [familyGuid]: familySamples.some(({ isActive }) => isActive),
     }), {})
   },
 )
 
 export const getIGVSamplesByFamilySampleIndividual = createSelector(
-  getSortedIndividualsByFamily,
+  getIndividualsByGuid,
   getIgvSamplesByGuid,
-  (individualsByFamily, igvSamplesByGuid) => {
-    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
-      ...acc,
-      [familyGuid]: individuals.reduce((familyAcc, { individualGuid, igvSampleGuids }) => {
-        (igvSampleGuids || []).forEach((sampleGuid) => {
-          const sample = igvSamplesByGuid[sampleGuid]
-          const type = sample.sampleType
-          if (!familyAcc[type]) {
-            familyAcc[type] = {}
-          }
-          familyAcc[type][individualGuid] = sample
-        })
-        return familyAcc
-      }, {}),
-    }), {})
-  },
+  (individualsByGuid, igvSamplesByGuid) =>
+    Object.values(igvSamplesByGuid).reduce((acc, sample) => {
+      const { familyGuid } = individualsByGuid[sample.individualGuid]
+      if (!acc[familyGuid]) {
+        acc[familyGuid] = {}
+      }
+      if (!acc[familyGuid][sample.sampleType]) {
+        acc[familyGuid][sample.sampleType] = {}
+      }
+      acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
+      return acc
+    }, {}),
 )
 
 // Saved variant selectors
