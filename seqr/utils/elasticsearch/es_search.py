@@ -46,29 +46,7 @@ class EsSearch(object):
         self._family_individual_affected_status = {}
         self._skipped_sample_count = defaultdict(int)
         if inheritance_search:
-            for index, family_samples in list(self.samples_by_family_index.items()):
-                index_skipped_families = []
-                for family_guid, samples_by_id in family_samples.items():
-                    individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_search.get('filter') or {})
-
-                    has_affected_samples = any(
-                        aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
-                    )
-                    if not has_affected_samples:
-                        index_skipped_families.append(family_guid)
-
-                        self._skipped_sample_count[index] += len(samples_by_id)
-
-                    if family_guid not in self._family_individual_affected_status:
-                        self._family_individual_affected_status[family_guid] = {}
-                    self._family_individual_affected_status[family_guid].update(individual_affected_status)
-
-                for family_guid in index_skipped_families:
-                    del self.samples_by_family_index[index][family_guid]
-
-                if not self.samples_by_family_index[index]:
-                    del self.samples_by_family_index[index]
-
+            self._filter_families_for_inheritance(inheritance_search)
             if len(self.samples_by_family_index) < 1:
                 raise InvalidSearchException('Inheritance based search is disabled in families with no data loaded for affected individuals')
 
@@ -81,22 +59,7 @@ class EsSearch(object):
             ))
         elif len(self.index_metadata) > len(self.samples_by_family_index):
             # Some of the indices are an alias
-            additional_meta_indices = set(self.index_metadata.keys()) - set(self._indices)
-            aliases = [ind for ind in self._indices if ind not in self.index_metadata]
-            alias_map = defaultdict(list)
-            if len(aliases) == 1:
-                alias_map[aliases[0]] = additional_meta_indices
-            else:
-                for index, index_aliases in self._client.indices.get_alias(index=','.join(aliases)).items():
-                    for alias in index_aliases['aliases']:
-                        alias_map[alias].append(index)
-            self._indices = list(self.index_metadata.keys())
-            for alias, alias_indices in alias_map.items():
-                alias_samples = self.samples_by_family_index.pop(alias, {})
-                for alias_index in alias_indices:
-                    if not self.samples_by_family_index[alias_index]:
-                        self.samples_by_family_index[alias_index] = {}
-                    self.samples_by_family_index[alias_index].update(alias_samples)
+            self._update_alias_metadata()
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
@@ -132,6 +95,49 @@ class EsSearch(object):
         self._set_index_name()
         from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
+
+    def _update_alias_metadata(self):
+        additional_meta_indices = set(self.index_metadata.keys()) - set(self._indices)
+        aliases = [ind for ind in self._indices if ind not in self.index_metadata]
+        alias_map = defaultdict(list)
+        if len(aliases) == 1:
+            alias_map[aliases[0]] = additional_meta_indices
+        else:
+            for index, index_aliases in self._client.indices.get_alias(index=','.join(aliases)).items():
+                for alias in index_aliases['aliases']:
+                    alias_map[alias].append(index)
+        self._indices = list(self.index_metadata.keys())
+        for alias, alias_indices in alias_map.items():
+            alias_samples = self.samples_by_family_index.pop(alias, {})
+            for alias_index in alias_indices:
+                if not self.samples_by_family_index[alias_index]:
+                    self.samples_by_family_index[alias_index] = {}
+                self.samples_by_family_index[alias_index].update(alias_samples)
+
+    def _filter_families_for_inheritance(self, inheritance_search):
+        for index, family_samples in list(self.samples_by_family_index.items()):
+            index_skipped_families = []
+            for family_guid, samples_by_id in family_samples.items():
+                individual_affected_status = _get_family_affected_status(
+                    samples_by_id, inheritance_search.get('filter') or {})
+
+                has_affected_samples = any(
+                    aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
+                )
+                if not has_affected_samples:
+                    index_skipped_families.append(family_guid)
+
+                    self._skipped_sample_count[index] += len(samples_by_id)
+
+                if family_guid not in self._family_individual_affected_status:
+                    self._family_individual_affected_status[family_guid] = {}
+                self._family_individual_affected_status[family_guid].update(individual_affected_status)
+
+            for family_guid in index_skipped_families:
+                del self.samples_by_family_index[index][family_guid]
+
+            if not self.samples_by_family_index[index]:
+                del self.samples_by_family_index[index]
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
