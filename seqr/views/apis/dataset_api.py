@@ -5,8 +5,8 @@ from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
 from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples, load_mapping_file
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
+    validate_index_metadata_and_get_elasticsearch_index_samples, load_mapping_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required
@@ -44,11 +44,10 @@ def add_variants_dataset_handler(request, project_guid):
         if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
             raise ValueError('Invalid dataset type "{}"'.format(dataset_type))
 
-        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
+        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
+            elasticsearch_index, project=project, dataset_type=dataset_type)
         if not sample_ids:
             raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
-        validate_index_metadata(index_metadata, project, elasticsearch_index, dataset_type=dataset_type)
-        sample_type = index_metadata['sampleType']
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
