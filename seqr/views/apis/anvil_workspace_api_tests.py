@@ -8,6 +8,7 @@ from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_pro
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
     TEST_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
+from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
@@ -34,6 +35,8 @@ REQUEST_BODY_VCF_DATA_PATH = deepcopy(REQUEST_BODY)
 REQUEST_BODY_VCF_DATA_PATH['dataPath'] = 'test_path.vcf'
 REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
+
+TEMP_PATH = '/temp_path/temp_filename'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -83,16 +86,18 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.mock_get_ws_access_level.assert_not_called()
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.time.sleep')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.time')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
-    @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
-    def test_create_project_from_workspace(self, mock_file_iter, mock_file_exist, mock_email, mock_add_service_account,
-                                           mock_has_service_account, mock_load_file, mock_api_logger, mock_sleep,
+    @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile.NamedTemporaryFile')
+    def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
+                                           mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -136,10 +141,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace')
         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         self.assertEqual(mock_has_service_account.call_count, 3)
-        self.assertEqual(mock_sleep.call_count, 3)
+        self.assertEqual(mock_time.sleep.call_count, 3)
 
         # Test bad data path
-        mock_sleep.reset_mock()
+        mock_time.reset_mock()
         mock_has_service_account.reset_mock()
         mock_has_service_account.return_value = True
         mock_file_exist.return_value = False
@@ -149,7 +154,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.assert_called_with('gs://test_bucket/test_no_slash_path.vcf.bgz', user=self.manager_user)
         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         self.assertEqual(mock_has_service_account.call_count, 1)
-        self.assertEqual(mock_sleep.call_count, 1)
+        self.assertEqual(mock_time.sleep.call_count, 1)
 
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
@@ -165,7 +170,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
-        mock_sleep.reset_mock()
+        mock_time.reset_mock()
         mock_file_exist.reset_mock()
         mock_file_iter.reset_mock()
         mock_has_service_account.reset_mock()
@@ -173,6 +178,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = True
         mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
                                        'chr1	1000	test\n']
+        mock_tempfile.return_value.__enter__.return_value.name = TEMP_PATH
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -183,27 +189,34 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
-        mock_sleep.assert_not_called()
+        mock_time.sleep.assert_not_called()
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf', user=self.manager_user)
         mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf', byte_range=None)
-
-        email_body = """
-        test_user_manager@test.com requested to load WES data (GRCh38) from AnVIL workspace "{namespace}/{name}" at 
-        "gs://test_bucket/test_path.vcf" to seqr project {{project_name}} (guid: {guid})
-
-        The sample IDs to load are attached.    
-        """.format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)
-        mock_email.assert_called_with(
-            subject='AnVIL data loading request',
-            body=email_body.format(project_name=TEST_NO_PROJECT_WORKSPACE_NAME),
-            to=['test_data_manager@test.com', 'test_superuser@test.com'],
-            attachments=[('{}_sample_ids.tsv'.format(project.guid), 'NA19675\nNA19678\nHG00735')]
+        mock_tempfile.assert_called_with(mode='wb', delete=False)
+        mock_tempfile.return_value.__enter__.return_value.write.assert_called_with(b's\nNA19675\nNA19678\nHG00735')
+        mock_mv_file.assert_called_with(
+            TEMP_PATH, 'gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt'.format(guid=project.guid),
+            user=self.manager_user
         )
-        html_project_name = '<a href="http://testserver/project/{guid}/project_page">{name}</a>'.format(
-                name=TEST_NO_PROJECT_WORKSPACE_NAME, guid=project.guid)
-        mock_email.return_value.attach_alternative.assert_called_with(
-            email_body.format(project_name=html_project_name), 'text/html')
-        mock_email.return_value.send.assert_called()
+        slack_message = """
+        *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace1* at 
+        gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*anvil-no-project-workspace1*> (guid: {guid})  
+  
+        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
+  
+        DAG for the loading pipeline:
+        ```{{
+    "active_projects": [
+        "{guid}"
+    ],
+    "vcf_path": "gs://test_bucket/test_path.vcf",
+    "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
+    "projects_to_run": [
+        "{guid}"
+    ]
+}}```
+        """.format(guid=project.guid)
+        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
 
         # Test project exist
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -212,12 +225,13 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Project "{name}" for workspace "{namespace}/{name}" exists.'
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
-        # Test sending email exception
+        # Test saving ID file exception
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
-        mock_email.side_effect = Exception('Something wrong while sending email.')
+        mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('AnVIL loading request email exception: Something wrong while sending email.', self.manager_user)
+        mock_api_logger.error.assert_called_with('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+                      self.manager_user, detail=['HG00735', 'NA19675', 'NA19678'])
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

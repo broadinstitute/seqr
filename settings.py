@@ -327,6 +327,7 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
+SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL = 'anvil-data-loading'
 
 #########################################################
 #  Social auth specific settings
