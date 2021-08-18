@@ -55,7 +55,8 @@ const PUBLIC_TABLE = {
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
 
 const getLocusListFilterVal = list =>
-  [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD].map(key => list[key] || '').join()
+  [list[LOCUS_LIST_NAME_FIELD], list[LOCUS_LIST_DESCRIPTION_FIELD] || '', ...(list.items || []).map(
+    ({ gene }) => (gene || {}).geneSymbol)].join()
 
 const LocusListTables = React.memo(({ tableData, basicFields, omitLocusLists, tableButtons, dispatch, ...tableProps }) => {
   return TABLES.map(
