@@ -165,9 +165,9 @@ def create_project_from_workspace(request, namespace, name):
 
     # Upload sample IDs to a file on Google Storage
     ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, request_json['sampleType']), guid=project.guid)
-    sample_ids = '\n'.join(['s'] + [individual.individual_id for individual in updated_individuals])
+    sample_ids = [individual.individual_id for individual in updated_individuals]
     try:
-        temp_path = save_temp_data(sample_ids)
+        temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
         mv_file_to_gs(temp_path, ids_path, user=request.user)
     except Exception as ee:
         logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,

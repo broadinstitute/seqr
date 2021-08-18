@@ -230,10 +230,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.has_called_with('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
-                      self.manager_user, detail='s\nNA19675\nNA19678\nHG00735')
+        mock_api_logger.error.assert_called_with('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+                      self.manager_user, detail=['HG00735', 'NA19675', 'NA19678'])
 
-            # Test logged in locally
+        # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
