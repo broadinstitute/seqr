@@ -80,14 +80,23 @@ class EsSearch(object):
                 ', '.join(sorted(set(self._indices) - set(self.index_metadata.keys()), reverse = True))
             ))
         elif len(self.index_metadata) > len(self.samples_by_family_index):
-            # One of the indices is an alias
+            # Some of the indices are an alias
             additional_meta_indices = set(self.index_metadata.keys()) - set(self._indices)
-            alias = next(ind for ind in self._indices if ind not in self.index_metadata)
-            self._indices.remove(alias)
-            self._indices += additional_meta_indices
-            alias_samples = self.samples_by_family_index.pop(alias)
-            for alias_index in additional_meta_indices:
-                self.samples_by_family_index[alias_index] = alias_samples
+            aliases = [ind for ind in self._indices if ind not in self.index_metadata]
+            alias_map = defaultdict(list)
+            if len(aliases) == 1:
+                alias_map[aliases[0]] = additional_meta_indices
+            else:
+                for index, index_aliases in self._client.indices.get_alias(index=','.join(aliases)).items():
+                    for alias in index_aliases['aliases']:
+                        alias_map[alias].append(index)
+            self._indices = list(self.index_metadata.keys())
+            for alias, alias_indices in alias_map.items():
+                alias_samples = self.samples_by_family_index.pop(alias, {})
+                for alias_index in alias_indices:
+                    if not self.samples_by_family_index[alias_index]:
+                        self.samples_by_family_index[alias_index] = {}
+                    self.samples_by_family_index[alias_index].update(alias_samples)
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:

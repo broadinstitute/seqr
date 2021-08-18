@@ -22,6 +22,8 @@ NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
+SUB_INDICES = ['sub_index_1', 'sub_index_2']
+SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 
 ES_VARIANTS = [
     {
@@ -430,6 +432,7 @@ INDEX_ES_VARIANTS = {
     SV_INDEX_NAME: [ES_SV_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
 }
+INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
 
 PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_ANY_AFFECTED_VARIANTS[1]['familyGuids'] = ['F000003_3']
@@ -2415,9 +2418,7 @@ class EsUtilsTest(TestCase):
 
         setup_search_responses()
         urllib3_responses.add_json('/{}/_mapping'.format(SECOND_INDEX_NAME), {
-            INDEX_NAME: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]},
-            NO_LIFT_38_INDEX_NAME: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]},
-        })
+            k: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]} for k in SUB_INDICES})
 
         get_es_variants(results_model, num_results=2)
 
@@ -2433,10 +2434,59 @@ class EsUtilsTest(TestCase):
             }}]
         }
         self.assertExecutedSearches([
-            dict(index=NO_LIFT_38_INDEX_NAME, **expected_search),
-            dict(index=INDEX_NAME, **expected_search),
+            dict(index=SUB_INDICES[1], **expected_search),
+            dict(index=SUB_INDICES[0], **expected_search),
         ])
         _set_cache('index_metadata__{}'.format(SECOND_INDEX_NAME), None)
+
+    @urllib3_responses.activate
+    def test_get_es_variants_search_multiple_index_alias(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'de_novo'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000011_11']))
+
+        setup_search_responses()
+        mappings = {k: {'mappings': INDEX_METADATA[INDEX_NAME]} for k in SUB_INDICES}
+        mappings.update({k: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]} for k in SECOND_SUB_INDICES})
+        urllib3_responses.add_json('/{},{}/_mapping'.format(INDEX_NAME, SECOND_INDEX_NAME), mappings)
+        aliases = {k: {'aliases': {INDEX_NAME: {}}} for k in SUB_INDICES}
+        aliases.update({k: {'aliases': {SECOND_INDEX_NAME: {}, INDEX_ALIAS: {}}} for k in SECOND_SUB_INDICES})
+        urllib3_responses.add_json('/{},{}/_alias'.format(INDEX_NAME, SECOND_INDEX_NAME), aliases)
+
+        get_es_variants(results_model, num_results=2)
+
+        second_alias_expected_search = {
+            'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
+                'bool': {'must': [
+                    {'bool': {'should': [
+                        {'term': {'samples_num_alt_1': 'NA20885'}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}},
+                    ]}}
+                ],
+                    '_name': 'F000011_11'
+                }}]
+        }
+        first_alias_expected_search = {
+            'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
+                'bool': {'must': [
+                    {'bool': {'should': [
+                        {'term': {'samples_num_alt_1': 'NA20870'}},
+                        {'term': {'samples_num_alt_2': 'NA20870'}},
+                    ]}}
+                ],
+                    '_name': 'F000003_3'
+                }}]
+        }
+        self.assertExecutedSearches([
+            dict(index=SECOND_SUB_INDICES[1], **second_alias_expected_search),
+            dict(index=SECOND_SUB_INDICES[0], **second_alias_expected_search),
+            dict(index=SUB_INDICES[1], **first_alias_expected_search),
+            dict(index=SUB_INDICES[0], **first_alias_expected_search),
+        ])
+        _set_cache('index_metadata__{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME), None)
 
     @urllib3_responses.activate
     def test_get_es_variant_gene_counts(self):
