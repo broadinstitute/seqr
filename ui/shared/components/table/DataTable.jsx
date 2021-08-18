@@ -153,12 +153,10 @@ class DataTable extends React.PureComponent {
       exportConfig = [
         {
           name: downloadTableType || 'All Data',
-          data: {
-            filename: downloadFileName,
-            rawData: sortedData,
-            headers: columns.map(config => config.downloadColumn || config.content),
-            processRow: row => columns.map(getRowColumnContent(row, true)),
-          },
+          filename: downloadFileName,
+          rawData: sortedData,
+          headers: columns.map(config => config.downloadColumn || config.content),
+          processRow: row => columns.map(getRowColumnContent(row, true)),
         },
       ]
     }

@@ -28,17 +28,21 @@ const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const mapStateToProps = (state, ownProps) => ({
-  project: getCurrentProject(state),
-  exportConfig: getEntityExportConfig(
-    getCurrentProject(state),
-    Object.values(ownProps.rawData || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
-    null,
-    ownProps.name,
-    ownProps.requiredFields.concat(ownProps.optionalFields),
-  ),
-  blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getCurrentProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
-})
+const mapStateToProps = (state, ownProps) => {
+  const project = getCurrentProject(state)
+  const fields = ownProps.requiredFields.concat(ownProps.optionalFields)
+  return {
+    project,
+    exportConfig: {
+      getRawData: state2 => Object.values((ownProps.getRawData || getProjectAnalysisGroupIndividualsByGuid)(state2, ownProps)),
+      ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
+    },
+    blankExportConfig: ownProps.blankDownload && {
+      rawData: [],
+      ...getEntityExportConfig({ project, fileName: 'template', fields }),
+    },
+  }
+}
 
 const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
@@ -66,10 +70,6 @@ EditBulkForm.propTypes = {
 const FAMILY_ID_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(0, 1)
 const FAMILY_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1)
 
-const mapFamiliesStateToProps = (state, ownProps) => ({
-  rawData: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-})
-
 const FamiliesBulkForm = React.memo(props =>
   <EditBulkForm
     name="families"
@@ -85,6 +85,7 @@ const FamiliesBulkForm = React.memo(props =>
     optionalFields={FAMILY_EXPORT_DATA}
     uploadFormats={FILE_FORMATS}
     blankDownload
+    getRawData={getProjectAnalysisGroupFamiliesByGuid}
     {...props}
   />,
 )
@@ -93,7 +94,7 @@ const mapFamiliesDispatchToProps = {
   onSubmit: updateFamilies,
 }
 
-export const EditFamiliesBulkForm = connect(mapFamiliesStateToProps, mapFamiliesDispatchToProps)(FamiliesBulkForm)
+export const EditFamiliesBulkForm = connect(null, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
 const IndividualsBulkForm = React.memo(({ user, ...props }) =>
   <EditBulkForm

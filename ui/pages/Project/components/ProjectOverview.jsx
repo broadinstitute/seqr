@@ -21,8 +21,8 @@ import {
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsByGuid,
-  getProjectAnalysisGroupSamplesByGuid,
+  getProjectAnalysisGroupIndividualsCount,
+  getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissions,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
@@ -93,41 +93,100 @@ MatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.array,
 }
 
-const ProjectOverview = React.memo((
-  { project, familiesByGuid, individualsByGuid, samplesByGuid, mmeSubmissions, analysisStatusCounts, user },
-) => {
+const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
 
-  const loadedProjectSamples = Object.values(samplesByGuid).reduce((acc, sample) => {
-    const loadedDate = (sample.loadedDate).split('T')[0]
-    if (!acc[sample.sampleType]) {
-      acc[sample.sampleType] = {}
-    }
-    if (!acc[sample.sampleType][sample.datasetType]) {
-      acc[sample.sampleType][sample.datasetType] = {}
-    }
-    acc[sample.sampleType][sample.datasetType] = {
-      ...acc[sample.sampleType][sample.datasetType],
-      [loadedDate]: (acc[sample.sampleType][sample.datasetType][loadedDate] || 0) + 1,
-    }
-    return acc
-  }, {})
+  let editIndividualsButton = null
+  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
+    editIndividualsButton = <EditFamiliesAndIndividualsButton />
+  } else if (project.canEdit) {
+    editIndividualsButton = <EditIndividualMetadataButton />
+  }
 
-  const datasetSections = Object.keys(loadedProjectSamples).sort().reduce((acc, sampleType) => ([
-    ...acc,
-    ...Object.entries(loadedProjectSamples[sampleType]).map(([datasetType, loadedSampleCounts]) => ({
-      key: `${sampleType}-${datasetType}`,
+  return (
+    <DetailSection
+      title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
+      content={
+        sortBy(Object.keys(familySizeHistogram)).map(size =>
+          <div key={size}>
+            {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
+          </div>)
+      }
+      button={editIndividualsButton}
+    />
+  )
+})
+
+FamiliesIndividuals.propTypes = {
+  project: PropTypes.object.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
+  individualsCount: PropTypes.number,
+  user: PropTypes.object.isRequired,
+}
+
+const mapFamiliesStateToProps = (state, ownProps) => ({
+  user: getUser(state),
+  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
+  individualsCount: getProjectAnalysisGroupIndividualsCount(state, ownProps),
+})
+
+const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
+
+const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
+  const mmeSubmissionCount = mmeSubmissions.length
+  const deletedSubmissionCount = mmeSubmissions.filter(({ deletedDate }) => deletedDate).length
+
+  return (
+    <DetailSection
+      title="Matchmaker Submissions"
+      content={mmeSubmissionCount ?
+        <div>
+          {mmeSubmissionCount - deletedSubmissionCount} submissions <HorizontalSpacer width={5} />
+          <Modal
+            trigger={<ButtonLink icon="external" size="tiny" />}
+            title={`Matchmaker Submissions for ${project.name}`}
+            modalName="mmeSubmissions"
+            size="large"
+          >
+            <MatchmakerSubmissionOverview mmeSubmissions={mmeSubmissions} />
+          </Modal>
+          {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
+        </div>
+        : 'No Submissions'
+      }
+    />
+  )
+})
+
+Matchmaker.propTypes = {
+  project: PropTypes.object.isRequired,
+  mmeSubmissions: PropTypes.array,
+}
+
+const mapMatchmakerStateToProps = (state, ownProps) => ({
+  mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
+})
+
+const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
+
+const Dataset = React.memo(({ project, samplesByType, user }) => {
+
+  const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
+    const [sampleType, datasetType] = sampleTypeKey.split('__')
+    return {
+      key: sampleTypeKey,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: Object.keys(loadedSampleCounts).sort().map(loadedDate =>
         <div key={loadedDate}>
           { new Date(loadedDate).toLocaleDateString()} - {loadedSampleCounts[loadedDate]} samples
         </div>,
       ),
-    }))]), [])
+    } }).sort((a, b) => a.title.localeCompare(b.title))
+
   if (!datasetSections.length) {
     datasetSections.push({
       title: 'Datasets',
@@ -154,91 +213,85 @@ const ProjectOverview = React.memo((
       key: 'blank' })
   }
 
-  let editIndividualsButton = null
-  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
-    editIndividualsButton = <EditFamiliesAndIndividualsButton />
-  } else if (project.canEdit) {
-    editIndividualsButton = <EditIndividualMetadataButton />
-  }
-
-  const mmeSubmissionCount = mmeSubmissions.length
-  const deletedSubmissionCount = mmeSubmissions.filter(({ deletedDate }) => deletedDate).length
-
-  return (
-    <Grid>
-      <Grid.Column width={5}>
-        <DetailSection
-          title={`${Object.keys(familiesByGuid).length} Families, ${Object.keys(individualsByGuid).length} Individuals`}
-          content={
-            sortBy(Object.keys(familySizeHistogram)).map(size =>
-              <div key={size}>
-                {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
-              </div>)
-          }
-          button={editIndividualsButton}
-        />
-        <VerticalSpacer height={10} />
-        <DetailSection
-          title="Matchmaker Submissions"
-          content={mmeSubmissionCount ?
-            <div>
-              {mmeSubmissionCount - deletedSubmissionCount} submissions <HorizontalSpacer width={5} />
-              <Modal
-                trigger={<ButtonLink icon="external" size="tiny" />}
-                title={`Matchmaker Submissions for ${project.name}`}
-                modalName="mmeSubmissions"
-                size="large"
-              >
-                <MatchmakerSubmissionOverview mmeSubmissions={mmeSubmissions} />
-              </Modal>
-              {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
-            </div>
-            : 'No Submissions'
-          }
-        />
-      </Grid.Column>
-      <Grid.Column width={5}>
-        <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[project.genomeVersion]} />
-        {datasetSections.map((sectionProps, i) =>
-          <DetailSection
-            {...sectionProps}
-            button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
-          />,
-        )}
-      </Grid.Column>
-      <Grid.Column width={6}>
-        {project.workspaceName && user.isAnvil && <DetailSection title="AnVIL Workspace" content={
-          <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank">
-            {project.workspaceName}
-          </a>}
-        />}
-        <DetailSection
-          title="Analysis Status"
-          content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}
-        />
-      </Grid.Column>
-    </Grid>
+  return datasetSections.map((sectionProps, i) =>
+    <DetailSection
+      {...sectionProps}
+      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
+    />,
   )
 })
 
-
-ProjectOverview.propTypes = {
+Dataset.propTypes = {
   project: PropTypes.object.isRequired,
-  familiesByGuid: PropTypes.object.isRequired,
-  individualsByGuid: PropTypes.object.isRequired,
-  samplesByGuid: PropTypes.object.isRequired,
-  mmeSubmissions: PropTypes.array,
-  analysisStatusCounts: PropTypes.array.isRequired,
+  samplesByType: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-  individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
-  samplesByGuid: getProjectAnalysisGroupSamplesByGuid(state, ownProps),
-  analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
-  mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
+  samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
 })
 
-export default connect(mapStateToProps)(ProjectOverview)
+const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
+
+const Anvil = React.memo(({ project, user }) => (
+  project.workspaceName && user.isAnvil && (
+    <DetailSection title="AnVIL Workspace" content={
+      <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank">
+        {project.workspaceName}
+      </a>}
+    />
+  )
+))
+
+Anvil.propTypes = {
+  project: PropTypes.object.isRequired,
+  user: PropTypes.object.isRequired,
+}
+
+const mapAnvilStateToProps = state => ({
+  user: getUser(state),
+})
+
+const AnvilOverview = connect(mapAnvilStateToProps)(Anvil)
+
+const AnalysisStatus = React.memo(({ analysisStatusCounts }) =>
+  <DetailSection
+    title="Analysis Status"
+    content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}
+  />,
+)
+
+AnalysisStatus.propTypes = {
+  analysisStatusCounts: PropTypes.array.isRequired,
+}
+
+const mapAnalysisStatusStateToProps = (state, ownProps) => ({
+  analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+})
+
+const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
+
+const ProjectOverview = React.memo(props =>
+  <Grid>
+    <Grid.Column width={5}>
+      <FamiliesIndividualsOverview {...props} />
+      <VerticalSpacer height={10} />
+      <MatchmakerOverview {...props} />
+    </Grid.Column>
+    <Grid.Column width={5}>
+      <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
+      <DatasetOverview {...props} />
+    </Grid.Column>
+    <Grid.Column width={6}>
+      <AnvilOverview {...props} />
+      <AnalysisStatusOverview {...props} />
+    </Grid.Column>
+  </Grid>,
+)
+
+ProjectOverview.propTypes = {
+  project: PropTypes.object.isRequired,
+}
+
+export default ProjectOverview
