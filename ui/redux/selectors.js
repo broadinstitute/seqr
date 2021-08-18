@@ -329,3 +329,23 @@ export const getLocusListIntervalsByChromProject = createSelector(
       return acc
     }, {}),
 )
+
+export const getLocusListTableData = createSelector(
+  (state, props) => props.omitLocusLists,
+  getLocusListsByGuid,
+  (omitLocusLists, locusListsByGuid) => {
+    let data = Object.values(locusListsByGuid)
+    if (omitLocusLists) {
+      data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+    }
+
+    return data.reduce((acc, locusList) => {
+      if (locusList.canEdit) {
+        acc.My.push(locusList)
+      } else if (locusList.isPublic) {
+        acc.Public.push(locusList)
+      }
+      return acc
+    }, { My: [], Public: [] })
+  },
+)
