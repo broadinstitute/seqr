@@ -1,9 +1,9 @@
 """APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
+import tempfile
 
 from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
@@ -18,11 +18,11 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
-from seqr.utils.communication_utils import send_html_email
-from seqr.utils.file_utils import does_file_exist, file_iter
+from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
-from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -40,6 +40,14 @@ def get_vcf_samples(vcf_filename):
             header = line.rstrip().split('FORMAT\t', 2)
             return set(header[1].split('\t')) if len(header) == 2 else {}
     return {}
+
+
+def save_temp_data(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    with tempfile.NamedTemporaryFile(mode='wb', delete=False) as fp:
+        fp.write(data)
+        return fp.name
 
 
 def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
@@ -152,12 +160,18 @@ def create_project_from_workspace(request, namespace, name):
         project, individual_records=pedigree_records, user=request.user
     )
 
-    # Send an email to all seqr data managers
+    # Upload sample IDs to a file on Google Storage
+    ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, request_json['sampleType']), guid=project.guid)
+    sample_ids = [individual.individual_id for individual in updated_individuals]
     try:
-        _send_load_data_email(project, updated_individuals, data_path, request_json['sampleType'], request.user)
+        temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
+        mv_file_to_gs(temp_path, ids_path, user=request.user)
     except Exception as ee:
-        message = 'AnVIL loading request email exception: {}'.format(str(ee))
-        logger.error(message, request.user)
+        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,
+                     detail=sample_ids)
+
+    # Send a slack message to the slack channel
+    _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
 
     return create_json_response({'projectGuid':  project.guid})
 
@@ -170,15 +184,33 @@ def _wait_for_service_account_access(user, namespace, name):
     raise TerraAPIException('Failed to grant seqr service account access to the workspace', 400)
 
 
-def _send_load_data_email(project, updated_individuals, data_path, sample_type, user):
-    email_content = """
-        {user} requested to load {sample_type} data ({genome_version}) from AnVIL workspace "{namespace}/{name}" at 
-        "{path}" to seqr project <a href="{base_url}project/{guid}/project_page">{project_name}</a> (guid: {guid})
+def _get_loading_project_path(project, sample_type):
+    return 'gs://seqr-datasets/v02/{genome_version}/AnVIL_{sample_type}/{guid}/'.format(
+        guid=project.guid,
+        sample_type=sample_type,
+        genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
+    )
 
-        The sample IDs to load are attached.    
+
+def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
+    pipeline_dag = {
+        "active_projects": [project.guid],
+        "vcf_path": data_path,
+        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "projects_to_run": [project.guid],
+    }
+    message_content = """
+        *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
+        {path} to seqr project <{base_url}project/{guid}/project_page|*{project_name}*> (guid: {guid})  
+  
+        The sample IDs to load have been uploaded to {ids_path}.  
+  
+        DAG for the loading pipeline:
+        ```{dag}```
         """.format(
         user=user.email,
         path=data_path,
+        ids_path=ids_path,
         namespace=project.workspace_namespace,
         name=project.workspace_name,
         base_url=BASE_URL,
@@ -186,14 +218,7 @@ def _send_load_data_email(project, updated_individuals, data_path, sample_type, 
         project_name=project.name,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
+        dag=json.dumps(pipeline_dag, indent=4),
     )
 
-    send_html_email(
-        email_content,
-        subject='AnVIL data loading request',
-        to=sorted([dm.email for dm in User.objects.filter(is_staff=True, is_active=True)]),
-        attachments=[(
-            '{}_sample_ids.tsv'.format(project.guid),
-            '\n'.join([individual.individual_id for individual in updated_individuals])
-        )]
-    )
+    safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)

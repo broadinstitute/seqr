@@ -223,7 +223,7 @@ POPULATION_SORTS = {
                 'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
             }
         }
-    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', '1kg': 'g1k', 'callset_af': 'callset'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
 PREDICTOR_SORT_FIELDS = {
     'cadd': 'cadd_PHRED',

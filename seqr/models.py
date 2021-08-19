@@ -822,7 +822,7 @@ class LocusList(ModelWithGUID):
 
 class LocusListGene(ModelWithGUID):
     locus_list = models.ForeignKey('LocusList', on_delete=models.CASCADE)
-
+    # TODO would be more efficient to take out this class entirely and have locus lists directly reference GeneInfo models
     gene_id = models.TextField(db_index=True)
 
     def __unicode__(self):
