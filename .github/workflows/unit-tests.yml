@@ -57,7 +57,7 @@ jobs:
         coverage report --fail-under=99
     - name: Run coverage tests for panelapp
       env:
-        ENABLE_PANEL_APP: True
+        ENABLE_PANEL_APP: "True"
       run: |
         coverage run --source="./panelapp" --omit="*/migrations/*","*/apps.py" manage.py test -p '*_tests.py' -v 2 panelapp
         coverage report --fail-under=99
