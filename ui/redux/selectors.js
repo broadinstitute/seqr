@@ -241,22 +241,32 @@ export const getFunctionalTagTypesTypesByProject = createSelector(
   }), {}),
 )
 
-export const getParsedLocusList = createSelector(
+const getLocusListsWithGenes = createSelector(
   getLocusListsByGuid,
   getGenesById,
+  (locusListsByGuid, genesById) =>
+    Object.entries(locusListsByGuid).reduce((acc, [locusListGuid, locusList]) => ({
+      ...acc,
+      [locusListGuid]: {
+        ...locusList,
+        items: locusList.items && locusList.items.map(item => ({ ...item, gene: genesById[item.geneId] })),
+      } }), {}),
+)
+
+export const getParsedLocusList = createSelector(
+  getLocusListsWithGenes,
   (state, props) => props.locusListGuid,
-  (locusListsByGuid, genesById, locusListGuid) => {
+  (locusListsByGuid, locusListGuid) => {
     const locusList = locusListsByGuid[locusListGuid] || {}
     if (locusList.items) {
       locusList.items = locusList.items.map((item) => {
-        const gene = genesById[item.geneId]
         let display
         if (item.geneId) {
-          display = gene ? gene.geneSymbol : item.geneId
+          display = item.gene ? item.gene.geneSymbol : item.geneId
         } else {
           display = `chr${item.chrom}:${item.start}-${item.end}`
         }
-        return { ...item, display, gene }
+        return { ...item, display }
       })
       locusList.items.sort(compareObjects('display'))
       locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
@@ -328,4 +338,24 @@ export const getLocusListIntervalsByChromProject = createSelector(
       })
       return acc
     }, {}),
+)
+
+export const getLocusListTableData = createSelector(
+  (state, props) => props.omitLocusLists,
+  getLocusListsWithGenes,
+  (omitLocusLists, locusListsByGuid) => {
+    let data = Object.values(locusListsByGuid)
+    if (omitLocusLists) {
+      data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+    }
+
+    return data.reduce((acc, locusList) => {
+      if (locusList.canEdit) {
+        acc.My.push(locusList)
+      } else if (locusList.isPublic) {
+        acc.Public.push(locusList)
+      }
+      return acc
+    }, { My: [], Public: [] })
+  },
 )
