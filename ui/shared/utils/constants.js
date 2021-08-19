@@ -882,8 +882,9 @@ export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 const SORT_BY_IN_OMIM = 'IN_OMIM'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
-const SORT_BY_GNOMAD = 'GNOMAD'
-const SORT_BY_EXAC = 'EXAC'
+const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
+const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
+const SORT_BY_CALLSET_AF = 'CALLSET_AF'
 const SORT_BY_1KG = '1KG'
 const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 const SORT_BY_CADD = 'CADD'
@@ -941,8 +942,9 @@ const VARIANT_SORT_OPTONS = [
     text: 'Protein Consequence',
     comparator: (a, b) => getConsequenceRank(a) - getConsequenceRank(b),
   },
-  { value: SORT_BY_GNOMAD, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
-  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: populationComparator('exac') },
+  { value: SORT_BY_GNOMAD_GENOMES, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
+  { value: SORT_BY_GNOMAD_EXOMES, text: 'gnomAD Exomes Frequency', comparator: populationComparator('gnomad_exomes') },
+  { value: SORT_BY_CALLSET_AF, text: 'Callset AF', comparator: populationComparator('callset') },
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: populationComparator('g1k') },
   { value: SORT_BY_CADD, text: 'Cadd', comparator: predictionComparator('cadd') },
   { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },
