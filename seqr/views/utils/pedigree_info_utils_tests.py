@@ -69,12 +69,13 @@ class PedigreeInfoUtilsTest(TestCase):
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
                  ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mother'],
-                 ['fam2', 'ind2', 'male', 'unknown', '.', '', '']],
+                 ['fam2', 'ind2', 'male', 'unknown', 'ind2', '.', '']],
                 FILENAME, user)
         self.assertListEqual(ec.exception.errors, [
             'Invalid proband relationship "Mother" for ind1 with given gender Male',
             'ind2 is recorded as Male and also as the mother of ind1',
             'ind2 is recorded as the mother of ind1 but they have different family ids: fam2 and fam1',
+            'ind2 is recorded as their own father',
         ])
         self.assertListEqual(ec.exception.warnings, ["ind3 is the father of ind1 but doesn't have a separate record in the table"])
 

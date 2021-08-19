@@ -268,6 +268,10 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 warnings.append("%(parent_id)s is the %(parent_id_type)s of %(individual_id)s but doesn't have a separate record in the table" % locals())
                 continue
 
+            # is the parent the same individuals
+            if parent_id == individual_id:
+                errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
+
             # is father male and mother female?
             if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
                 actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
