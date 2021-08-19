@@ -632,6 +632,7 @@ MAPPING_FIELDS = [
     'topmed_AC',
     'topmed_Hom',
     'topmed_Hemi',
+    'topmed_Het',
     'topmed_AF',
     'topmed_AN',
     'topmed_ID',
@@ -675,7 +676,7 @@ SOURCE_FIELDS = {
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
-SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
+SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het'}
 
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
