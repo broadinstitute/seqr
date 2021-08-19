@@ -9,7 +9,10 @@ import { getLocusListTableData, getLocusListsIsLoading } from 'redux/selectors'
 import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
 import DataTable from './DataTable'
 import { VerticalSpacer } from '../Spacers'
-import { LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD } from '../../utils/constants'
+import {
+  LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
+  LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
+} from '../../utils/constants'
 
 const FilterContainer = styled.div`
   position: relative;
@@ -18,26 +21,43 @@ const FilterContainer = styled.div`
   text-align: right;
 `
 
-const LOCUS_LIST_TABLE_FIELDS = LOCUS_LIST_FIELDS.map(({ name, label, fieldDisplay, width }) => ({
-  name,
-  width: Math.min(width, 6),
-  content: label,
-  format: fieldDisplay ? val => fieldDisplay(val[name]) : null,
-}))
+const FIELD_LOOKUP = LOCUS_LIST_FIELDS.reduce(
+  (acc, { name, label, fieldDisplay, width }) => ({
+    ...acc,
+    [name]: {
+      name,
+      width: Math.min(width, 6),
+      content: label,
+      format: fieldDisplay ? val => fieldDisplay(val[name]) : null,
+    },
+  }), {},
+)
 
-const BASIC_FIELDS = LOCUS_LIST_TABLE_FIELDS.slice(0, 3)
+const BASIC_FIELDS = [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD].map(
+  field => FIELD_LOOKUP[field])
 
 const NAME_WITH_LINK_FIELD = {
-  ...LOCUS_LIST_TABLE_FIELDS[0],
+  ...FIELD_LOOKUP[LOCUS_LIST_NAME_FIELD],
   format: locusList => <Link to={`/summary_data/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>,
 }
+
+const CORE_FIELDS = [
+  NAME_WITH_LINK_FIELD,
+  ...[LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME].map(
+    field => FIELD_LOOKUP[field]),
+  {
+    name: 'numProjects',
+    content: 'Projects',
+    width: 1,
+    format: null,
+  },
+]
 
 const MY_TABLE = {
   name: 'My',
   tableFields: [
-    NAME_WITH_LINK_FIELD,
-    ...LOCUS_LIST_TABLE_FIELDS.slice(1, 4),
-    LOCUS_LIST_TABLE_FIELDS[5],
+    ...CORE_FIELDS,
+    FIELD_LOOKUP[LOCUS_LIST_IS_PUBLIC_FIELD_NAME],
     {
       name: '',
       format: locusList => ([
@@ -50,7 +70,7 @@ const MY_TABLE = {
 }
 const PUBLIC_TABLE = {
   name: 'Public',
-  tableFields: [NAME_WITH_LINK_FIELD, ...LOCUS_LIST_TABLE_FIELDS.slice(1, 5)],
+  tableFields: [...CORE_FIELDS, FIELD_LOOKUP[LOCUS_LIST_CURATOR_FIELD_NAME]],
 }
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
 
