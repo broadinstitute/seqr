@@ -117,6 +117,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([header_1], FILENAME, user = User.objects.get(id=10))
         self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
+        self.assertListEqual(ec.exception.warnings, [])
 
         user = User.objects.get(username='test_pm_user')
         with self.assertRaises(ErrorsWarningsException) as ec:
@@ -128,6 +129,7 @@ class PedigreeInfoUtilsTest(TestCase):
                 header_3,
             ], FILENAME, user)
         self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
+        self.assertListEqual(ec.exception.warnings, [])
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
@@ -142,6 +144,8 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(ec.exception.errors, [
             'Error while parsing file: {}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status'.format(
                 FILENAME)])
+        self.assertListEqual(ec.exception.warnings, [])
+
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
                 header_1, header_2, ['', 'Position', '', '', 'Collaborator Sample ID', '', '', '', '', 'ul', 'ng/ul', '',
@@ -149,6 +153,7 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(ec.exception.errors, [
             'Error while parsing file: {}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+'.format(
                 FILENAME)])
+        self.assertListEqual(ec.exception.warnings, [])
 
         original_data = [
             header_1, header_2, header_3,
