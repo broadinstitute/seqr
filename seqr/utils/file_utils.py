@@ -64,3 +64,12 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
             line = line.decode('utf-8')
         yield line
 
+
+def mv_file_to_gs(local_path, gs_path, user=None):
+    if not _is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected.')
+    command = 'mv {}'.format(local_path)
+    process = _run_gsutil_command(command, gs_path, user=user)
+    if process.wait() != 0:
+        errors = [line.decode('utf-8').strip() for line in process.stdout]
+        raise Exception('Run command failed: ' + ' '.join(errors))

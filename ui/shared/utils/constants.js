@@ -1,6 +1,5 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
-import orderBy from 'lodash/orderBy'
 import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/ReduxFormWrapper'
@@ -389,14 +388,6 @@ export const INDIVIDUAL_EXPORT_DATA = [].concat(
   INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
 )
 
-export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
-  const sampleGuids = [...(family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
-  )]
-  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid])
-  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
-}
-
 // CLINVAR
 
 export const CLINSIG_SEVERITY = {
@@ -445,6 +436,7 @@ export const LOCUS_LIST_FIELDS = [
     name: LOCUS_LIST_DESCRIPTION_FIELD,
     label: 'Description',
     labelHelp: 'Some background on how this list is curated',
+    validate: value => (value ? undefined : 'Description is required'),
     width: 9,
     isEditable: true,
   },
@@ -891,8 +883,9 @@ export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 const SORT_BY_IN_OMIM = 'IN_OMIM'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
-const SORT_BY_GNOMAD = 'GNOMAD'
-const SORT_BY_EXAC = 'EXAC'
+const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
+const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
+const SORT_BY_CALLSET_AF = 'CALLSET_AF'
 const SORT_BY_1KG = '1KG'
 const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 const SORT_BY_CADD = 'CADD'
@@ -950,8 +943,9 @@ const VARIANT_SORT_OPTONS = [
     text: 'Protein Consequence',
     comparator: (a, b) => getConsequenceRank(a) - getConsequenceRank(b),
   },
-  { value: SORT_BY_GNOMAD, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
-  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: populationComparator('exac') },
+  { value: SORT_BY_GNOMAD_GENOMES, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
+  { value: SORT_BY_GNOMAD_EXOMES, text: 'gnomAD Exomes Frequency', comparator: populationComparator('gnomad_exomes') },
+  { value: SORT_BY_CALLSET_AF, text: 'Callset AF', comparator: populationComparator('callset') },
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: populationComparator('g1k') },
   { value: SORT_BY_CADD, text: 'Cadd', comparator: predictionComparator('cadd') },
   { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },

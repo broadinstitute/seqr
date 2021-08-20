@@ -255,7 +255,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
-    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /users/set_password/{password_token}'
+    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /login/set_password/{password_token}'
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def _test_forgot_password(self, url, mock_send_mail): # pylint: disable=arguments-differ

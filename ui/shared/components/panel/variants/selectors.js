@@ -170,48 +170,56 @@ export const getSavedVariantTotalPages = createSelector(
   },
 )
 
-export const getSavedVariantExportConfig = createSelector(
+const getSavedVariantExportData = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
-  getAnalysisGroupsByGuid,
-  getTagsByVariantGuids,
-  getNotesByVariantGuids,
-  (state, props) => props.project,
-  getSavedVariantTableState,
-  (state, props) => props.match.params,
-  (pairedVariants, familiesByGuid, analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
-    const familyVariants = pairedVariants.reduce(
+  (pairedVariants, familiesByGuid) =>
+    pairedVariants.reduce(
       (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
     ).map(({ genotypes, ...variant }) => ({
       ...variant,
       genotypes: Object.keys(genotypes).filter(
         indGuid => variant.familyGuids.some(familyGuid => familiesByGuid[familyGuid].individualGuids.includes(indGuid)),
       ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),
-    }))
-    const maxGenotypes = Math.max(...familyVariants.map(variant => Object.keys(variant.genotypes).length), 0)
+    })),
+)
 
+const getSavedVariantExportHeaders = createSelector(
+  getSavedVariantExportData,
+  (familyVariants) => {
+    const maxGenotypes = Math.max(...familyVariants.map(variant => Object.keys(variant.genotypes).length), 0)
+    return [
+      ...VARIANT_EXPORT_DATA.map(config => config.header),
+      ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
+        [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
+    ]
+  },
+)
+
+export const getSavedVariantExportConfig = createSelector(
+  getAnalysisGroupsByGuid,
+  getTagsByVariantGuids,
+  getNotesByVariantGuids,
+  (state, props) => props.project,
+  getSavedVariantTableState,
+  (state, props) => props.match.params,
+  (analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
     const familyId = params.familyGuid && params.familyGuid.split(/_(.+)/)[1]
     const analysisGroupName = (analysisGroupsByGuid[params.analysisGroupGuid] || {}).name
     const tagName = params.tag || tableState.categoryFilter || 'All'
 
     return [{
       name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analysisGroupName ? ` in Analysis Group ${analysisGroupName}` : ''}`,
-      data: {
-        filename: toSnakecase(`saved_${tagName}_variants${project ? `_${project.name}` : ''}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
-        rawData: familyVariants,
-        headers: [
-          ...VARIANT_EXPORT_DATA.map(config => config.header),
-          ...[...Array(maxGenotypes).keys()].reduce((acc, i) => (
-            [...acc, `sample_${i + 1}`, `num_alt_alleles_${i + 1}`, `gq_${i + 1}`, `ab_${i + 1}`]), []),
-        ],
-        processRow: variant => ([
-          ...VARIANT_EXPORT_DATA.map(config => (
-            config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
-          ),
-          ...Object.values(variant.genotypes).reduce(
-            (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
-        ]),
-      },
+      filename: toSnakecase(`saved_${tagName}_variants${project ? `_${project.name}` : ''}${familyId ? `_family_${familyId}` : ''}${analysisGroupName ? `_analysis_group_${analysisGroupName}` : ''}`),
+      getRawData: state => getSavedVariantExportData(state, { project, match: { params } }),
+      getHeaders: state => getSavedVariantExportHeaders(state, { project, match: { params } }),
+      processRow: variant => ([
+        ...VARIANT_EXPORT_DATA.map(config => (
+          config.getVal ? config.getVal(variant, tagsByGuid, notesByGuid) : variant[config.header]),
+        ),
+        ...Object.values(variant.genotypes).reduce(
+          (acc, { sampleId, numAlt, gq, ab }) => ([...acc, sampleId, numAlt, gq, ab]), []),
+      ]),
     }]
   },
 )
