@@ -121,7 +121,7 @@ def add_variants_dataset_handler(request, project_guid):
         Data Manager from seqr
         """.format(
             user=request.user,
-            date=loaded_date.date(),
+            date=project.created_date.date().strftime('%B %d, %Y'),
             namespace=project.workspace_namespace,
             name=project.workspace_name,
             proj_name=project.name,
