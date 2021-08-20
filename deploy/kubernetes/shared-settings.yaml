@@ -1,6 +1,6 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
-KUBERNETES_VERSION: '1.16.15-gke.4300'
+KUBERNETES_VERSION: '1.18.20-gke.501'
 ELASTICSEARCH_VERSION: 7.8.1
 LINKERD_VERSION: 'stable-2.10.0'
 POSTGRES_VERSION: '12'
