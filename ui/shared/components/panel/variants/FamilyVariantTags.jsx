@@ -73,7 +73,7 @@ ShortcutTagToggle.propTypes = {
 }
 
 const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
-  const { tags = [], ...variantMeta } = variantTagNotes
+  const { tags = [], ...variantMeta } = variantTagNotes || {}
   const onSubmit = tagName => (value) => {
     return dispatchUpdateFamilyVariantTags({
       ...variantMeta,
@@ -92,8 +92,6 @@ const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantT
 ShortcutTags.propTypes = {
   variantTagNotes: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
-  familyGuid: PropTypes.string.isRequired,
-  variantId: PropTypes.string.isRequired,
 }
 
 
@@ -224,8 +222,6 @@ const FamilyVariantTags = React.memo((
           <Table.Cell collapsing>
             <ShortcutTags
               variantTagNotes={variantTagNotes}
-              variantId={variantId}
-              familyGuid={family.familyGuid}
               dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
             />
           </Table.Cell>}
