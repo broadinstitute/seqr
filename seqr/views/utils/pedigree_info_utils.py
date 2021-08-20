@@ -17,7 +17,7 @@ logger = SeqrLogger(__name__)
 
 class ErrorsWarningsException(Exception):
     def __init__(self, errors, warnings=None):
-        """Custom Exception to capture errors and warnings"""
+        """Custom Exception to capture errors and warnings."""
         Exception.__init__(self, str(errors))
         self.errors = errors
         self.warnings = warnings
