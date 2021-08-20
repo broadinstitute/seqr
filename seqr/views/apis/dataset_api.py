@@ -4,12 +4,14 @@ from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
+from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
+from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
     validate_index_metadata_and_get_elasticsearch_index_samples, load_mapping_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_samples
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_project_collaborators_by_username
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, has_analyst_access
 
 
 @data_manager_required
@@ -109,6 +111,31 @@ def add_variants_dataset_handler(request, project_guid):
     ]
     Family.bulk_update(
         request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
+
+    if project.workspace_name and project.workspace_namespace:
+        message_content = """
+        Hi {user},
+        We are following up on your request to load data from AnVIL on {date}.
+        We have loaded data from the AnVIL workspace “{namespace}/{name}” to the corresponding seqr project {proj_name}. {sample_count} samples are currently loaded. Let us know if you have any questions.
+        Thanks,
+        Data Manager from seqr
+        """.format(
+            user=request.user,
+            date=loaded_date.date(),
+            namespace=project.workspace_namespace,
+            name=project.workspace_name,
+            proj_name=project.name,
+            sample_count=len(matched_sample_id_to_sample_record),
+        )
+        if has_analyst_access(project):
+            safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+        else:
+            send_html_email(
+                message_content,
+                subject='AnVIL data have been loaded into seqr',
+                to=sorted([user['email'] for user in get_project_collaborators_by_username(request.user, project).values()
+                           if user['hasEditPermissions']]),
+            )
 
     response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
