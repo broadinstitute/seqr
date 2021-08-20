@@ -53,20 +53,20 @@ def validate_index_metadata(index_metadata, elasticsearch_index, project=None, g
 
     sample_type = index_metadata['sampleType']
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
-        raise Exception("Sample type not supported: {}".format(sample_type))
+        raise ValueError("Sample type not supported: {}".format(sample_type))
 
     if index_metadata['genomeVersion'] != (genome_version or project.genome_version):
-        raise Exception('Index "{0}" has genome version {1} but this project uses version {2}'.format(
+        raise ValueError('Index "{0}" has genome version {1} but this project uses version {2}'.format(
             elasticsearch_index, index_metadata['genomeVersion'], project.genome_version
         ))
 
     dataset_path = index_metadata['sourceFilePath']
     dataset_suffixes = ('.vds', '.vcf.gz', '.bgz', '.bed')
     if not dataset_path.endswith(dataset_suffixes):
-        raise Exception("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
+        raise ValueError("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
 
     if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
-        raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
+        raise ValueError('Index "{0}" has dataset type {1} but expects {2}'.format(
             elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
         ))
 
