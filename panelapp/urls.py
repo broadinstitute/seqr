@@ -9,5 +9,5 @@ extra = getattr(settings, setting_name('TRAILING_SLASH'), True) and '/' or ''
 app_name = 'panelapp'
 
 urlpatterns = [
-    url(r'^api/locus_lists/import_panelapp$'.format(extra), import_panelapp_handler, name='import_panelapp_handler')
+    url(r'^api/locus_lists/import_panelapp{0}$'.format(extra), import_panelapp_handler, name='import_panelapp_handler')
 ]
