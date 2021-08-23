@@ -84,8 +84,14 @@ def validate_patient_data(json_data):
         raise ValueError('"id" is required')
     if not patient_data.get('contact'):
         raise ValueError('"contact" is required')
-    if not (patient_data.get('features') or patient_data.get('genomicFeatures')):
+    features = patient_data.get('features')
+    genomic_features = patient_data.get('genomicFeatures')
+    if not (features or genomic_features):
         raise ValueError('"features" or "genomicFeatures" are required')
+    if genomic_features and any(not feature.get('gene', {}).get('id') for feature in genomic_features):
+        raise ValueError('all "genomicFeatures" require a gene id')
+    if features and any(not feature.get('id') for feature in features):
+        raise ValueError('all "features" require an id')
 
 
 def parse_mme_features(features, hpo_terms_by_id):

@@ -414,7 +414,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         alert_a_slack_message = 'Error searching in Node A: Failed request (400)\n```{}```'.format(
             json.dumps(expected_patient_body, indent=2))
         alert_b_slack_message = 'Error searching in Node B: Received invalid results\n```{}```'.format(
-            json.dumps([INVALID_NEW_MATCH_JSON], indent=2))
+            json.dumps([INVALID_NEW_MATCH_JSON, INVALID_FEATURES_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON], indent=2))
         mock_slacker.return_value.chat.post_message.assert_has_calls([
             mock.call('matchmaker_alerts', alert_a_slack_message, **slack_kwargs),
             mock.call('matchmaker_alerts', alert_b_slack_message, **slack_kwargs),
