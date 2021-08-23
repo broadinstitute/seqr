@@ -4,7 +4,7 @@ from datetime import datetime
 from django.urls.base import reverse
 from io import StringIO
 
-from seqr.models import Sample
+from seqr.models import Sample, Project
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase
@@ -41,8 +41,12 @@ MOCK_FILE_ITER = MOCK_OPEN.return_value.__enter__.return_value.__iter__
 class DatasetAPITest(object):
 
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
+    @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
+    @mock.patch('seqr.views.apis.dataset_api.send_html_email')
+    @mock.patch('seqr.views.apis.dataset_api.has_analyst_access')
+    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @urllib3_responses.activate
-    def test_add_variants_dataset(self, mock_random):
+    def test_add_variants_dataset(self, mock_analyst_access, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_data_manager_login(url)
 
@@ -63,6 +67,7 @@ class DatasetAPITest(object):
 
         mock_random.return_value = 98765432101234567890
 
+        mock_analyst_access.return_value = False
         urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON)
         urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
             'sample_ids': {'buckets': [{'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'}]}
@@ -118,6 +123,20 @@ class DatasetAPITest(object):
         self.assertEqual(len(updated_sample_models), 3)
         self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
 
+        message_content = """
+        Hi test_data_manager,
+        We are following up on your request to load data from AnVIL on March 12, 2017.
+        We have loaded data from the AnVIL workspace “my-seqr-billing/anvil-1kg project nåme with uniçøde” to the corresponding seqr project 1kg project nåme with uniçøde. {samples} samples are currently loaded. Let us know if you have any questions.
+        Thanks,
+        Data Manager from seqr
+        """
+        mock_send_email.assert_called_with(message_content.format(samples=3),
+                                           subject='AnVIL data have been loaded into seqr',
+                                           to=['test_user_manager@test.com'])
+        mock_send_slack.assert_not_called()
+        project = Project.objects.get(guid=PROJECT_GUID)
+        mock_analyst_access.assert_called_with(project)
+
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
         urllib3_responses.add_json('/{}/_mapping'.format(SV_INDEX_NAME), {
@@ -130,6 +149,9 @@ class DatasetAPITest(object):
         urllib3_responses.add_json('/{}/_search?size=0'.format(SV_INDEX_NAME), {
             'aggregations': {'sample_ids': {'buckets': [{'key': 'NA19675_1'}]}}
         }, method=urllib3_responses.POST)
+        mock_analyst_access.reset_mock()
+        mock_send_email.reset_mock()
+        mock_analyst_access.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': SV_INDEX_NAME,
             'datasetType': 'SV',
@@ -159,6 +181,10 @@ class DatasetAPITest(object):
         self.assertEqual(len(sample_models), 2)
         self.assertSetEqual({sv_sample_guid, existing_index_sample_guid}, {sample.guid for sample in sample_models})
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
+
+        mock_send_email.assert_not_called()
+        mock_send_slack.assert_called_with('anvil-data-loading', message_content.format(samples=1))
+        mock_analyst_access.assert_called_with(project)
 
         # Adding an index for a different sample type works additively
         mock_random.return_value = 987654
@@ -347,16 +373,16 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
 
+
 # Tests for AnVIL access disabled
 class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', '1kg_project']
 
 
-def assert_no_anvil_calls(self):
+def assert_anvil_calls(self):
     self.mock_list_workspaces.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_ws_acl.assert_not_called()
-
+    self.mock_get_ws_acl.assert_called_with(self.data_manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
 
 # Test for permissions from AnVIL only
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
@@ -364,7 +390,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
+        assert_anvil_calls(self)
 
 
 # Test for permissions from AnVIL and local
@@ -373,4 +399,4 @@ class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
+        assert_anvil_calls(self)
