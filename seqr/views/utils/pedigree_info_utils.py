@@ -15,11 +15,17 @@ from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
 
+class ErrorsWarningsException(Exception):
+    def __init__(self, errors, warnings=None):
+        """Custom Exception to capture errors and warnings."""
+        Exception.__init__(self, str(errors))
+        self.errors = errors
+        self.warnings = warnings
 
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
-def parse_pedigree_table(parsed_file, filename, user, project=None):
+def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warnings=False):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
@@ -37,11 +43,6 @@ def parse_pedigree_table(parsed_file, filename, user, project=None):
             warnings (list): list of warning message strings
         )
     """
-
-    json_records = []
-    errors = []
-    warnings = []
-    is_merged_pedigree_sample_manifest = False
 
     # parse rows from file
     try:
@@ -88,8 +89,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None):
 
         rows = [dict(zip(header, row)) for row in rows]
     except Exception as e:
-        errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
-        return json_records, errors, warnings
+        raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
     # convert to json and validate
     try:
@@ -104,15 +104,14 @@ def parse_pedigree_table(parsed_file, filename, user, project=None):
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
-        errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
-        return json_records, errors, warnings
+        raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    errors, warnings = validate_fam_file_records(json_records)
+    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings)
 
-    if not errors and is_merged_pedigree_sample_manifest:
+    if is_merged_pedigree_sample_manifest:
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
-    return json_records, errors, warnings
+    return json_records, warnings
 
 
 def _convert_fam_file_rows_to_json(rows):
@@ -270,6 +269,10 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 warnings.append("%(parent_id)s is the %(parent_id_type)s of %(individual_id)s but doesn't have a separate record in the table" % locals())
                 continue
 
+            # is the parent the same individuals
+            if parent_id == individual_id:
+                errors.append('{} is recorded as their own {}'.format(parent_id, parent_id_type))
+
             # is father male and mother female?
             if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
                 actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
@@ -285,7 +288,10 @@ def validate_fam_file_records(records, fail_on_warnings=False):
 
     if fail_on_warnings:
         errors += warnings
-    return errors, warnings
+        warnings = []
+    if errors:
+        raise ErrorsWarningsException(errors, warnings)
+    return warnings
 
 
 def _is_header_row(row):

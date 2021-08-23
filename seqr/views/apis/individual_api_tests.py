@@ -61,7 +61,7 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 
 CHILD_UPDATE_GUID = "I000001_na19675"
 
-
+@mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 

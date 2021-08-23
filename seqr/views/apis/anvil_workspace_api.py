@@ -131,10 +131,7 @@ def create_project_from_workspace(request, namespace, name):
 
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user)
-    errors += ped_warnings
-    if errors:
-        return create_json_response({'errors': errors}, status=400)
+    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
 
     # Validate the VCF to see if it contains all the required samples
     samples = get_vcf_samples(data_path)

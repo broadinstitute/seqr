@@ -82,7 +82,7 @@ POPULATIONS = {
     },
     'topmed': {
         'filter_AF': [],
-        'Het': [],
+        'Het': None,
     },
     'g1k': {
         'filter_AF': ['g1k_POPMAX_AF'],
@@ -314,5 +314,5 @@ for pop_config in POPULATIONS.values():
     for pop_field in pop_config.values():
         if isinstance(pop_field, list):
             QUERY_FIELD_NAMES += pop_field
-        else:
+        elif pop_field is not None:
             QUERY_FIELD_NAMES.append(pop_field)

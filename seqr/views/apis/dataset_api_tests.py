@@ -235,12 +235,6 @@ Data Manager from seqr
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         self.check_data_manager_login(url)
 
-        urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME), {INDEX_NAME: {'mappings': {"properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
-        urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {
-            'aggregations': {'sample_ids': {'buckets': []}}
-        }, method=urllib3_responses.POST)
-
-        # Send invalid requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['request must contain fields: elasticsearchIndex, datasetType']})
@@ -250,6 +244,13 @@ Data Manager from seqr
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid dataset type "NOT_A_TYPE"']})
 
+        response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'], 'test_index - Error accessing index: Connection refused: GET /test_index/_mapping')
+
+        urllib3_responses.add_json('/{}/_mapping'.format(INDEX_NAME),
+                                   {INDEX_NAME: {'mappings': {"properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
@@ -328,6 +329,9 @@ Data Manager from seqr
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Found mismatched sample types for indices in alias']})
 
+        urllib3_responses.add_json('/{}/_search?size=0'.format(INDEX_NAME), {
+            'aggregations': {'sample_ids': {'buckets': []}}
+        }, method=urllib3_responses.POST)
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), MAPPING_JSON)
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
@@ -374,6 +378,16 @@ Data Manager from seqr
         }))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
+
+        MOCK_FILE_ITER.side_effect = Exception('Unhandled base exception')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'elasticsearchIndex': INDEX_NAME,
+            'mappingFilePath': 'mapping.csv',
+            'datasetType': 'VARIANTS',
+        }))
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Unhandled base exception')
+        MOCK_FILE_ITER.side_effect = None
 
 
 # Tests for AnVIL access disabled

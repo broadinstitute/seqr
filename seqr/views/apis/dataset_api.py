@@ -37,15 +37,17 @@ def add_variants_dataset_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     request_json = json.loads(request.body)
 
-    try:
-        required_fields = ['elasticsearchIndex', 'datasetType']
-        if any(field not in request_json for field in required_fields):
-            raise ValueError('request must contain fields: {}'.format(', '.join(required_fields)))
-        elasticsearch_index = request_json['elasticsearchIndex'].strip()
-        dataset_type = request_json['datasetType']
-        if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
-            raise ValueError('Invalid dataset type "{}"'.format(dataset_type))
+    required_fields = ['elasticsearchIndex', 'datasetType']
+    if any(field not in request_json for field in required_fields):
+        return create_json_response(
+            {'errors': ['request must contain fields: {}'.format(', '.join(required_fields))]}, status=400)
 
+    elasticsearch_index = request_json['elasticsearchIndex'].strip()
+    dataset_type = request_json['datasetType']
+    if dataset_type not in Sample.DATASET_TYPE_LOOKUP:
+        return create_json_response({'errors': ['Invalid dataset type "{}"'.format(dataset_type)]}, status=400)
+
+    try:
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, project=project, dataset_type=dataset_type)
         if not sample_ids:
@@ -53,58 +55,58 @@ def add_variants_dataset_handler(request, project_guid):
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
-
-        loaded_date = timezone.now()
-        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
-            project=project,
-            user=request.user,
-            sample_ids=sample_ids,
-            sample_type=sample_type,
-            dataset_type=dataset_type,
-            elasticsearch_index=elasticsearch_index,
-            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            loaded_date=loaded_date,
-        )
-
-        unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
-
-        if request_json.get('ignoreExtraSamplesInCallset'):
-            if len(matched_sample_id_to_sample_record) == 0:
-                raise Exception(
-                    "None of the individuals or samples in the project matched the {} expected sample id(s)".format(
-                        len(sample_ids)
-                    ))
-        elif len(unmatched_samples) > 0:
-            raise Exception(
-                'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
-                    ", ".join(unmatched_samples)))
-
-        prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
-        included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
-
-        missing_individuals = Individual.objects.filter(
-            family__in=included_families,
-            sample__is_active=True,
-            sample__dataset_type=dataset_type,
-            sample__sample_type=sample_type,
-        ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
-        missing_family_individuals = defaultdict(list)
-        for individual in missing_individuals:
-            missing_family_individuals[individual.family].append(individual)
-
-        if missing_family_individuals:
-            raise Exception(
-                'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(sorted(
-                        ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
-                         for family, missing_indivs in missing_family_individuals.items()]
-                    ))))
-
-        inactivate_sample_guids = _update_variant_samples(
-            matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
-
-    except Exception as e:
+    except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
+
+    loaded_date = timezone.now()
+    matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+        project=project,
+        user=request.user,
+        sample_ids=sample_ids,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        elasticsearch_index=elasticsearch_index,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        loaded_date=loaded_date,
+    )
+
+    unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
+
+    if request_json.get('ignoreExtraSamplesInCallset'):
+        if len(matched_sample_id_to_sample_record) == 0:
+            return create_json_response({'errors': [
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
+                    len(sample_ids)
+                )]}, status=400)
+    elif len(unmatched_samples) > 0:
+        return create_json_response({'errors': [
+            'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
+                ", ".join(unmatched_samples))
+        ]}, status=400)
+
+    prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
+    included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
+
+    missing_individuals = Individual.objects.filter(
+        family__in=included_families,
+        sample__is_active=True,
+        sample__dataset_type=dataset_type,
+        sample__sample_type=sample_type,
+    ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
+    missing_family_individuals = defaultdict(list)
+    for individual in missing_individuals:
+        missing_family_individuals[individual.family].append(individual)
+
+    if missing_family_individuals:
+        return create_json_response({'errors': [
+            'The following families are included in the callset but are missing some family members: {}.'.format(
+                ', '.join(sorted(
+                    ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
+                     for family, missing_indivs in missing_family_individuals.items()]
+                )))]}, status=400)
+
+    inactivate_sample_guids = _update_variant_samples(
+        matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA

@@ -697,6 +697,7 @@ class EsSearch(object):
                 lookup_field_prefix=population,
                 existing_fields=self.index_metadata[index_name]['fields'],
                 get_addl_fields=lambda field: pop_config[field] if isinstance(pop_config[field], list) else [pop_config[field]],
+                skip_fields=[field for field, val in pop_config.items() if val is None],
             )
             for population, pop_config in POPULATIONS.items()
         }
@@ -1352,7 +1353,7 @@ def _parse_es_sort(sort, sort_config):
     return sort
 
 
-def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix='', existing_fields=None):
+def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix='', existing_fields=None, skip_fields=None):
     return {
         field_config.get('response_key', format_response_key(field)): _value_if_has_key(
             hit,
@@ -1360,7 +1361,7 @@ def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, ge
             ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],
             existing_fields=existing_fields,
             **field_config
-        )
+        ) if field not in (skip_fields or []) else None
         for field, field_config in field_configs.items()
     }
 
