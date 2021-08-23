@@ -281,7 +281,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, INVALID_FEATURES_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
