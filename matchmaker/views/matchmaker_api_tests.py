@@ -138,8 +138,15 @@ PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
 INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
-INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
-INVALID_NEW_MATCH_JSON['patient']['id'] = '123'
+INVALID_NEW_MATCH_JSON['patient'] = {}
+
+INVALID_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+INVALID_GENE_NEW_MATCH_JSON['patient']['id'] = '123'
+
+INVALID_FEATURES_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_FEATURES_NEW_MATCH_JSON['patient']['features'][0] = {}
+INVALID_FEATURES_NEW_MATCH_JSON['patient']['id'] = '456'
 
 MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
@@ -274,7 +281,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
@@ -401,20 +408,27 @@ class MatchmakerAPITest(AuthenticationTestCase):
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
-        self.assertEqual(mock_slacker.call_count, 2)
+        self.assertEqual(mock_slacker.call_count, 3)
         mock_slacker.assert_called_with(MOCK_SLACK_TOKEN)
         slack_kwargs = {'as_user': False, 'icon_emoji': ':beaker:', 'username': 'Beaker (engineering-minion)'}
-        alert_slack_message = 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
-            json.dumps(expected_patient_body))
+        alert_a_slack_message = 'Error searching in Node A: Failed request (400)\n```{}```'.format(
+            json.dumps(expected_patient_body, indent=2))
+        alert_b_slack_message = 'Error searching in Node B: Received invalid results\n```{}```'.format(
+            json.dumps([INVALID_NEW_MATCH_JSON], indent=2))
         mock_slacker.return_value.chat.post_message.assert_has_calls([
-            mock.call('matchmaker_alerts', alert_slack_message, **slack_kwargs),
+            mock.call('matchmaker_alerts', alert_a_slack_message, **slack_kwargs),
+            mock.call('matchmaker_alerts', alert_b_slack_message, **slack_kwargs),
             mock.call('matchmaker_seqr_match', message, **slack_kwargs),
         ])
         mock_logger.error.assert_has_calls([
             mock.call(
                 'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
-                    'matchmaker_alerts', alert_slack_message
+                    'matchmaker_alerts', alert_a_slack_message
             )),
+            mock.call(
+                'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
+                    'matchmaker_alerts', alert_b_slack_message
+                )),
             mock.call(
                 'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
                     'matchmaker_seqr_match', message

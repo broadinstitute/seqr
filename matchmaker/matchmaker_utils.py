@@ -76,6 +76,18 @@ def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, inclu
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
+def validate_patient_data(json_data):
+    patient_data = json_data.get('patient')
+    if not isinstance(patient_data, dict):
+        raise ValueError('"patient" object is required')
+    if not patient_data.get('id'):
+        raise ValueError('"id" is required')
+    if not patient_data.get('contact'):
+        raise ValueError('"contact" is required')
+    if not (patient_data.get('features') or patient_data.get('genomicFeatures')):
+        raise ValueError('"features" or "genomicFeatures" are required')
+
+
 def parse_mme_features(features, hpo_terms_by_id):
     phenotypes = [feature for feature in (features or [])]
     for feature in phenotypes:

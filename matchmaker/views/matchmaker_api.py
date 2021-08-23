@@ -8,7 +8,7 @@ from django.db.models import prefetch_related_objects
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, \
-    get_gene_ids_for_feature, MME_DISCLAIMER
+    get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -162,20 +162,24 @@ def _search_external_matches(nodes_to_query, patient_data):
             if node_results:
                 _, _, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(node_results)
                 invalid_results = []
+                malformed_results = []
                 for result in node_results:
-                    if (not submission_gene_ids) or \
-                            _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
-                        external_results.append(result)
-                    else:
-                        invalid_results.append(result)
+                    try:
+                        validate_patient_data(result)
+                        if (not submission_gene_ids) or \
+                                _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
+                            external_results.append(result)
+                        else:
+                            invalid_results.append(result)
+                    except ValueError:
+                        malformed_results.append(result)
+                if malformed_results:
+                    _report_external_mme_error(node['name'], 'Received invalid results', malformed_results)
                 if invalid_results:
                     error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
                     logger.warning(error_message)
         except Exception as e:
-            error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
-                node['name'], str(e), json.dumps(patient_data))
-            logger.warning(error_message)
-            safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
+            _report_external_mme_error(node['name'], str(e), patient_data)
 
     return external_results
 
@@ -186,6 +190,13 @@ def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
             return True
     return False
 
+
+def _report_external_mme_error(node_name, error, detail):
+    error_message = 'Error searching in {}: {}'.format(node_name, error)
+    # logger.warning(error_message, detail=detail) # TODO use SeqrLogger
+    logger.warning(error_message)
+    slack_message = '{}\n```{}```'.format(error_message, json.dumps(detail, indent=2))
+    safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, slack_message)
 
 @login_and_policies_required
 def update_mme_submission(request, submission_guid=None):
