@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
-from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
@@ -113,25 +113,31 @@ def add_variants_dataset_handler(request, project_guid):
         request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     if project.workspace_name and project.workspace_namespace:
-        message_content = """
-        Hi {user},
-        We are following up on your request to load data from AnVIL on {date}.
-        We have loaded data from the AnVIL workspace “{namespace}/{name}” to the corresponding seqr project {proj_name}. {sample_count} samples are currently loaded. Let us know if you have any questions.
-        Thanks,
-        Data Manager from seqr
-        """.format(
-            user=request.user,
-            date=project.created_date.date().strftime('%B %d, %Y'),
-            namespace=project.workspace_namespace,
-            name=project.workspace_name,
-            proj_name=project.name,
-            sample_count=len(matched_sample_id_to_sample_record),
-        )
         if has_analyst_access(project):
-            safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+            safe_post_to_slack(
+                SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+                """{num_sample} new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page
+                ```{samples}```
+                """.format(
+                    num_sample=len(matched_sample_id_to_sample_record),
+                    guid=project.guid,
+                    samples=[id for id in matched_sample_id_to_sample_record.keys()]
+                ))
         else:
             send_html_email(
-                message_content,
+                """Hi {user},
+We are following up on your request to load data from AnVIL on {date}.
+We have loaded data from the AnVIL workspace “{namespace}/{name}” to the corresponding seqr project {proj_name}. {num_sample} samples are currently loaded. Let us know if you have any questions.
+Thanks,
+Data Manager from seqr
+""".format(
+                    user=request.user,
+                    date=project.created_date.date().strftime('%B %d, %Y'),
+                    namespace=project.workspace_namespace,
+                    name=project.workspace_name,
+                    proj_name=project.name,
+                    num_sample=len(matched_sample_id_to_sample_record),
+                ),
                 subject='AnVIL data have been loaded into seqr',
                 to=sorted([user['email'] for user in get_project_collaborators_by_username(request.user, project).values()
                            if user['hasEditPermissions']]),

@@ -44,7 +44,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.dataset_api.send_html_email')
     @mock.patch('seqr.views.apis.dataset_api.has_analyst_access')
-    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
+    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate
     def test_add_variants_dataset(self, mock_analyst_access, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -123,14 +123,12 @@ class DatasetAPITest(object):
         self.assertEqual(len(updated_sample_models), 3)
         self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
 
-        message_content = """
-        Hi test_data_manager,
-        We are following up on your request to load data from AnVIL on March 12, 2017.
-        We have loaded data from the AnVIL workspace “my-seqr-billing/anvil-1kg project nåme with uniçøde” to the corresponding seqr project 1kg project nåme with uniçøde. {samples} samples are currently loaded. Let us know if you have any questions.
-        Thanks,
-        Data Manager from seqr
-        """
-        mock_send_email.assert_called_with(message_content.format(samples=3),
+        mock_send_email.assert_called_with("""Hi test_data_manager,
+We are following up on your request to load data from AnVIL on March 12, 2017.
+We have loaded data from the AnVIL workspace “my-seqr-billing/anvil-1kg project nåme with uniçøde” to the corresponding seqr project 1kg project nåme with uniçøde. 3 samples are currently loaded. Let us know if you have any questions.
+Thanks,
+Data Manager from seqr
+""",
                                            subject='AnVIL data have been loaded into seqr',
                                            to=['test_user_manager@test.com'])
         mock_send_slack.assert_not_called()
@@ -183,7 +181,11 @@ class DatasetAPITest(object):
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
-        mock_send_slack.assert_called_with('anvil-data-loading', message_content.format(samples=1))
+        mock_send_slack.assert_called_with(
+            'seqr-data-loading',
+            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n                ```[\'NA19675_1\']```\n                '.format(
+                guid=project.guid
+            ))
         mock_analyst_access.assert_called_with(project)
 
         # Adding an index for a different sample type works additively
