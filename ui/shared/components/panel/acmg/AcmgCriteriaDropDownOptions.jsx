@@ -1,446 +1,446 @@
 export default [
-  [
+  [ // 0
     {
-      key: 'BA_BA1_Yes',
+      key: 'BA_BA1_S_Yes',
       text: 'Y',
-      value: 'BA_BA1_Yes',
+      value: 'BA_BA1_S_Yes',
     },
     {
-      key: 'BA_BA1_No',
+      key: 'BA_BA1_S_No',
       text: 'N',
-      value: 'BA_BA1_No',
+      value: 'BA_BA1_S_No',
     },
   ],
-  [
+  [ // 1
     {
-      key: 'PM_PM2_Yes',
+      key: 'PM_PM2_M_Yes',
       text: 'Y',
-      value: 'PM_PM2_Yes',
+      value: 'PM_PM2_M_Yes',
     },
     {
-      key: 'PM_PM2_No',
+      key: 'PM_PM2_M_No',
       text: 'N',
-      value: 'PM_PM2_No',
+      value: 'PM_PM2_M_No',
     },
   ],
-  [
+  [ // 2
     {
-      key: 'BS_BS1_Yes',
+      key: 'BS_BS1_S_Yes',
       text: 'Y',
-      value: 'BS_BS1_Yes',
+      value: 'BS_BS1_S_Yes',
     },
     {
-      key: 'BS_BS1_No',
+      key: 'BS_BS1_S_No',
       text: 'N',
-      value: 'BS_BS1_No',
+      value: 'BS_BS1_S_No',
     },
   ],
-  [
+  [ // 3
     {
-      key: 'PP_PS4-P-Supporting_Yes',
+      key: 'PP_PS4_P_Yes',
       text: 'Y',
-      value: 'PP_PS4-P-Supporting_Yes',
+      value: 'PP_PS4_P_Yes',
     },
     {
-      key: 'PP_PS4-P-Supporting_No',
+      key: 'PP_PS4_P_No',
       text: 'N',
-      value: 'PP_PS4-P-Supporting_No',
+      value: 'PP_PS4_P_No',
     },
   ],
-  [
+  [ // 4
     {
-      key: 'PM_PS4-M-Moderate_Yes',
+      key: 'PM_PS4_M_Yes',
       text: 'Y',
-      value: 'PM_PS4-M-Moderate_Yes',
+      value: 'PM_PS4_M_Yes',
     },
     {
-      key: 'PM_PS4-M-Moderate_No',
+      key: 'PM_PS4_M_No',
       text: 'N',
-      value: 'PM_PS4-M-Moderate_No',
+      value: 'PM_PS4_M_No',
     },
   ],
-  [
+  [ // 5
     {
-      key: 'PS_PS4_Yes',
+      key: 'PS_PS4_S_Yes',
       text: 'Y',
-      value: 'PS_PS4_Yes',
+      value: 'PS_PS4_S_Yes',
     },
     {
-      key: 'PS_PS4_No',
+      key: 'PS_PS4_S_No',
       text: 'N',
-      value: 'PS_PS4_No',
+      value: 'PS_PS4_S_No',
     },
   ],
-  [
+  [ // 6
     {
-      key: 'BS_BS2_Yes',
+      key: 'BS_BS2_S_Yes',
       text: 'Y',
-      value: 'BS_BS2_Yes',
+      value: 'BS_BS2_S_Yes',
     },
     {
-      key: 'BS_BS2_No',
+      key: 'BS_BS2_S_No',
       text: 'N',
-      value: 'BS_BS2_No',
+      value: 'BS_BS2_S_No',
     },
   ],
-  [
+  [ // 7
     {
-      key: 'BP_BP1_Yes',
+      key: 'BP_BP1_P_Yes',
       text: 'Y',
-      value: 'BP_BP1_Yes',
+      value: 'BP_BP1_P_Yes',
     },
     {
-      key: 'BP_BP1_No',
+      key: 'BP_BP1_P_No',
       text: 'N',
-      value: 'BP_BP1_No',
+      value: 'BP_BP1_P_No',
     },
   ],
-  [
+  [ // 8
     {
-      key: 'PS_PS1_Yes',
+      key: 'PS_PS1_S_Yes',
       text: 'Y',
-      value: 'PS_PS1_Yes',
+      value: 'PS_PS1_S_Yes',
     },
     {
-      key: 'PS_PS1_No',
+      key: 'PS_PS1_S_No',
       text: 'N',
-      value: 'PS_PS1_No',
+      value: 'PS_PS1_S_No',
     },
   ],
-  [
+  [ // 9
     {
-      key: 'BP_BP3_Yes',
+      key: 'BP_BP3_P_Yes',
       text: 'Y',
-      value: 'BP_BP3_Yes',
+      value: 'BP_BP3_P_Yes',
     },
     {
-      key: 'BP_BP3_No',
+      key: 'BP_BP3_P_No',
       text: 'N',
-      value: 'BP_BP3_No',
+      value: 'BP_BP3_P_No',
     },
   ],
-  [
+  [ // 10
     {
-      key: 'PM_PM5_Yes',
+      key: 'PM_PM5_M_Yes',
       text: 'Y',
-      value: 'PM_PM5_Yes',
+      value: 'PM_PM5_M_Yes',
     },
     {
-      key: 'PM_PM5_No',
+      key: 'PM_PM5_M_No',
       text: 'N',
-      value: 'PM_PM5_No',
+      value: 'PM_PM5_M_No',
     },
   ],
-  [
+  [ // 11
     {
-      key: 'PS_PM5-S-Strong_Yes',
+      key: 'PS_PM5_S_Yes',
       text: 'Y',
-      value: 'PS_PM5-S-Strong_Yes',
+      value: 'PS_PM5_S_Yes',
     },
     {
-      key: 'PS_PM5-S-Strong_No',
+      key: 'PS_PM5_S_No',
       text: 'N',
-      value: 'PS_PM5-S-Strong_No',
+      value: 'PS_PM5_S_No',
     },
   ],
-  [
+  [ // 12
     {
-      key: 'BP_BP4_Yes',
+      key: 'BP_BP4_P_Yes',
       text: 'Y',
-      value: 'BP_BP4_Yes',
+      value: 'BP_BP4_P_Yes',
     },
     {
-      key: 'BP_BP4_No',
+      key: 'BP_BP4_P_No',
       text: 'N',
-      value: 'BP_BP4_No',
+      value: 'BP_BP4_P_No',
     },
   ],
-  [
+  [ // 13
     {
-      key: 'PP_PP3_Yes',
+      key: 'PP_PP3_P_Yes',
       text: 'Y',
-      value: 'PP_PP3_Yes',
+      value: 'PP_PP3_P_Yes',
     },
     {
-      key: 'PP_PP3_No',
+      key: 'PP_PP3_P_No',
       text: 'N',
-      value: 'PP_PP3_No',
+      value: 'PP_PP3_P_No',
     },
   ],
-  [
+  [ // 14
     {
-      key: 'PM_PVS1-M-Moderate_Yes',
+      key: 'PM_PVS1_M_Yes',
       text: 'Y',
-      value: 'PM_PVS1-M-Moderate_Yes',
+      value: 'PM_PVS1_M_Yes',
     },
     {
-      key: 'PM_PVS1-M-Moderate_No',
+      key: 'PM_PVS1_M_No',
       text: 'N',
-      value: 'PM_PVS1-M-Moderate_No',
+      value: 'PM_PVS1_M_No',
     },
   ],
-  [
+  [ // 15
     {
-      key: 'PS_PVS1-S-Strong_Yes',
+      key: 'PS_PVS1_S_Yes',
       text: 'Y',
-      value: 'PS_PVS1-S-Strong_Yes',
+      value: 'PS_PVS1_S_Yes',
     },
     {
-      key: 'PS_PVS1-S-Strong_No',
+      key: 'PS_PVS1_S_No',
       text: 'N',
-      value: 'PS_PVS1-S-Strong_No',
+      value: 'PS_PVS1_S_No',
     },
   ],
-  [
+  [ // 16
     {
-      key: 'PVS_PVS1_Yes',
+      key: 'PVS_PVS1_VS_Yes',
       text: 'Y',
-      value: 'PVS_PVS1_Yes',
+      value: 'PVS_PVS1_VS_Yes',
     },
     {
-      key: 'PVS_PVS1_No',
+      key: 'PVS_PVS1_VS_No',
       text: 'N',
-      value: 'PVS_PVS1_No',
+      value: 'PVS_PVS1_VS_No',
     },
   ],
-  [
+  [ // 17
     {
-      key: 'BP_BP7_Yes',
+      key: 'BP_BP7_P_Yes',
       text: 'Y',
-      value: 'BP_BP7_Yes',
+      value: 'BP_BP7_P_Yes',
     },
     {
-      key: 'BP_BP7_No',
+      key: 'BP_BP7_P_No',
       text: 'N',
-      value: 'BP_BP7_No',
+      value: 'BP_BP7_P_No',
     },
   ],
-  [
+  [ // 18
     {
-      key: 'PM_PM4_Yes',
+      key: 'PM_PM4_M_Yes',
       text: 'Y',
-      value: 'PM_PM4_Yes',
+      value: 'PM_PM4_M_Yes',
     },
     {
-      key: 'PM_PM4_No',
+      key: 'PM_PM4_M_No',
       text: 'N',
-      value: 'PM_PM4_No',
+      value: 'PM_PM4_M_No',
     },
   ],
-  [
+  [ // 19
     {
-      key: 'PP_PP2_Yes',
+      key: 'PP_PP2_P_Yes',
       text: 'Y',
-      value: 'PP_PP2_Yes',
+      value: 'PP_PP2_P_Yes',
     },
     {
-      key: 'PP_PP2_No',
+      key: 'PP_PP2_P_No',
       text: 'N',
-      value: 'PP_PP2_No',
+      value: 'PP_PP2_P_No',
     },
   ],
-  [
+  [ // 20
     {
-      key: 'PM_PM1_Yes',
+      key: 'PM_PM1_M_Yes',
       text: 'Y',
-      value: 'PM_PM1_Yes',
+      value: 'PM_PM1_M_Yes',
     },
     {
-      key: 'PM_PM1_No',
+      key: 'PM_PM1_M_No',
       text: 'N',
-      value: 'PM_PM1_No',
+      value: 'PM_PM1_M_No',
     },
   ],
-  [
+  [ // 21
     {
-      key: 'BS_BS3_Yes',
+      key: 'BS_BS3_S_Yes',
       text: 'Y',
-      value: 'BS_BS3_Yes',
+      value: 'BS_BS3_S_Yes',
     },
     {
-      key: 'BS_BS3_No',
+      key: 'BS_BS3_S_No',
       text: 'N',
-      value: 'BS_BS3_No',
+      value: 'BS_BS3_S_No',
     },
   ],
-  [
+  [ // 22
     {
-      key: 'PP_PS3-P-Supporting_Yes',
+      key: 'PP_PS3_P_Yes',
       text: 'Y',
-      value: 'PP_PS3-P-Supporting_Yes',
+      value: 'PP_PS3_P_Yes',
     },
     {
-      key: 'PP_PS3-P-Supporting_No',
+      key: 'PP_PS3_P_No',
       text: 'N',
-      value: 'PP_PS3-P-Supporting_No',
+      value: 'PP_PS3_P_No',
     },
   ],
-  [
+  [ // 23
     {
-      key: 'PM_PS3-M-Moderate_Yes',
+      key: 'PM_PS3_M_Yes',
       text: 'Y',
-      value: 'PM_PS3-M-Moderate_Yes',
+      value: 'PM_PS3_M_Yes',
     },
     {
-      key: 'PM_PS3-M-Moderate_No',
+      key: 'PM_PS3_M_No',
       text: 'N',
-      value: 'PM_PS3-M-Moderate_No',
+      value: 'PM_PS3_M_No',
     },
   ],
-  [
+  [ // 24
     {
-      key: 'PS_PS3_Yes',
+      key: 'PS_PS3_S_Yes',
       text: 'Y',
-      value: 'PS_PS3_Yes',
+      value: 'PS_PS3_S_Yes',
     },
     {
-      key: 'PS_PS3_No',
+      key: 'PS_PS3_S_No',
       text: 'N',
-      value: 'PS_PS3_No',
+      value: 'PS_PS3_S_No',
     },
   ],
-  [
+  [ // 25
     {
-      key: 'BS_BS4_Yes',
+      key: 'BS_BS4_S_Yes',
       text: 'Y',
-      value: 'BS_BS4_Yes',
+      value: 'BS_BS4_S_Yes',
     },
     {
-      key: 'BS_BS4_No',
+      key: 'BS_BS4_S_No',
       text: 'N',
-      value: 'BS_BS4_No',
+      value: 'BS_BS4_S_No',
     },
   ],
-  [
+  [ // 26
     {
-      key: 'PP_PP1_Yes',
+      key: 'PP_PP1_P_Yes',
       text: 'Y',
-      value: 'PP_PP1_Yes',
+      value: 'PP_PP1_P_Yes',
     },
     {
-      key: 'PP_PP1_No',
+      key: 'PP_PP1_P_No',
       text: 'N',
-      value: 'PP_PP1_No',
+      value: 'PP_PP1_P_No',
     },
   ],
-  [
+  [ // 27
     {
-      key: 'PM_PP1-M-Moderate_Yes',
+      key: 'PM_PP1_M_Yes',
       text: 'Y',
-      value: 'PM_PP1-M-Moderate_Yes',
+      value: 'PM_PP1_M_Yes',
     },
     {
-      key: 'PM_PP1-M-Moderate_No',
+      key: 'PM_PP1_M_No',
       text: 'N',
-      value: 'PM_PP1-M-Moderate_No',
+      value: 'PM_PP1_M_No',
     },
   ],
-  [
+  [ // 28
     {
-      key: 'PS_PP1-S-Strong_Yes',
+      key: 'PS_PP1_S_Yes',
       text: 'Y',
-      value: 'PS_PP1-S-Strong_Yes',
+      value: 'PS_PP1_S_Yes',
     },
     {
-      key: 'PS_PP1-S-Strong_No',
+      key: 'PS_PP1_S_No',
       text: 'N',
-      value: 'PS_PP1-S-Strong_No',
+      value: 'PS_PP1_S_No',
     },
   ],
-  [
+  [ // 29
     {
-      key: 'PM_PM6_Yes',
+      key: 'PM_PM6_M_Yes',
       text: 'Y',
-      value: 'PM_PM6_Yes',
+      value: 'PM_PM6_M_Yes',
     },
     {
-      key: 'PM_PM6_No',
+      key: 'PM_PM6_M_No',
       text: 'N',
-      value: 'PM_PM6_No',
+      value: 'PM_PM6_M_No',
     },
   ],
-  [
+  [ // 30
     {
-      key: 'PS_PM6-S-Strong_Yes',
+      key: 'PS_PM6_S_Yes',
       text: 'Y',
-      value: 'PS_PM6-S-Strong_Yes',
+      value: 'PS_PM6_S_Yes',
     },
     {
-      key: 'PS_PM6-S-Strong_No',
+      key: 'PS_PM6_S_No',
       text: 'N',
-      value: 'PS_PM6-S-Strong_No',
+      value: 'PS_PM6_S_No',
     },
   ],
-  [
+  [ // 31
     {
-      key: 'PS_PS2_Yes',
+      key: 'PS_PS2_S_Yes',
       text: 'Y',
-      value: 'PS_PS2_Yes',
+      value: 'PS_PS2_S_Yes',
     },
     {
-      key: 'PS_PS2_No',
+      key: 'PS_PS2_S_No',
       text: 'N',
-      value: 'PS_PS2_No',
+      value: 'PS_PS2_S_No',
     },
   ],
-  [
+  [ // 32
     {
-      key: 'PVS_PS2-VS-VeryStrong_Yes',
+      key: 'PVS_PS2_VS_Yes',
       text: 'Y',
-      value: 'PVS_PS2-VS-VeryStrong_Yes',
+      value: 'PVS_PS2_VS_Yes',
     },
     {
-      key: 'PVS_PS2-VS-VeryStrong_No',
+      key: 'PVS_PS2_VS_No',
       text: 'N',
-      value: 'PVS_PS2-VS-VeryStrong_No',
+      value: 'PVS_PS2_VS_No',
     },
   ],
-  [
+  [ // 33
     {
-      key: 'BP_BP2_Yes',
+      key: 'BP_BP2_P_Yes',
       text: 'Y',
-      value: 'BP_BP2_Yes',
+      value: 'BP_BP2_P_Yes',
     },
     {
-      key: 'BP_BP2_No',
+      key: 'BP_BP2_P_No',
       text: 'N',
-      value: 'BP_BP2_No',
+      value: 'BP_BP2_P_No',
     },
   ],
-  [
+  [ // 34
     {
-      key: 'PM_PM3_Yes',
+      key: 'PM_PM3_M_Yes',
       text: 'Y',
-      value: 'PM_PM3_Yes',
+      value: 'PM_PM3_M_Yes',
     },
     {
-      key: 'PM_PM3_No',
+      key: 'PM_PM3_M_No',
       text: 'N',
-      value: 'PM_PM3_No',
+      value: 'PM_PM3_M_No',
     },
   ],
-  [
+  [ // 35
     {
-      key: 'PS_PM3-S-Strong_Yes',
+      key: 'PS_PM3_S_Yes',
       text: 'Y',
-      value: 'PS_PM3-S-Strong_Yes',
+      value: 'PS_PM3_S_Yes',
     },
     {
-      key: 'PS_PM3-S-Strong_No',
+      key: 'PS_PM3_S_No',
       text: 'N',
-      value: 'PS_PM3-S-Strong_No',
+      value: 'PS_PM3_S_No',
     },
   ],
-  [
+  [ // 36
     {
-      key: 'PVS_PM3-VS-VeryStrong_Yes',
+      key: 'PVS_PM3_VS_Yes',
       text: 'Y',
-      value: 'PVS_PM3-VS-VeryStrong_Yes',
+      value: 'PVS_PM3_VS_Yes',
     },
     {
-      key: 'PVS_PM3-VS-VeryStrong_No',
+      key: 'PVS_PM3_VS_No',
       text: 'N',
-      value: 'PVS_PM3-VS-VeryStrong_No',
+      value: 'PVS_PM3_VS_No',
     },
   ],
 ]
