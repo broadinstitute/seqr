@@ -175,13 +175,13 @@ class DatasetAPITest(object):
         if self.test_local:
             mock_send_email.assert_not_called()
         else:
-            mock_send_email.assert_called_with("""Hi Test Collaborator User,
+            mock_send_email.assert_called_with("""Hi Test Manager User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
 We have loaded 1 sample(s) from the AnVIL workspace <a>https://anvil.terra.bio/#workspaces/my-seqr-billing/anvil-1kg project nåme with uniçøde</a> to the corresponding seqr project <a>https://seqr.broadinstitute.org/project/{guid}/project_page</a>. Let us know if you have any questions.
 Thanks,
 - The seqr team\n""".format(guid=PROJECT_GUID),
                                                subject='New data available in seqr',
-                                               to=['test_user_collaborator@test.com'])
+                                               to=['test_user_manager@test.com'])
         mock_send_slack.assert_not_called()
 
         # Adding an index for a different sample type works additively
@@ -395,7 +395,7 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
 def assert_anvil_calls(self):
     self.mock_list_workspaces.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_ws_acl.assert_called_with(self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
 
 # Test for permissions from AnVIL only
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
