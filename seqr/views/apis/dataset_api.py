@@ -6,13 +6,13 @@ from django.utils import timezone
 
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
-from seqr.models import Individual, Sample, Family, CAN_EDIT
+from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
     validate_index_metadata_and_get_elasticsearch_index_samples, load_mapping_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_project_collaborators_by_username
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
-    project_has_analyst_access, project_has_anvil, get_workspace_collaborator_perms
+    project_has_analyst_access, project_has_anvil
 
 
 @data_manager_required
