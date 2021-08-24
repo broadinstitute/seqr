@@ -125,7 +125,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(
             'seqr-data-loading',
-            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```[\'NA19678_1\']```\n            '.format(
+            '1 new sample(s) are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```[\'NA19678_1\']```\n            '.format(
                 guid=PROJECT_GUID
             ))
 
@@ -177,9 +177,9 @@ class DatasetAPITest(object):
         else:
             mock_send_email.assert_called_with("""Hi Test Collaborator User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace <a>https://anvil.terra.bio/#workspaces/my-seqr-billing/anvil-1kg project nåme with uniçøde</a> to the corresponding seqr project <a>/1kg project nåme with uniçøde</a>. Let us know if you have any questions.
+We have loaded 1 sample(s) from the AnVIL workspace <a>https://anvil.terra.bio/#workspaces/my-seqr-billing/anvil-1kg project nåme with uniçøde</a> to the corresponding seqr project <a>https://seqr.broadinstitute.org/project/{guid}/project_page</a>. Let us know if you have any questions.
 Thanks,
-- The seqr team\n""",
+- The seqr team\n""".format(guid=PROJECT_GUID),
                                                subject='New data available in seqr',
                                                to=['test_user_collaborator@test.com'])
         mock_send_slack.assert_not_called()

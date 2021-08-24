@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
@@ -118,7 +118,7 @@ def add_variants_dataset_handler(request, project_guid):
     if project_has_analyst_access(project):
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            """{num_sample} new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page
+            """{num_sample} new sample(s) are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page
             ```{samples}```
             """.format(
                 num_sample=len(new_samples),
@@ -129,7 +129,7 @@ def add_variants_dataset_handler(request, project_guid):
         user = project.created_by
         send_html_email("""Hi {user},
 We are following up on your request to load data from AnVIL on {date}.
-We have loaded {num_sample} samples from the AnVIL workspace <a>https://anvil.terra.bio/#workspaces/{namespace}/{name}</a> to the corresponding seqr project <a>{base_url}{proj_name}</a>. Let us know if you have any questions.
+We have loaded {num_sample} sample(s) from the AnVIL workspace <a>https://anvil.terra.bio/#workspaces/{namespace}/{name}</a> to the corresponding seqr project <a>https://seqr.broadinstitute.org/project/{guid}/project_page</a>. Let us know if you have any questions.
 Thanks,
 - The seqr team
 """.format(
@@ -137,9 +137,8 @@ Thanks,
                 date=project.created_date.date().strftime('%B %d, %Y'),
                 namespace=project.workspace_namespace,
                 name=project.workspace_name,
-                proj_name=project.name,
+                guid=project.guid,
                 num_sample=len(matched_sample_id_to_sample_record),
-                base_url=BASE_URL,
             ),
             subject='New data available in seqr',
             to=sorted([user.email]),
