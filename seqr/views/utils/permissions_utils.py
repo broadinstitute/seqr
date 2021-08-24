@@ -67,7 +67,7 @@ pm_or_data_manager_required = _user_has_policies_and_passes_test(
 superuser_required = _user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
-def has_analyst_access(project):
+def project_has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -155,7 +155,7 @@ def has_project_permissions(project, user, can_edit=False):
         permission_level = CAN_EDIT
 
     return user_is_data_manager(user) or \
-           (user_is_analyst(user) and has_analyst_access(project)) or \
+           (user_is_analyst(user) and project_has_analyst_access(project)) or \
            user.has_perm(permission_level, project) or \
            anvil_has_perm(user, permission_level, project)
 
