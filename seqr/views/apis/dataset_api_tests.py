@@ -395,7 +395,7 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
 def assert_anvil_calls(self):
     self.mock_list_workspaces.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_ws_acl.assert_called_with(self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
+    self.mock_get_ws_acl.assert_called_with(self.data_manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')
 
 # Test for permissions from AnVIL only
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
