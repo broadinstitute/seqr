@@ -3,46 +3,46 @@ import PropTypes from 'prop-types'
 import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
 import AcmgRuleSpecification from './AcmgRuleSpecification'
 import dropDownOptions from './AcmgCriteriaDropDownOptions'
- 
+
 const AcmgCriteria = (props) => {
   const { criteria, setCriteria, setActive } = props
   const { acmgCalculationValue, setAcmgCalculationValue } = props
   const { getScore, setScore } = props
   const [formWarning, setFormWarning] = useState('')
- 
+
   const criteriaUsed = {}
   for (let i = 0; i < criteria.length; i++) {
     criteriaUsed[criteria[i]] = true
   }
- 
+
   const addOrRemoveCriteria = (event, data) => {
     const values = data.value.split('_')
     const category = values[0]
- 
+
     const value = `${values[1]}_${values[2]}`
     const answer = values[3]
- 
+
     const fullCriteria = value
     const criteriaCopy = [...criteria]
- 
+
     const acmgCalculationValueCopy = Object.assign({}, acmgCalculationValue)
     if (answer === 'No' && criteriaUsed[fullCriteria] === true) {
       acmgCalculationValueCopy[category] -= 1
       const filteredCriteria = criteriaCopy.filter(item => item !== fullCriteria)
- 
+
       setCriteria(filteredCriteria)
       setAcmgCalculationValue(acmgCalculationValueCopy)
     } else if (answer === 'Yes' && (criteriaUsed[fullCriteria] === false || criteriaUsed[fullCriteria] === undefined)) {
       acmgCalculationValueCopy[category] += 1
       criteriaCopy.push(fullCriteria)
- 
+
       setCriteria(criteriaCopy)
       setAcmgCalculationValue(acmgCalculationValueCopy)
     }
- 
+
     setScore(getScore(acmgCalculationValueCopy))
   }
- 
+
   const clearFields = () => {
     setAcmgCalculationValue({
       PVS: 0,
@@ -56,7 +56,7 @@ const AcmgCriteria = (props) => {
     setCriteria([])
     setScore('Unknown')
   }
- 
+
   const submitForm = () => {
     if (getScore(acmgCalculationValue) === 'Unknown') {
       setFormWarning('Please select at least one criteria from the table below.')
@@ -67,17 +67,17 @@ const AcmgCriteria = (props) => {
       setActive(false)
     }
   }
- 
+
   const fontStyleSize = { fontSize: '13px' }
   const fontStyleWritingMode = { writingMode: 'sideways-lr', marginLeft: '-10px' }
- 
+
   return (
     <div>
       {formWarning !== '' &&
-      <Message warning>
-        <Message.Header>Warning</Message.Header>
-        <p>{formWarning}</p>
-      </Message>
+        <Message warning>
+          <Message.Header>Warning</Message.Header>
+          <p>{formWarning}</p>
+        </Message>
       }
       <Button primary onClick={submitForm}>Submit</Button>
       <Button onClick={clearFields} color="grey">Clear Form</Button>
@@ -89,7 +89,7 @@ const AcmgCriteria = (props) => {
             <Table.HeaderCell colSpan="4">Pathogenic</Table.HeaderCell>
           </Table.Row>
         </Table.Header>
- 
+
         <Table.Body>
           <Table.Row>
             <Table.Cell></Table.Cell>
@@ -100,7 +100,7 @@ const AcmgCriteria = (props) => {
             <Table.Cell width={3}>Strong</Table.Cell>
             <Table.Cell width={3}>Very Strong</Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell rowSpan="3"><span style={fontStyleWritingMode}>Population Data</span></Table.Cell>
             <Table.Cell>
@@ -124,7 +124,26 @@ const AcmgCriteria = (props) => {
               </Table>
             </Table.Cell>
             <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM2_P</Table.Cell>
+                    <Table.Cell width={2}>LOW AF in pop db</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM2_P ? 'Y' : ''}
+                        key="dropdown1"
+                        placeholder="N"
+                        options={dropDownOptions[1]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM2_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="orange">
                 <Table.Body>
@@ -134,9 +153,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM2_M ? 'Y' : ''}
-                        key="dropdown1"
+                        key="dropdown2"
                         placeholder="N"
-                        options={dropDownOptions[1]}
+                        options={dropDownOptions[2]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM2_M ? 'Y' : ''}
                       />
@@ -148,20 +167,20 @@ const AcmgCriteria = (props) => {
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell>
               <Table size="small" color="pink">
                 <Table.Body>
                   <Table.Row textAlign="center">
                     <Table.Cell width={1}>BS1_S</Table.Cell>
-                    <Table.Cell width={2}>MAF too high</Table.Cell>
+                    <Table.Cell width={2}>MAF too high (Strong)</Table.Cell>
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BS1_S ? 'Y' : ''}
-                        key="dropdown2"
+                        key="dropdown3"
                         placeholder="N"
-                        options={dropDownOptions[2]}
+                        options={dropDownOptions[3]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BS1_S ? 'Y' : ''}
                       />
@@ -170,7 +189,26 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BS1_P</Table.Cell>
+                    <Table.Cell width={2}>MAF too high (Supporting)</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BS1_P ? 'Y' : ''}
+                        key="dropdown4"
+                        placeholder="N"
+                        options={dropDownOptions[4]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BS1_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="green">
                 <Table.Body>
@@ -180,9 +218,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS4_P ? 'Y' : ''}
-                        key="dropdown3"
+                        key="dropdown5"
                         placeholder="N"
-                        options={dropDownOptions[3]}
+                        options={dropDownOptions[5]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS4_P ? 'Y' : ''}
                       />
@@ -200,9 +238,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS4_M ? 'Y' : ''}
-                        key="dropdown4"
+                        key="dropdown6"
                         placeholder="N"
-                        options={dropDownOptions[4]}
+                        options={dropDownOptions[6]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS4_M ? 'Y' : ''}
                       />
@@ -220,9 +258,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS4_S ? 'Y' : ''}
-                        key="dropdown5"
+                        key="dropdown7"
                         placeholder="N"
-                        options={dropDownOptions[5]}
+                        options={dropDownOptions[7]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS4_S ? 'Y' : ''}
                       />
@@ -233,7 +271,7 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell>
               <Table size="small" color="pink">
@@ -244,11 +282,31 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BS2_S ? 'Y' : ''}
-                        key="dropdown6"
+                        key="dropdown8"
                         placeholder="N"
-                        options={dropDownOptions[6]}
+                        options={dropDownOptions[8]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BS2_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BS2_P</Table.Cell>
+                    <Table.Cell width={2}>BS2_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BS2_P ? 'Y' : ''}
+                        key="dropdown9"
+                        placeholder="N"
+                        options={dropDownOptions[9]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BS2_P ? 'Y' : ''}
                       />
                     </Table.Cell>
                   </Table.Row>
@@ -259,12 +317,30 @@ const AcmgCriteria = (props) => {
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
-            <Table.Cell rowSpan="4"><span style={fontStyleWritingMode}>Computational and Predictive Data</span></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell rowSpan="5"><span style={fontStyleWritingMode}>Computational and Predictive Data</span></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP1_S</Table.Cell>
+                    <Table.Cell width={2}>BP1_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP1_S ? 'Y' : ''}
+                        key="dropdown10"
+                        placeholder="N"
+                        options={dropDownOptions[10]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP1_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="blue">
                 <Table.Body>
@@ -274,9 +350,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BP1_P ? 'Y' : ''}
-                        key="dropdown7"
+                        key="dropdown11"
                         placeholder="N"
-                        options={dropDownOptions[7]}
+                        options={dropDownOptions[11]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BP1_P ? 'Y' : ''}
                       />
@@ -285,8 +361,46 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PS1_P</Table.Cell>
+                    <Table.Cell width={2}>PS1_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PS1_P ? 'Y' : ''}
+                        key="dropdown12"
+                        placeholder="N"
+                        options={dropDownOptions[12]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PS1_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="orange">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PS1_M</Table.Cell>
+                    <Table.Cell width={2}>PS1_Moderate</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PS1_M ? 'Y' : ''}
+                        key="dropdown13"
+                        placeholder="N"
+                        options={dropDownOptions[13]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PS1_M ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="red">
                 <Table.Body>
@@ -296,9 +410,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS1_S ? 'Y' : ''}
-                        key="dropdown8"
+                        key="dropdown14"
                         placeholder="N"
-                        options={dropDownOptions[8]}
+                        options={dropDownOptions[14]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS1_S ? 'Y' : ''}
                       />
@@ -309,9 +423,28 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP3_S</Table.Cell>
+                    <Table.Cell width={2}>BP3_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP3_S ? 'Y' : ''}
+                        key="dropdown15"
+                        placeholder="N"
+                        options={dropDownOptions[15]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP3_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="blue">
                 <Table.Body>
@@ -321,9 +454,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BP3_P ? 'Y' : ''}
-                        key="dropdown9"
+                        key="dropdown16"
                         placeholder="N"
-                        options={dropDownOptions[9]}
+                        options={dropDownOptions[16]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BP3_P ? 'Y' : ''}
                       />
@@ -332,7 +465,26 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM5_P</Table.Cell>
+                    <Table.Cell width={2}>PM5_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM5_P ? 'Y' : ''}
+                        key="dropdown17"
+                        placeholder="N"
+                        options={dropDownOptions[17]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM5_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="orange">
                 <Table.Body>
@@ -342,9 +494,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM5_M ? 'Y' : ''}
-                        key="dropdown10"
+                        key="dropdown18"
                         placeholder="N"
-                        options={dropDownOptions[10]}
+                        options={dropDownOptions[18]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM5_M ? 'Y' : ''}
                       />
@@ -362,9 +514,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM5_S ? 'Y' : ''}
-                        key="dropdown11"
+                        key="dropdown19"
                         placeholder="N"
-                        options={dropDownOptions[11]}
+                        options={dropDownOptions[19]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM5_S ? 'Y' : ''}
                       />
@@ -375,9 +527,28 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP4_S</Table.Cell>
+                    <Table.Cell width={2}>Variant AA found<br />in {'>='} 3 mamals</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP4_S ? 'Y' : ''}
+                        key="dropdown20"
+                        placeholder="N"
+                        options={dropDownOptions[20]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP4_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="blue">
                 <Table.Body>
@@ -387,9 +558,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BP4_P ? 'Y' : ''}
-                        key="dropdown12"
+                        key="dropdown21"
                         placeholder="N"
-                        options={dropDownOptions[12]}
+                        options={dropDownOptions[21]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BP4_P ? 'Y' : ''}
                       />
@@ -402,16 +573,16 @@ const AcmgCriteria = (props) => {
               <Table size="small" color="green">
                 <Table.Body>
                   <Table.Row textAlign="center">
-                    <Table.Cell width={1}>PP3_P</Table.Cell>
-                    <Table.Cell width={2}>Computational<br />evidente suggests<br />impact</Table.Cell>
+                    <Table.Cell width={1}>PSV1_P</Table.Cell>
+                    <Table.Cell width={2}>PSV1_Supporting</Table.Cell>
                     <Table.Cell width={1}>
                       <Dropdown
-                        value={criteriaUsed.PP3_P ? 'Y' : ''}
-                        key="dropdown13"
+                        value={criteriaUsed.PSV1_P ? 'Y' : ''}
+                        key="dropdown22"
                         placeholder="N"
-                        options={dropDownOptions[13]}
+                        options={dropDownOptions[22]}
                         onChange={addOrRemoveCriteria}
-                        text={criteriaUsed.PP3_P ? 'Y' : ''}
+                        text={criteriaUsed.PSV1_P ? 'Y' : ''}
                       />
                     </Table.Cell>
                   </Table.Row>
@@ -427,9 +598,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PVS1_M ? 'Y' : ''}
-                        key="dropdown14"
+                        key="dropdown23"
                         placeholder="N"
-                        options={dropDownOptions[14]}
+                        options={dropDownOptions[23]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PVS1_M ? 'Y' : ''}
                       />
@@ -447,9 +618,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PVS1_S ? 'Y' : ''}
-                        key="dropdown15"
+                        key="dropdown24"
                         placeholder="N"
-                        options={dropDownOptions[15]}
+                        options={dropDownOptions[24]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PVS1_S ? 'Y' : ''}
                       />
@@ -467,9 +638,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PVS1_VS ? 'Y' : ''}
-                        key="dropdown16"
+                        key="dropdown25"
                         placeholder="N"
-                        options={dropDownOptions[16]}
+                        options={dropDownOptions[25]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PVS1_VS ? 'Y' : ''}
                       />
@@ -479,44 +650,44 @@ const AcmgCriteria = (props) => {
               </Table>
             </Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell></Table.Cell>
+            <Table.Cell></Table.Cell>
             <Table.Cell>
-              <Table size="small" color="blue">
+              <Table size="small" color="green">
                 <Table.Body>
                   <Table.Row textAlign="center">
-                    <Table.Cell width={1}>BP7_P</Table.Cell>
-                    <Table.Cell width={2}>Silent or noncons splice<br />(see below) with no<br />predicted splice impact</Table.Cell>
+                    <Table.Cell width={1}>PP3_P</Table.Cell>
+                    <Table.Cell width={2}>Computation evidence<br />suggests impact</Table.Cell>
                     <Table.Cell width={1}>
                       <Dropdown
-                        value={criteriaUsed.BP7_P ? 'Y' : ''}
-                        key="dropdown17"
+                        value={criteriaUsed.PP3_P ? 'Y' : ''}
+                        key="dropdown26"
                         placeholder="N"
-                        options={dropDownOptions[17]}
+                        options={dropDownOptions[26]}
                         onChange={addOrRemoveCriteria}
-                        text={criteriaUsed.BP7_P ? 'Y' : ''}
+                        text={criteriaUsed.PP3_P ? 'Y' : ''}
                       />
                     </Table.Cell>
                   </Table.Row>
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
             <Table.Cell>
               <Table size="small" color="orange">
                 <Table.Body>
                   <Table.Row textAlign="center">
-                    <Table.Cell width={1}>PM4_M</Table.Cell>
-                    <Table.Cell width={2}>Pritein length<br />changing variant{'>2'}<br />AA) in non-repeat<br />region</Table.Cell>
+                    <Table.Cell width={1}>PP3_M</Table.Cell>
+                    <Table.Cell width={2}>PP3_Moderate</Table.Cell>
                     <Table.Cell width={1}>
                       <Dropdown
-                        value={criteriaUsed.PM4_M ? 'Y' : ''}
-                        key="dropdown18"
+                        value={criteriaUsed.PP3_M ? 'Y' : ''}
+                        key="dropdown27"
                         placeholder="N"
-                        options={dropDownOptions[18]}
+                        options={dropDownOptions[27]}
                         onChange={addOrRemoveCriteria}
-                        text={criteriaUsed.PM4_M ? 'Y' : ''}
+                        text={criteriaUsed.PP3_M ? 'Y' : ''}
                       />
                     </Table.Cell>
                   </Table.Row>
@@ -526,25 +697,129 @@ const AcmgCriteria = (props) => {
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
-            <Table.Cell rowSpan="2"><span style={fontStyleWritingMode}>Functional Data</span></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP7_S</Table.Cell>
+                    <Table.Cell width={2}>BP7_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP7_S ? 'Y' : ''}
+                        key="dropdown28"
+                        placeholder="N"
+                        options={dropDownOptions[28]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP7_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP7_P</Table.Cell>
+                    <Table.Cell width={2}>Silent or noncons splice<br />(see below) with no<br />predicted splice impact</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP7_P ? 'Y' : ''}
+                        key="dropdown29"
+                        placeholder="N"
+                        options={dropDownOptions[29]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP7_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM4_S</Table.Cell>
+                    <Table.Cell width={2}>In-frame indel of 1-2 AA</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM4_S ? 'Y' : ''}
+                        key="dropdown30"
+                        placeholder="N"
+                        options={dropDownOptions[30]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM4_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="orange">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM4_M</Table.Cell>
+                    <Table.Cell width={2}>Protein length changing<br />{'(>2 AA)'} in non-<br />repeat region</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM4_M ? 'Y' : ''}
+                        key="dropdown31"
+                        placeholder="N"
+                        options={dropDownOptions[31]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM4_M ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="red">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM4_S</Table.Cell>
+                    <Table.Cell width={2}>PM4_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM4S_S ? 'Y' : ''}
+                        key="dropdown32"
+                        placeholder="N"
+                        options={dropDownOptions[32]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM4S_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell></Table.Cell>
+          </Table.Row>
+
+          <Table.Row>
+            <Table.Cell rowSpan="3"><span style={fontStyleWritingMode}>Functional Data</span></Table.Cell>
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
             <Table.Cell>
               <Table size="small" color="green">
                 <Table.Body>
                   <Table.Row textAlign="center">
-                    <Table.Cell width={1}>PP2_P</Table.Cell>
-                    <Table.Cell width={2}>Missense in a gene<br />with low rate of<br />benign missense &<br />path missense<br />common</Table.Cell>
+                    <Table.Cell width={1}>PM1_P</Table.Cell>
+                    <Table.Cell width={2}>PM1_Supporting</Table.Cell>
                     <Table.Cell width={1}>
                       <Dropdown
-                        value={criteriaUsed.PP2_P ? 'Y' : ''}
-                        key="dropdown19"
+                        value={criteriaUsed.PM1_P ? 'Y' : ''}
+                        key="dropdown33"
                         placeholder="N"
-                        options={dropDownOptions[19]}
+                        options={dropDownOptions[33]}
                         onChange={addOrRemoveCriteria}
-                        text={criteriaUsed.PP2_P ? 'Y' : ''}
+                        text={criteriaUsed.PM1_P ? 'Y' : ''}
                       />
                     </Table.Cell>
                   </Table.Row>
@@ -560,9 +835,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM1_M ? 'Y' : ''}
-                        key="dropdown20"
+                        key="dropdown34"
                         placeholder="N"
-                        options={dropDownOptions[20]}
+                        options={dropDownOptions[34]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM1_M ? 'Y' : ''}
                       />
@@ -571,9 +846,56 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="red">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM1_S</Table.Cell>
+                    <Table.Cell width={2}>PM1_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM1_S ? 'Y' : ''}
+                        key="dropdown35"
+                        placeholder="N"
+                        options={dropDownOptions[35]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM1_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+          </Table.Row>
+
+          <Table.Row>
+            <Table.Cell></Table.Cell>
+            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PP2_P</Table.Cell>
+                    <Table.Cell width={2}>Missense in a gene with<br />low rate of benign<br />missense & path<br />missense common</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PP2_P ? 'Y' : ''}
+                        key="dropdown36"
+                        placeholder="N"
+                        options={dropDownOptions[36]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PP2_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell></Table.Cell>
+            <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell>
               <Table size="small" color="pink">
@@ -584,9 +906,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BS3_S ? 'Y' : ''}
-                        key="dropdown21"
+                        key="dropdown37"
                         placeholder="N"
-                        options={dropDownOptions[21]}
+                        options={dropDownOptions[37]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BS3_S ? 'Y' : ''}
                       />
@@ -595,7 +917,26 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BS3_P</Table.Cell>
+                    <Table.Cell width={2}>BS3_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BS3_P ? 'Y' : ''}
+                        key="dropdown38"
+                        placeholder="N"
+                        options={dropDownOptions[38]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BS3_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="green">
                 <Table.Body>
@@ -605,9 +946,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS3_P ? 'Y' : ''}
-                        key="dropdown22"
+                        key="dropdown39"
                         placeholder="N"
-                        options={dropDownOptions[22]}
+                        options={dropDownOptions[39]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS3_P ? 'Y' : ''}
                       />
@@ -625,9 +966,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS3_M ? 'Y' : ''}
-                        key="dropdown23"
+                        key="dropdown40"
                         placeholder="N"
-                        options={dropDownOptions[23]}
+                        options={dropDownOptions[40]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS3_M ? 'Y' : ''}
                       />
@@ -645,9 +986,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS3_S ? 'Y' : ''}
-                        key="dropdown24"
+                        key="dropdown41"
                         placeholder="N"
-                        options={dropDownOptions[24]}
+                        options={dropDownOptions[41]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS3_S ? 'Y' : ''}
                       />
@@ -658,7 +999,7 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell><span style={fontStyleWritingMode}>Segregation Data</span></Table.Cell>
             <Table.Cell>
@@ -670,9 +1011,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BS4_S ? 'Y' : ''}
-                        key="dropdown25"
+                        key="dropdown42"
                         placeholder="N"
-                        options={dropDownOptions[25]}
+                        options={dropDownOptions[42]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BS4_S ? 'Y' : ''}
                       />
@@ -681,7 +1022,26 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BS4_P</Table.Cell>
+                    <Table.Cell width={2}>BS4_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BS4_P ? 'Y' : ''}
+                        key="dropdown43"
+                        placeholder="N"
+                        options={dropDownOptions[43]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BS4_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="green">
                 <Table.Body>
@@ -691,9 +1051,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PP1_P ? 'Y' : ''}
-                        key="dropdown26"
+                        key="dropdown44"
                         placeholder="N"
-                        options={dropDownOptions[26]}
+                        options={dropDownOptions[44]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PP1_P ? 'Y' : ''}
                       />
@@ -711,9 +1071,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PP1_M ? 'Y' : ''}
-                        key="dropdown27"
+                        key="dropdown45"
                         placeholder="N"
-                        options={dropDownOptions[27]}
+                        options={dropDownOptions[45]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PP1_M ? 'Y' : ''}
                       />
@@ -731,9 +1091,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PP1_S ? 'Y' : ''}
-                        key="dropdown28"
+                        key="dropdown46"
                         placeholder="N"
-                        options={dropDownOptions[28]}
+                        options={dropDownOptions[46]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PP1_S ? 'Y' : ''}
                       />
@@ -744,12 +1104,31 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell rowSpan="2"><span style={fontStyleWritingMode}>De Novo Data</span></Table.Cell>
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM6_P</Table.Cell>
+                    <Table.Cell width={2}>PM6_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM6_P ? 'Y' : ''}
+                        key="dropdown47"
+                        placeholder="N"
+                        options={dropDownOptions[47]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM6_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="orange">
                 <Table.Body>
@@ -759,9 +1138,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM6_M ? 'Y' : ''}
-                        key="dropdown29"
+                        key="dropdown48"
                         placeholder="N"
-                        options={dropDownOptions[29]}
+                        options={dropDownOptions[48]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM6_M ? 'Y' : ''}
                       />
@@ -779,9 +1158,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM6_S ? 'Y' : ''}
-                        key="dropdown30"
+                        key="dropdown49"
                         placeholder="N"
-                        options={dropDownOptions[30]}
+                        options={dropDownOptions[49]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM6_S ? 'Y' : ''}
                       />
@@ -792,12 +1171,50 @@ const AcmgCriteria = (props) => {
             </Table.Cell>
             <Table.Cell></Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell></Table.Cell>
             <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PS2_P</Table.Cell>
+                    <Table.Cell width={2}>PS2_Supporting</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PS2_P ? 'Y' : ''}
+                        key="dropdown50"
+                        placeholder="N"
+                        options={dropDownOptions[50]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PS2_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="orange">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PS2_M</Table.Cell>
+                    <Table.Cell width={2}>PS2_Moderate</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PS2_M ? 'Y' : ''}
+                        key="dropdown51"
+                        placeholder="N"
+                        options={dropDownOptions[51]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PS2_M ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="red">
                 <Table.Body>
@@ -807,9 +1224,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS2_S ? 'Y' : ''}
-                        key="dropdown31"
+                        key="dropdown52"
                         placeholder="N"
-                        options={dropDownOptions[31]}
+                        options={dropDownOptions[52]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS2_S ? 'Y' : ''}
                       />
@@ -827,9 +1244,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PS2_VS ? 'Y' : ''}
-                        key="dropdown32"
+                        key="dropdown53"
                         placeholder="N"
-                        options={dropDownOptions[32]}
+                        options={dropDownOptions[53]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PS2_VS ? 'Y' : ''}
                       />
@@ -839,10 +1256,29 @@ const AcmgCriteria = (props) => {
               </Table>
             </Table.Cell>
           </Table.Row>
- 
+
           <Table.Row>
             <Table.Cell><span style={fontStyleWritingMode}>Alleleic Data</span></Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP2_S</Table.Cell>
+                    <Table.Cell width={2}>Met, BP2_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP2_S ? 'Y' : ''}
+                        key="dropdown54"
+                        placeholder="N"
+                        options={dropDownOptions[54]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP2_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="blue">
                 <Table.Body>
@@ -852,9 +1288,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.BP2_P ? 'Y' : ''}
-                        key="dropdown33"
+                        key="dropdown55"
                         placeholder="N"
-                        options={dropDownOptions[33]}
+                        options={dropDownOptions[55]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.BP2_P ? 'Y' : ''}
                       />
@@ -863,7 +1299,26 @@ const AcmgCriteria = (props) => {
                 </Table.Body>
               </Table>
             </Table.Cell>
-            <Table.Cell></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PM3_P</Table.Cell>
+                    <Table.Cell width={2}>Variant in trans does<br />not meet LP/P criteria</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PM3_P ? 'Y' : ''}
+                        key="dropdown56"
+                        placeholder="N"
+                        options={dropDownOptions[56]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PM3_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
             <Table.Cell>
               <Table size="small" color="orange">
                 <Table.Body>
@@ -873,9 +1328,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM3_M ? 'Y' : ''}
-                        key="dropdown34"
+                        key="dropdown57"
                         placeholder="N"
-                        options={dropDownOptions[34]}
+                        options={dropDownOptions[57]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM3_M ? 'Y' : ''}
                       />
@@ -893,9 +1348,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM3_S ? 'Y' : ''}
-                        key="dropdown35"
+                        key="dropdown58"
                         placeholder="N"
-                        options={dropDownOptions[35]}
+                        options={dropDownOptions[58]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM3_S ? 'Y' : ''}
                       />
@@ -913,9 +1368,9 @@ const AcmgCriteria = (props) => {
                     <Table.Cell width={1}>
                       <Dropdown
                         value={criteriaUsed.PM3_VS ? 'Y' : ''}
-                        key="dropdown36"
+                        key="dropdown59"
                         placeholder="N"
-                        options={dropDownOptions[36]}
+                        options={dropDownOptions[59]}
                         onChange={addOrRemoveCriteria}
                         text={criteriaUsed.PM3_VS ? 'Y' : ''}
                       />
@@ -925,6 +1380,111 @@ const AcmgCriteria = (props) => {
               </Table>
             </Table.Cell>
           </Table.Row>
+
+          <Table.Row>
+            <Table.Cell><span style={fontStyleWritingMode}>Other data</span></Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="pink">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PB5_S</Table.Cell>
+                    <Table.Cell width={2}>Met, PB5_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PB5_S ? 'Y' : ''}
+                        key="dropdown60"
+                        placeholder="N"
+                        options={dropDownOptions[60]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PB5_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="blue">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>BP5_P</Table.Cell>
+                    <Table.Cell width={2}>Found in case with an<br />alternative cause</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.BP5_P ? 'Y' : ''}
+                        key="dropdown61"
+                        placeholder="N"
+                        options={dropDownOptions[61]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.BP5_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="green">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PP4_P</Table.Cell>
+                    <Table.Cell width={2}>Patient phenotype or<br />FH high specific for<br />gene</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PP4_P ? 'Y' : ''}
+                        key="dropdown62"
+                        placeholder="N"
+                        options={dropDownOptions[62]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PP4_P ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="orange">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PP4_M</Table.Cell>
+                    <Table.Cell width={2}>PP4_Moderate</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PP4_M ? 'Y' : ''}
+                        key="dropdown63"
+                        placeholder="N"
+                        options={dropDownOptions[63]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PP4_M ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell>
+              <Table size="small" color="red">
+                <Table.Body>
+                  <Table.Row textAlign="center">
+                    <Table.Cell width={1}>PP4_S</Table.Cell>
+                    <Table.Cell width={2}>PP4_Strong</Table.Cell>
+                    <Table.Cell width={1}>
+                      <Dropdown
+                        value={criteriaUsed.PP4_S ? 'Y' : ''}
+                        key="dropdown64"
+                        placeholder="N"
+                        options={dropDownOptions[64]}
+                        onChange={addOrRemoveCriteria}
+                        text={criteriaUsed.PP4_S ? 'Y' : ''}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </Table.Cell>
+            <Table.Cell></Table.Cell>
+          </Table.Row>
         </Table.Body>
       </Table>
       <br />
@@ -932,7 +1492,7 @@ const AcmgCriteria = (props) => {
     </div>
   )
 }
- 
+
 AcmgCriteria.propTypes = {
   criteria: PropTypes.array.isRequired,
   setCriteria: PropTypes.func.isRequired,
@@ -942,5 +1502,5 @@ AcmgCriteria.propTypes = {
   setScore: PropTypes.func.isRequired,
   setActive: PropTypes.func.isRequired,
 }
- 
+
 export default AcmgCriteria

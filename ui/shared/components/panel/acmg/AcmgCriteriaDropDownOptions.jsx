@@ -13,6 +13,18 @@ export default [
   ],
   [ // 1
     {
+      key: 'PP_PM2_P_Yes',
+      text: 'Y',
+      value: 'PP_PM2_P_Yes',
+    },
+    {
+      key: 'PP_PM2_P_No',
+      text: 'N',
+      value: 'PP_PM2_P_No',
+    },
+  ],
+  [ // 2
+    {
       key: 'PM_PM2_M_Yes',
       text: 'Y',
       value: 'PM_PM2_M_Yes',
@@ -23,7 +35,7 @@ export default [
       value: 'PM_PM2_M_No',
     },
   ],
-  [ // 2
+  [ // 3
     {
       key: 'BS_BS1_S_Yes',
       text: 'Y',
@@ -35,7 +47,19 @@ export default [
       value: 'BS_BS1_S_No',
     },
   ],
-  [ // 3
+  [ // 4
+    {
+      key: 'BP_BS1_P_Yes',
+      text: 'Y',
+      value: 'BP_BS1_P_Yes',
+    },
+    {
+      key: 'BP_BS1_P_No',
+      text: 'N',
+      value: 'BP_BS1_P_No',
+    },
+  ],
+  [ // 5
     {
       key: 'PP_PS4_P_Yes',
       text: 'Y',
@@ -47,7 +71,7 @@ export default [
       value: 'PP_PS4_P_No',
     },
   ],
-  [ // 4
+  [ // 6
     {
       key: 'PM_PS4_M_Yes',
       text: 'Y',
@@ -59,7 +83,7 @@ export default [
       value: 'PM_PS4_M_No',
     },
   ],
-  [ // 5
+  [ // 7
     {
       key: 'PS_PS4_S_Yes',
       text: 'Y',
@@ -71,7 +95,7 @@ export default [
       value: 'PS_PS4_S_No',
     },
   ],
-  [ // 6
+  [ // 8
     {
       key: 'BS_BS2_S_Yes',
       text: 'Y',
@@ -83,7 +107,31 @@ export default [
       value: 'BS_BS2_S_No',
     },
   ],
-  [ // 7
+  [ // 9
+    {
+      key: 'BP_BS2_P_Yes',
+      text: 'Y',
+      value: 'BP_BS2_P_Yes',
+    },
+    {
+      key: 'BP_BS2_P_No',
+      text: 'N',
+      value: 'BP_BS2_P_No',
+    },
+  ],
+  [ // 10
+    {
+      key: 'BS_BP1_S_Yes',
+      text: 'Y',
+      value: 'BS_BP1_S_Yes',
+    },
+    {
+      key: 'BS_BP1_S_No',
+      text: 'N',
+      value: 'BS_BP1_S_No',
+    },
+  ],
+  [ // 11
     {
       key: 'BP_BP1_P_Yes',
       text: 'Y',
@@ -95,7 +143,31 @@ export default [
       value: 'BP_BP1_P_No',
     },
   ],
-  [ // 8
+  [ // 12
+    {
+      key: 'PP_PS1_P_Yes',
+      text: 'Y',
+      value: 'PP_PS1_P_Yes',
+    },
+    {
+      key: 'PP_PS1_P_No',
+      text: 'N',
+      value: 'PP_PS1_P_No',
+    },
+  ],
+  [ // 13
+    {
+      key: 'PM_PS1_M_Yes',
+      text: 'Y',
+      value: 'PM_PS1_M_Yes',
+    },
+    {
+      key: 'PM_PS1_M_No',
+      text: 'N',
+      value: 'PM_PS1_M_No',
+    },
+  ],
+  [ // 14
     {
       key: 'PS_PS1_S_Yes',
       text: 'Y',
@@ -107,7 +179,19 @@ export default [
       value: 'PS_PS1_S_No',
     },
   ],
-  [ // 9
+  [ // 15
+    {
+      key: 'BS_BP3_S_Yes',
+      text: 'Y',
+      value: 'BS_BP3_S_Yes',
+    },
+    {
+      key: 'BS_BP3_S_No',
+      text: 'N',
+      value: 'BS_BP3_S_No',
+    },
+  ],
+  [ // 16
     {
       key: 'BP_BP3_P_Yes',
       text: 'Y',
@@ -119,7 +203,19 @@ export default [
       value: 'BP_BP3_P_No',
     },
   ],
-  [ // 10
+  [ // 17
+    {
+      key: 'PP_PM5_P_Yes',
+      text: 'Y',
+      value: 'PP_PM5_P_Yes',
+    },
+    {
+      key: 'PP_PM5_P_No',
+      text: 'N',
+      value: 'PP_PM5_P_No',
+    },
+  ],
+  [ // 18
     {
       key: 'PM_PM5_M_Yes',
       text: 'Y',
@@ -131,7 +227,7 @@ export default [
       value: 'PM_PM5_M_No',
     },
   ],
-  [ // 11
+  [ // 19
     {
       key: 'PS_PM5_S_Yes',
       text: 'Y',
@@ -143,7 +239,19 @@ export default [
       value: 'PS_PM5_S_No',
     },
   ],
-  [ // 12
+  [ // 20
+    {
+      key: 'BS_BP4_S_Yes',
+      text: 'Y',
+      value: 'BS_BP4_S_Yes',
+    },
+    {
+      key: 'BS_BP4_S_No',
+      text: 'N',
+      value: 'BS_BP4_S_No',
+    },
+  ],
+  [ // 21
     {
       key: 'BP_BP4_P_Yes',
       text: 'Y',
@@ -155,19 +263,19 @@ export default [
       value: 'BP_BP4_P_No',
     },
   ],
-  [ // 13
+  [ // 22
     {
-      key: 'PP_PP3_P_Yes',
+      key: 'PP_PSV1_P_Yes',
       text: 'Y',
-      value: 'PP_PP3_P_Yes',
+      value: 'PP_PSV1_P_Yes',
     },
     {
-      key: 'PP_PP3_P_No',
+      key: 'PP_PSV1_P_No',
       text: 'N',
-      value: 'PP_PP3_P_No',
+      value: 'PP_PSV1_P_No',
     },
   ],
-  [ // 14
+  [ // 23
     {
       key: 'PM_PVS1_M_Yes',
       text: 'Y',
@@ -179,7 +287,7 @@ export default [
       value: 'PM_PVS1_M_No',
     },
   ],
-  [ // 15
+  [ // 24
     {
       key: 'PS_PVS1_S_Yes',
       text: 'Y',
@@ -191,7 +299,7 @@ export default [
       value: 'PS_PVS1_S_No',
     },
   ],
-  [ // 16
+  [ // 25
     {
       key: 'PVS_PVS1_VS_Yes',
       text: 'Y',
@@ -203,7 +311,43 @@ export default [
       value: 'PVS_PVS1_VS_No',
     },
   ],
-  [ // 17
+  [ // 26
+    {
+      key: 'PP_PP3_P_Yes',
+      text: 'Y',
+      value: 'PP_PP3_P_Yes',
+    },
+    {
+      key: 'PP_PP3_P_No',
+      text: 'N',
+      value: 'PP_PP3_P_No',
+    },
+  ],
+  [ // 27
+    {
+      key: 'PM_PP3_M_Yes',
+      text: 'Y',
+      value: 'PM_PP3_M_Yes',
+    },
+    {
+      key: 'PM_PP3_M_No',
+      text: 'N',
+      value: 'PM_PP3_M_No',
+    },
+  ],
+  [ // 28
+    {
+      key: 'BS_BP7_S_Yes',
+      text: 'Y',
+      value: 'BS_BP7_S_Yes',
+    },
+    {
+      key: 'BS_BP7_S_No',
+      text: 'N',
+      value: 'BS_BP7_S_No',
+    },
+  ],
+  [ // 29
     {
       key: 'BP_BP7_P_Yes',
       text: 'Y',
@@ -215,7 +359,19 @@ export default [
       value: 'BP_BP7_P_No',
     },
   ],
-  [ // 18
+  [ // 30
+    {
+      key: 'PP_PM4_S_Yes',
+      text: 'Y',
+      value: 'PP_PM4_S_Yes',
+    },
+    {
+      key: 'PP_PM4_S_No',
+      text: 'N',
+      value: 'PP_PM4_S_No',
+    },
+  ],
+  [ // 31
     {
       key: 'PM_PM4_M_Yes',
       text: 'Y',
@@ -227,19 +383,31 @@ export default [
       value: 'PM_PM4_M_No',
     },
   ],
-  [ // 19
+  [ // 32
     {
-      key: 'PP_PP2_P_Yes',
+      key: 'PS_PM4S_S_Yes',
       text: 'Y',
-      value: 'PP_PP2_P_Yes',
+      value: 'PS_PM4S_S_Yes',
     },
     {
-      key: 'PP_PP2_P_No',
+      key: 'PS_PM4S_S_No',
       text: 'N',
-      value: 'PP_PP2_P_No',
+      value: 'PS_PM4S_S_No',
     },
   ],
-  [ // 20
+  [ // 33
+    {
+      key: 'PP_PM1_P_Yes',
+      text: 'Y',
+      value: 'PP_PM1_P_Yes',
+    },
+    {
+      key: 'PP_PM1_P_No',
+      text: 'N',
+      value: 'PP_PM1_P_No',
+    },
+  ],
+  [ // 34
     {
       key: 'PM_PM1_M_Yes',
       text: 'Y',
@@ -251,7 +419,31 @@ export default [
       value: 'PM_PM1_M_No',
     },
   ],
-  [ // 21
+  [ // 35
+    {
+      key: 'PS_PM1_S_Yes',
+      text: 'Y',
+      value: 'PS_PM1_S_Yes',
+    },
+    {
+      key: 'PS_PM1_S_No',
+      text: 'N',
+      value: 'PS_PM1_S_No',
+    },
+  ],
+  [ // 36
+    {
+      key: 'PP_PP2_P_Yes',
+      text: 'Y',
+      value: 'PP_PP2_P_Yes',
+    },
+    {
+      key: 'PP_PP2_P_No',
+      text: 'N',
+      value: 'PP_PP2_P_No',
+    },
+  ],
+  [ // 37
     {
       key: 'BS_BS3_S_Yes',
       text: 'Y',
@@ -263,7 +455,19 @@ export default [
       value: 'BS_BS3_S_No',
     },
   ],
-  [ // 22
+  [ // 38
+    {
+      key: 'BP_BS3_P_Yes',
+      text: 'Y',
+      value: 'BP_BS3_P_Yes',
+    },
+    {
+      key: 'BP_BS3_P_No',
+      text: 'N',
+      value: 'BP_BS3_P_No',
+    },
+  ],
+  [ // 39
     {
       key: 'PP_PS3_P_Yes',
       text: 'Y',
@@ -275,7 +479,7 @@ export default [
       value: 'PP_PS3_P_No',
     },
   ],
-  [ // 23
+  [ // 40
     {
       key: 'PM_PS3_M_Yes',
       text: 'Y',
@@ -287,7 +491,7 @@ export default [
       value: 'PM_PS3_M_No',
     },
   ],
-  [ // 24
+  [ // 41
     {
       key: 'PS_PS3_S_Yes',
       text: 'Y',
@@ -299,7 +503,7 @@ export default [
       value: 'PS_PS3_S_No',
     },
   ],
-  [ // 25
+  [ // 42
     {
       key: 'BS_BS4_S_Yes',
       text: 'Y',
@@ -311,7 +515,19 @@ export default [
       value: 'BS_BS4_S_No',
     },
   ],
-  [ // 26
+  [ // 43
+    {
+      key: 'BP_BS4_P_Yes',
+      text: 'Y',
+      value: 'BP_BS4_P_Yes',
+    },
+    {
+      key: 'BP_BS4_P_No',
+      text: 'N',
+      value: 'BP_BS4_P_No',
+    },
+  ],
+  [ // 44
     {
       key: 'PP_PP1_P_Yes',
       text: 'Y',
@@ -323,7 +539,7 @@ export default [
       value: 'PP_PP1_P_No',
     },
   ],
-  [ // 27
+  [ // 45
     {
       key: 'PM_PP1_M_Yes',
       text: 'Y',
@@ -335,7 +551,7 @@ export default [
       value: 'PM_PP1_M_No',
     },
   ],
-  [ // 28
+  [ // 46
     {
       key: 'PS_PP1_S_Yes',
       text: 'Y',
@@ -347,7 +563,19 @@ export default [
       value: 'PS_PP1_S_No',
     },
   ],
-  [ // 29
+  [ // 47
+    {
+      key: 'PP_PM6_P_Yes',
+      text: 'Y',
+      value: 'PP_PM6_P_Yes',
+    },
+    {
+      key: 'PP_PM6_P_No',
+      text: 'N',
+      value: 'PP_PM6_P_No',
+    },
+  ],
+  [ // 48
     {
       key: 'PM_PM6_M_Yes',
       text: 'Y',
@@ -359,7 +587,7 @@ export default [
       value: 'PM_PM6_M_No',
     },
   ],
-  [ // 30
+  [ // 49
     {
       key: 'PS_PM6_S_Yes',
       text: 'Y',
@@ -371,7 +599,31 @@ export default [
       value: 'PS_PM6_S_No',
     },
   ],
-  [ // 31
+  [ // 50
+    {
+      key: 'PP_PS2_P_Yes',
+      text: 'Y',
+      value: 'PP_PS2_P_Yes',
+    },
+    {
+      key: 'PP_PS2_P_No',
+      text: 'N',
+      value: 'PP_PS2_P_No',
+    },
+  ],
+  [ // 51
+    {
+      key: 'PM_PS2_M_Yes',
+      text: 'Y',
+      value: 'PM_PS2_M_Yes',
+    },
+    {
+      key: 'PM_PS2_M_No',
+      text: 'N',
+      value: 'PM_PS2_M_No',
+    },
+  ],
+  [ // 52
     {
       key: 'PS_PS2_S_Yes',
       text: 'Y',
@@ -383,7 +635,7 @@ export default [
       value: 'PS_PS2_S_No',
     },
   ],
-  [ // 32
+  [ // 53
     {
       key: 'PVS_PS2_VS_Yes',
       text: 'Y',
@@ -395,7 +647,19 @@ export default [
       value: 'PVS_PS2_VS_No',
     },
   ],
-  [ // 33
+  [ // 54
+    {
+      key: 'BS_BP2_S_Yes',
+      text: 'Y',
+      value: 'BS_BP2_S_Yes',
+    },
+    {
+      key: 'BS_BP2_S_No',
+      text: 'N',
+      value: 'BS_BP2_S_No',
+    },
+  ],
+  [ // 55
     {
       key: 'BP_BP2_P_Yes',
       text: 'Y',
@@ -407,7 +671,19 @@ export default [
       value: 'BP_BP2_P_No',
     },
   ],
-  [ // 34
+  [ // 56
+    {
+      key: 'PP_PM3_P_Yes',
+      text: 'Y',
+      value: 'PP_PM3_P_Yes',
+    },
+    {
+      key: 'PP_PM3_P_No',
+      text: 'N',
+      value: 'PP_PM3_P_No',
+    },
+  ],
+  [ // 57
     {
       key: 'PM_PM3_M_Yes',
       text: 'Y',
@@ -419,7 +695,7 @@ export default [
       value: 'PM_PM3_M_No',
     },
   ],
-  [ // 35
+  [ // 58
     {
       key: 'PS_PM3_S_Yes',
       text: 'Y',
@@ -431,7 +707,7 @@ export default [
       value: 'PS_PM3_S_No',
     },
   ],
-  [ // 36
+  [ // 59
     {
       key: 'PVS_PM3_VS_Yes',
       text: 'Y',
@@ -441,6 +717,66 @@ export default [
       key: 'PVS_PM3_VS_No',
       text: 'N',
       value: 'PVS_PM3_VS_No',
+    },
+  ],
+  [ // 60
+    {
+      key: 'BS_PB5_S_Yes',
+      text: 'Y',
+      value: 'BS_PB5_S_Yes',
+    },
+    {
+      key: 'BS_PB5_S_No',
+      text: 'N',
+      value: 'BS_PB5_S_No',
+    },
+  ],
+  [ // 61
+    {
+      key: 'BP_BP5_P_Yes',
+      text: 'Y',
+      value: 'BP_BP5_P_Yes',
+    },
+    {
+      key: 'BP_BP5_P_No',
+      text: 'N',
+      value: 'BP_BP5_P_No',
+    },
+  ],
+  [ // 62
+    {
+      key: 'PP_PP4_P_Yes',
+      text: 'Y',
+      value: 'PP_PP4_P_Yes',
+    },
+    {
+      key: 'PP_PP4_P_No',
+      text: 'N',
+      value: 'PP_PP4_P_No',
+    },
+  ],
+  [ // 63
+    {
+      key: 'PM_PP4_M_Yes',
+      text: 'Y',
+      value: 'PM_PP4_M_Yes',
+    },
+    {
+      key: 'PM_PP4_M_No',
+      text: 'N',
+      value: 'PM_PP4_M_No',
+    },
+  ],
+  [ // 64
+    {
+      key: 'PS_PP4_S_Yes',
+      text: 'Y',
+      value: 'PS_PP4_S_Yes',
+    },
+    {
+      key: 'PS_PP4_S_No',
+      text: 'N',
+      value: 'PS_PP4_S_No',
     },
   ],
 ]
