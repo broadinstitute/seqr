@@ -1,14 +1,12 @@
 import logging
 from slacker import Slacker
-from settings import SLACK_TOKEN, BASE_URL
+from settings import SLACK_TOKEN, BASE_URL, ANVIL_UI_URL
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
 logger = logging.getLogger(__name__)
-
-ANVIL_UI_URL = 'https://anvil.terra.bio/'
 
 
 def safe_post_to_slack(channel, message):

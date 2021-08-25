@@ -145,7 +145,7 @@ const ACCEPTED_FILTER = {
 const ASSIGNED_TO_ME_FILTER = {
   value: SHOW_ASSIGNED_TO_ME,
   name: 'Assigned To Me',
-  createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
+  createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
 
 export const FAMILY_FILTER_OPTIONS = [

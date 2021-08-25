@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime
 from django.db.models import prefetch_related_objects, Q
 
@@ -22,11 +23,11 @@ def get_mme_genes_phenotypes_for_submissions(submissions):
 
 
 def _get_patient_features(result):
-    return result['patient'].get('features')
+    return deepcopy(result['patient'].get('features'))
 
 
 def _get_patient_genomic_features(result):
-    return result['patient'].get('genomicFeatures')
+    return deepcopy(result['patient'].get('genomicFeatures'))
 
 
 def _get_submisson_features(submisson):
@@ -76,8 +77,26 @@ def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, inclu
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
+def validate_patient_data(json_data):
+    patient_data = json_data.get('patient')
+    if not isinstance(patient_data, dict):
+        raise ValueError('"patient" object is required')
+    if not patient_data.get('id'):
+        raise ValueError('"id" is required')
+    if not patient_data.get('contact'):
+        raise ValueError('"contact" is required')
+    features = patient_data.get('features')
+    genomic_features = patient_data.get('genomicFeatures')
+    if not (features or genomic_features):
+        raise ValueError('"features" or "genomicFeatures" are required')
+    if genomic_features and any(not feature.get('gene', {}).get('id') for feature in genomic_features):
+        raise ValueError('all "genomicFeatures" require a gene id')
+    if features and any(not feature.get('id') for feature in features):
+        raise ValueError('all "features" require an id')
+
+
 def parse_mme_features(features, hpo_terms_by_id):
-    phenotypes = [feature for feature in (features or [])]
+    phenotypes = deepcopy(features) or []
     for feature in phenotypes:
         feature['label'] = hpo_terms_by_id.get(feature['id'])
     return phenotypes

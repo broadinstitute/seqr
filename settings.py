@@ -185,6 +185,7 @@ LOGGING = {
 }
 
 TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
+ANVIL_UI_URL = 'https://anvil.terra.bio/'
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',

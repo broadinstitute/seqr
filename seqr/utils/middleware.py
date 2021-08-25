@@ -15,6 +15,7 @@ import traceback
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.pedigree_info_utils import ErrorsWarningsException
 from seqr.views.utils.terra_api_utils import TerraAPIException
 from settings import DEBUG, LOGIN_URL
 
@@ -27,12 +28,17 @@ EXCEPTION_ERROR_MAP = {
     Http404: 404,
     InvalidIndexException: 400,
     InvalidSearchException: 400,
+    ErrorsWarningsException: 400,
     AuthException: 401,
     elasticsearch.exceptions.ConnectionError: 504,
     elasticsearch.exceptions.TransportError: lambda e: int(e.status_code) if e.status_code != 'N/A' else 400,
     HTTPError: lambda e: int(e.response.status_code),
     TerraAPIException: lambda e: e.status_code,
     AnymailError: lambda e: getattr(e, 'status_code', None) or 400,
+}
+
+EXCEPTION_JSON_MAP = {
+    ErrorsWarningsException: lambda e: {'errors': e.errors, 'warnings': e.warnings}
 }
 
 EXCEPTION_MESSAGE_MAP = {
@@ -67,15 +73,20 @@ def _get_exception_status_code(exception):
     except Exception:
         return 500
 
-def _get_exception_message(exception):
+def _get_core_exception_json(exception):
+    exception_json_formatter = next((f for exc, f in EXCEPTION_JSON_MAP.items() if isinstance(exception, exc)), None)
+    if exception_json_formatter:
+        return exception_json_formatter(exception)
+
     message_func = next((f for exc, f in EXCEPTION_MESSAGE_MAP.items() if isinstance(exception, exc)), str)
-    return message_func(exception)
+    return {'error': message_func(exception)}
+
 
 class JsonErrorMiddleware(MiddlewareMixin):
 
     @staticmethod
     def process_exception(request, exception):
-        exception_json = {'error': _get_exception_message(exception)}
+        exception_json =  _get_core_exception_json(exception)
         status = _get_exception_status_code(exception)
         if exception.__class__ in ERROR_LOG_EXCEPTIONS:
             exception_json['log_error'] = True

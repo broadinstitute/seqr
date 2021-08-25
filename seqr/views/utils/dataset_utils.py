@@ -53,20 +53,20 @@ def validate_index_metadata(index_metadata, elasticsearch_index, project=None, g
 
     sample_type = index_metadata['sampleType']
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
-        raise Exception("Sample type not supported: {}".format(sample_type))
+        raise ValueError("Sample type not supported: {}".format(sample_type))
 
     if index_metadata['genomeVersion'] != (genome_version or project.genome_version):
-        raise Exception('Index "{0}" has genome version {1} but this project uses version {2}'.format(
+        raise ValueError('Index "{0}" has genome version {1} but this project uses version {2}'.format(
             elasticsearch_index, index_metadata['genomeVersion'], project.genome_version
         ))
 
     dataset_path = index_metadata['sourceFilePath']
     dataset_suffixes = ('.vds', '.vcf.gz', '.bgz', '.bed')
     if not dataset_path.endswith(dataset_suffixes):
-        raise Exception("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
+        raise ValueError("Variant call dataset path must end with {}".format(' or '.join(dataset_suffixes)))
 
     if index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS) != dataset_type:
-        raise Exception('Index "{0}" has dataset type {1} but expects {2}'.format(
+        raise ValueError('Index "{0}" has dataset type {1} but expects {2}'.format(
             elasticsearch_index, index_metadata.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS), dataset_type
         ))
 
@@ -109,11 +109,11 @@ def match_sample_ids_to_sample_records(
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        max_edit_distance (int): max permitted edit distance for approximate matches
         create_sample_records (bool): whether to create new Sample records for sample_ids that
             don't match existing Sample records, but do match individual_id's of existing
             Individual records.
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
+        loaded_date (object): datetime object
 
     Returns:
         tuple:
@@ -128,6 +128,7 @@ def match_sample_ids_to_sample_records(
     logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
+    new_samples = []
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()
@@ -170,7 +171,7 @@ def match_sample_ids_to_sample_records(
             })
             log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record
+    return sample_id_to_sample_record, new_samples
 
 
 def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
