@@ -437,7 +437,7 @@ INTERNAL_FAMILY_FIELDS = {
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
 INDIVIDUAL_FIELDS_NO_FEATURES = {
-    'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'individualId',
+    'projectGuid', 'familyGuid', 'individualGuid', 'individualId',
     'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
     'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
     'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',

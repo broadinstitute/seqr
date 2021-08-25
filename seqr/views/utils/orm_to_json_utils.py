@@ -44,8 +44,9 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
     if additional_model_fields:
         fields += additional_model_fields
 
-    if 'created_by' in fields:
-        prefetch_related_objects(models, 'created_by')
+    user_fields = [field for field in fields if field.endswith('last_modified_by') or field == 'created_by']
+    for field in user_fields:
+        prefetch_related_objects(models, field)
     for nested_field in nested_fields or []:
         if not nested_field.get('value'):
             prefetch_related_objects(models, '__'.join(nested_field['fields'][:-1]))
@@ -65,8 +66,10 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         if result.get('guid'):
             guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
             result[guid_key] = result.pop('guid')
-        if result.get('createdBy'):
-            result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
+        for field in user_fields:
+            result_field = _to_camel_case(field)
+            if result.get(result_field):
+                result[result_field] = result[result_field].get_full_name() or result[result_field].email
         if process_result:
             process_result(result, model)
         results.append(result)
@@ -266,15 +269,11 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if not individuals:
         return []
 
-    def _get_case_review_status_modified_by(modified_by):
-        return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
-
     def _process_result(result, individual):
         mother = result.pop('mother', None)
         father = result.pop('father', None)
 
         result.update({
-            'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'maternalGuid': mother.guid if mother else None,
             'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,
@@ -308,8 +307,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
-    if 'case_review_status_last_modified_by' in kwargs['additional_model_fields']:
-        prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')

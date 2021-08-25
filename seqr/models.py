@@ -7,7 +7,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import options, ForeignKey, JSONField
+from django.db.models import base, options, ForeignKey, JSONField
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -22,7 +22,7 @@ logger = SeqrLogger(__name__)
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_fields',)
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_fields', 'audit_fields')
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
@@ -33,7 +33,19 @@ def _slugify(text):
     return __slugify(text).replace('-', '_')
 
 
-class ModelWithGUID(models.Model):
+class CustomModelBase(base.ModelBase):
+    def __new__(cls, name, bases, attrs, **kwargs):
+        audit_fields = getattr(attrs.get('Meta'), 'audit_fields', None)
+        if audit_fields:
+            for audit_field in audit_fields:
+                attrs.update({
+                    '{}_last_modified_date'.format(audit_field): models.DateTimeField(null=True, blank=True, db_index=True),
+                    '{}_last_modified_by'.format(audit_field): models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+                })
+        return super().__new__(cls, name, bases, attrs, **kwargs)
+
+
+class ModelWithGUID(models.Model, metaclass=CustomModelBase):
     MAX_GUID_SIZE = 30
 
     guid = models.CharField(max_length=MAX_GUID_SIZE, db_index=True, unique=True)
@@ -49,6 +61,7 @@ class ModelWithGUID(models.Model):
 
         json_fields = []
         internal_json_fields = []
+        audit_fields = set()
 
     @abstractmethod
     def _compute_guid(self):
@@ -459,8 +472,6 @@ class Individual(ModelWithGUID):
     notes = models.TextField(blank=True, null=True)
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default=CASE_REVIEW_STATUS_IN_REVIEW)
-    case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
-    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
@@ -522,6 +533,7 @@ class Individual(ModelWithGUID):
         internal_json_fields = [
             'proband_relationship'
         ]
+        audit_fields = {'case_review_status'}
 
 
 class Sample(ModelWithGUID):

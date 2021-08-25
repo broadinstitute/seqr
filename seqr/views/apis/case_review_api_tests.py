@@ -64,7 +64,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
 
-    @mock.patch('seqr.views.apis.case_review_api.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
+    @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_case_review_status(self):
         url = reverse(update_case_review_status, args=[INDIVIDUAL_GUID])
         self.check_manager_login(url)
@@ -76,7 +76,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         self.assertEqual(response_json[INDIVIDUAL_GUID]['caseReviewStatus'], 'A')
         self.assertEqual(response_json[INDIVIDUAL_GUID]['caseReviewStatusLastModifiedDate'],
                          '2020-01-01T00:00:00')
-        self.assertEqual(response_json[INDIVIDUAL_GUID]['caseReviewStatusLastModifiedBy'], 'test_user_manager@test.com')
+        self.assertEqual(response_json[INDIVIDUAL_GUID]['caseReviewStatusLastModifiedBy'], 'Test Manager User')
 
         # send request for invalid project
         url = reverse(update_case_review_status, args=[NO_CASE_REVIEW_INDIVIDUAL_GUID])
