@@ -63,8 +63,8 @@ PARSED_RESULT = {
         },
         'id': 'P0004515',
         'features': [
-            {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-            {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
+            {'id': 'HP:0012469', 'observed': 'yes'},
+            {'id': 'HP:0003273', 'observed': 'no'},
         ],
     },
     'phenotypes': [
@@ -138,8 +138,15 @@ PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
 INVALID_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
-INVALID_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
-INVALID_NEW_MATCH_JSON['patient']['id'] = '123'
+INVALID_NEW_MATCH_JSON['patient'] = {}
+
+INVALID_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene'] = {}
+INVALID_GENE_NEW_MATCH_JSON['patient']['id'] = '123'
+
+INVALID_FEATURES_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+INVALID_FEATURES_NEW_MATCH_JSON['patient']['features'][0] = {}
+INVALID_FEATURES_NEW_MATCH_JSON['patient']['id'] = '456'
 
 MISMATCHED_GENE_NEW_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
 MISMATCHED_GENE_NEW_MATCH_JSON['patient']['genomicFeatures'][0]['gene']['id'] = 'ENSG00000227232'
@@ -263,32 +270,37 @@ class MatchmakerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
+    @mock.patch('matchmaker.views.matchmaker_api.logger')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_slacker, mock_logger):
+    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_logger, mock_slacker, mock_communication_logger):
         mock_slacker.return_value.chat.post_message.side_effect = ValueError('Unable to connect to slack')
 
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
-        responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
-            'results': [NEW_MATCH_JSON, INVALID_NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON]
-        })
+        invalid_results = [INVALID_NEW_MATCH_JSON, INVALID_FEATURES_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON]
+        results = [NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON] + invalid_results
+        responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
 
         # Test invalid inputs
         mock_nodes.values.return_value = []
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
+        mock_logger.error.assert_called_with('No external MME nodes are configured', self.collaborator_user)
 
+        mock_logger.reset_mock()
         mock_nodes.values.return_value = [{'name': 'My node'}]
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
+        mock_logger.error.assert_called_with('No external MME nodes are configured', self.collaborator_user)
 
         # Test successful search
+        mock_logger.reset_mock()
         mock_nodes.values.return_value = [
             {'name': 'My node'},
             {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},
@@ -401,20 +413,27 @@ class MatchmakerAPITest(AuthenticationTestCase):
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
-        self.assertEqual(mock_slacker.call_count, 2)
+        self.assertEqual(mock_slacker.call_count, 3)
         mock_slacker.assert_called_with(MOCK_SLACK_TOKEN)
         slack_kwargs = {'as_user': False, 'icon_emoji': ':beaker:', 'username': 'Beaker (engineering-minion)'}
-        alert_slack_message = 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
-            json.dumps(expected_patient_body))
+        alert_a_slack_message = 'Error searching in Node A: Failed request (400)\n```{}```'.format(
+            json.dumps(expected_patient_body, indent=2))
+        alert_b_slack_message = 'Error searching in Node B: Received invalid results\n```{}```'.format(
+            json.dumps(invalid_results, indent=2))
         mock_slacker.return_value.chat.post_message.assert_has_calls([
-            mock.call('matchmaker_alerts', alert_slack_message, **slack_kwargs),
+            mock.call('matchmaker_alerts', alert_a_slack_message, **slack_kwargs),
+            mock.call('matchmaker_alerts', alert_b_slack_message, **slack_kwargs),
             mock.call('matchmaker_seqr_match', message, **slack_kwargs),
         ])
-        mock_logger.error.assert_has_calls([
+        mock_communication_logger.error.assert_has_calls([
             mock.call(
                 'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
-                    'matchmaker_alerts', alert_slack_message
+                    'matchmaker_alerts', alert_a_slack_message
             )),
+            mock.call(
+                'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
+                    'matchmaker_alerts', alert_b_slack_message
+                )),
             mock.call(
                 'Slack error: Unable to connect to slack: Original message in channel ({}) - {}'.format(
                     'matchmaker_seqr_match', message
@@ -426,6 +445,18 @@ class MatchmakerAPITest(AuthenticationTestCase):
             to=['test_user@broadinstitute.org'],
             from_email='matchmaker@broadinstitute.org')
         mock_email.return_value.send.assert_called()
+
+        mock_logger.error.assert_not_called()
+        mock_logger.warning.assert_has_calls([
+            mock.call('Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body),
+            mock.call('Error searching in Node B: Received invalid results', self.collaborator_user, detail=invalid_results),
+            mock.call('Received 1 invalid matches from Node B', self.collaborator_user),
+        ])
+        mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
+            'Found 5 matches from Node B',
+            'Found 2 matches for NA19675_1_01 (1 new)',
+            'Removed 2 old matches for NA19675_1_01',
+        ]])
 
         # Test new result model created
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
@@ -442,12 +473,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'comments': 'Some additional data about this institution',
             }})
 
-    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage', Exception('Email error'))
+    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
+    @mock.patch('matchmaker.views.matchmaker_api.logger')
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_update_mme_submission(self, mock_mme_nodes):
+    def test_update_mme_submission(self, mock_mme_nodes, mock_logger, mock_email):
         responses.add(responses.POST, 'http://node_a.com/match', status=200, json={'results': [NEW_MATCH_JSON]})
         mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
+        mock_email.side_effect = Exception('Email error')
 
         url = reverse(update_mme_submission)
         self.check_collaborator_login(url, request_data=SUBMISSION_DATA)
@@ -568,6 +601,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[0].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertEqual(responses.calls[0].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[0].request.body), expected_body)
+
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for new MME match: Email error', self.collaborator_user)
+        mock_logger.warning.assert_not_called()
+        mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
+            'Found 1 matches from Node A',
+            'Found 1 matches for I000006_hg00733 (1 new)',
+        ]])
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
