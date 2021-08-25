@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_BASE_URL, BASE_URL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
@@ -135,7 +135,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
 """.format(
                 user=user.get_full_name() or user.email,
                 date=project.created_date.date().strftime('%B %d, %Y'),
-                anvil_url=ANVIL_BASE_URL,
+                anvil_url=ANVIL_UI_URL,
                 namespace=project.workspace_namespace,
                 name=project.workspace_name,
                 base_url=BASE_URL,
