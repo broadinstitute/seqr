@@ -503,7 +503,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Individual is required for a new submission')
 
         # Test successful creation
-        mock_logger.reset_mock()
         response = self.client.post(url, content_type='application/json', data=json.dumps(SUBMISSION_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
