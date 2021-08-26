@@ -115,10 +115,27 @@ const EDIT_FIELDS = [
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-    tagAnnotation: (value, compact) => (compact ?
-      <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
-      <ColoredIcon name="stop" color={value.color} />
-    ),
+    tagAnnotation: (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
+      const icon = <ColoredIcon name="stop" color={value.color} />
+      if (!compact && !analysisStatusLastModifiedDate) {
+        return icon
+      }
+      return (
+        <Popup
+          trigger={icon}
+          content={
+            <div>
+              {compact && value.text}
+              {analysisStatusLastModifiedDate &&
+                <i>
+                  {compact && <br />}Changed on {new Date(analysisStatusLastModifiedDate).toLocaleDateString()}
+                  <br />by {analysisStatusLastModifiedBy}
+                </i>}
+            </div>
+          }
+          position="top center"
+        />
+      ) },
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     formFields: EDIT_FIELDS,

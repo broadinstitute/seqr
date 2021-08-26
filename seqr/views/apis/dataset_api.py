@@ -113,7 +113,7 @@ def add_variants_dataset_handler(request, project_guid):
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
     ]
     Family.bulk_update(
-        request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
+        request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update) # TODO add test for explicit behavior
 
     if project_has_analyst_access(project):
         safe_post_to_slack(
