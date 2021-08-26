@@ -109,11 +109,11 @@ def match_sample_ids_to_sample_records(
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        max_edit_distance (int): max permitted edit distance for approximate matches
         create_sample_records (bool): whether to create new Sample records for sample_ids that
             don't match existing Sample records, but do match individual_id's of existing
             Individual records.
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
+        loaded_date (object): datetime object
 
     Returns:
         tuple:
@@ -128,6 +128,7 @@ def match_sample_ids_to_sample_records(
     logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
+    new_samples = []
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()
@@ -170,7 +171,7 @@ def match_sample_ids_to_sample_records(
             })
             log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record
+    return sample_id_to_sample_record, new_samples
 
 
 def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
