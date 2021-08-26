@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
                 ('note', models.TextField()),
                 ('note_type', models.CharField(choices=[('M', 'mme'), ('C', 'case'), ('A', 'analysis')], max_length=1)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('family', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='seqr.family')),
+                ('family', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='seqr.family')),
             ],
         ),
         migrations.RunPython(create_family_note_models, reverse_code=revert_family_note_models),

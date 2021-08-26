@@ -144,8 +144,6 @@
         "description": "test descripti\u00f8n",
         "post_discovery_omim_number": "615120,615123",
         "pedigree_image": "ped_1.png",
-        "analysis_notes": "<b>\r\n                        F\u00e5mily analysis n\u00f8tes\r\n                    </b>",
-        "analysis_summary": "<b>\r\n                        F\u00e5mily analysis summ\u00e5ry.\r\n                    </b>",
         "analysis_status": "Q",
         "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
         "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
@@ -164,8 +162,6 @@
         "display_name": "2",
         "description": "",
         "pedigree_image": "ped_2.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
@@ -184,8 +180,6 @@
         "display_name": "3",
         "description": "",
         "pedigree_image": "ped_3.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -204,8 +198,6 @@
         "display_name": "4",
         "description": "",
         "pedigree_image": "ped_4.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -224,8 +216,6 @@
         "display_name": "5",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -244,8 +234,6 @@
         "display_name": "6",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -264,8 +252,6 @@
         "display_name": "7",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -284,8 +270,6 @@
         "display_name": "8",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -304,8 +288,6 @@
         "display_name": "9",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -324,8 +306,6 @@
         "display_name": "10",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -344,8 +324,6 @@
         "display_name": "11",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": ""
@@ -364,8 +342,6 @@
         "display_name": "12",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
@@ -386,8 +362,6 @@
         "display_name": "family without individuals and samples",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
         "success_story_types": ["A"],
@@ -407,6 +381,32 @@
         "family_id": "14",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 1,
+    "fields": {
+        "guid": "FAN000001_1",
+        "created_date": "2017-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "family": 1,
+        "note": "*\r\n                        F\u00e5mily analysis n\u00f8tes\r\n*",
+        "note_type": "C"
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 2,
+    "fields": {
+        "guid": "FAN000001_2",
+        "created_date": "2017-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "family": 1,
+        "note": "*\r\nF\u00e5mily analysis summ\u00e5ry.\r\n*",
+        "note_type": "A"
     }
 },
 {

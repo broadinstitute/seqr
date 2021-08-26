@@ -356,7 +356,7 @@ class FamilyNote(ModelWithGUID):
         ('A', 'analysis'),
     )
 
-    family = models.ForeignKey(Family, on_delete=models.PROTECT)
+    family = models.ForeignKey(Family, on_delete=models.CASCADE)
     note = models.TextField()
     note_type = models.CharField(max_length=1, choices=NOTE_TYPE_CHOICES,)
 
