@@ -303,10 +303,6 @@ class Family(ModelWithGUID):
     ), default=list)
     success_story = models.TextField(null=True, blank=True)
 
-    mme_notes = models.TextField(null=True, blank=True)
-    analysis_notes = models.TextField(null=True, blank=True)
-    analysis_summary = models.TextField(null=True, blank=True)
-
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
     pubmed_ids = ArrayField(models.TextField(), default=list)
@@ -330,9 +326,8 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'assigned_analyst', 'mme_notes', 'pedigree_dataset',
+            'guid', 'family_id', 'display_name', 'description', 'analysis_status', 'pedigree_image', 'created_date',
+            'post_discovery_omim_number', 'assigned_analyst', 'pedigree_dataset', 'coded_phenotype',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
@@ -352,6 +347,27 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
+
+
+class FamilyNote(ModelWithGUID):
+    NOTE_TYPE_CHOICES = (
+        ('M', 'mme'),
+        ('C', 'case'),
+        ('A', 'analysis'),
+    )
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
+    note = models.TextField()
+    note_type = models.CharField(max_length=1, choices=NOTE_TYPE_CHOICES,)
+
+    def __unicode__(self):
+        return '{}_{}_{}'.format(self.family.family_id, self.note_type, self.note)[:20]
+
+    def _compute_guid(self):
+        return 'FAN{:06d}_{}'.format(self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'note_type', 'last_modified_date', 'created_by']
 
 
 class YearField(models.PositiveSmallIntegerField):
