@@ -4,7 +4,7 @@ from datetime import datetime
 from django.urls.base import reverse
 from io import StringIO
 
-from seqr.models import Sample
+from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase
@@ -102,7 +102,13 @@ class DatasetAPITest(object):
             set(response_json['individualsByGuid']['I000002_na19678']['sampleGuids']),
             {new_sample_guid, existing_old_index_sample_guid}
         )
+
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
+        updated_family = Family.objects.get(guid='F000001_1')
+        self.assertEqual(updated_family.analysis_status, 'I')
+        self.assertIsNone(updated_family.analysis_status_last_modified_date)
+        self.assertIsNone(updated_family.analysis_status_last_modified_by)
+
         updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
         self.assertSetEqual(
             {'WES'},
