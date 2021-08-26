@@ -337,6 +337,7 @@ class Family(ModelWithGUID):
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
         ]
+        audit_fields = {'analysis_status'}
 
 
 # TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/broadinstitute/seqr-private/issues/449)
