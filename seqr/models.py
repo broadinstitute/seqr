@@ -33,15 +33,23 @@ def _slugify(text):
     return __slugify(text).replace('-', '_')
 
 
+def _get_audit_fields(audit_field):
+    return {
+        '{}_last_modified_date'.format(audit_field): models.DateTimeField(null=True, blank=True, db_index=True),
+        '{}_last_modified_by'.format(audit_field): models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+    }
+
+
+def get_audit_field_names(audit_field):
+    return list(_get_audit_fields(audit_field).keys())
+
+
 class CustomModelBase(base.ModelBase):
     def __new__(cls, name, bases, attrs, **kwargs):
         audit_fields = getattr(attrs.get('Meta'), 'audit_fields', None)
         if audit_fields:
             for audit_field in audit_fields:
-                attrs.update({
-                    '{}_last_modified_date'.format(audit_field): models.DateTimeField(null=True, blank=True, db_index=True),
-                    '{}_last_modified_by'.format(audit_field): models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
-                })
+                attrs.update(_get_audit_fields(audit_field))
         return super().__new__(cls, name, bases, attrs, **kwargs)
 
 
