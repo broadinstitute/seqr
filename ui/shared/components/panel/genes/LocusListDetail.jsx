@@ -33,21 +33,17 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
   const itemExportDownloads = [
     {
       name: 'Genes',
-      data: {
-        headers: ['Gene ID', 'Symbol'],
-        filename: `${toSnakecase(locusList.name)}_genes`,
-        rawData: locusList.items.filter(item => item.geneId),
-        processRow: item => ([item.geneId, item.display]),
-      },
+      headers: ['Gene ID', 'Symbol'],
+      filename: `${toSnakecase(locusList.name)}_genes`,
+      rawData: locusList.items.filter(item => item.geneId),
+      processRow: item => ([item.geneId, item.display]),
     },
     {
       name: 'Intervals',
-      data: {
-        headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
-        filename: `${toSnakecase(locusList.name)}_intervals`,
-        rawData: locusList.items.filter(item => item.chrom),
-        processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
-      },
+      headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
+      filename: `${toSnakecase(locusList.name)}_intervals`,
+      rawData: locusList.items.filter(item => item.chrom),
+      processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
     },
   ]
   const { items, ...itemsValues } = locusList

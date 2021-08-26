@@ -1,5 +1,4 @@
 import json
-import logging
 import requests
 from datetime import datetime
 from django.core.mail.message import EmailMessage
@@ -8,10 +7,11 @@ from django.db.models import prefetch_related_objects
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, \
-    get_gene_ids_for_feature, MME_DISCLAIMER
+    get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -23,7 +23,7 @@ from seqr.views.utils.permissions_utils import check_mme_permissions, check_proj
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 @login_and_policies_required
@@ -71,10 +71,10 @@ def _search_matches(submission, user):
     nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
     if not nodes_to_query:
         message = 'No external MME nodes are configured'
-        logger.error(message)
+        logger.error(message, user)
         return create_json_response({'error': message}, status=400, reason=message)
 
-    external_results = _search_external_matches(nodes_to_query, patient_data)
+    external_results = _search_external_matches(nodes_to_query, patient_data, user)
     local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
 
     results = local_results + external_results
@@ -109,9 +109,9 @@ def _search_matches(submission, user):
         try:
             _generate_notification_for_seqr_match(submission, new_results)
         except Exception as e:
-            logger.error('Unable to create notification for new MME match: {}'.format(str(e)))
+            logger.error('Unable to create notification for new MME match: {}'.format(str(e)), user)
 
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), submission.submission_id, len(new_results)))
+    logger.info('Found {} matches for {} ({} new)'.format(len(results), submission.submission_id, len(new_results)), user)
 
     removed_patients = set(initial_saved_results.keys()) - set(saved_results.keys())
     removed_count = 0
@@ -127,12 +127,12 @@ def _search_matches(submission, user):
             removed_count += 1
 
     if removed_count:
-        logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id))
+        logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id), user)
 
     return _parse_mme_results(submission, list(saved_results.values()), user)
 
 
-def _search_external_matches(nodes_to_query, patient_data):
+def _search_external_matches(nodes_to_query, patient_data, user):
     body = {'_disclaimer': MME_DISCLAIMER}
     body.update(patient_data)
     external_results = []
@@ -158,24 +158,28 @@ def _search_external_matches(nodes_to_query, patient_data):
                 raise Exception(error_message)
 
             node_results = external_result.json()['results']
-            logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
+            logger.info('Found {} matches from {}'.format(len(node_results), node['name']), user)
             if node_results:
                 _, _, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(node_results)
                 invalid_results = []
+                malformed_results = []
                 for result in node_results:
-                    if (not submission_gene_ids) or \
-                            _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
-                        external_results.append(result)
-                    else:
-                        invalid_results.append(result)
+                    try:
+                        validate_patient_data(result)
+                        if (not submission_gene_ids) or \
+                                _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
+                            external_results.append(result)
+                        else:
+                            invalid_results.append(result)
+                    except ValueError:
+                        malformed_results.append(result)
+                if malformed_results:
+                    _report_external_mme_error(node['name'], 'Received invalid results', malformed_results, user)
                 if invalid_results:
                     error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
-                    logger.warning(error_message)
+                    logger.warning(error_message, user)
         except Exception as e:
-            error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
-                node['name'], str(e), json.dumps(patient_data))
-            logger.warning(error_message)
-            safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
+            _report_external_mme_error(node['name'], str(e), patient_data, user)
 
     return external_results
 
@@ -186,6 +190,12 @@ def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
             return True
     return False
 
+
+def _report_external_mme_error(node_name, error, detail, user):
+    error_message = 'Error searching in {}: {}'.format(node_name, error)
+    logger.warning(error_message, user, detail=detail)
+    slack_message = '{}\n```{}```'.format(error_message, json.dumps(detail, indent=2))
+    safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, slack_message)
 
 @login_and_policies_required
 def update_mme_submission(request, submission_guid=None):

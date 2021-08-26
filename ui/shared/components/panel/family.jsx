@@ -8,7 +8,7 @@ import styled from 'styled-components'
 import { updateFamily, loadAnalystOptions } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
-  getFirstSampleByFamily,
+  getSamplesByFamily,
   getUserOptionsIsLoading,
   getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
@@ -58,7 +58,7 @@ BaseFirstSample.propTypes = {
 }
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
-  firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+  firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
   hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
@@ -254,7 +254,7 @@ const Family = React.memo((
     />
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
-      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
     ]
   }
 

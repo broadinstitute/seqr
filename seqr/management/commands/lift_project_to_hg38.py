@@ -8,8 +8,8 @@ from pyliftover.liftover import LiftOver
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Individual
 from seqr.views.apis.dataset_api import _update_variant_samples
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
+    validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
@@ -36,11 +36,10 @@ class Command(BaseCommand):
 
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
-        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
-        validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
-        sample_type = index_metadata['sampleType']
+        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
+            elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+        matched_sample_id_to_sample_record, _ = match_sample_ids_to_sample_records(
             project=project,
             user=None,
             sample_ids=sample_ids,

@@ -5,9 +5,10 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Select } from 'shared/components/form/Inputs'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import { camelcaseToTitlecase, toSnakecase } from 'shared/utils/stringUtils'
 import { updateIndividual } from 'redux/rootReducer'
 
 import {
@@ -19,6 +20,10 @@ const StatusContainer = styled.span`
   display: inline-block;
   whitespace: nowrap;
   min-width: 220px;
+  
+  .ui.form {
+    width: 100%;
+  }
   
   .ui.selection.active.dropdown .menu {
     max-height: none;
@@ -34,12 +39,9 @@ const STATUS_FORM_FIELDS = [{
 
 const CaseReviewStatusDropdown = React.memo(props =>
   <StatusContainer>
-    <ReduxFormWrapper
-      onSubmit={props.updateIndividualStatus}
-      form={`editCaseReviewStatus-${props.individual.individualGuid}`}
+    <StateChangeForm
+      updateField={props.updateIndividualField}
       initialValues={props.individual}
-      closeOnSuccess={false}
-      submitOnChange
       fields={STATUS_FORM_FIELDS}
     />
     {/* edit case review discussion for individual: */}
@@ -66,15 +68,18 @@ export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
 CaseReviewStatusDropdown.propTypes = {
   individual: PropTypes.object.isRequired,
-  updateIndividualStatus: PropTypes.func.isRequired,
+  updateIndividualField: PropTypes.func.isRequired,
   updateIndividualDiscussion: PropTypes.func.isRequired,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    updateIndividualStatus: (updates) => {
+    updateIndividualField: individualField => (value) => {
       dispatch(updateIndividual({
-        individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_status', ...updates }))
+        individualGuid: ownProps.individual.individualGuid,
+        individualField: toSnakecase(camelcaseToTitlecase(individualField)),
+        [individualField]: value,
+      }))
     },
     updateIndividualDiscussion: (updates) => {
       dispatch(updateIndividual({

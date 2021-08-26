@@ -73,8 +73,8 @@ class AuthenticationTestCase(TestCase):
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
-    def check_manager_login(self, url):
-        self._check_login(url, self.MANAGER)
+    def check_manager_login(self, url, **request_kwargs):
+        return self._check_login(url, self.MANAGER, **request_kwargs)
 
     def check_analyst_login(self, url):
         self._check_login(url, self.ANALYST)
@@ -159,7 +159,7 @@ class AuthenticationTestCase(TestCase):
 
         self.client.force_login(self.manager_user)
         if permission_level == self.MANAGER:
-            return
+            return response
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, permission_denied_error)
@@ -426,7 +426,7 @@ PROJECT_FIELDS = {
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
     'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
-    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes',
+    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes', 'pedigreeDataset',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
@@ -740,7 +740,7 @@ PARSED_VARIANTS = [
             'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0, 'filter_af': 0.000437, 'het': 0, 'id': None},
             'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661, 'het': 0, 'id': None},
             'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753, 'het': 0, 'id': None},
-            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None, 'het': None, 'id': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
             'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None, 'het': None, 'id': None},
         },
@@ -801,7 +801,7 @@ PARSED_VARIANTS = [
             'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
             'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614, 'het': 0, 'id': None},
             'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0, 'filter_af': 0.00016269686320447742, 'het': 0, 'id': None},
-            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None},
+            'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': None, 'id': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
             'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None, 'het': None, 'id': None},
         },

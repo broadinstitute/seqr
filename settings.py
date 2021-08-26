@@ -68,10 +68,10 @@ SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
-CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
-CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com')
+CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
 IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
 IGV_CSS2_HASH = "'sha256-m7BbAVh3TyZH136+WARZw8eulS+0pHbppq98KGFYbhA='"
@@ -185,6 +185,7 @@ LOGGING = {
 }
 
 TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
+ANVIL_UI_URL = 'https://anvil.terra.bio/'
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
@@ -277,6 +278,7 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
+POLICY_REQUIRED_URL = '/accept_policies'
 
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
@@ -329,6 +331,7 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
+SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL = 'anvil-data-loading'
 
 #########################################################
 #  Social auth specific settings

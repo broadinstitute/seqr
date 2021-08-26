@@ -239,6 +239,25 @@ export class SearchInput extends React.PureComponent {
   }
 }
 
+const YEAR_OPTIONS = [...Array(130).keys()].map(i => ({ value: i + 1900 }))
+const YEAR_OPTIONS_UNKNOWN = [{ value: 0, text: 'Unknown' }, ...YEAR_OPTIONS]
+const YEAR_OPTIONS_ALIVE = [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS_UNKNOWN]
+const yearOptions = (includeAlive, includeUnknown) => {
+  if (includeAlive) {
+    return YEAR_OPTIONS_ALIVE
+  } else if (includeUnknown) {
+    return YEAR_OPTIONS_UNKNOWN
+  }
+  return YEAR_OPTIONS
+}
+
+export const YearSelector = ({ includeAlive, includeUnknown, ...props }) =>
+  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />
+
+YearSelector.propTypes = {
+  includeAlive: PropTypes.bool,
+  includeUnknown: PropTypes.bool,
+}
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
@@ -399,8 +418,12 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-const BaseInlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
-  margin-bottom: 0 !important;
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+  ${props => (props.asFormInput ?
+    `label {
+      font-weight: 700;
+    }` : 'margin-bottom: 0 !important;')}
+  
   &:last-child {
     padding-right: 0 !important;
   }

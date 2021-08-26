@@ -6,7 +6,7 @@ from django.urls.base import reverse
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
     update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS, LOCUS_LIST_DETAIL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -29,7 +29,7 @@ class LocusListAPITest(AuthenticationTestCase):
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
         fields = {'numProjects'}
-        fields.update(LOCUS_LIST_FIELDS)
+        fields.update(LOCUS_LIST_DETAIL_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
         self.login_analyst_user()
