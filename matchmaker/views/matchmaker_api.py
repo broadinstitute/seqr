@@ -174,7 +174,7 @@ def _search_external_matches(nodes_to_query, patient_data, user):
                     except ValueError:
                         malformed_results.append(result)
                 if malformed_results:
-                    _report_external_mme_error(node['name'], 'Received invalid results', malformed_results, user)
+                    _report_external_mme_error(node['name'], 'Received invalid results for {}'.format(patient_data['patient']['label']), malformed_results, user)
                 if invalid_results:
                     error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
                     logger.warning(error_message, user)
