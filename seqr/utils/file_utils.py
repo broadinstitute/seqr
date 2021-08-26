@@ -86,7 +86,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
                 # Using \n might be a bad assumption if nl is represented another way
                 lines = data.decode("utf-8").split("\n")
                 if len(lines) == 1:
-                    # one reaally long line
+                    # one reaally long line (or to the end)
                     prev_line = prev_line + lines[0]
                 else:
                     yield prev_line + lines.pop(0)
@@ -94,10 +94,9 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
                     for line in lines:
                         yield line
 
-            yield data if raw_content else data.decode("utf-8")
             # We're done if we couldn't read the full range or we've reached the end.
             if current <= chunk_end or (end and current > end):
-                prev_line
+                yield prev_line
     elif byte_range:
         command = "dd skip={offset} count={size} bs=1 if={file_path}".format(
             offset=byte_range[0],
