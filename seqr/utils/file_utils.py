@@ -97,6 +97,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
             # We're done if we couldn't read the full range or we've reached the end.
             if current <= chunk_end or (end and current > end):
                 yield prev_line
+                break
     elif byte_range:
         command = "dd skip={offset} count={size} bs=1 if={file_path}".format(
             offset=byte_range[0],
