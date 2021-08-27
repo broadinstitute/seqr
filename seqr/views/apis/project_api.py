@@ -205,15 +205,12 @@ def _retrieve_families(project_guid, is_analyst, has_case_review_perm):
     for family in families:
         family_guid = family['familyGuid']
         family['individualGuids'] = set()
-        family['noteGuids'] = []
         families_by_guid[family_guid] = family
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid))
-    family_notes_by_guid = {}
-    for note in family_notes:
-        guid = note['noteGuid']
-        family_notes_by_guid[guid] = note
-        families_by_guid[note['familyGuid']]['noteGuids'].append(guid)
+    family_notes_by_guid = {
+        note['noteGuid']: note for note in
+        get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid))
+    }
 
     return families_by_guid, family_notes_by_guid
 

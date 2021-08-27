@@ -497,7 +497,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMatchmakerIndividual)
 
-const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, colWidth: 16 }]
+const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, colWidth: 16 }] // TODO
 
 const Matchmaker = React.memo(({ individuals, family }) =>
   <div>

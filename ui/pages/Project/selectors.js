@@ -123,7 +123,7 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
       ...acc,
       ...(individualsByFamily[familyGuid] || []).map(individual => (
         individual.mmeSubmissionGuid && {
-          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes,
+          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes, // TODO
           familyName: familiesByGuid[individual.familyGuid].displayName,
           individualName: individual.displayName,
           familyGuid: individual.familyGuid,

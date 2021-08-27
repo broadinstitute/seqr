@@ -11,9 +11,15 @@ import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
   getHasActiveVariantSampleByFamily,
+  getNotesByFamilyType,
 } from 'redux/selectors'
 
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
+import BaseFieldView from './view-fields/BaseFieldView'
+import ListFieldView from './view-fields/ListFieldView'
+import OptionFieldView from './view-fields/OptionFieldView'
+import SingleFieldView from './view-fields/SingleFieldView'
+import TagFieldView from './view-fields/TagFieldView'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
 import { ColoredIcon, InlineHeader } from '../StyledComponents'
@@ -28,9 +34,11 @@ import {
   successStoryTypeDisplay,
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
-  FAMILY_FIELD_RENDER_LOOKUP,
+  FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
-  FAMILY_FIELD_PMIDS,
+  FAMILY_FIELD_PMIDS, FAMILY_FIELD_SUCCESS_STORY, FAMILY_FIELD_ANALYSIS_NOTES, FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_FIELD_CODED_PHENOTYPE,
 } from '../../utils/constants'
 import { getAnalystOptions } from '../../../pages/Project/selectors'
 
@@ -63,6 +71,12 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 })
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
+
+const mapNotesStateToProps = (state, ownProps) => ({
+  fieldValue: getNotesByFamilyType(state)[ownProps.initialValues.familyGuid][ownProps.noteType],
+})
+
+const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
 
 const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
@@ -111,9 +125,18 @@ const EDIT_FIELDS = [
   },
 ]
 
+const NOTE_FIELD = {
+  canEdit: true,
+  component: NotesFieldView,
+  itemKey: ({ noteGuid }) => noteGuid,
+  itemDisplay: ({ note }) => note, // TODO
+}
 
-const familyFieldRenderProps = {
+const FAMILY_FIELD_RENDER_LOOKUP = {
+  [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    canEdit: true,
+    component: OptionFieldView,
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
     tagAnnotation: (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
       const icon = <ColoredIcon name="stop" color={value.color} />
@@ -138,36 +161,53 @@ const familyFieldRenderProps = {
       ) },
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
+    canEdit: true,
+    component: BaseFieldView,
+    submitArgs: { familyField: 'assigned_analyst' },
     formFields: EDIT_FIELDS,
     addConfirm: 'Are you sure you want to add the analyst to this family?',
-    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> :
-      ''),
+    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> : ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
+    canEdit: true,
+    component: BaseFieldView,
+    submitArgs: { familyField: 'analysed_by' },
     addConfirm: 'Are you sure you want to add that you analysed this family?',
     fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
+    internal: true,
+    component: TagFieldView,
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
-    ),
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>),
   },
+  [FAMILY_FIELD_SUCCESS_STORY]: { internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
+    component: BaseFieldView,
     showEmptyValues: true,
     fieldDisplay: (loadedSample, compact, familyGuid) =>
       <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { noteType: 'C', ...NOTE_FIELD },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { noteType: 'A', ...NOTE_FIELD },
+  [FAMILY_FIELD_MME_NOTES]: { noteType: 'M', ...NOTE_FIELD },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
+    canEdit: true,
+    component: SingleFieldView,
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
+    internal: true,
+    component: ListFieldView,
     itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
+  [FAMILY_FIELD_INTERNAL_NOTES]: { internal: true, submitArgs: { familyField: 'case_review_notes' } },
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: { internal: true, submitArgs: { familyField: 'case_review_summary' } },
 }
-
 
 const formatAnalysedByList = analysedByList =>
   analysedByList.map(analysedBy =>
@@ -241,7 +281,8 @@ const Family = React.memo((
   }
 
   const familyField = (field) => {
-    const { submitArgs, component, canEdit, internal, name } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
+    const { submitArgs, component, canEdit, internal, ...fieldProps } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
@@ -255,7 +296,7 @@ const Family = React.memo((
       onSubmit: submitFunc,
       modalTitle: `${name} for Family ${family.displayName}`,
       compact,
-      ...(familyFieldRenderProps[field.id] || {}),
+      ...fieldProps,
     })
   }
 
@@ -285,8 +326,6 @@ const Family = React.memo((
     rightContent={rightContent}
   />
 })
-
-export { Family as FamilyComponent }
 
 Family.propTypes = {
   project: PropTypes.object.isRequired,

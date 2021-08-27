@@ -129,7 +129,7 @@ class ProjectAPITest(object):
             {tag['variantGuid'] for tag in discovery_tags},
             {'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000186092'})
-        family_fields = {'individualGuids', 'noteGuids'}
+        family_fields = {'individualGuids'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}

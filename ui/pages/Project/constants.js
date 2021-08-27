@@ -367,8 +367,8 @@ const FAMILY_FIELD_CONFIGS = {
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst', format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown }, // TODO
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown }, // TODO
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
 }
 
@@ -385,8 +385,8 @@ export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
-  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY, // TODO
+  FAMILY_FIELD_ANALYSIS_NOTES, // TODO
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const FAMILY_BULK_EDIT_EXPORT_DATA = [
