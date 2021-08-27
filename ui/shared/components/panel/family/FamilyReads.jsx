@@ -10,13 +10,13 @@ import {
   getFamiliesByGuid,
   getProjectsByGuid,
 } from 'redux/selectors'
-import PedigreeIcon from '../icons/PedigreeIcon'
-import { CheckboxGroup } from '../form/Inputs'
-import IGV from '../graph/IGV'
-import { ButtonLink } from '../StyledComponents'
-import { VerticalSpacer } from '../Spacers'
-import { getLocus } from './variants/Annotations'
-import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../utils/constants'
+import PedigreeIcon from '../../icons/PedigreeIcon'
+import { CheckboxGroup } from '../../form/Inputs'
+import IGV from '../../graph/IGV'
+import { ButtonLink } from '../../StyledComponents'
+import { VerticalSpacer } from '../../Spacers'
+import { getLocus } from '../variants/Annotations'
+import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants'
 
 const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'

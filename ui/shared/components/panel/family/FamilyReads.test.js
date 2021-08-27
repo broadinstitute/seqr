@@ -2,13 +2,13 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import configureStore from 'redux-mock-store'
-import Family from './family'
-
-import { STATE1 } from './fixtures'
+import FamilyReads from './FamilyReads'
+import { STATE1 } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   const store = configureStore()(STATE1)
-  shallow(<Family store={store} family={Object.values(STATE1.familiesByGuid)[0]} />)
+
+  shallow(<FamilyReads store={store} familyGuid="F011652_1" />)
 })
