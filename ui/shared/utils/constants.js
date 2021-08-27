@@ -170,7 +170,7 @@ export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
 export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
 export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
-export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_CASE_NOTES = 'caseNotes'
 export const FAMILY_FIELD_MME_NOTES = 'mmeNotes'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'caseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'caseReviewSummary'
@@ -189,8 +189,8 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: 'Success Story Type',
   [FAMILY_FIELD_SUCCESS_STORY]: 'Success Story',
   [FAMILY_FIELD_FIRST_SAMPLE]: 'Data Loaded?',
-  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Notes', // TODO
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: 'Analysis Summary', // TODO
+  [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
+  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
   [FAMILY_FIELD_CODED_PHENOTYPE]: 'Coded Phenotype',
   [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
@@ -206,8 +206,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
+  { id: FAMILY_FIELD_CASE_NOTES },
   { id: FAMILY_FIELD_ANALYSIS_NOTES },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
   { id: FAMILY_FIELD_MME_NOTES },
   { id: FAMILY_FIELD_CODED_PHENOTYPE },
   { id: FAMILY_FIELD_OMIM_NUMBER },
