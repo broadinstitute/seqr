@@ -867,7 +867,7 @@ def _get_basic_row(initial_row, family, samples, now):
         "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
         "coded_phenotype": family.coded_phenotype or "",
         "pubmed_ids": '; '.join(family.pubmed_ids),
-        "analysis_summary": (family.analysis_summary or '').strip('" \n'),
+        "analysis_summary": (family.analysis_summary or '').strip('" \n'), # TODO change
         "row_id": family.guid,
         "num_individuals_sequenced": len({sample.individual for sample in samples})
     }

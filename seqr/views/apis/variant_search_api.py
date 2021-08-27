@@ -370,7 +370,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
         })
 
     family_models = Family.objects.filter(project__in=projects)
-    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
+    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True) # TODO need to add family notes
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(

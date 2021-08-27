@@ -7,7 +7,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantFunctionalData, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, FamilyNote, \
     VariantNote, VariantTagType, SavedVariant, AnalysisGroup, LocusList, ProjectCategory
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -15,7 +15,8 @@ from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_json_for_locus_lists, \
-    get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
+    get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions, \
+    get_json_for_family_notes
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, has_case_review_permissions, \
     login_and_policies_required
@@ -161,7 +162,7 @@ def project_page_data(request, project_guid):
 def _get_project_child_entities(project, user, is_analyst):
     has_case_review_perm = has_case_review_permissions(project, user)
 
-    families_by_guid = _retrieve_families(project.guid, is_analyst, has_case_review_perm)
+    families_by_guid, family_notes_by_guid = _retrieve_families(project.guid, is_analyst, has_case_review_perm)
     individuals_by_guid, individual_models = _retrieve_individuals(project.guid, is_analyst, has_case_review_perm)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
@@ -176,6 +177,7 @@ def _get_project_child_entities(project, user, is_analyst):
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
     return {
         'familiesByGuid': families_by_guid,
+        'familyNotesByGuid': family_notes_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
         'igvSamplesByGuid': igv_samples_by_guid,
@@ -203,9 +205,17 @@ def _retrieve_families(project_guid, is_analyst, has_case_review_perm):
     for family in families:
         family_guid = family['familyGuid']
         family['individualGuids'] = set()
+        family['noteGuids'] = []
         families_by_guid[family_guid] = family
 
-    return families_by_guid
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid))
+    family_notes_by_guid = {}
+    for note in family_notes:
+        guid = note['noteGuid']
+        family_notes_by_guid[guid] = note
+        families_by_guid[note['familyGuid']]['noteGuids'].append(guid)
+
+    return families_by_guid, family_notes_by_guid
 
 
 def _retrieve_individuals(project_guid, is_analyst, has_case_review_perm):

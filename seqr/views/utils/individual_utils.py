@@ -103,7 +103,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
         family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
         if family_notes:
-            update_family_from_json(family, {'analysis_notes': family_notes}, user)
+            update_family_from_json(family, {'analysis_notes': family_notes}, user) # TODO change
             updated_families.add(family)
 
         is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
