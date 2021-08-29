@@ -5,16 +5,16 @@ import AcmgModal from './AcmgModal'
 import { updateAcmgCriteriaForFileDownload } from '../../buttons/ExportTableButton'
 
 export const Acmg = (props) => {
-  const [score, setScore] = useState('Unknown')
+  const [classification, setClassification] = useState('Unknown')
   const [active, setActive] = useState(false)
   const [criteria, setCriteria] = useState([])
 
   const { variantId } = props
-  updateAcmgCriteriaForFileDownload(variantId, score, criteria)
+  updateAcmgCriteriaForFileDownload(variantId, classification, criteria)
 
   return (
     <div>
-      <AcmgModal score={score} setScore={setScore} active={active} setActive={setActive} criteria={criteria} setCriteria={setCriteria} />
+      <AcmgModal classification={classification} setClassification={setClassification} active={active} setActive={setActive} criteria={criteria} setCriteria={setCriteria} />
     </div>
   )
 }

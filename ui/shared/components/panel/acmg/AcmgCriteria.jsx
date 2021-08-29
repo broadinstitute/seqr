@@ -3,11 +3,35 @@ import PropTypes from 'prop-types'
 import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
 import AcmgRuleSpecification from './AcmgRuleSpecification'
 import dropDownOptions from './AcmgCriteriaDropDownOptions'
+import categoryCriteriaScore from './AcmgCategoryCriteriaScore'
+
+export const GetNewScoreValue = (criteria) => {
+  let newScore = 0
+  criteria.forEach((item) => {
+    newScore += categoryCriteriaScore[item]
+  })
+  return newScore
+}
+
+const getNewScore = (criteria) => {
+  const newScore = GetNewScoreValue(criteria)
+
+  if (newScore >= 10) {
+    return 'Pathogenic'
+  } else if (newScore >= 6 && newScore <= 9) {
+    return 'Likely Pathogenic'
+  } else if (newScore >= 0 && newScore <= 5) {
+    return 'Uncertain'
+  } else if (newScore >= -6 && newScore <= -1) {
+    return 'Likely Benign'
+  }
+
+  return 'Benign'
+}
 
 const AcmgCriteria = (props) => {
   const { criteria, setCriteria, setActive } = props
-  const { acmgCalculationValue, setAcmgCalculationValue } = props
-  const { getScore, setScore } = props
+  const { classification, setClassification } = props
   const [formWarning, setFormWarning] = useState('')
 
   const criteriaUsed = {}
@@ -15,9 +39,12 @@ const AcmgCriteria = (props) => {
     criteriaUsed[criteria[i]] = true
   }
 
+  if (criteria.length > 0) {
+    setClassification(getNewScore(criteria))
+  }
+
   const addOrRemoveCriteria = (event, data) => {
     const values = data.value.split('_')
-    const category = values[0]
 
     const value = `${values[1]}_${values[2]}`
     const answer = values[3]
@@ -25,42 +52,24 @@ const AcmgCriteria = (props) => {
     const fullCriteria = value
     const criteriaCopy = [...criteria]
 
-    const acmgCalculationValueCopy = Object.assign({}, acmgCalculationValue)
     if (answer === 'No' && criteriaUsed[fullCriteria] === true) {
-      acmgCalculationValueCopy[category] -= 1
       const filteredCriteria = criteriaCopy.filter(item => item !== fullCriteria)
-
       setCriteria(filteredCriteria)
-      setAcmgCalculationValue(acmgCalculationValueCopy)
     } else if (answer === 'Yes' && (criteriaUsed[fullCriteria] === false || criteriaUsed[fullCriteria] === undefined)) {
-      acmgCalculationValueCopy[category] += 1
       criteriaCopy.push(fullCriteria)
-
       setCriteria(criteriaCopy)
-      setAcmgCalculationValue(acmgCalculationValueCopy)
     }
-
-    setScore(getScore(acmgCalculationValueCopy))
   }
 
   const clearFields = () => {
-    setAcmgCalculationValue({
-      PVS: 0,
-      PS: 0,
-      PM: 0,
-      PP: 0,
-      BA: 0,
-      BS: 0,
-      BP: 0,
-    })
     setCriteria([])
-    setScore('Unknown')
+    setClassification('Unknown')
   }
 
   const submitForm = () => {
-    if (getScore(acmgCalculationValue) === 'Unknown') {
+    if (classification === 'Unknown') {
       setFormWarning('Please select at least one criteria from the table below.')
-    } else if (getScore(acmgCalculationValue) === 'Conflicting') {
+    } else if (classification === 'Conflicting') {
       setFormWarning('You have conflicting score. Please verify your selections.')
     } else {
       setFormWarning(false)
@@ -1496,10 +1505,8 @@ const AcmgCriteria = (props) => {
 AcmgCriteria.propTypes = {
   criteria: PropTypes.array.isRequired,
   setCriteria: PropTypes.func.isRequired,
-  acmgCalculationValue: PropTypes.object.isRequired,
-  setAcmgCalculationValue: PropTypes.func.isRequired,
-  getScore: PropTypes.func.isRequired,
-  setScore: PropTypes.func.isRequired,
+  classification: PropTypes.string.isRequired,
+  setClassification: PropTypes.func.isRequired,
   setActive: PropTypes.func.isRequired,
 }
 
