@@ -3,22 +3,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Popup } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
-import styled from 'styled-components'
 
-import { updateFamily, loadAnalystOptions } from 'redux/rootReducer'
-import {
-  getProjectsByGuid,
-  getSamplesByFamily,
-  getUserOptionsIsLoading,
-  getHasActiveVariantSampleByFamily,
-} from 'redux/selectors'
+import { updateFamily } from 'redux/rootReducer'
+import { getProjectsByGuid } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from '../view-fields/TextFieldView'
-import Sample from '../sample'
 import { ColoredIcon, InlineHeader } from '../../StyledComponents'
-import { Select } from '../../form/Inputs'
-import DataLoader from '../../DataLoader'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -32,76 +23,15 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../../utils/constants'
-import { getAnalystOptions } from '../../../../pages/Project/selectors'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
-const NoWrap = styled.div`
-  white-space: nowrap;
-`
-
-const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) =>
-  <Sample
-    loadedSample={firstFamilySample}
-    hoverDetails={compact ? 'first loaded' : null}
-    isOutdated={!hasActiveVariantSample}
-  />,
-)
-
-BaseFirstSample.propTypes = {
-  firstFamilySample: PropTypes.object,
-  compact: PropTypes.bool,
-  hasActiveVariantSample: PropTypes.bool,
-}
-
-const mapSampleDispatchToProps = (state, ownProps) => ({
-  firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
-})
-
-const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
-
-const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
-  <DataLoader load={load} loading={false} content>
-    <Select
-      loading={loading}
-      additionLabel="Assigned Analyst: "
-      onChange={val => onChange(val)}
-      value={value}
-      placeholder="Unassigned"
-      search
-      {...props}
-    />
-  </DataLoader>,
-)
-
-AnalystEmailDropdown.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  onChange: PropTypes.func,
-  value: PropTypes.any,
-}
-
-const mapDropdownStateToProps = state => ({
-  loading: getUserOptionsIsLoading(state),
-  options: getAnalystOptions(state),
-})
-
-const mapDropdownDispatchToProps = {
-  load: loadAnalystOptions,
-}
-
-AnalystEmailDropdown.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  onChange: PropTypes.func,
-  value: PropTypes.any,
-}
 
 const EDIT_FIELDS = [
   {
     name: 'assigned_analyst_username',
     label: 'Email',
-    component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
+    component: AnalystEmailDropdown,
     width: 16,
     inline: true,
   },
@@ -164,32 +94,6 @@ const familyFieldRenderProps = {
   },
 }
 
-
-const formatAnalysedByList = analysedByList =>
-  analysedByList.map(analysedBy =>
-    `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
-  ).join(', ')
-
-export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
-  if (compact) {
-    return [...analysedByList.reduce(
-      (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
-    )].map(
-      analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
-    )
-  }
-  const analystUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isAnalyst)
-  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isAnalyst)
-  return [
-    analystUsers.length > 0 ? <div key="analyst"><b>CMG Analysts:</b> {formatAnalysedByList(analystUsers)}</div> : null,
-    externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
-  ]
-})
-
-AnalysedBy.propTypes = {
-  analysedByList: PropTypes.array,
-  compact: PropTypes.bool,
-}
 
 const Family = React.memo((
   { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
