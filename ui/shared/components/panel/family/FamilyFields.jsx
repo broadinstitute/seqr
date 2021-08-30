@@ -89,8 +89,7 @@ BaseAnalystEmailDropdown.propTypes = {
 
 export const AnalystEmailDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(BaseAnalystEmailDropdown)
 
-
-export const anaysisStatusIcon = (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
+export const analysisStatusIcon = (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
   const icon = <ColoredIcon name="stop" color={value.color} />
   if (!compact && !analysisStatusLastModifiedDate) {
     return icon

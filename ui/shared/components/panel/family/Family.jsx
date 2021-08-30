@@ -29,7 +29,7 @@ import {
   FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_CODED_PHENOTYPE,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy, NotesFieldView, anaysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, NotesFieldView, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
@@ -56,7 +56,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     canEdit: true,
     component: OptionFieldView,
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-    tagAnnotation: anaysisStatusIcon,
+    tagAnnotation: analysisStatusIcon,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     canEdit: true,
