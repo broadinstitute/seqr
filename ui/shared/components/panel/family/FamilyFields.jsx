@@ -72,13 +72,6 @@ const mapDropdownDispatchToProps = {
   load: loadAnalystOptions,
 }
 
-BaseAnalystEmailDropdown.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  onChange: PropTypes.func,
-  value: PropTypes.any,
-}
-
 export const AnalystEmailDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(BaseAnalystEmailDropdown)
 
 export const analysisStatusIcon = (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
