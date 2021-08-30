@@ -7,6 +7,11 @@ import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
+import BaseFieldView from '../view-fields/BaseFieldView'
+import OptionFieldView from '../view-fields/OptionFieldView'
+import ListFieldView from '../view-fields/ListFieldView'
+import SingleFieldView from '../view-fields/SingleFieldView'
+import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 import { InlineHeader } from '../../StyledComponents'
 import {
@@ -18,9 +23,11 @@ import {
   successStoryTypeDisplay,
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
-  FAMILY_FIELD_RENDER_LOOKUP,
+  FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
-  FAMILY_FIELD_PMIDS,
+  FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
 } from '../../../utils/constants'
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
@@ -37,42 +44,62 @@ const EDIT_FIELDS = [
 ]
 
 
-const familyFieldRenderProps = {
+const FAMILY_FIELD_RENDER_LOOKUP = {
+  [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    canEdit: true,
+    component: OptionFieldView,
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
     tagAnnotation: analysisStatusIcon,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
+    canEdit: true,
     formFields: EDIT_FIELDS,
+    component: BaseFieldView,
+    submitArgs: { familyField: 'assigned_analyst' },
     addConfirm: 'Are you sure you want to add the analyst to this family?',
-    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> :
-      ''),
+    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> : ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
+    canEdit: true,
+    component: BaseFieldView,
+    submitArgs: { familyField: 'analysed_by' },
     addConfirm: 'Are you sure you want to add that you analysed this family?',
     fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
+    internal: true,
+    component: TagFieldView,
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
-    ),
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>),
   },
+  [FAMILY_FIELD_SUCCESS_STORY]: { internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
+    component: BaseFieldView,
     showEmptyValues: true,
     fieldDisplay: (loadedSample, compact, familyGuid) =>
       <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { canEdit: true },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { canEdit: true },
+  [FAMILY_FIELD_MME_NOTES]: { canEdit: true },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
+    canEdit: true,
+    component: SingleFieldView,
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
+    internal: true,
+    component: ListFieldView,
     itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
+  [FAMILY_FIELD_INTERNAL_NOTES]: { internal: true, submitArgs: { familyField: 'case_review_notes' } },
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: { internal: true, submitArgs: { familyField: 'case_review_summary' } },
 }
-
 
 const Family = React.memo((
   { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
@@ -83,7 +110,8 @@ const Family = React.memo((
   }
 
   const familyField = (field) => {
-    const { submitArgs, component, canEdit, internal, name } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const { submitArgs, component, canEdit, internal, ...fieldProps } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
@@ -97,7 +125,7 @@ const Family = React.memo((
       onSubmit: submitFunc,
       modalTitle: `${name} for Family ${family.displayName}`,
       compact,
-      ...(familyFieldRenderProps[field.id] || {}),
+      ...fieldProps,
     })
   }
 
