@@ -681,7 +681,7 @@ def get_json_for_gene_notes(notes, user):
 
     def _process_result(result, note):
         result.update({
-            'editable': user == note.created_by,
+            'editable': user == note.created_by, # TODO remove?
         })
 
     return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
