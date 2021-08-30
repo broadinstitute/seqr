@@ -8,8 +8,8 @@ import { getProjectsByGuid } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
 import BaseFieldView from '../view-fields/BaseFieldView'
-import ListFieldView from '../view-fields/ListFieldView'
 import OptionFieldView from '../view-fields/OptionFieldView'
+import ListFieldView from '../view-fields/ListFieldView'
 import SingleFieldView from '../view-fields/SingleFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
@@ -25,9 +25,9 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
-  FAMILY_FIELD_PMIDS, FAMILY_FIELD_SUCCESS_STORY, FAMILY_FIELD_ANALYSIS_NOTES, FAMILY_FIELD_CASE_NOTES,
-  FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_CASE_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
 } from '../../../utils/constants'
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, NotesFieldView, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
@@ -49,7 +49,6 @@ export const NOTE_FIELD = {
   itemDisplay: ({ note }) => note, // TODO
 }
 
-
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
@@ -60,9 +59,9 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     canEdit: true,
+    formFields: EDIT_FIELDS,
     component: BaseFieldView,
     submitArgs: { familyField: 'assigned_analyst' },
-    formFields: ASSIGNED_ANALYST_EDIT_FIELDS,
     addConfirm: 'Are you sure you want to add the analyst to this family?',
     fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> : ''),
   },
@@ -116,8 +115,8 @@ const Family = React.memo((
   }
 
   const familyField = (field) => {
-    const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
     const { submitArgs, component, canEdit, internal, ...fieldProps } = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const name = FAMILY_FIELD_NAME_LOOKUP[field.id]
     const submitFunc = submitArgs ?
       values => dispatchUpdateFamily({ ...values, ...submitArgs }) : dispatchUpdateFamily
     return React.createElement(component || TextFieldView, {
