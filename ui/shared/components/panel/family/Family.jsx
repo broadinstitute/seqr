@@ -13,12 +13,12 @@ import {
   getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
 
-import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
-import TextFieldView from './view-fields/TextFieldView'
-import Sample from './sample'
-import { ColoredIcon, InlineHeader } from '../StyledComponents'
-import { Select } from '../form/Inputs'
-import DataLoader from '../DataLoader'
+import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
+import TextFieldView from '../view-fields/TextFieldView'
+import Sample from '../sample'
+import { ColoredIcon, InlineHeader } from '../../StyledComponents'
+import { Select } from '../../form/Inputs'
+import DataLoader from '../../DataLoader'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -31,8 +31,8 @@ import {
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
-} from '../../utils/constants'
-import { getAnalystOptions } from '../../../pages/Project/selectors'
+} from '../../../utils/constants'
+import { getAnalystOptions } from '../../../../pages/Project/selectors'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};

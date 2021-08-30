@@ -15,7 +15,7 @@ import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/Matc
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
-import Family from 'shared/components/panel/family'
+import Family from 'shared/components/panel/family/Family'
 import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'

@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { getUser } from 'redux/selectors'
 import { FamilyComponent } from './family'
 
-import { STATE1 } from './fixtures'
+import { STATE1 } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
