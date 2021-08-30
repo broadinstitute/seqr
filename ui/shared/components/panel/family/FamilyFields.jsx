@@ -48,7 +48,7 @@ const mapNotesStateToProps = (state, ownProps) => ({
   fieldValue: getNotesByFamilyType(state)[ownProps.initialValues.familyGuid][ownProps.noteType],
 })
 
-const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
+export const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
 
 const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
@@ -89,13 +89,6 @@ BaseAnalystEmailDropdown.propTypes = {
 
 export const AnalystEmailDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(BaseAnalystEmailDropdown)
 
-
-export const NOTE_FIELD = {
-  canEdit: true,
-  component: NotesFieldView,
-  itemKey: ({ noteGuid }) => noteGuid,
-  itemDisplay: ({ note }) => note, // TODO
-}
 
 export const anaysisStatusIcon = (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
   const icon = <ColoredIcon name="stop" color={value.color} />
