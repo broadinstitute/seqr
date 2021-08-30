@@ -286,8 +286,6 @@ const Family = React.memo((
   />
 })
 
-export { Family as FamilyComponent }
-
 Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
