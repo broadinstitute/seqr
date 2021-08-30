@@ -59,7 +59,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     canEdit: true,
-    formFields: EDIT_FIELDS,
+    formFields: ASSIGNED_ANALYST_EDIT_FIELDS,
     component: BaseFieldView,
     submitArgs: { familyField: 'assigned_analyst' },
     addConfirm: 'Are you sure you want to add the analyst to this family?',
