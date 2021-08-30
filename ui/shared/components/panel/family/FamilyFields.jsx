@@ -9,10 +9,8 @@ import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
   getHasActiveVariantSampleByFamily,
-  getNotesByFamilyType,
 } from 'redux/selectors'
 
-import ListFieldView from '../view-fields/ListFieldView'
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
@@ -43,12 +41,6 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
-
-const mapNotesStateToProps = (state, ownProps) => ({
-  fieldValue: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.noteType],
-})
-
-export const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
 
 const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>

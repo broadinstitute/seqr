@@ -4,12 +4,13 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { updateFamily } from 'redux/rootReducer'
-import { getProjectsByGuid } from 'redux/selectors'
+import { getProjectsByGuid, getNotesByFamilyType } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import OptionFieldView from '../view-fields/OptionFieldView'
 import ListFieldView from '../view-fields/ListFieldView'
+import NoteListFieldView from '../view-fields/NoteListFieldView'
 import SingleFieldView from '../view-fields/SingleFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
@@ -29,7 +30,7 @@ import {
   FAMILY_FIELD_CASE_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy, NotesFieldView, analysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
@@ -42,11 +43,16 @@ const ASSIGNED_ANALYST_EDIT_FIELDS = [
   },
 ]
 
+
+const mapNotesStateToProps = (state, ownProps) => ({
+  notes: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.modalId],
+})
+
 export const NOTE_FIELD = {
   canEdit: true,
-  component: NotesFieldView,
-  itemKey: ({ noteGuid }) => noteGuid,
-  itemDisplay: ({ note }) => note, // TODO
+  component: connect(mapNotesStateToProps)(NoteListFieldView),
+  submitArgs: { familyField: 'note' },
+  // textAnnotation/ textPopup
 }
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
@@ -86,9 +92,9 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: (loadedSample, compact, familyGuid) =>
       <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
-  [FAMILY_FIELD_CASE_NOTES]: { noteType: 'C', ...NOTE_FIELD },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { noteType: 'A', ...NOTE_FIELD },
-  [FAMILY_FIELD_MME_NOTES]: { noteType: 'M', ...NOTE_FIELD },
+  [FAMILY_FIELD_CASE_NOTES]: { modalId: 'C', ...NOTE_FIELD },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { modalId: 'A', ...NOTE_FIELD },
+  [FAMILY_FIELD_MME_NOTES]: { modalId: 'M', ...NOTE_FIELD },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,

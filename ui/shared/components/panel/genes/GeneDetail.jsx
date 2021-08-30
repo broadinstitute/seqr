@@ -156,13 +156,6 @@ const STAT_DETAILS = [
   },
 ]
 
-const NOTE_ANNOTATION_STYLE = { color: 'gray' }
-const geneNoteAnnotation = note =>
-  <i style={NOTE_ANNOTATION_STYLE}>
-    By {note.createdBy || 'unknown user'}
-    {note.lastModifiedDate && ` (${new Date(note.lastModifiedDate).toLocaleDateString()})`}
-  </i>
-
 const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
@@ -245,10 +238,10 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
         information you learn while researching candidates.
       </p>
       <NoteListFieldView
+        isEditable
         initialValues={gene}
-        modalTitleBase="Gene Note"
-        newIdField="geneId"
-        getTextAnnotation={geneNoteAnnotation}
+        modalTitle="Gene Note"
+        idField="geneId"
         onSubmit={dispatchUpdateGeneNote}
       />
     </div>

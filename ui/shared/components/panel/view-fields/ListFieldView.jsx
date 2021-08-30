@@ -36,7 +36,7 @@ AddElementButton.propTypes = {
   addElement: PropTypes.func,
 }
 
-const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, fieldValue, ...props }) => {
+const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, ...props }) => {
   const fields = [{
     name: props.field,
     isArrayField: true,
@@ -46,7 +46,7 @@ const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldPro
     component: RemovableInput,
     ...formFieldProps,
   }]
-  const initialValue = fieldValue || initialValues[props.field]
+  const initialValue = initialValues[props.field]
   const defaultedInitialValues = {
     ...initialValues,
     [props.field]: (initialValue && initialValue.length) ? initialValue : [''],
@@ -67,7 +67,6 @@ const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldPro
 ListFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   initialValues: PropTypes.object,
-  fieldValue: PropTypes.array,
   addElementLabel: PropTypes.string,
   formFieldProps: PropTypes.object,
   itemJoin: PropTypes.string,

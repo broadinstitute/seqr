@@ -127,8 +127,6 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const noteRequired = value => (value ? undefined : 'Note is required')
-
 const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
   <NavLink
     to={variantTagNotes ?
@@ -236,11 +234,11 @@ const FamilyVariantTags = React.memo((
             <NoteListFieldView
               initialValues={variantTagNotes}
               modalId={family.familyGuid}
-              modalTitleBase={`Variant Note for Family ${family.displayName}`}
+              modalTitle={`Variant Note for Family ${family.displayName}`}
               additionalEditFields={VARIANT_NOTE_FIELDS}
-              fieldValidator={noteRequired}
               defaultId={variantId}
-              newIdField="variantGuids"
+              idField="variantGuids"
+              isEditable
               showInLine
               compact
               getTextPopup={note => note && taggedByPopup(note, 'Note By')}
