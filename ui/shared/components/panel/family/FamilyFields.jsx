@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { loadAnalystOptions } from 'redux/rootReducer'
@@ -11,6 +12,7 @@ import {
 } from 'redux/selectors'
 
 import Sample from '../sample'
+import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
 import DataLoader from '../../DataLoader'
 import { getAnalystOptions } from '../../../../pages/Project/selectors'
@@ -78,6 +80,29 @@ BaseAnalystEmailDropdown.propTypes = {
 }
 
 export const AnalystEmailDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(BaseAnalystEmailDropdown)
+
+export const analysisStatusIcon = (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
+  const icon = <ColoredIcon name="stop" color={value.color} />
+  if (!compact && !analysisStatusLastModifiedDate) {
+    return icon
+  }
+  return (
+    <Popup
+      trigger={icon}
+      content={
+        <div>
+          {compact && value.text}
+          {analysisStatusLastModifiedDate &&
+            <i>
+              {compact && <br />}Changed on {new Date(analysisStatusLastModifiedDate).toLocaleDateString()}
+              <br />by {analysisStatusLastModifiedBy}
+            </i>}
+        </div>
+      }
+      position="top center"
+    />
+  )
+}
 
 const formatAnalysedByList = analysedByList =>
   analysedByList.map(analysedBy =>

@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Popup } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
 import { updateFamily } from 'redux/rootReducer'
@@ -9,7 +8,7 @@ import { getProjectsByGuid } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from '../view-fields/TextFieldView'
-import { ColoredIcon, InlineHeader } from '../../StyledComponents'
+import { InlineHeader } from '../../StyledComponents'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -23,7 +22,7 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 
@@ -41,27 +40,7 @@ const EDIT_FIELDS = [
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-    tagAnnotation: (value, compact, { analysisStatusLastModifiedBy, analysisStatusLastModifiedDate }) => {
-      const icon = <ColoredIcon name="stop" color={value.color} />
-      if (!compact && !analysisStatusLastModifiedDate) {
-        return icon
-      }
-      return (
-        <Popup
-          trigger={icon}
-          content={
-            <div>
-              {compact && value.text}
-              {analysisStatusLastModifiedDate &&
-                <i>
-                  {compact && <br />}Changed on {new Date(analysisStatusLastModifiedDate).toLocaleDateString()}
-                  <br />by {analysisStatusLastModifiedBy}
-                </i>}
-            </div>
-          }
-          position="top center"
-        />
-      ) },
+    tagAnnotation: analysisStatusIcon,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     formFields: EDIT_FIELDS,
