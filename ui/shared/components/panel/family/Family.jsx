@@ -58,8 +58,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     component: BaseFieldView,
     submitArgs: { familyField: 'assigned_analyst' },
     addConfirm: 'Are you sure you want to add the analyst to this family?',
-    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> :
-      ''),
+    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> : ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     canEdit: true,
@@ -73,8 +72,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     component: TagFieldView,
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>,
-    ),
+    fieldDisplay: value => value.map(tag => <div key={tag}>{successStoryTypeDisplay(tag)}</div>),
   },
   [FAMILY_FIELD_SUCCESS_STORY]: { internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
@@ -102,7 +100,6 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_INTERNAL_NOTES]: { internal: true, submitArgs: { familyField: 'case_review_notes' } },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { internal: true, submitArgs: { familyField: 'case_review_summary' } },
 }
-
 
 const Family = React.memo((
   { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
