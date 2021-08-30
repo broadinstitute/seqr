@@ -45,7 +45,7 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
 const mapNotesStateToProps = (state, ownProps) => ({
-  fieldValue: getNotesByFamilyType(state)[ownProps.initialValues.familyGuid][ownProps.noteType],
+  fieldValue: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.noteType],
 })
 
 export const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
