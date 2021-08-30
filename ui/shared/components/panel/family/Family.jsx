@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Popup } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -33,11 +33,7 @@ import {
   FAMILY_FIELD_PMIDS,
 } from '../../../utils/constants'
 import { getAnalystOptions } from '../../../../pages/Project/selectors'
-
-const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
-  margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
-  margin-top: ${props => (props.annotation ? '-33px !important' : 'inherit')};
-`
+import FamilyLayout from './FamilyLayout'
 
 const NoWrap = styled.div`
   white-space: nowrap;
@@ -193,43 +189,6 @@ export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
 AnalysedBy.propTypes = {
   analysedByList: PropTypes.array,
   compact: PropTypes.bool,
-}
-
-const getContentWidth = (useFullWidth, leftContent, rightContent) => {
-  if (!useFullWidth || (leftContent && rightContent)) {
-    return 10
-  }
-  if (leftContent || rightContent) {
-    return 13
-  }
-  return 16
-}
-
-export const FamilyLayout = React.memo(({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
-  <div>
-    {annotation}
-    <FamilyGrid annotation={annotation} offset={offset}>
-      <Grid.Row>
-        {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
-        {compact ? fields.map(field =>
-          <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
-        }
-        {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
-      </Grid.Row>
-    </FamilyGrid>
-  </div>,
-)
-
-FamilyLayout.propTypes = {
-  fieldDisplay: PropTypes.func,
-  fields: PropTypes.array,
-  useFullWidth: PropTypes.bool,
-  compact: PropTypes.bool,
-  offset: PropTypes.bool,
-  annotation: PropTypes.node,
-  leftContent: PropTypes.node,
-  rightContent: PropTypes.node,
 }
 
 const Family = React.memo((

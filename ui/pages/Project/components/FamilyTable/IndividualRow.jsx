@@ -18,7 +18,7 @@ import NullableBoolFieldView, { NULLABLE_BOOL_FIELD } from 'shared/components/pa
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
-import { FamilyLayout } from 'shared/components/panel/family/Family'
+import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import DataLoader from 'shared/components/DataLoader'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
