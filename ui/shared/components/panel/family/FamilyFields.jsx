@@ -50,7 +50,7 @@ const mapNotesStateToProps = (state, ownProps) => ({
 
 const NotesFieldView = connect(mapNotesStateToProps)(ListFieldView)
 
-const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
+const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
     <Select
       loading={loading}
@@ -64,7 +64,7 @@ const AnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...pr
   </DataLoader>,
 )
 
-AnalystEmailDropdown.propTypes = {
+BaseAnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   onChange: PropTypes.func,
@@ -80,22 +80,15 @@ const mapDropdownDispatchToProps = {
   load: loadAnalystOptions,
 }
 
-AnalystEmailDropdown.propTypes = {
+BaseAnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   onChange: PropTypes.func,
   value: PropTypes.any,
 }
 
-export const ASSIGNED_ANALYST_EDIT_FIELDS = [
-  {
-    name: 'assigned_analyst_username',
-    label: 'Email',
-    component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
-    width: 16,
-    inline: true,
-  },
-]
+export const AnalystEmailDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(BaseAnalystEmailDropdown)
+
 
 export const NOTE_FIELD = {
   canEdit: true,
