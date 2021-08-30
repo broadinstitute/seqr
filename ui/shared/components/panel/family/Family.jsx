@@ -29,8 +29,7 @@ import {
   FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_CODED_PHENOTYPE,
 } from '../../../utils/constants'
-
-import { FirstSample, AnalysedBy, AnalystEmailDropdown, NotesFieldView, anaysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, NotesFieldView, anaysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
