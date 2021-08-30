@@ -12,7 +12,7 @@ import {
   FAMILY_ANALYSIS_STATUS_LOOKUP,
 } from 'shared/utils/constants'
 import { ColoredLink } from '../StyledComponents'
-import Family from '../panel/family'
+import Family from '../panel/family/Family'
 
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION },
