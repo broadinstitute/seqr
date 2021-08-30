@@ -361,7 +361,7 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
-  [FAMILY_FIELD_DESCRIPTION]: { format: stripMarkdown, width: 10, description: 'A short description of the family' },
+  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },

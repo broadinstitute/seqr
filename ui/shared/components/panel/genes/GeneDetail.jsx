@@ -239,9 +239,9 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
       </p>
       <NoteListFieldView
         isEditable
-        initialValues={gene}
-        modalTitle="Gene Note"
         idField="geneId"
+        modalTitle="Gene Note"
+        initialValues={gene}
         onSubmit={dispatchUpdateGeneNote}
       />
     </div>

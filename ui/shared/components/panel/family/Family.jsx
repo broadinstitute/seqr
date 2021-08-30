@@ -52,7 +52,6 @@ export const NOTE_FIELD = {
   canEdit: true,
   component: connect(mapNotesStateToProps)(NoteListFieldView),
   submitArgs: { familyField: 'note' },
-  // textAnnotation/ textPopup
 }
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
