@@ -5,6 +5,9 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_CASE_NOTES,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_MME_NOTES,
   SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
@@ -17,7 +20,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 
@@ -308,9 +311,16 @@ export const getEntityExportConfig = ({ project, tableName, fileName, fields }) 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSamplesByFamily,
-  (visibleFamilies, samplesByFamily) =>
+  getNotesByFamilyType,
+  (visibleFamilies, samplesByFamily, notesByFamilyType) =>
     visibleFamilies.reduce((acc, family) =>
-      [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0] }], []),
+      [...acc, {
+        ...family,
+        [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0],
+        [FAMILY_FIELD_CASE_NOTES]: (notesByFamilyType[family.familyGuid] || {}).C,
+        [FAMILY_FIELD_ANALYSIS_NOTES]: (notesByFamilyType[family.familyGuid] || {}).A,
+        [FAMILY_FIELD_MME_NOTES]: (notesByFamilyType[family.familyGuid] || {}).M,
+      }], []),
 )
 
 const getIndividualsExportData = createSelector(

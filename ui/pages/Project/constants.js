@@ -356,6 +356,8 @@ const tableConfigForField = fieldConfigs => (field) => {
   return { name: field,  content: label, width, formFieldProps }
 }
 
+const formatNotes = notes => (notes || []).map(({ note }) => stripMarkdown(note)).join(';')
+
 const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
@@ -367,8 +369,8 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { format: stripMarkdown }, // TODO
-  [FAMILY_FIELD_CASE_NOTES]: { format: stripMarkdown }, // TODO
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { format: formatNotes },
+  [FAMILY_FIELD_CASE_NOTES]: { format: formatNotes },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
@@ -376,7 +378,7 @@ export const FAMILY_FIELDS = [
   FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(tableConfigForField(FAMILY_FIELD_CONFIGS))
 
-export const FAMILY_EXPORT_DATA = [ // TODO
+export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_ID,
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_CREATED_DATE,
