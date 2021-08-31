@@ -403,9 +403,22 @@
         "guid": "FAN000001_2",
         "created_date": "2017-03-12T19:27:08.563Z",
         "created_by": null,
-        "last_modified_date": null,
+        "last_modified_date": "2017-03-12T19:27:08.563Z",
         "family": 1,
         "note": "*\r\nF\u00e5mily analysis summ\u00e5ry.\r\n*",
+        "note_type": "A"
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 3,
+    "fields": {
+        "guid": "FAN000001_3",
+        "created_date": "2019-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": "2019-03-12T19:27:08.563Z",
+        "family": 1,
+        "note": "Some additional follow up",
         "note_type": "A"
     }
 },

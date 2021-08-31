@@ -19,7 +19,7 @@ from seqr.views.utils.permissions_utils import analyst_required, get_project_and
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
+from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
 from settings import AIRTABLE_API_KEY, AIRTABLE_URL
@@ -630,6 +630,7 @@ DEFAULT_ROW = {
     "t0_copy": None,
     "months_since_t0": None,
     "sample_source": "CMG",
+    "analysis_summary": "",
     "analysis_complete_status": "complete",
     "expected_inheritance_model": "multiple",
     "actual_inheritance_model": "",
@@ -705,6 +706,7 @@ def discovery_sheet(request, project_guid):
 
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
     saved_variants_by_family = _get_project_saved_discovery_variants_by_family(project)
+    analysis_notes_by_family = _get_analysis_notes_by_family(project)
     mme_submission_families = _get_has_mme_submission_families(project)
 
     if not loaded_samples_by_family:
@@ -732,9 +734,10 @@ def discovery_sheet(request, project_guid):
             errors.append("No data loaded for family: %s. Skipping..." % family)
             continue
         saved_variants = saved_variants_by_family.get(family.guid)
+        analysis_notes = analysis_notes_by_family.get(family.guid)
         submitted_to_mme = family in mme_submission_families
 
-        rows += _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mme, errors, now=now)
+        rows += _generate_rows(initial_row, family, samples, saved_variants, analysis_notes, submitted_to_mme, now=now)
 
     _update_gene_symbols(rows)
     _update_hpo_categories(rows, errors)
@@ -756,6 +759,17 @@ def _get_loaded_samples_by_family(project):
         loaded_samples_by_family[family.guid].append(sample)
 
     return loaded_samples_by_family
+
+
+def _get_analysis_notes_by_family(project):
+    notes = FamilyNote.objects.filter(
+        family__project=project, note_type='A').select_related('family').order_by('last_modified_date')
+
+    analysis_notes_by_family = defaultdict(list)
+    for note in notes:
+        analysis_notes_by_family[note.family.guid].append(note.note)
+
+    return analysis_notes_by_family
 
 
 def _get_parsed_saved_discovery_variants_by_family(families):
@@ -801,10 +815,12 @@ def _get_has_mme_submission_families(project):
     }
 
 
-def _generate_rows(initial_row, family, samples, saved_variants, submitted_to_mme, errors, now=timezone.now()):
+def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes, submitted_to_mme, now=timezone.now()):
     row = _get_basic_row(initial_row, family, samples, now)
     if submitted_to_mme:
         row["submitted_to_mme"] = "Y"
+    if analysis_notes:
+        row['analysis_summary'] = '; '.join(analysis_notes)
 
     individuals = family.individual_set.all()
 
@@ -867,7 +883,6 @@ def _get_basic_row(initial_row, family, samples, now):
         "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
         "coded_phenotype": family.coded_phenotype or "",
         "pubmed_ids": '; '.join(family.pubmed_ids),
-        "analysis_summary": (family.analysis_summary or '').strip('" \n'), # TODO change
         "row_id": family.guid,
         "num_individuals_sequenced": len({sample.individual for sample in samples})
     }
