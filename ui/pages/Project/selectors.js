@@ -119,12 +119,13 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getIndividualsByFamily,
   getGenesById,
-  (submissionsByGuid, familiesByGuid, individualsByFamily, genesById) =>
+  getNotesByFamilyType,
+  (submissionsByGuid, familiesByGuid, individualsByFamily, genesById, notesByFamilyType) =>
     Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
       ...acc,
       ...(individualsByFamily[familyGuid] || []).map(individual => (
         individual.mmeSubmissionGuid && {
-          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes, // TODO
+          mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
           familyName: familiesByGuid[individual.familyGuid].displayName,
           individualName: individual.displayName,
           familyGuid: individual.familyGuid,
