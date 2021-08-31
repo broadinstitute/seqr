@@ -24,6 +24,7 @@ import {
   getProjectAnalysisGroupIndividualsCount,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissions,
+  getProjectAnalysisGroupMmeSubmissionDetails,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
@@ -76,7 +77,7 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const MatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
+const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
   return (
     <DataTable
       basic="very"
@@ -89,9 +90,15 @@ const MatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
   )
 })
 
-MatchmakerSubmissionOverview.propTypes = {
+BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.array,
 }
+
+const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
+  mmeSubmissions: getProjectAnalysisGroupMmeSubmissionDetails(state, ownProps),
+})
+
+const MatchmakerSubmissionOverview = connect(mapMatchmakerSubmissionsStateToProps)(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
@@ -152,7 +159,7 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
             modalName="mmeSubmissions"
             size="large"
           >
-            <MatchmakerSubmissionOverview mmeSubmissions={mmeSubmissions} />
+            <MatchmakerSubmissionOverview />
           </Modal>
           {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
         </div>

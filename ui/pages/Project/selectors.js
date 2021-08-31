@@ -118,24 +118,33 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
   getIndividualsByFamily,
-  getGenesById,
-  getNotesByFamilyType,
-  (submissionsByGuid, familiesByGuid, individualsByFamily, genesById, notesByFamilyType) =>
+  (submissionsByGuid, familiesByGuid, individualsByFamily) =>
     Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
       ...acc,
       ...(individualsByFamily[familyGuid] || []).map(individual => (
-        individual.mmeSubmissionGuid && {
-          mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
-          familyName: familiesByGuid[individual.familyGuid].displayName,
-          individualName: individual.displayName,
-          familyGuid: individual.familyGuid,
-          projectGuid: individual.projectGuid,
-          geneSymbols: (submissionsByGuid[individual.mmeSubmissionGuid].geneIds || []).map(
-            geneId => (genesById[geneId] || {}).geneSymbol || geneId),
-          ...submissionsByGuid[individual.mmeSubmissionGuid],
-        }
+        individual.mmeSubmissionGuid && submissionsByGuid[individual.mmeSubmissionGuid]
       )).filter(submission => submission),
     ]), []),
+)
+
+export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
+  getProjectAnalysisGroupMmeSubmissions,
+  getProjectAnalysisGroupFamiliesByGuid,
+  getIndividualsByGuid,
+  getGenesById,
+  getNotesByFamilyType,
+  (submissions, familiesByGuid, individualsByGuid, genesById, notesByFamilyType) =>
+    submissions.map((submission) => {
+      const individual = individualsByGuid[submission.individualGuid]
+      return {
+        mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
+        familyName: familiesByGuid[individual.familyGuid].displayName,
+        familyGuid: individual.familyGuid,
+        projectGuid: individual.projectGuid,
+        geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
+        ...submission,
+      }
+    }),
 )
 
 export const getTaggedVariantsByFamily = createSelector(
