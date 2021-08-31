@@ -133,9 +133,14 @@ export const updateProject = (values) => {
 }
 
 export const updateFamily = (values) => {
+  const urlBase = `/api/family/${values.familyGuid}`
+  if (values.nestedField) {
+    return updateEntity(values, RECEIVE_DATA, `${urlBase}/${values.nestedField}`, `${values.nestedField}Guid`)
+  }
+
+  const familyField = values.familyField ? `_${values.familyField}` : ''
   return (dispatch) => {
-    const familyField = values.familyField ? `_${values.familyField}` : ''
-    return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
+    return new HttpRequestHelper(`${urlBase}/update${familyField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
       },

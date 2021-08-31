@@ -48,11 +48,16 @@ const mapNotesStateToProps = (state, ownProps) => ({
   notes: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.modalId],
 })
 
-export const NOTE_FIELD = {
+const BASE_NOTE_FIELD = {
   canEdit: true,
   component: connect(mapNotesStateToProps)(NoteListFieldView),
-  submitArgs: { familyField: 'note' },
 }
+
+const getNoteField = noteType => ({
+  modalId: noteType,
+  submitArgs: { noteType, nestedField: 'note' },
+  ...BASE_NOTE_FIELD,
+})
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
@@ -91,9 +96,9 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: (loadedSample, compact, familyGuid) =>
       <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
-  [FAMILY_FIELD_CASE_NOTES]: { modalId: 'C', ...NOTE_FIELD },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { modalId: 'A', ...NOTE_FIELD },
-  [FAMILY_FIELD_MME_NOTES]: { modalId: 'M', ...NOTE_FIELD },
+  [FAMILY_FIELD_CASE_NOTES]: getNoteField('C'),
+  [FAMILY_FIELD_ANALYSIS_NOTES]: getNoteField('A'),
+  [FAMILY_FIELD_MME_NOTES]: getNoteField('M'),
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,
