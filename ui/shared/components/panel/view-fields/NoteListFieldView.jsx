@@ -8,7 +8,7 @@ import TextFieldView from '../view-fields/TextFieldView'
 const noteRequired = value => (value ? undefined : 'Note is required')
 
 const userCanEdit = (note, user) => (
-  note.createdBy ? (note.createdBy === user.displayName || note.createdBy === user.email) : true
+  note.createdBy === user.displayName || note.createdBy === user.email
 )
 
 const CORE_PROPS = {
