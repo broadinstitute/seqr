@@ -41,6 +41,7 @@ import {
   exportConfigForField,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
+  FAMILY_NOTES_FIELDS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -369,9 +370,8 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { format: formatNotes },
-  [FAMILY_FIELD_CASE_NOTES]: { format: formatNotes },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
+  ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
 export const FAMILY_FIELDS = [

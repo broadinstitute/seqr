@@ -5,9 +5,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
-  FAMILY_FIELD_CASE_NOTES,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_MME_NOTES,
+  FAMILY_NOTES_FIELDS,
   SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
@@ -316,10 +314,9 @@ const getFamiliesExportData = createSelector(
     visibleFamilies.reduce((acc, family) =>
       [...acc, {
         ...family,
+        ...FAMILY_NOTES_FIELDS.reduce((noteAcc, { id, noteType }) => (
+          { ...noteAcc, [id]: (notesByFamilyType[family.familyGuid] || {})[noteType] }), {}),
         [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0],
-        [FAMILY_FIELD_CASE_NOTES]: (notesByFamilyType[family.familyGuid] || {}).C,
-        [FAMILY_FIELD_ANALYSIS_NOTES]: (notesByFamilyType[family.familyGuid] || {}).A,
-        [FAMILY_FIELD_MME_NOTES]: (notesByFamilyType[family.familyGuid] || {}).M,
       }], []),
 )
 

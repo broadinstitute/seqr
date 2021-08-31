@@ -26,9 +26,8 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
-  FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_CASE_NOTES, FAMILY_FIELD_MME_NOTES, FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES,
-  FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
+  FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
 } from '../../../utils/constants'
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
@@ -42,7 +41,6 @@ const ASSIGNED_ANALYST_EDIT_FIELDS = [
     inline: true,
   },
 ]
-
 
 const mapNotesStateToProps = (state, ownProps) => ({
   notes: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.modalId],
@@ -96,9 +94,6 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: (loadedSample, compact, familyGuid) =>
       <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
-  [FAMILY_FIELD_CASE_NOTES]: getNoteField('C'),
-  [FAMILY_FIELD_ANALYSIS_NOTES]: getNoteField('A'),
-  [FAMILY_FIELD_MME_NOTES]: getNoteField('M'),
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,
@@ -114,6 +109,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_INTERNAL_NOTES]: { internal: true, submitArgs: { familyField: 'case_review_notes' } },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { internal: true, submitArgs: { familyField: 'case_review_summary' } },
+  ...FAMILY_NOTES_FIELDS.reduce((acc, { id, noteType }) => ({ ...acc, [id]: getNoteField(noteType) }), {}),
 }
 
 const Family = React.memo((
