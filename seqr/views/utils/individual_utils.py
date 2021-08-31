@@ -3,9 +3,8 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
-from seqr.models import Sample, IgvSample, Individual, Family
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
-    create_model_from_json
+from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
 
@@ -40,6 +39,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
     """
     updated_families = set()
     updated_individuals = set()
+    updated_notes = []
     parent_updates = []
 
     family_ids = {_get_record_family_id(record) for record in individual_records}
@@ -103,8 +103,8 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
         family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
         if family_notes:
-            update_family_from_json(family, {'analysis_notes': family_notes}, user) # TODO change
-            updated_families.add(family)
+            note = create_model_from_json(FamilyNote, {'note': family_notes, 'note_type': 'C', 'family': family}, user)
+            updated_notes.append(note)
 
         is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
@@ -116,7 +116,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         if is_updated:
             updated_individuals.add(individual)
 
-    return list(updated_families), list(updated_individuals)
+    return list(updated_individuals), list(updated_families), updated_notes
 
 
 def delete_individuals(project, individual_guids, user):
