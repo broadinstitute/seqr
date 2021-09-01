@@ -179,6 +179,12 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
     groupByVariantGuidFields(variantTagNotes, notesByGuids, savedVariantsByGuid, 'notes')
     groupByVariantGuidFields(variantTagNotes, functionalDataByGuids, savedVariantsByGuid, 'functionalData')
 
+    Object.values(savedVariantsByGuid).forEach((variant) => {
+      if (!variantTagNotes[variant.variantGuid]) {
+        variantTagNotes[variant.variantGuid] = { variantGuids: variant.variantGuid, variants: [variant] }
+      }
+    })
+
     return Object.values(variantTagNotes).reduce((acc, { variants, ...variantDetail }) => {
       const variantId = getVariantId(variants)
       variants[0].familyGuids.forEach((familyGuid) => {
