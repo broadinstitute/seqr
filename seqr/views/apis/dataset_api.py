@@ -60,7 +60,7 @@ def add_variants_dataset_handler(request, project_guid):
         return create_json_response({'errors': [str(e)]}, status=400)
 
     loaded_date = timezone.now()
-    matched_sample_id_to_sample_record, new_samples = match_sample_ids_to_sample_records(
+    matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
         project=project,
         user=request.user,
         sample_ids=sample_ids,
@@ -116,6 +116,7 @@ def add_variants_dataset_handler(request, project_guid):
         request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     if project_has_analyst_access(project):
+        new_samples = []
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             """{num_sample} new samples are loaded in {base_url}project/{guid}/project_page

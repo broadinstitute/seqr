@@ -128,7 +128,6 @@ def match_sample_ids_to_sample_records(
     logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
-    new_samples = []
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()
@@ -171,7 +170,7 @@ def match_sample_ids_to_sample_records(
             })
             log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record, new_samples
+    return sample_id_to_sample_record
 
 
 def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
