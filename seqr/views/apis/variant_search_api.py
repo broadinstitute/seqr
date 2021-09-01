@@ -7,8 +7,7 @@ from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
-    IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
@@ -18,19 +17,8 @@ from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
-from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_variant_functional_data_tag_types, \
-    get_json_for_projects, \
-    _get_json_for_families, \
-    _get_json_for_individuals, \
-    get_json_for_analysis_groups, \
-    get_json_for_samples, \
-    get_json_for_locus_lists, \
-    get_json_for_saved_variants_with_tags, \
-    get_json_for_saved_search,\
-    get_json_for_saved_searches, \
-    get_json_for_discovery_tags, \
-    _get_json_for_models
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
+    get_json_for_saved_searches, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -346,44 +334,11 @@ def _get_projects_details(projects, user, project_category_guid=None):
         check_project_permissions(project, user)
 
     response = get_projects_child_entities(projects, user)
-
-    project_json_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user)}
-
-    functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
-
-    variant_tag_types_models = VariantTagType.objects.filter(
-        Q(project__in=projects) | Q(project__isnull=True)).prefetch_related('project')
-    variant_tag_types = _get_json_for_models(variant_tag_types_models)
-
-    project_locus_lists = defaultdict(list)
-    project_tag_types = defaultdict(list)
-    if len(projects) == 1:
-        project_guid = projects[0].guid
-        project_locus_lists[project_guid] = list(response['locusListsByGuid'].keys())
-        project_tag_types[project_guid] = variant_tag_types
-    else:
-        for locus_list_guid, locus_list in response['locusListsByGuid'].items():
-            project_guids = locus_list.pop('projectGuids')
-            for project_guid in project_guids:
-                project_locus_lists[project_guid].append(locus_list_guid)
-
-        variant_tag_types_by_guid = {vtt['variantTagTypeGuid']: vtt for vtt in variant_tag_types}
-        for vtt in variant_tag_types_models:
-            project_guid = vtt.project.guid if vtt.project else None
-            project_tag_types[project_guid].append(variant_tag_types_by_guid[vtt.guid])
-
-    for project_guid, project_json in project_json_by_guid.items():
-        project_json.update({
-            'locusListGuids': project_locus_lists[project_guid],
-            'variantTagTypes': project_tag_types[project_guid] + project_tag_types[None],
-            'variantFunctionalTagTypes': functional_data_tag_types,
-        })
-
-    response['projectsByGuid'] = project_json_by_guid
     if project_category_guid:
         response['projectCategoriesByGuid'] = {
             project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
         }
+
     return response
 
 

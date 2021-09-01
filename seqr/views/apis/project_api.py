@@ -141,11 +141,13 @@ def project_page_data(request, project_guid):
         i['mmeSubmissionGuid'] = None
     response['mmeSubmissionsByGuid'] = _retrieve_mme_submissions(project, response['individualsByGuid'])
 
-    project_json = _get_json_for_project(project, request.user, is_analyst=is_analyst)
+    project_json = response['projectsByGuid'][project_guid]
     project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
-    project_json['locusListGuids'] = list(response['locusListsByGuid'].keys())
     project_json['detailsLoaded'] = True
-    project_json.update(_get_json_for_variant_tag_types(project))
+    project_json['discoveryTags'] = _get_discovery_tags(project)
+
+    _add_tag_type_counts(project, project_json['variantTagTypes'])
+    project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
     gene_ids = set()
     for tag in project_json['discoveryTags']:
@@ -154,7 +156,6 @@ def project_page_data(request, project_guid):
         gene_ids.update(submission['geneIds'])
 
     response.update({
-        'projectsByGuid': {project_guid: project_json},
         'genesById': get_genes(gene_ids),
     })
 
@@ -179,7 +180,7 @@ def _retrieve_mme_submissions(project, individuals_by_guid):
     return submissions_by_guid
 
 
-def _get_json_for_variant_tag_types(project):
+def _add_tag_type_counts(project, project_variant_tags):
     note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project)\
         .values('saved_variants__family__guid').annotate(count=Count('*'))
     num_tags = sum(count['count'] for count in note_counts_by_family)
@@ -196,7 +197,6 @@ def _get_json_for_variant_tag_types(project):
 
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
         .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
     for tag_type in project_variant_tags:
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
                                    counts['variant_tag_type__name'] == tag_type['name']]
@@ -208,19 +208,14 @@ def _get_json_for_variant_tag_types(project):
         })
 
     project_variant_tags.append(note_tag_type)
-    project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
-    discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
-                                if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0]
+
+def _get_discovery_tags(project):
     discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
-        family__project=project, varianttag__variant_tag_type__guid__in=discovery_tag_type_guids,
+        family__project=project, varianttag__variant_tag_type__category='CMG Discovery Tags',
     ), add_details=True)
 
-    return {
-        'variantTagTypes': project_variant_tags,
-        'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
-        'discoveryTags': discovery_tags,
-    }
+    return discovery_tags
 
 
 def _delete_project(project_guid, user):
