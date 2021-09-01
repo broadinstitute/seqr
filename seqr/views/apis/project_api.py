@@ -3,18 +3,17 @@ APIs for updating project metadata, as well as creating or deleting projects
 """
 
 import json
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, VariantTagType, \
-    SavedVariant, ProjectCategory
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, SavedVariant, \
+    ProjectCategory
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_saved_variants, \
-    get_json_for_variant_functional_data_tag_types,  get_json_for_project_collaborator_list, \
-    _get_json_for_models, get_json_for_matchmaker_submissions
+    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities
