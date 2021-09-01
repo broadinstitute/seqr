@@ -124,7 +124,7 @@ def add_variants_dataset_handler(request, project_guid):
                 num_sample=len(new_samples),
                 base_url=BASE_URL,
                 guid=project.guid,
-                samples=[sample.sample_id for sample in new_samples]
+                samples=', '.join([sample.sample_id for sample in new_samples])
             ))
     elif project_has_anvil(project):
         user = project.created_by
