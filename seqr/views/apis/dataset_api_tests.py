@@ -93,10 +93,9 @@ class DatasetAPITest(object):
         replaced_sample_guid = 'S98765432101234567890_NA19678_'
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
-            {existing_index_sample_guid, existing_sample_guid, existing_old_index_sample_guid, replaced_sample_guid, new_sample_guid}
+            {existing_sample_guid, existing_old_index_sample_guid, replaced_sample_guid, new_sample_guid}
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
-            'I000001_na19675': {'sampleGuids': [existing_index_sample_guid]},
             'I000002_na19678': {'sampleGuids': mock.ANY},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
             'I000013_na20878': {'sampleGuids': [new_sample_guid]},
@@ -124,17 +123,20 @@ class DatasetAPITest(object):
             {True},
             {sample['isActive'] for sample in updated_samples}
         )
+        self.assertSetEqual(
+            {datetime.now().strftime('%Y-%m-%d')},
+            {sample['loadedDate'][:10] for sample in updated_samples}
+        )
         self.assertDictEqual(response_json['samplesByGuid'][existing_old_index_sample_guid], {'isActive': False})
 
-        # Only the new/updated samples should have an updated loaded date
-        self.assertTrue(response_json['samplesByGuid'][existing_index_sample_guid]['loadedDate'].startswith('2017-02-05'))
-        today = datetime.now().strftime('%Y-%m-%d')
-        self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
-        self.assertTrue(response_json['samplesByGuid'][replaced_sample_guid]['loadedDate'].startswith(today))
-
         updated_sample_models = Sample.objects.filter(guid__in=[sample['sampleGuid'] for sample in updated_samples])
-        self.assertEqual(len(updated_sample_models), 4)
+        self.assertEqual(len(updated_sample_models), 3)
         self.assertSetEqual({INDEX_NAME}, {sample.elasticsearch_index for sample in updated_sample_models})
+
+        existing_index_sample_model = Sample.objects.get(guid=existing_index_sample_guid)
+        self.assertEqual(existing_index_sample_model.sample_type, 'WES')
+        self.assertTrue(existing_index_sample_model.is_active)
+        self.assertTrue(str(existing_index_sample_model.loaded_date).startswith('2017-02-05'))
 
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(

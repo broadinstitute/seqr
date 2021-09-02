@@ -77,9 +77,7 @@ def add_variants_dataset_handler(request, project_guid):
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
         matched_sample_id_to_sample_record.values(), request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
-    matched_sample_id_to_sample_record.update({
-        sample.sample_id: sample for sample in Sample.objects.filter(guid__in=activated_sample_guids)
-    })
+    updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
@@ -120,15 +118,15 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
             to=sorted([user.email]),
         )
 
-    response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivated_sample_guids, project_guid)
+    response_json = _get_samples_json(updated_samples, inactivated_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
                                        for family_guid in family_guids_to_update}
 
     return create_json_response(response_json)
 
 
-def _get_samples_json(matched_sample_id_to_sample_record, inactivated_sample_guids, project_guid):
-    updated_sample_json = get_json_for_samples(list(matched_sample_id_to_sample_record.values()), project_guid=project_guid)
+def _get_samples_json(updated_samples, inactivated_sample_guids, project_guid):
+    updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
     sample_response = {sample_guid: {'isActive': False} for sample_guid in inactivated_sample_guids}
     sample_response.update({s['sampleGuid']: s for s in updated_sample_json})
     response = {
