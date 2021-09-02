@@ -92,16 +92,19 @@ def add_variants_dataset_handler(request, project_guid):
                 individual__in=updated_individuals, sample_type=sample_type, dataset_type=dataset_type,
             ).exclude(elasticsearch_index=elasticsearch_index)}
         previous_loaded_individuals.update(matched_individual_ids)
-        new_samples = [sample for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
+        new_sample_ids = [
+            sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            """{num_sample} new samples are loaded in {base_url}project/{guid}/project_page
+            """{num_sample} new {sample_type}{dataset_type} samples are loaded in {base_url}project/{guid}/project_page
             ```{samples}```
             """.format(
-                num_sample=len(new_samples),
+                num_sample=len(new_sample_ids),
+                sample_type=sample_type,
+                dataset_type='' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else ' {}'.format(dataset_type),
                 base_url=BASE_URL,
                 guid=project.guid,
-                samples=', '.join([sample.sample_id for sample in new_samples])
+                samples=', '.join(new_sample_ids)
             ))
     elif project_has_anvil(project):
         user = project.created_by

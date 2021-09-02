@@ -141,7 +141,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(
             'seqr-data-loading',
-            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA20878```\n            '.format(
+            '1 new WES samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA20878```\n            '.format(
                 guid=PROJECT_GUID
             ))
 
@@ -191,7 +191,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(
             'seqr-data-loading',
-            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
+            '1 new WES SV samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
                 guid=PROJECT_GUID
             ))
 
@@ -235,7 +235,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(
             'seqr-data-loading',
-            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
+            '1 new WGS samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
                 guid=PROJECT_GUID
             ))
 
