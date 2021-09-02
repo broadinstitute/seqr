@@ -148,7 +148,8 @@ def _stream_gs(request, gs_path):
             stream=True)
         if 200 <= response.status_code < 300:
             break
-        headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True))  # refresh the token and retry
+        if retry == 0:  # refresh the token and retry
+            headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True))
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
@@ -160,9 +161,9 @@ access_token = None
 def get_access_token(refresh=False):
     global access_token
     if refresh or not access_token:
-        process = subprocess.Popen('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        if process.wait() == 0:
-            access_token = next(process.stdout).decode('utf-8').strip()
+        process = subprocess.run(['gcloud', 'auth', 'print-access-token'], capture_output=True)
+        if process.returncode == 0:
+            access_token = process.stdout.decode('utf-8').strip()
     return access_token
 
 
