@@ -126,12 +126,11 @@ def match_sample_ids_to_sample_records(
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
+    matched_individual_ids = {sample.individual_id for sample in samples}
     if len(remaining_sample_ids) > 0:
-        already_matched_individual_ids = {sample.individual.individual_id for sample in samples}
-
         remaining_individuals_dict = {
             i.individual_id: i for i in
-            Individual.objects.filter(family__project=project).exclude(individual_id__in=already_matched_individual_ids)
+            Individual.objects.filter(family__project=project).exclude(id__in=matched_individual_ids)
         }
 
         # find Individual records with exactly-matching individual_ids
@@ -174,7 +173,7 @@ def match_sample_ids_to_sample_records(
 
     included_families = _validate_samples_families(samples, sample_type, dataset_type)
 
-    return samples, included_families
+    return samples, included_families, matched_individual_ids
 
 
 def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):

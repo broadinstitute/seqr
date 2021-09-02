@@ -59,7 +59,7 @@ def add_variants_dataset_handler(request, project_guid):
     loaded_date = timezone.now()
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        samples, included_families = match_sample_ids_to_sample_records(
+        samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
             project=project,
             user=request.user,
             sample_ids=sample_ids,
@@ -86,7 +86,13 @@ def add_variants_dataset_handler(request, project_guid):
         request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     if project_has_analyst_access(project):
-        new_samples = []
+        updated_individuals = {sample.individual_id for sample in updated_samples}
+        previous_loaded_individuals = {
+            sample.individual_id for sample in Sample.objects.filter(
+                individual__in=updated_individuals, sample_type=sample_type, dataset_type=dataset_type,
+            ).exclude(elasticsearch_index=elasticsearch_index)}
+        previous_loaded_individuals.update(matched_individual_ids)
+        new_samples = [sample for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             """{num_sample} new samples are loaded in {base_url}project/{guid}/project_page

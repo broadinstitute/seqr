@@ -141,7 +141,7 @@ class DatasetAPITest(object):
         mock_send_email.assert_not_called()
         mock_send_slack.assert_called_with(
             'seqr-data-loading',
-            '2 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19678_1, NA20878```\n            '.format(
+            '1 new samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA20878```\n            '.format(
                 guid=PROJECT_GUID
             ))
 
