@@ -37,7 +37,7 @@ class Command(BaseCommand):
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        matched_sample_id_to_sample_record, included_families = match_sample_ids_to_sample_records(
+        samples, included_families = match_sample_ids_to_sample_records(
             project=project,
             user=None,
             sample_ids=sample_ids,
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
-        update_variant_samples(matched_sample_id_to_sample_record.values(), None, elasticsearch_index)
+        update_variant_samples(samples, None, elasticsearch_index)
         saved_variants = get_json_for_saved_variants(list(saved_variant_models_by_guid.values()), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 

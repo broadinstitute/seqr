@@ -59,7 +59,7 @@ def add_variants_dataset_handler(request, project_guid):
     loaded_date = timezone.now()
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        matched_sample_id_to_sample_record, included_families = match_sample_ids_to_sample_records(
+        samples, included_families = match_sample_ids_to_sample_records(
             project=project,
             user=request.user,
             sample_ids=sample_ids,
@@ -75,7 +75,7 @@ def add_variants_dataset_handler(request, project_guid):
         return create_json_response({'errors': [str(e)]}, status=400)
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
-        matched_sample_id_to_sample_record.values(), request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
+        samples, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
@@ -112,7 +112,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
                 base_url=BASE_URL,
                 guid=project.guid,
                 project_name=project.name,
-                num_sample=len(matched_sample_id_to_sample_record),
+                num_sample=len(samples),
             ),
             subject='New data available in seqr',
             to=sorted([user.email]),

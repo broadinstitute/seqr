@@ -178,7 +178,7 @@ def match_sample_ids_to_sample_records(
 
     included_families = _validate_samples_families(list(sample_id_to_sample_record.values()), sample_type, dataset_type)
 
-    return sample_id_to_sample_record, included_families
+    return sample_id_to_sample_record.values(), included_families
 
 
 def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
