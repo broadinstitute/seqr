@@ -60,28 +60,22 @@ def add_variants_dataset_handler(request, project_guid):
         return create_json_response({'errors': [str(e)]}, status=400)
 
     loaded_date = timezone.now()
-    matched_sample_id_to_sample_record, unmatched_samples = match_sample_ids_to_sample_records(
-        project=project,
-        user=request.user,
-        sample_ids=sample_ids,
-        elasticsearch_index=elasticsearch_index,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        loaded_date=loaded_date,
-    )
-
-    if request_json.get('ignoreExtraSamplesInCallset'):
-        if len(matched_sample_id_to_sample_record) == 0:
-            return create_json_response({'errors': [
-                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
-                    len(sample_ids)
-                )]}, status=400)
-    elif len(unmatched_samples) > 0:
-        return create_json_response({'errors': [
-            'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
-                ", ".join(unmatched_samples))
-        ]}, status=400)
+    ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
+    try:
+        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+            project=project,
+            user=request.user,
+            sample_ids=sample_ids,
+            elasticsearch_index=elasticsearch_index,
+            sample_type=sample_type,
+            dataset_type=dataset_type,
+            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            loaded_date=loaded_date,
+            raise_no_match_error=ignore_extra_samples,
+            unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+        )
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400)
 
     prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
     included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}

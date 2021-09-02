@@ -38,16 +38,14 @@ class Command(BaseCommand):
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        matched_sample_id_to_sample_record, unmatched_samples = match_sample_ids_to_sample_records(
+        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
             user=None,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
+            unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
         )
-
-        if len(unmatched_samples) > 0:
-            raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
         prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
         included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}

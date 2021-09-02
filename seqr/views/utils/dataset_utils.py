@@ -84,24 +84,22 @@ def _load_mapping_file(file_content):
         id_mapping[line[0]] = line[1]
     return id_mapping
 
-#             elasticsearch_index=elasticsearch_index,
-#             sample_id_to_individual_id_mapping={},
-
 def match_sample_ids_to_sample_records(
-    project,
-    user,
-    sample_ids,
-    elasticsearch_index,
-    sample_type,
-    dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-    sample_id_to_individual_id_mapping=None,
-    loaded_date=None,
+        project,
+        user,
+        sample_ids,
+        elasticsearch_index,
+        sample_type,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_id_to_individual_id_mapping=None,
+        loaded_date=None,
+        raise_no_match_error=False,
+        unmatched_error_template=None,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
-    records, it looks for Individual records that have an individual_id that either exactly or
-    approximately equals one of the sample_ids in the list or is contained in the optional
-    sample_id_to_individual_id_mapping and optionally creates new Sample records for these.
+    records, it looks for Individual records that have an individual_id that exactly equals one of the sample_ids in
+    the list or is contained in the optional sample_id_to_individual_id_mapping and creates new Sample records for these.
 
     Args:
         project (object): Django ORM project model
@@ -148,9 +146,16 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
             del remaining_individuals_dict[individual_id]
 
-        remaining_sample_ids -= set(sample_id_to_individual_record.keys())
-
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
+
+        remaining_sample_ids -= set(sample_id_to_individual_record.keys())
+        if raise_no_match_error and len(remaining_sample_ids) == len(sample_ids):
+            raise ValueError(
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
+                    len(sample_ids)
+                ))
+        if unmatched_error_template and remaining_sample_ids:
+            raise ValueError(unmatched_error_template.format(sample_ids=(', '.join(remaining_sample_ids))))
 
         # create new Sample records for Individual records that matches
         new_samples = [
@@ -169,7 +174,7 @@ def match_sample_ids_to_sample_records(
         })
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record, remaining_sample_ids
+    return sample_id_to_sample_record
 
 
 def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):

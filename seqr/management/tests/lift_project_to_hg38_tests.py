@@ -92,7 +92,7 @@ class LiftProjectToHg38Test(TestCase):
     def test_command_error_unmatched_sample(self, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = ['ID_NOT_EXIST'], SAMPLE_TYPE
 
-        with self.assertRaises(CommandError) as ce:
+        with self.assertRaises(ValueError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
