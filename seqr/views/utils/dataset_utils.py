@@ -234,11 +234,11 @@ def _validate_samples_families(samples, sample_type, dataset_type):
     return included_families
 
 
-def update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,
+def update_variant_samples(samples, user, elasticsearch_index, loaded_date=None,
                             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
     if not loaded_date:
         loaded_date = timezone.now()
-    updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
+    updated_samples = [sample.id for sample in samples]
 
     activated_sample_guids = Sample.bulk_update(user, {
         'elasticsearch_index': elasticsearch_index,
@@ -246,12 +246,8 @@ def update_variant_samples(matched_sample_id_to_sample_record, user, elasticsear
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
 
-    matched_sample_id_to_sample_record.update({
-        sample.sample_id: sample for sample in Sample.objects.filter(guid__in=activated_sample_guids)
-    })
-
     inactivate_samples = Sample.objects.filter(
-        individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
+        individual_id__in={sample.individual_id for sample in samples},
         is_active=True,
         dataset_type=dataset_type,
         sample_type=sample_type,
@@ -259,4 +255,4 @@ def update_variant_samples(matched_sample_id_to_sample_record, user, elasticsear
 
     inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
-    return inactivate_sample_guids
+    return activated_sample_guids, inactivate_sample_guids
