@@ -101,7 +101,7 @@ def match_sample_ids_to_sample_records(
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
     records, it looks for Individual records that have an individual_id that exactly equals one of the sample_ids in
-    the list or is contained in the optional sample_id_to_individual_id_mapping and creates new Sample records for these.
+    the list or is contained in the optional sample_id_to_individual_id_mapping and creates new Sample records for these
 
     Args:
         project (object): Django ORM project model
@@ -112,12 +112,14 @@ def match_sample_ids_to_sample_records(
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
         loaded_date (object): datetime object
+        raise_no_match_error (bool): whether to raise an exception if no sample matches are found
+        unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched
 
     Returns:
         tuple:
-            [0] dict: sample_id_to_sample_record containing the matching Sample records (including any
-            newly-created ones)
-            [1] array: array of the sample_ids of any samples that were created
+            [0] array: matching Sample records (including any newly-created ones)
+            [1] array: Family records with matched samples
+            [2] array: ids of Individuals with exact-matching existing samples
     """
 
     samples = _find_matching_sample_records(
