@@ -120,16 +120,14 @@ def match_sample_ids_to_sample_records(
             [1] array: array of the sample_ids of any samples that were created
     """
 
-    sample_id_to_sample_record = _find_matching_sample_records(
+    samples = _find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
-    logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
+    logger.debug(str(len(samples)) + " exact sample record matches", user)
 
-    remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
+    remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
     if len(remaining_sample_ids) > 0:
-        already_matched_individual_ids = {
-            sample.individual.individual_id for sample in sample_id_to_sample_record.values()
-        }
+        already_matched_individual_ids = {sample.individual.individual_id for sample in samples}
 
         remaining_individuals_dict = {
             i.individual_id: i for i in
@@ -171,14 +169,12 @@ def match_sample_ids_to_sample_records(
                 created_date=timezone.now(),
                 loaded_date=loaded_date or timezone.now(),
             ) for sample_id, individual in sample_id_to_individual_record.items()]
-        sample_id_to_sample_record.update({
-            sample.sample_id: sample for sample in Sample.bulk_create(user, new_samples)
-        })
+        samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    included_families = _validate_samples_families(list(sample_id_to_sample_record.values()), sample_type, dataset_type)
+    included_families = _validate_samples_families(samples, sample_type, dataset_type)
 
-    return sample_id_to_sample_record.values(), included_families
+    return samples, included_families
 
 
 def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
@@ -196,18 +192,13 @@ def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type
         dict: sample_id_to_sample_record containing the matching Sample records
     """
 
-    sample_id_to_sample_record = {}
-    sample_query = Sample.objects.select_related('individual').filter(
+    return list(Sample.objects.select_related('individual').filter(
         individual__family__project=project,
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
-    )
-    for sample in sample_query:
-        sample_id_to_sample_record[sample.sample_id] = sample
-
-    return sample_id_to_sample_record
+    ))
 
 
 def _validate_samples_families(samples, sample_type, dataset_type):
