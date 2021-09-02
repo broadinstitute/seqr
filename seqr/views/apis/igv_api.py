@@ -2,6 +2,8 @@ from collections import defaultdict
 import json
 import re
 import requests
+import subprocess
+
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
@@ -126,7 +128,42 @@ def fetch_igv_track(request, project_guid, igv_track_path):
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
 
+    if igv_track_path.startswith('gs://'):
+        return _stream_gs(request, igv_track_path)
+
     return _stream_file(request, igv_track_path)
+
+
+def _stream_gs(request, gs_path):
+    headers = {'Authorization': 'Bearer {}'.format(get_access_token())}
+    range_header = request.META.get('HTTP_RANGE')
+    if range_header:
+        headers['Range'] = range_header
+
+    bucket_object = gs_path[5:].split('/', 1)
+    for retry in range(2):  # retry automatically if the access token expired
+        response = requests.get(
+            'https://{bucket}.storage.googleapis.com/{object}'.format(bucket=bucket_object[0], object=bucket_object[1]),
+            headers=headers,
+            stream=True)
+        if 200 <= response.status_code < 300:
+            break
+        headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True))  # refresh the token and retry
+
+    return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
+                                 content_type='application/octet-stream')
+
+
+access_token = None
+
+
+def get_access_token(refresh=False):
+    global access_token
+    if refresh or not access_token:
+        process = subprocess.Popen('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        if process.wait() == 0:
+            access_token = next(process.stdout).decode('utf-8').strip()
+    return access_token
 
 
 def _stream_file(request, path):
@@ -147,6 +184,7 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True, user=request.user), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
+
 
 def igv_genomes_proxy(request, file_path):
     # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
