@@ -7,7 +7,7 @@ from django.utils import timezone
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, \
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples, \
     validate_index_metadata_and_get_elasticsearch_index_samples, load_mapping_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
@@ -60,18 +60,16 @@ def add_variants_dataset_handler(request, project_guid):
         return create_json_response({'errors': [str(e)]}, status=400)
 
     loaded_date = timezone.now()
-    matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+    matched_sample_id_to_sample_record, unmatched_samples = match_sample_ids_to_sample_records(
         project=project,
         user=request.user,
         sample_ids=sample_ids,
+        elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        elasticsearch_index=elasticsearch_index,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         loaded_date=loaded_date,
     )
-
-    unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
 
     if request_json.get('ignoreExtraSamplesInCallset'):
         if len(matched_sample_id_to_sample_record) == 0:
@@ -106,7 +104,7 @@ def add_variants_dataset_handler(request, project_guid):
                      for family, missing_indivs in missing_family_individuals.items()]
                 )))]}, status=400)
 
-    inactivate_sample_guids = _update_variant_samples(
+    inactivate_sample_guids = update_variant_samples(
         matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
     family_guids_to_update = [
@@ -153,34 +151,6 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
                                        for family_guid in family_guids_to_update}
 
     return create_json_response(response_json)
-
-
-def _update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,
-                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
-    if not loaded_date:
-        loaded_date = timezone.now()
-    updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
-
-    activated_sample_guids = Sample.bulk_update(user, {
-        'elasticsearch_index': elasticsearch_index,
-        'is_active': True,
-        'loaded_date': loaded_date,
-    }, id__in=updated_samples, is_active=False)
-
-    matched_sample_id_to_sample_record.update({
-        sample.sample_id: sample for sample in Sample.objects.filter(guid__in=activated_sample_guids)
-    })
-
-    inactivate_samples = Sample.objects.filter(
-        individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
-        is_active=True,
-        dataset_type=dataset_type,
-        sample_type=sample_type,
-    ).exclude(id__in=updated_samples)
-
-    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
-
-    return inactivate_sample_guids
 
 
 def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):

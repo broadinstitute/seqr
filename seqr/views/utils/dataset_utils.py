@@ -84,18 +84,19 @@ def _load_mapping_file(file_content):
         id_mapping[line[0]] = line[1]
     return id_mapping
 
+#             elasticsearch_index=elasticsearch_index,
+#             sample_id_to_individual_id_mapping={},
 
 def match_sample_ids_to_sample_records(
-        project,
-        user,
-        sample_ids,
-        sample_type,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        elasticsearch_index=None,
-        create_sample_records=True,
-        sample_id_to_individual_id_mapping=None,
-        loaded_date=None,
-    ):
+    project,
+    user,
+    sample_ids,
+    elasticsearch_index,
+    sample_type,
+    dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+    sample_id_to_individual_id_mapping=None,
+    loaded_date=None,
+):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
     records, it looks for Individual records that have an individual_id that either exactly or
@@ -109,9 +110,6 @@ def match_sample_ids_to_sample_records(
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        create_sample_records (bool): whether to create new Sample records for sample_ids that
-            don't match existing Sample records, but do match individual_id's of existing
-            Individual records.
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
         loaded_date (object): datetime object
 
@@ -122,7 +120,7 @@ def match_sample_ids_to_sample_records(
             [1] array: array of the sample_ids of any samples that were created
     """
 
-    sample_id_to_sample_record = find_matching_sample_records(
+    sample_id_to_sample_record = _find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
     logger.debug(str(len(sample_id_to_sample_record)) + " exact sample record matches", user)
@@ -150,30 +148,31 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
             del remaining_individuals_dict[individual_id]
 
+        remaining_sample_ids -= set(sample_id_to_individual_record.keys())
+
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         # create new Sample records for Individual records that matches
-        if create_sample_records:
-            new_samples = [
-                Sample(
-                    guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE],
-                    sample_id=sample_id,
-                    sample_type=sample_type,
-                    dataset_type=dataset_type,
-                    elasticsearch_index=elasticsearch_index,
-                    individual=individual,
-                    created_date=timezone.now(),
-                    loaded_date=loaded_date or timezone.now(),
-                ) for sample_id, individual in sample_id_to_individual_record.items()]
-            sample_id_to_sample_record.update({
-                sample.sample_id: sample for sample in Sample.bulk_create(user, new_samples)
-            })
-            log_model_bulk_update(logger, new_samples, user, 'create')
+        new_samples = [
+            Sample(
+                guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE],
+                sample_id=sample_id,
+                sample_type=sample_type,
+                dataset_type=dataset_type,
+                elasticsearch_index=elasticsearch_index,
+                individual=individual,
+                created_date=timezone.now(),
+                loaded_date=loaded_date or timezone.now(),
+            ) for sample_id, individual in sample_id_to_individual_record.items()]
+        sample_id_to_sample_record.update({
+            sample.sample_id: sample for sample in Sample.bulk_create(user, new_samples)
+        })
+        log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record
+    return sample_id_to_sample_record, remaining_sample_ids
 
 
-def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
+def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
@@ -193,11 +192,38 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
         individual__family__project=project,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        sample_id__in=sample_ids
+        sample_id__in=sample_ids,
+        elasticsearch_index=elasticsearch_index,
     )
-    if elasticsearch_index:
-        sample_query = sample_query.filter(elasticsearch_index=elasticsearch_index)
     for sample in sample_query:
         sample_id_to_sample_record[sample.sample_id] = sample
 
     return sample_id_to_sample_record
+
+
+def update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,
+                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
+    if not loaded_date:
+        loaded_date = timezone.now()
+    updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
+
+    activated_sample_guids = Sample.bulk_update(user, {
+        'elasticsearch_index': elasticsearch_index,
+        'is_active': True,
+        'loaded_date': loaded_date,
+    }, id__in=updated_samples, is_active=False)
+
+    matched_sample_id_to_sample_record.update({
+        sample.sample_id: sample for sample in Sample.objects.filter(guid__in=activated_sample_guids)
+    })
+
+    inactivate_samples = Sample.objects.filter(
+        individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
+        is_active=True,
+        dataset_type=dataset_type,
+        sample_type=sample_type,
+    ).exclude(id__in=updated_samples)
+
+    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+
+    return inactivate_sample_guids
