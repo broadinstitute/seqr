@@ -12,15 +12,18 @@ const confidenceLevelColors = {
   1: '#d9534f', // red
   2: '#f0ad4e', // amber
   3: '#3fad46', // green
-  4: '#3fad46'  // green
+  4: '#3fad46', // green
 }
 
 const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) =>
   <Modal
-    trigger={<ButtonLink
-      background={confidenceLevelColors[pagene.confidenceLevel]}
-      {...linkProps}
-    >{gene.geneSymbol}</ButtonLink>}
+    trigger={
+      <ButtonLink
+        background={confidenceLevelColors[pagene.confidenceLevel]}
+        {...linkProps}
+      >
+        {gene.geneSymbol}
+      </ButtonLink>}
     title={gene.geneSymbol}
     modalName={`${modalId}-${gene.geneId}`}
     size="fullscreen"
