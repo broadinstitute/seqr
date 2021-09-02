@@ -20,6 +20,7 @@ const BaseButtonLink = styled(({ color, padding, background, ...props }) => <But
     &:hover, &:focus, &:active {
       color: #1e70bf !important;
       background: transparent !important;
+      filter: contrast(0.5);
     }
     
     &[class*="right labeled"].icon {
