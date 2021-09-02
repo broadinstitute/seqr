@@ -1,4 +1,6 @@
 import elasticsearch_dsl
+from collections import defaultdict
+from django.db.models import prefetch_related_objects
 from django.utils import timezone
 import random
 
@@ -174,7 +176,9 @@ def match_sample_ids_to_sample_records(
         })
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    return sample_id_to_sample_record
+    included_families = _validate_samples_families(list(sample_id_to_sample_record.values()), sample_type, dataset_type)
+
+    return sample_id_to_sample_record, included_families
 
 
 def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
@@ -204,6 +208,30 @@ def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type
         sample_id_to_sample_record[sample.sample_id] = sample
 
     return sample_id_to_sample_record
+
+
+def _validate_samples_families(samples, sample_type, dataset_type):
+    prefetch_related_objects(samples, 'individual__family')
+    included_families = {sample.individual.family for sample in samples}
+
+    missing_individuals = Individual.objects.filter(
+        family__in=included_families,
+        sample__is_active=True,
+        sample__dataset_type=dataset_type,
+        sample__sample_type=sample_type,
+    ).exclude(sample__in=samples).select_related('family')
+    missing_family_individuals = defaultdict(list)
+    for individual in missing_individuals:
+        missing_family_individuals[individual.family].append(individual)
+
+    if missing_family_individuals:
+        raise ValueError(
+            'The following families are included in the callset but are missing some family members: {}.'.format(
+                ', '.join(sorted(
+                    ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
+                     for family, missing_indivs in missing_family_individuals.items()]
+                ))))
+    return included_families
 
 
 def update_variant_samples(matched_sample_id_to_sample_record, user, elasticsearch_index, loaded_date=None,

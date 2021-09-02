@@ -62,7 +62,7 @@ def add_variants_dataset_handler(request, project_guid):
     loaded_date = timezone.now()
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+        matched_sample_id_to_sample_record, included_families = match_sample_ids_to_sample_records(
             project=project,
             user=request.user,
             sample_ids=sample_ids,
@@ -76,27 +76,6 @@ def add_variants_dataset_handler(request, project_guid):
         )
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
-
-    prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
-    included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
-
-    missing_individuals = Individual.objects.filter(
-        family__in=included_families,
-        sample__is_active=True,
-        sample__dataset_type=dataset_type,
-        sample__sample_type=sample_type,
-    ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
-    missing_family_individuals = defaultdict(list)
-    for individual in missing_individuals:
-        missing_family_individuals[individual.family].append(individual)
-
-    if missing_family_individuals:
-        return create_json_response({'errors': [
-            'The following families are included in the callset but are missing some family members: {}.'.format(
-                ', '.join(sorted(
-                    ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
-                     for family, missing_indivs in missing_family_individuals.items()]
-                )))]}, status=400)
 
     inactivate_sample_guids = update_variant_samples(
         matched_sample_id_to_sample_record, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
