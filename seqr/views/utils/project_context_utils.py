@@ -1,10 +1,10 @@
 from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects
 
-from seqr.models import Family, Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType
-from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
-    get_json_for_variant_functional_data_tag_types, _get_json_for_models
+from seqr.models import Family, Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
+    VariantFunctionalData
+from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 
 
@@ -118,8 +118,6 @@ def _add_child_ids(response):
 
 
 def _add_tag_types(projects_by_guid, project_guid):
-    functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
-
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
 
@@ -136,5 +134,5 @@ def _add_tag_types(projects_by_guid, project_guid):
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({
             'variantTagTypes': project_tag_types[project_guid] + project_tag_types[None],
-            'variantFunctionalTagTypes': functional_data_tag_types,
+            'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
         })
