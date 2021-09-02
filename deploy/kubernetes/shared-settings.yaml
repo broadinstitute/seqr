@@ -13,7 +13,7 @@ NODE_POOLS:
     machine_type: n1-highmem-8
     labels: nodeType=data
 #  es-loading-nodes:
-#    num_nodes: 2
+#    num_nodes: 3
 
 DISKS: seqr-static-files, es-data
 
