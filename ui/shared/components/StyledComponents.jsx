@@ -19,7 +19,7 @@ const BaseButtonLink = styled(({ color, padding, background, ...props }) => <But
     
     &:hover, &:focus, &:active {
       color: #1e70bf !important;
-      background: transparent !important;
+      background: ${props => props.background || 'transparent'} !important;
       filter: contrast(0.5);
     }
     
