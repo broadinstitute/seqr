@@ -128,6 +128,17 @@ class ProjectAPITest(object):
         self.assertSetEqual(
             {tag['variantGuid'] for tag in discovery_tags},
             {'SV0000001_2103343353_r0390_100', 'SV0000002_1248367227_r0390_100'})
+        note_tag_type = response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][-1]
+        self.assertDictEqual(note_tag_type, {
+            'variantTagTypeGuid': 'notes',
+            'name': 'Has Notes',
+            'category': 'Notes',
+            'description': '',
+            'color': 'grey',
+            'order': 100,
+            'numTags': 1,
+            'numTagsPerFamily': {'F000002_2': 1},
+        })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000186092'})
         family_fields = {'individualGuids'}
         family_fields.update(FAMILY_FIELDS)
