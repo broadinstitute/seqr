@@ -43,7 +43,7 @@ class Command(BaseCommand):
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
-            unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
+            raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
         )
 
         # Get expected saved variants

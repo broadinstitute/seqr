@@ -69,7 +69,7 @@ def add_variants_dataset_handler(request, project_guid):
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
             loaded_date=loaded_date,
             raise_no_match_error=ignore_extra_samples,
-            unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+            raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         )
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)

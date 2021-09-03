@@ -96,7 +96,7 @@ def match_sample_ids_to_sample_records(
         sample_id_to_individual_id_mapping=None,
         loaded_date=None,
         raise_no_match_error=False,
-        unmatched_error_template=None,
+        raise_unmatched_error_template=None,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -113,7 +113,7 @@ def match_sample_ids_to_sample_records(
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
         loaded_date (object): datetime object
         raise_no_match_error (bool): whether to raise an exception if no sample matches are found
-        unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched
+        raise_unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched, will not raise if not provided
 
     Returns:
         tuple:
@@ -155,8 +155,8 @@ def match_sample_ids_to_sample_records(
                 'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
                     len(sample_ids)
                 ))
-        if unmatched_error_template and remaining_sample_ids:
-            raise ValueError(unmatched_error_template.format(sample_ids=(', '.join(remaining_sample_ids))))
+        if raise_unmatched_error_template and remaining_sample_ids:
+            raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(remaining_sample_ids))))
 
         # create new Sample records for Individual records that matches
         new_samples = [
