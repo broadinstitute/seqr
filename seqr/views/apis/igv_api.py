@@ -2,17 +2,20 @@ from collections import defaultdict
 import json
 import re
 import requests
+import time
 
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist, get_access_token
+from seqr.utils.file_utils import file_iter, does_file_exist, run_command, is_google_bucket_file_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
+
+EXPIRATION_TIME_IN_SECONDS = 3600 - 5
 
 
 @pm_or_data_manager_required
@@ -127,31 +130,35 @@ def fetch_igv_track(request, project_guid, igv_track_path):
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
 
-    if igv_track_path.startswith('gs://'):
+    if is_google_bucket_file_path(igv_track_path):
         return _stream_gs(request, igv_track_path)
 
     return _stream_file(request, igv_track_path)
 
 
 def _stream_gs(request, gs_path):
-    headers = {'Authorization': 'Bearer {}'.format(get_access_token(user=request.user))}
+    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(request.user))}
     range_header = request.META.get('HTTP_RANGE')
     if range_header:
         headers['Range'] = range_header
 
-    bucket_object = gs_path[5:].split('/', 1)
-    for retry in range(2):  # retry automatically if the access token expired
-        response = requests.get(
-            'https://{bucket}.storage.googleapis.com/{object}'.format(bucket=bucket_object[0], object=bucket_object[1]),
-            headers=headers,
-            stream=True)
-        if 200 <= response.status_code < 300:
-            break
-        if retry == 0:  # refresh the token and retry
-            headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True, user=request.user))
+    bucket_object = gs_path.replace('gs://', '', 1).split('/', 1)
+    response = requests.get(
+        'https://{bucket}.storage.googleapis.com/{object}'.format(bucket=bucket_object[0], object=bucket_object[1]),
+        headers=headers,
+        stream=True)
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
+
+
+def _get_access_token(user):
+    if not hasattr(_get_access_token, 'timer') or (time.time() - _get_access_token.timer) > EXPIRATION_TIME_IN_SECONDS:
+        process = run_command('gcloud auth print-access-token', user=user)
+        if process.wait() == 0:
+            _get_access_token.access_token = next(process.stdout).decode('utf-8').strip()
+            _get_access_token.timer = time.time()
+    return _get_access_token.access_token
 
 
 def _stream_file(request, path):

@@ -6,7 +6,7 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def _run_command(command, user=None):
+def run_command(command, user=None):
     logger.info('==> {}'.format(command), user)
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
@@ -20,22 +20,22 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
     if gunzip:
         command += " | gunzip -c -q - "
 
-    return _run_command(command, user=user)
+    return run_command(command, user=user)
 
 
-def _is_google_bucket_file_path(file_path):
+def is_google_bucket_file_path(file_path):
     return file_path.startswith("gs://")
 
 
 def does_file_exist(file_path, user=None):
-    if _is_google_bucket_file_path(file_path):
+    if is_google_bucket_file_path(file_path):
         process = _run_gsutil_command('ls', file_path, user=user)
         return process.wait() == 0
     return os.path.isfile(file_path)
 
 
 def file_iter(file_path, byte_range=None, raw_content=False, user=None):
-    if _is_google_bucket_file_path(file_path):
+    if is_google_bucket_file_path(file_path):
         for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user):
             yield line
     elif byte_range:
@@ -44,7 +44,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
             size=byte_range[1]-byte_range[0],
             file_path=file_path,
         )
-        process = _run_command(command, user=user)
+        process = run_command(command, user=user)
         for line in process.stdout:
             yield line
     else:
@@ -66,22 +66,10 @@ def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=N
 
 
 def mv_file_to_gs(local_path, gs_path, user=None):
-    if not _is_google_bucket_file_path(gs_path):
+    if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     command = 'mv {}'.format(local_path)
     process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
-
-
-access_token = None
-
-
-def get_access_token(refresh=False, user=None):
-    global access_token
-    if refresh or not access_token:
-        process = _run_command('gcloud auth print-access-token', user=user)
-        if process.wait() == 0:
-            access_token = next(process.stdout).decode('utf-8').strip()
-    return access_token

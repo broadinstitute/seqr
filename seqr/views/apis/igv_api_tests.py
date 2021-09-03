@@ -40,15 +40,17 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[0].request.headers.get('Range'), 'bytes=100-200')
         self.assertEqual(responses.calls[0].request.headers.get('Authorization'), 'Bearer token1')
 
-        responses.replace(responses.GET, 'https://project_a.storage.googleapis.com/sample_1.bai',
-                          stream=True,
-                          body=b'\n'.join(STREAMING_READS_CONTENT), status=401)
-        response = self.client.get(url, HTTP_RANGE='bytes=100-200')
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(mock_subprocess.call_count, 2)
+        mock_file_exist.reset_mock()
+        responses.add(responses.GET, 'https://fc-secure-project_a.storage.googleapis.com/sample_1.bed.gz',
+                      stream=True,
+                      body=b'\n'.join(STREAMING_READS_CONTENT), status=200)
+        url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://fc-secure-project_A/sample_1.bed.gz'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(responses.calls[1].request.headers.get('Range'))
         self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token1')
-        self.assertEqual(responses.calls[2].request.headers.get('Authorization'), 'Bearer token2')
-        self.assertEqual(len(responses.calls), 3)
+        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(mock_file_exist.call_count, 0)
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.open')
