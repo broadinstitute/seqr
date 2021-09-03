@@ -73,3 +73,15 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
+
+
+access_token = None
+
+
+def get_access_token(refresh=False, user=None):
+    global access_token
+    if refresh or not access_token:
+        process = _run_command('gcloud auth print-access-token', user=user)
+        if process.wait() == 0:
+            access_token = next(process.stdout).decode('utf-8').strip()
+    return access_token

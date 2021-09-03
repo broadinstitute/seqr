@@ -2,12 +2,11 @@ from collections import defaultdict
 import json
 import re
 import requests
-import subprocess
 
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, does_file_exist, get_access_token
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -135,7 +134,7 @@ def fetch_igv_track(request, project_guid, igv_track_path):
 
 
 def _stream_gs(request, gs_path):
-    headers = {'Authorization': 'Bearer {}'.format(get_access_token())}
+    headers = {'Authorization': 'Bearer {}'.format(get_access_token(user=request.user))}
     range_header = request.META.get('HTTP_RANGE')
     if range_header:
         headers['Range'] = range_header
@@ -149,22 +148,10 @@ def _stream_gs(request, gs_path):
         if 200 <= response.status_code < 300:
             break
         if retry == 0:  # refresh the token and retry
-            headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True))
+            headers['Authorization'] = 'Bearer {}'.format(get_access_token(refresh=True, user=request.user))
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
-
-
-access_token = None
-
-
-def get_access_token(refresh=False):
-    global access_token
-    if refresh or not access_token:
-        process = subprocess.run(['gcloud', 'auth', 'print-access-token'], capture_output=True)
-        if process.returncode == 0:
-            access_token = process.stdout.decode('utf-8').strip()
-    return access_token
 
 
 def _stream_file(request, path):
