@@ -425,6 +425,9 @@ class VariantSearchAPITest(object):
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
+        # Test fetching multiple projects where a locus list is contained in a non-included project
+        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(id=2))
+
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'projectCategoryGuid': 'PC000003_test_category_name'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
