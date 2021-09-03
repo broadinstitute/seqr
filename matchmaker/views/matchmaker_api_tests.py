@@ -418,7 +418,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         slack_kwargs = {'as_user': False, 'icon_emoji': ':beaker:', 'username': 'Beaker (engineering-minion)'}
         alert_a_slack_message = 'Error searching in Node A: Failed request (400)\n```{}```'.format(
             json.dumps(expected_patient_body, indent=2))
-        alert_b_slack_message = 'Error searching in Node B: Received invalid results\n```{}```'.format(
+        alert_b_slack_message = 'Error searching in Node B: Received invalid results for NA19675_1\n```{}```'.format(
             json.dumps(invalid_results, indent=2))
         mock_slacker.return_value.chat.post_message.assert_has_calls([
             mock.call('matchmaker_alerts', alert_a_slack_message, **slack_kwargs),
@@ -449,7 +449,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         mock_logger.error.assert_not_called()
         mock_logger.warning.assert_has_calls([
             mock.call('Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body),
-            mock.call('Error searching in Node B: Received invalid results', self.collaborator_user, detail=invalid_results),
+            mock.call('Error searching in Node B: Received invalid results for NA19675_1', self.collaborator_user, detail=invalid_results),
             mock.call('Received 1 invalid matches from Node B', self.collaborator_user),
         ])
         mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [

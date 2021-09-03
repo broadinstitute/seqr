@@ -12,11 +12,6 @@ import {
   Pagination,
   BaseSemanticInput,
 } from '../components/form/Inputs'
-import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
-import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import ListFieldView from '../components/panel/view-fields/ListFieldView'
-import SingleFieldView from '../components/panel/view-fields/SingleFieldView'
-import TagFieldView from '../components/panel/view-fields/TagFieldView'
 
 import { stripMarkdown } from './stringUtils'
 import { ColoredIcon } from '../components/StyledComponents'
@@ -186,44 +181,22 @@ export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 
-export const FAMILY_FIELD_RENDER_LOOKUP = {
-  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description', canEdit: true },
-  [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView, canEdit: true },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: {
-    name: 'Assigned Analyst',
-    component: BaseFieldView,
-    submitArgs: { familyField: 'assigned_analyst' },
-    canEdit: true,
-  },
-  [FAMILY_FIELD_ANALYSED_BY]: {
-    name: 'Analysed By',
-    component: BaseFieldView,
-    submitArgs: { familyField: 'analysed_by' },
-    canEdit: true,
-  },
-  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
-    name: 'Success Story Type',
-    component: TagFieldView,
-    internal: true,
-  },
-  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story', internal: true },
-  [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes', canEdit: true },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary', canEdit: true },
-  [FAMILY_FIELD_MME_NOTES]: { name: 'Matchmaker Notes', canEdit: true },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView, canEdit: true },
-  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView, canEdit: true },
-  [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView, internal: true },
-  [FAMILY_FIELD_INTERNAL_NOTES]: {
-    name: 'Internal Notes',
-    internal: true,
-    submitArgs: { familyField: 'case_review_notes' },
-  },
-  [FAMILY_FIELD_INTERNAL_SUMMARY]: {
-    name: 'Internal Summary',
-    internal: true,
-    submitArgs: { familyField: 'case_review_summary' },
-  },
+export const FAMILY_FIELD_NAME_LOOKUP = {
+  [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
+  [FAMILY_FIELD_ANALYSIS_STATUS]: 'Analysis Status',
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: 'Assigned Analyst',
+  [FAMILY_FIELD_ANALYSED_BY]: 'Analysed By',
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: 'Success Story Type',
+  [FAMILY_FIELD_SUCCESS_STORY]: 'Success Story',
+  [FAMILY_FIELD_FIRST_SAMPLE]: 'Data Loaded?',
+  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Notes',
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: 'Analysis Summary',
+  [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
+  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Coded Phenotype',
+  [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
+  [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
+  [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
 }
 
 export const FAMILY_DETAIL_FIELDS = [
@@ -1114,8 +1087,14 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+  { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
+  {
+    header: 'notes',
+    getVal: (variant, tagsByGuid, notesByGuid) => variant.noteGuids.map((noteGuid) => {
+      const note = notesByGuid[noteGuid]
+      return `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`
+    }).join('|'),
+  },
 ]
 
 export const ALL_INHERITANCE_FILTER = 'all'

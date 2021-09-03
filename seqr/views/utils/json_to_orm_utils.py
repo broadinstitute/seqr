@@ -1,6 +1,7 @@
 from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 
-from seqr.models import Individual
+from seqr.models import Individual, get_audit_field_names
 from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.json_utils import _to_snake_case
 from seqr.views.utils.permissions_utils import user_is_analyst
@@ -36,8 +37,7 @@ def update_individual_from_json(individual, json, user, allow_unknown_keys=False
         immutable_keys=[
             'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features',
-            'case_review_status', 'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
-            'case_review_discussion'
+            'case_review_status', 'case_review_discussion'
         ],
     )
 
@@ -53,6 +53,9 @@ def _parse_parent_field(json, individual, parent_key, parent_id_key):
 def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immutable_keys=None, updated_fields=None, verbose=True):
     immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
+    audit_fields = model_obj._meta.audit_fields if hasattr(model_obj._meta, 'audit_fields') else set()
+    for audit_field in audit_fields:
+        immutable_keys += get_audit_field_names(audit_field)
 
     if not updated_fields:
         updated_fields = set()
@@ -69,6 +72,10 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             updated_fields.add(orm_key)
             setattr(model_obj, orm_key, value)
+            if orm_key in audit_fields:
+                updated_fields.update(get_audit_field_names(orm_key))
+                setattr(model_obj, '{}_last_modified_date'.format(orm_key), timezone.now())
+                setattr(model_obj, '{}_last_modified_by'.format(orm_key), user)
 
     if updated_fields:
         model_obj.save()

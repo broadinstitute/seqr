@@ -13,8 +13,8 @@ import {
   VARIANT_EXPORT_DATA,
 } from 'shared/utils/constants'
 import {
-  getVariantTagsByGuid, getVariantNotesByGuid, getTagsByVariantGuids, getNotesByVariantGuids, getSavedVariantsByGuid,
-  getFamiliesByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
+  getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
+  getFamiliesByGuid,
 } from 'redux/selectors'
 
 
@@ -198,8 +198,8 @@ const getSavedVariantExportHeaders = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getAnalysisGroupsByGuid,
-  getTagsByVariantGuids,
-  getNotesByVariantGuids,
+  getVariantTagsByGuid,
+  getVariantNotesByGuid,
   (state, props) => props.project,
   getSavedVariantTableState,
   (state, props) => props.match.params,
