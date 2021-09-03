@@ -2,6 +2,8 @@
 
 ## dev
 * Change family note fields into lists of notes (REQUIRES DB MIGRATION)
+
+## 9/3/21
 * Add last updated information for family analysis_status (REQUIRES DB MIGRATION)
 
 ## 8/25/21

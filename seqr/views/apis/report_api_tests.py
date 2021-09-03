@@ -279,8 +279,8 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['errors'], ['No data loaded for family: no_individuals. Skipping...'])
-        self.assertEqual(len(response_json['rows']), 10)
+        self.assertListEqual(response_json['errors'], ['No data loaded for family: 9. Skipping...', 'No data loaded for family: no_individuals. Skipping...'])
+        self.assertEqual(len(response_json['rows']), 9)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
         # test compound het reporting
