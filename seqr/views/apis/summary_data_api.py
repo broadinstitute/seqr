@@ -4,11 +4,11 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.saved_variant_api import _add_locus_lists
-from seqr.models import Family, LocusList, VariantTagType, SavedVariant, Individual
+from seqr.models import Family, LocusList, VariantTagType, SavedVariant, Individual,VariantFunctionalData
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants_with_tags, \
-    get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions
+    _get_json_for_models, get_json_for_matchmaker_submissions, get_json_for_projects, _get_json_for_families, \
+    get_json_for_locus_lists
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import saved_variant_genes
@@ -97,7 +97,6 @@ def saved_variants_page(request, tag):
     locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
 
     projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
-    functional_tag_types = get_json_for_variant_functional_data_tag_types()
 
     variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))
     prefetch_related_objects(variant_tag_types, 'project')
@@ -111,7 +110,7 @@ def saved_variants_page(request, tag):
         project_json.update({
             'locusListGuids': list(locus_lists_by_guid.keys()),
             'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
-            'variantFunctionalTagTypes': functional_tag_types,
+            'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
         })
 
     families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
