@@ -14,9 +14,10 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 EXPIRATION_TIME_IN_SECONDS = 3600 - 5
-
+ACCESS_TOKEN_CACHE_KEY = 'google-account-access-token-info'
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
@@ -153,12 +154,13 @@ def _stream_gs(request, gs_path):
 
 
 def _get_access_token(user):
-    if not hasattr(_get_access_token, 'timer') or (time.time() - _get_access_token.timer) > EXPIRATION_TIME_IN_SECONDS:
+    access_token = safe_redis_get_json(ACCESS_TOKEN_CACHE_KEY)
+    if not access_token or (time.time() - access_token['timer']) > EXPIRATION_TIME_IN_SECONDS:
         process = run_command('gcloud auth print-access-token', user=user)
         if process.wait() == 0:
-            _get_access_token.access_token = next(process.stdout).decode('utf-8').strip()
-            _get_access_token.timer = time.time()
-    return _get_access_token.access_token
+            access_token = {'timer': time.time(), 'token': next(process.stdout).decode('utf-8').strip()}
+            safe_redis_set_json(ACCESS_TOKEN_CACHE_KEY, access_token)
+    return access_token['token']
 
 
 def _stream_file(request, path):
