@@ -1,6 +1,7 @@
 import json
 
 import responses
+from django.core.management import call_command
 from django.urls.base import reverse
 
 from seqr.models import LocusList
@@ -137,15 +138,10 @@ class PaLocusListAPITest(AuthenticationTestCase):
         responses.add(responses.GET, genes_260_url, json=genes_260_json, status=200)
         responses.add(responses.GET, genes_3069_url, json=genes_3069_json, status=200)
 
-        # when import all panels is called
-        url = reverse('panelapp:import_panelapp_handler')
-        self.login_data_manager_user()
-        response = self.client.post(url, content_type='application/json')
+        # when import_all_panels()
+        call_command('import_all_panels')
 
-        # then import has no errors
-        self.assertEqual(response.status_code, 200)
-
-        # and lists from PanelApp are created
+        # then lists from PanelApp are created
         self._assert_lists_imported()
 
         # and list 260 contains expected two genes
@@ -163,10 +159,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000090861'})
 
         # and import is idempotent
-        url = reverse('panelapp:import_panelapp_handler')
-        self.login_data_manager_user()
-        response = self.client.post(url, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
+        call_command('import_all_panels')
         self._assert_lists_imported()
 
     def _assert_lists_imported(self):
