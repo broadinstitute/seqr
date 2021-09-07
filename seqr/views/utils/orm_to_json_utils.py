@@ -16,8 +16,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL, \
-    ENABLE_PANEL_APP
+from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None, process_result=None, guid_key=None, additional_model_fields=None):
@@ -737,9 +736,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pro
     prefetch_related_objects(locus_lists, 'created_by')
     prefetch_related_objects(locus_lists, 'locuslistgene_set')
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
-    if ENABLE_PANEL_APP:
-        prefetch_related_objects(locus_lists, 'palocuslist')
-        prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
+    prefetch_related_objects(locus_lists, 'palocuslist')
+    prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
     return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
 
