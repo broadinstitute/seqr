@@ -17,7 +17,8 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 EXPIRATION_TIME_IN_SECONDS = 3600 - 5
-ACCESS_TOKEN_CACHE_KEY = 'google-account-access-token-info'
+ACCESS_TOKEN_CACHE_KEY = 'GOOGLE_ACCESS_TOKEN_REDIS_CACHE_KEY'
+
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
