@@ -265,8 +265,8 @@ class UsersAPITest(object):
 
     def _test_password_auth_disabled(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
 
     @mock.patch("seqr.views.apis.users_api.SEQR_TOS_VERSION")
     @mock.patch("seqr.views.apis.users_api.SEQR_PRIVACY_VERSION")
