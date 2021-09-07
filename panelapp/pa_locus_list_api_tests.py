@@ -6,7 +6,7 @@ from django.urls.base import reverse
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
     delete_project_locus_lists
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS
 from settings import PANEL_APP_API_URL
 
 PROJECT_GUID = 'R0001_1kg'
@@ -16,11 +16,11 @@ PRIVATE_LOCUS_LIST_GUID = 'LL00005_retina_proteome'
 PA_LOCUS_LIST_GUID = 'LL01705_sarcoma'
 
 PA_LOCUS_LIST_FIELDS = {'paLocusList'}
-PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_FIELDS)
+PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
 
 PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
-PA_GENE_FIELDS = {'biotype', 'confidenceLevel', 'modeOfPathogenicity', 'penetrance', 'rawData'}
+PA_GENE_FIELDS = {'confidenceLevel', 'penetrance', 'modeOfPathogenicity', 'modeOfInheritance'}
 
 
 def _get_json_from_file(filepath):

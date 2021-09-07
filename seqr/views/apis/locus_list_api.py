@@ -3,14 +3,13 @@ import json
 from django.db.models import Q, Count
 from django.db.utils import IntegrityError
 
-
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.utils.logging_utils import log_model_update, SeqrLogger
-from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions, login_and_policies_required
@@ -26,7 +25,8 @@ def locus_lists(request):
         Q(is_public=True) | Q(created_by=request.user)
     ).annotate(num_projects=Count('projects'))
 
-    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True, include_genes=True)
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True,
+                                                include_genes=True)
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
@@ -44,14 +44,11 @@ def locus_list_info(request, locus_list_guid):
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
     pagenes_by_id = {item['geneId']: item.get('pagene', None) for item in locus_list_json['items']
                      if item.get('geneId')}
-    genes_by_id = get_genes(pagenes_by_id.keys())
-    genes_by_id2 = _get_locus_lists_genes([locus_list_json])
 
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_genes(pagenes_by_id.keys()),
-        'pagenesById': pagenes_by_id,
         'genesById': _get_locus_lists_genes([locus_list_json]),
+        'pagenesById': pagenes_by_id,
     })
 
 
@@ -128,7 +125,8 @@ def add_project_locus_lists(request, project_guid):
     log_model_update(logger, project, user=request.user, update_type='update', update_fields=['locus_lists'])
 
     return create_json_response({
-        'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in
+                           _get_sorted_project_locus_lists(project, request.user)],
     })
 
 
@@ -142,9 +140,9 @@ def delete_project_locus_lists(request, project_guid):
         locus_list.save()
     log_model_update(logger, project, user=request.user, update_type='update', update_fields=['locus_lists'])
 
-
     return create_json_response({
-        'locusListGuids': [locus_list['locusListGuid'] for locus_list in _get_sorted_project_locus_lists(project, request.user)],
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in
+                           _get_sorted_project_locus_lists(project, request.user)],
     })
 
 

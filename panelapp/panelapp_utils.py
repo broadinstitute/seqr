@@ -23,10 +23,10 @@ def import_all_panels(user):
 
     for panel in all_panels:
         with transaction.atomic():
-            pa_locus_list = _create_or_update_locus_list_from_panel(user, panel)
             panel_app_id = panel.get('id')
-            panel_genes_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL, panel_app_id)
-            all_genes_for_panel = _get_all_genes_for_panel(panel_genes_url, [])
+            panel_genes_url = '{}/panels/{}/genes'.format(PANEL_APP_API_URL, panel_app_id)
+            pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel)
+            all_genes_for_panel = _get_all_genes_for_panel('{}/?page=1'.format(panel_genes_url), [])
             panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
                                  if _extract_ensembl_id_from_json(gene)}
             raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
@@ -103,41 +103,49 @@ def _get_all_genes_for_panel(panel_genes_url, all_results):
         return _get_all_genes_for_panel(next_page, all_results)
 
 
-def _create_or_update_locus_list_from_panel(user, panel_json):
+def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
     panel_app_id = panel_json.get('id')
     existing = _safe_get_locus_list(panel_app_id)
 
+    name = panel_json['name']
+    disease_group = panel_json.get('disease_group') or None
+    disease_sub_group = panel_json.get('disease_sub_group') or None
+    status = panel_json.get('status') or None
+    version = panel_json.get('version') or None
+    version_created = panel_json.get('version_created') or None
+    description = _create_panel_description(panel_app_id, version, disease_group, disease_sub_group)
+    new_seqrlocuslist_json = {
+        'name': name,
+        'description': description,
+        'is_public': True,
+    }
+    new_palocuslist_json = {
+        'disease_group': disease_group,
+        'disease_sub_group': disease_sub_group,
+        'status': status,
+        'version': version,
+        'version_created': version_created,
+        'url': panelgenes_url,
+        'raw_data': panel_json,
+    }
     if existing:
-        update_model_from_json(existing.seqr_locus_list, {
-            'name': panel_json['name']
-        }, user)
-        update_model_from_json(existing, {
-            'disease_group': panel_json.get('disease_group') or None,
-            'disease_sub_group': panel_json.get('disease_sub_group') or None,
-            'status': panel_json.get('status') or None,
-            'version': panel_json.get('version') or None,
-            'version_created': panel_json.get('version_created') or None,
-            'raw_data': panel_json,
-        }, user)
+        update_model_from_json(existing.seqr_locus_list, new_seqrlocuslist_json, user)
+        update_model_from_json(existing, new_palocuslist_json, user)
 
         return existing
     else:
-        seqr_locus_list = create_model_from_json(SeqrLocusList, {
-            'name': panel_json['name'],
-            'description': None,
-            'is_public': True,
-        }, user)
-        locus_list = PaLocusList.objects.create(seqr_locus_list=seqr_locus_list, panel_app_id=panel_app_id)
-        update_model_from_json(locus_list, {
-            'disease_group': panel_json.get('disease_group'),
-            'disease_sub_group': panel_json.get('disease_sub_group'),
-            'status': panel_json.get('status'),
-            'version': panel_json.get('version'),
-            'version_created': panel_json.get('version_created'),
-            'raw_data': panel_json,
-        }, user)
+        seqr_locus_list = create_model_from_json(SeqrLocusList, new_seqrlocuslist_json, user)
+        pa_locus_list = PaLocusList.objects.create(seqr_locus_list=seqr_locus_list, panel_app_id=panel_app_id)
+        update_model_from_json(pa_locus_list, new_palocuslist_json, user)
 
-        return locus_list
+        return pa_locus_list
+
+
+def _create_panel_description(panel_app_id, version, disease_group, disease_sub_group):
+    disease_groups = [d for d in [disease_group, disease_sub_group] if d]
+
+    return 'PanelApp_{}_{}_{}'.format(panel_app_id, version, ';'.join(disease_groups)) \
+        if disease_groups else 'PanelApp_{}_{}'.format(panel_app_id, version)
 
 
 def _safe_get_locus_list(panel_app_id):

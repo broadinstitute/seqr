@@ -739,6 +739,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pro
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
     if ENABLE_PANEL_APP:
         prefetch_related_objects(locus_lists, 'palocuslist')
+        prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
     return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
 
