@@ -19,7 +19,6 @@ export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDa
 export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
-export const getPaGenesById = state => state.pagenesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getHpoTermsByParent = state => state.hpoTermsByParent
 export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
