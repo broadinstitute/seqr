@@ -14,8 +14,14 @@ logger = SeqrLogger(__name__)
 
 def import_all_panels(user):
     def _extract_ensembl_id_from_json(raw_gene_json):
-        return raw_gene_json.get('gene_data', {}).get('ensembl_genes', {}).get('GRch38', {}).get('90', {}).get(
-            'ensembl_id')
+        ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
+        if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
+            return ensembl_genes_json \
+                .get('GRch38', {}) \
+                .get('90', {}) \
+                .get('ensembl_id')
+        else:
+            return None
 
     panels_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL)
 
