@@ -43,6 +43,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
 
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, PA_LOCUS_LIST_GUID})
+        self.assertTrue(all('pagene' not in item for k, v in locus_lists_dict.items() for item in v['items']))
 
         locus_list = locus_lists_dict[PA_LOCUS_LIST_GUID]
         fields = {'numProjects'}
@@ -66,6 +67,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
         response_json = response.json()
         locus_lists_dict = response_json['locusListsByGuid']
         self.assertListEqual(list(locus_lists_dict.keys()), [PA_LOCUS_LIST_GUID])
+        self.assertTrue(all('pagene' in item for k, v in locus_lists_dict.items() for item in v['items']))
 
         locus_list = locus_lists_dict[PA_LOCUS_LIST_GUID]
         self.assertSetEqual(set(locus_list.keys()), PA_LOCUS_LIST_DETAIL_FIELDS)

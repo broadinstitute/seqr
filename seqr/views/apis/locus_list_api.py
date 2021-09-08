@@ -26,7 +26,7 @@ def locus_lists(request):
     ).annotate(num_projects=Count('projects'))
 
     locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True,
-                                                include_genes=True)
+                                                include_genes=True, include_pagenes=False)
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
