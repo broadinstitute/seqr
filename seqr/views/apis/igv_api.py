@@ -17,7 +17,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 EXPIRATION_TIME_IN_SECONDS = 3600 - 5
-ACCESS_TOKEN_CACHE_KEY = 'GOOGLE_ACCOUNT_REDIS_CACHE_KEY'
+ACCESS_TOKEN_CACHE_KEY = 'seqr-igv-redis_cache_key'
 
 
 @pm_or_data_manager_required
