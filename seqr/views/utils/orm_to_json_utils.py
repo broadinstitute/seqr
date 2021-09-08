@@ -727,10 +727,6 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
             result.update({
                 'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
             })
-        else:
-            result.update({
-                'items': []
-            })
 
         if include_project_count:
             result['numProjects'] = locus_list.num_projects
