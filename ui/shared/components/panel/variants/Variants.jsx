@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
+import { CLINSIG_SEVERITY, getVariantMainGeneId, VARIANT_BACKGROUND_COLORS } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../FamilyReads'
 import FamilyVariantTags, { LoadedFamilyLabel, taggedByPopup } from './FamilyVariantTags'
@@ -26,13 +26,13 @@ const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) =>
   color: #999;
   background-color: ${({ severity, isSV }) => {
     if (severity > 0) {
-      return '#eaa8a857'
+      return VARIANT_BACKGROUND_COLORS.red
     } else if (severity === 0) {
-      return '#f5d55c57'
+      return VARIANT_BACKGROUND_COLORS.amber
     } else if (severity < 0) {
-      return '#21a92624'
+      return VARIANT_BACKGROUND_COLORS.green
     } else if (isSV) {
-      return '#f3f8fa'
+      return VARIANT_BACKGROUND_COLORS.lightBlue
     }
     return 'inherit'
   }}
