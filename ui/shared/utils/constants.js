@@ -1169,6 +1169,15 @@ export const VARIANT_BACKGROUND_COLORS = {
   green: '#21a92624',
   lightBlue: '#f3f8fa',
 }
+
+export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
+  0: 'None',
+  1: VARIANT_BACKGROUND_COLORS.red,
+  2: VARIANT_BACKGROUND_COLORS.amber,
+  3: VARIANT_BACKGROUND_COLORS.green,
+  4: VARIANT_BACKGROUND_COLORS.green,
+}
+
 // Users
 
 export const USER_NAME_FIELDS = [
