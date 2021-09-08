@@ -247,12 +247,24 @@ const getLocusListsWithGenes = createSelector(
   getGenesById,
   getPaGenesById,
   (locusListsByGuid, genesById, pagenesById) =>
-    Object.entries(locusListsByGuid).reduce((acc, [locusListGuid, locusList]) => ({
-      ...acc,
-      [locusListGuid]: {
-        ...locusList,
-        items: locusList.items && locusList.items.map(item => ({ ...item, gene: genesById[item.geneId], pagene: pagenesById[item.geneId] })),
-      } }), {}),
+    Object.entries(locusListsByGuid).reduce(
+      (acc, [locusListGuid, locusList]) => ({
+        ...acc,
+        [locusListGuid]: {
+          ...locusList,
+          items:
+            locusList.items &&
+            locusList.items.map((item) => {
+              return {
+                ...item,
+                gene: genesById[item.geneId],
+                pagene: pagenesById[item.geneId],
+              }
+            }),
+        },
+      }),
+      {},
+    ),
 )
 
 export const getParsedLocusList = createSelector(
