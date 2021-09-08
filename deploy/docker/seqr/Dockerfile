@@ -45,7 +45,6 @@ RUN rm -rf ./Python-$PYTHON_VERSION \
     && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y --no-install-recommends \
@@ -65,8 +64,6 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg m
     && rm -rf /var/lib/apt/lists/*
 
 # install gcloud tools
-# ignore the unused environment variable, because the gcloud CLI install uses it
-# hadolint ignore=SC2034
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get update && apt-get install -y --no-install-recommends \
@@ -76,8 +73,6 @@ RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir gsutil
 
-# ignore the unused environment variable, because the gcloud sdk install uses it
-# hadolint ignore=SC2034
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \

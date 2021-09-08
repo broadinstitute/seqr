@@ -1,0 +1,13 @@
+deploy/*
+!deploy/docker/seqr
+.git*
+.vscode/
+.idea/
+ui/jest*
+*.pyc
+*.DS_Store
+.ipynb_checkpoints
+pedigree_images/*
+seqr_settings
+
+django_key
