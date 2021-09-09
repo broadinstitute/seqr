@@ -106,6 +106,8 @@ class UpdateOmimTest(TestCase):
         record = json.loads(re.search(r'No phenotypes found: ({.*})', str(ve.exception)).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
+        self.assertEqual(Omim.objects.all().count(), 3)
+
         GeneInfo.objects.all().delete()
         with self.assertRaises(CommandError) as ve:
             call_command('update_omim', '--omim-key=test_key')
@@ -145,13 +147,16 @@ class UpdateOmimTest(TestCase):
             call_command('update_omim', '--omim-key=test_key')
         self.assertEqual(str(ce.exception), 'Expected 1 omim entries but recieved 0')
 
+        # No records get deleted on error
+        self.assertEqual(Omim.objects.all().count(), 3)
+
         # Test without a file_path parameter
         mock_utils_logger.reset_mock()
         call_command('update_omim', '--omim-key=test_key', '--skip-cache-parsed-records')
 
         calls = [
-            mock.call('Deleting 0 existing Omim records'),
             mock.call('Parsing file'),
+            mock.call('Deleting 3 existing Omim records'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
             mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
@@ -172,8 +177,8 @@ class UpdateOmimTest(TestCase):
         mock_omim_logger.reset_mock()
         call_command('update_omim', '--omim-key=test_key', tmp_file)
         calls = [
-            mock.call('Deleting 2 existing Omim records'),
             mock.call('Parsing file'),
+            mock.call('Deleting 2 existing Omim records'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
             mock.call('Loaded 2 Omim records from {}. Skipped 2 records with unrecognized genes.'.format(tmp_file)),
@@ -221,8 +226,8 @@ class UpdateOmimTest(TestCase):
         update_records(CachedOmimReferenceDataHandler())
 
         calls = [
-            mock.call('Deleting 3 existing Omim records'),
             mock.call('Parsing file'),
+            mock.call('Deleting 3 existing Omim records'),
             mock.call('Creating 2 Omim records'),
             mock.call('Done'),
             mock.call('Loaded 2 Omim records from {}. Skipped 0 records with unrecognized genes.'.format(tmp_file)),

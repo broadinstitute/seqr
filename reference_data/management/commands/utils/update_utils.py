@@ -74,10 +74,6 @@ def update_records(reference_data_handler, file_path=None):
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
 
-    if not reference_data_handler.keep_existing_records:
-        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
-        model_objects.all().delete()
-
     models = []
     skip_counter = 0
     logger.info('Parsing file')
@@ -103,6 +99,10 @@ def update_records(reference_data_handler, file_path=None):
 
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)
+
+    if not reference_data_handler.keep_existing_records:
+        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
+        model_objects.all().delete()
 
     logger.info("Creating {} {} records".format(len(models), model_name))
     model_objects.bulk_create(models)
