@@ -73,8 +73,9 @@ class UpdateOmimTest(TestCase):
     fixtures = ['users', 'reference_data']
 
     @responses.activate
+    @mock.patch('reference_data.management.commands.utils.update_utils.logger')
     @mock.patch('reference_data.management.commands.update_omim.os')
-    def test_update_omim_command_exceptions(self, mock_os):
+    def test_update_omim_command_exceptions(self, mock_os, mock_logger):
         url = 'https://data.omim.org/downloads/test_key/genemap2.txt'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url, body='This account has expired')
@@ -91,19 +92,16 @@ class UpdateOmimTest(TestCase):
         self.assertEqual(str(ce.exception), 'omim_key is required')
 
         # Test omim account expired
-        with self.assertRaises(Exception) as err:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(err.exception), 'This account has expired')
+        call_command('update_omim', '--omim-key=test_key')
+        mock_logger.error.assert_called_with('This account has expired', extra={'traceback': mock.ANY})
 
         # Test bad omim data header
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(ve.exception), 'Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						')
+        call_command('update_omim', '--omim-key=test_key')
+        mock_logger.error.assert_called_with('Header row not found in genemap2 file before line 0: chr1	0	27600000	1p36		607413	OR4F29	Alzheimer disease neuronal thread protein						', extra={'traceback': mock.ANY})
 
         # Test bad phenotype field in the record
-        with self.assertRaises(ValueError) as ve:
-            call_command('update_omim', '--omim-key=test_key')
-        record = json.loads(re.search(r'No phenotypes found: ({.*})', str(ve.exception)).group(1))
+        call_command('update_omim', '--omim-key=test_key')
+        record = json.loads(re.search(r'No phenotypes found: ({.*})', mock_logger.error.call_args.args[0]).group(1))
         self.assertDictEqual(record, {"gene_name": "Basal cell carcinoma, susceptibility to, 1", "mim_number": "605462", "comments": "associated with rs7538876", "mouse_gene_symbol/id": "", "phenotypes": "{x}, 605462 (5)", "genomic_position_end": "27600000", "ensembl_gene_id": "", "gene_symbols": "BCC1", "approved_symbol": "", "entrez_gene_id": "100307118", "computed_cyto_location": "", "cyto_location": "1p36", "#_chromosome": "chr1", "genomic_position_start": "0"})
 
         self.assertEqual(Omim.objects.all().count(), 3)
@@ -138,14 +136,13 @@ class UpdateOmimTest(TestCase):
                       json=OMIM_ENTRIES, status=200)
 
         # Omim api response error test
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(ce.exception), 'Request failed with 400: Bad Request')
+        call_command('update_omim', '--omim-key=test_key')
+        mock_utils_logger.error.assert_called_with('Request failed with 400: Bad Request', extra={'traceback': mock.ANY})
 
         # Bad omim api response test
-        with self.assertRaises(CommandError) as ce:
-            call_command('update_omim', '--omim-key=test_key')
-        self.assertEqual(str(ce.exception), 'Expected 1 omim entries but recieved 0')
+        mock_utils_logger.reset_mock()
+        call_command('update_omim', '--omim-key=test_key')
+        mock_utils_logger.error.assert_called_with('Expected 1 omim entries but recieved 0', extra={'traceback': mock.ANY})
 
         # No records get deleted on error
         self.assertEqual(Omim.objects.all().count(), 3)
