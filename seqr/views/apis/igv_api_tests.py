@@ -2,12 +2,11 @@ import json
 import mock
 import responses
 import subprocess
-import time
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy, GS_STORAGE_SECRET_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
+    igv_genomes_proxy, GS_STORAGE_ACCESS_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -40,8 +39,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(next(response.streaming_content), b'\n'.join(STREAMING_READS_CONTENT))
         self.assertEqual(responses.calls[0].request.headers.get('Range'), 'bytes=100-200')
         self.assertEqual(responses.calls[0].request.headers.get('Authorization'), 'Bearer token1')
-        mock_get_redis.assert_called_with(GS_STORAGE_SECRET_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_SECRET_CACHE_KEY, 'token1', expire=EXPIRATION_TIME_IN_SECONDS)
+        mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=EXPIRATION_TIME_IN_SECONDS)
         mock_subprocess.assert_has_calls([
             mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
             mock.call().wait(),
@@ -60,8 +59,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(responses.calls[1].request.headers.get('Range'))
         self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token2')
-        mock_get_redis.assert_called_with(GS_STORAGE_SECRET_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_SECRET_CACHE_KEY, 'token2', expire=EXPIRATION_TIME_IN_SECONDS)
+        mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token2', expire=EXPIRATION_TIME_IN_SECONDS)
         mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')

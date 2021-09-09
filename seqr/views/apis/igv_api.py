@@ -16,7 +16,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 EXPIRATION_TIME_IN_SECONDS = 3600 - 5
-GS_STORAGE_SECRET_CACHE_KEY = 'gs_storage_secrect_cache_entry'
+GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 
 
 @pm_or_data_manager_required
@@ -154,12 +154,12 @@ def _stream_gs(request, gs_path):
 
 
 def _get_access_token(user):
-    access_token = safe_redis_get_json(GS_STORAGE_SECRET_CACHE_KEY)
+    access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
     if not access_token:
         process = run_command('gcloud auth print-access-token', user=user)
         if process.wait() == 0:
             access_token = next(process.stdout).decode('utf-8').strip()
-            safe_redis_set_json(GS_STORAGE_SECRET_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
+            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
     return access_token
 
 
