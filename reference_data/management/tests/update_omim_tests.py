@@ -147,7 +147,7 @@ class UpdateOmimTest(TestCase):
 
         # Test without a file_path parameter
         mock_utils_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key')
+        call_command('update_omim', '--omim-key=test_key', '--skip-cache-parsed-records')
 
         calls = [
             mock.call('Deleting 0 existing Omim records'),
@@ -170,7 +170,7 @@ class UpdateOmimTest(TestCase):
         responses.remove(responses.GET, data_url)
         mock_utils_logger.reset_mock()
         mock_omim_logger.reset_mock()
-        call_command('update_omim', '--omim-key=test_key', '--cache-parsed-records', tmp_file)
+        call_command('update_omim', '--omim-key=test_key', tmp_file)
         calls = [
             mock.call('Deleting 2 existing Omim records'),
             mock.call('Parsing file'),
