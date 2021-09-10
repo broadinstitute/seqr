@@ -279,7 +279,7 @@ const Annotations = React.memo(({ variant }) => {
         </Modal>
       }
       {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
-      {numExon && <b>, {numExon} exons</b>}
+      {Number.isInteger(numExon) && <b>, {numExon} exons</b>}
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />

@@ -101,7 +101,8 @@ def _add_parent_ids(response, projects, family_models, individual_models, locus_
     prefetch_related_objects(locus_lists_models, 'projects')
     for locus_list in locus_lists_models:
         for project in locus_list.projects.all():
-            response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
+            if project.guid in response['projectsByGuid']:
+                response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
 def _add_child_ids(response):
     sample_guids_by_individual = defaultdict(list)
