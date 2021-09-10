@@ -142,10 +142,11 @@ def _stream_gs(request, gs_path):
     range_header = request.META.get('HTTP_RANGE')
     if range_header:
         headers['Range'] = range_header
+    if gs_path.startswith('gs://fc-secure'):
+        headers['x-goog-user-project'] = 'anvil-datastorage'
 
-    bucket_object = gs_path.replace('gs://', '', 1).split('/', 1)
     response = requests.get(
-        'https://{bucket}.storage.googleapis.com/{object}'.format(bucket=bucket_object[0], object=bucket_object[1]),
+        'https://storage.googleapis.com/{}'.format(gs_path.replace('gs://', '', 1)),
         headers=headers,
         stream=True)
 
