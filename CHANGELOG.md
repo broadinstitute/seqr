@@ -2,6 +2,9 @@
 
 ## dev
 
+## 9/10/21
+* Use google storage API instead of gsutil for IGV 
+
 ## 9/3/21
 * Add last updated information for family analysis_status (REQUIRES DB MIGRATION)
 
