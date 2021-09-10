@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD
+    GRCH38_LOCUS_FIELD, FUNCTION_SORTS
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -73,6 +73,7 @@ class EsSearch(object):
         self._search = Search()
         self._index_searches = defaultdict(list)
         self._sort = None
+        self._function_sort = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
@@ -157,7 +158,11 @@ class EsSearch(object):
         return self
 
     def sort(self, sort):
-        self._sort = deepcopy(SORT_FIELDS.get(sort, []))
+        self._function_sort = FUNCTION_SORTS.get(sort)
+        if callable(self._function_sort):
+            self._function_sort = self._function_sort()
+
+        self._sort = ['_score'] if self._function_sort else deepcopy(SORT_FIELDS.get(sort, []))
 
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
@@ -1008,6 +1013,7 @@ class EsSearch(object):
             if search.aggs.to_dict():
                 # For compound het search get results from aggregation instead of top level hits
                 search = search[:1]
+                # TODO function sort?
                 logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name), self._user)
             else:
                 end_index = page * num_results
@@ -1019,6 +1025,12 @@ class EsSearch(object):
                     raise InvalidSearchException(
                         'Unable to load more than {} variants ({} requested)'.format(MAX_VARIANTS, end_index))
 
+                if self._function_sort:
+                    search_dict = search.to_dict()
+                    search = Search().query(
+                        'function_score', boost_mode='replace', query=search_dict['query'], functions=self._function_sort)
+                    if search_dict.get('sort'):
+                        search = search.sort(*search_dict['sort'])
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
                 logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index), self._user)
