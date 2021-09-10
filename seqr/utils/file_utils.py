@@ -73,15 +73,30 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
         blob = bucket.blob("/".join(path_segments[3:]))
         current = byte_range[0] if byte_range else 0
         end = byte_range[1] if byte_range else None
+        prev_line = ''
         while True:
             chunk_end = current + (1 << 20) - 1  # 1 MB chunks
             if end and end < chunk_end:
                 chunk_end = end
             data = blob.download_as_bytes(start=current, end=chunk_end, checksum=None)
             current += len(data)
-            yield data if raw_content else data.decode("utf-8")
+            if raw_content:
+                yield data
+            else:
+                # Using \n might be a bad assumption if nl is represented another way
+                lines = data.decode("utf-8").split("\n")
+                if len(lines) == 1:
+                    # one reaally long line (or to the end)
+                    prev_line = prev_line + lines[0]
+                else:
+                    yield prev_line + lines.pop(0)
+                    prev_line = lines.pop(-1)
+                    for line in lines:
+                        yield line
+
             # We're done if we couldn't read the full range or we've reached the end.
             if current <= chunk_end or (end and current > end):
+                yield prev_line
                 break
     elif byte_range:
         command = "dd skip={offset} count={size} bs=1 if={file_path}".format(
