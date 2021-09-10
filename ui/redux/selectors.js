@@ -151,68 +151,41 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
 )
 
 // Saved variant selectors
-const groupByVariantGuids = allObjects =>
-  Object.values(allObjects).reduce((acc, o) => {
-    const variantGuids = o.variantGuids.sort().join(',')
-    if (!acc[variantGuids]) {
-      acc[variantGuids] = []
-    }
-    acc[variantGuids].push(o)
-    return acc
-  }, {})
-
-export const getTagsByVariantGuids = createSelector(
-  getVariantTagsByGuid,
-  groupByVariantGuids,
-)
-
-export const getNotesByVariantGuids = createSelector(
-  getVariantNotesByGuid,
-  groupByVariantGuids,
-)
-
-const getFunctionalDataByVariantGuids = createSelector(
-  getVariantFunctionalDataByGuid,
-  groupByVariantGuids,
-)
-
 export const getVariantId = variant =>
   (Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
 
+const groupByVariantGuidFields = (variantTagNotes, objectsByGuid, savedVariantsByGuid, field) =>
+  Object.values(objectsByGuid).forEach((o) => {
+    const variantGuids = o.variantGuids.sort().join(',')
+    if (!variantTagNotes[variantGuids]) {
+      variantTagNotes[variantGuids] = {
+        variantGuids, variants: o.variantGuids.map(variantGuid => savedVariantsByGuid[variantGuid]),
+      }
+    }
+    if (!variantTagNotes[variantGuids][field]) {
+      variantTagNotes[variantGuids][field] = []
+    }
+    variantTagNotes[variantGuids][field].push(o)
+  })
+
 export const getVariantTagNotesByFamilyVariants = createSelector(
-  getTagsByVariantGuids,
-  getNotesByVariantGuids,
-  getFunctionalDataByVariantGuids,
+  getVariantTagsByGuid,
+  getVariantNotesByGuid,
+  getVariantFunctionalDataByGuid,
   getSavedVariantsByGuid,
   (tagsByGuids, notesByGuids, functionalDataByGuids, savedVariantsByGuid) => {
-    let variantDetails = Object.entries(tagsByGuids).reduce(
-      (acc, [variantGuids, tags]) => ({ ...acc, [variantGuids]: { tags, variantGuids } }), {})
+    const variantTagNotes = {}
+    groupByVariantGuidFields(variantTagNotes, tagsByGuids, savedVariantsByGuid, 'tags')
+    groupByVariantGuidFields(variantTagNotes, notesByGuids, savedVariantsByGuid, 'notes')
+    groupByVariantGuidFields(variantTagNotes, functionalDataByGuids, savedVariantsByGuid, 'functionalData')
 
-    variantDetails = Object.entries(notesByGuids).reduce((acc, [variantGuids, notes]) => {
-      if (!acc[variantGuids]) {
-        acc[variantGuids] = { variantGuids }
+    Object.values(savedVariantsByGuid).forEach((variant) => {
+      if (!variantTagNotes[variant.variantGuid]) {
+        variantTagNotes[variant.variantGuid] = { variantGuids: variant.variantGuid, variants: [variant] }
       }
-      acc[variantGuids].notes = notes
-      return acc
-    }, variantDetails)
+    })
 
-    variantDetails = Object.entries(functionalDataByGuids).reduce((acc, [variantGuids, functionalData]) => {
-      if (!acc[variantGuids]) {
-        acc[variantGuids] = { variantGuids }
-      }
-      acc[variantGuids].functionalData = functionalData
-      return acc
-    }, variantDetails)
-
-    variantDetails = Object.keys(savedVariantsByGuid).reduce((acc, variantGuid) => {
-      if (!acc[variantGuid]) {
-        acc[variantGuid] = { variantGuids: variantGuid }
-      }
-      return acc
-    }, variantDetails)
-
-    return Object.values(variantDetails).reduce((acc, variantDetail) => {
-      const variants = variantDetail.variantGuids.split(',').map(variantGuid => savedVariantsByGuid[variantGuid])
+    return Object.values(variantTagNotes).reduce((acc, { variants, ...variantDetail }) => {
       const variantId = getVariantId(variants)
       variants[0].familyGuids.forEach((familyGuid) => {
         if (!(familyGuid in acc)) {

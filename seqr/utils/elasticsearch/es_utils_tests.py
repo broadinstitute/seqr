@@ -1096,8 +1096,9 @@ class EsUtilsTest(TestCase):
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.elasticsearch.es_search.logger')
     @urllib3_responses.activate
-    def test_invalid_get_es_variants(self):
+    def test_invalid_get_es_variants(self, mock_logger):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1166,14 +1167,14 @@ class EsUtilsTest(TestCase):
             123: {'running_time_in_nanos': 10},
             456: {'running_time_in_nanos': 10 ** 12},
         }})
-        urllib3_responses.add_json('/_tasks/_cancel?parent_task_id=456', {}, method=urllib3_responses.POST)
         with self.assertRaises(ConnectionTimeout):
             get_es_variants(results_model)
         self.assertListEqual(
             [call.request.url for call in urllib3_responses.calls],
-            ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents',
-             '/_tasks/_cancel?parent_task_id=456']
-        )
+            ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents'])
+        mock_logger.error.assert_called_with('ES Query Timeout: Found 1 long running searches', None, detail=[
+            {'task': {'running_time_in_nanos': 10 ** 12}, 'parent_task_id': '456'},
+        ])
 
         urllib3_responses.reset()
         urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [

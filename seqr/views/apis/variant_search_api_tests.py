@@ -304,8 +304,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
-            'projectsByGuid': {}, 'familiesByGuid': {}, 'individualsByGuid': {}, 'samplesByGuid': {},
-            'igvSamplesByGuid': {}, 'locusListsByGuid': {}, 'analysisGroupsByGuid': {}, 'variantTagsByGuid': mock.ANY,
+            'locusListsByGuid': {}, 'variantTagsByGuid': mock.ANY,
             'variantNotesByGuid': mock.ANY, 'variantFunctionalDataByGuid': {}, 'genesById': mock.ANY,
             'savedVariantsByGuid': mock.ANY, 'searchedVariants': VARIANTS, 'search': {
                 'search': SEARCH,
@@ -426,6 +425,9 @@ class VariantSearchAPITest(object):
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
+        # Test fetching multiple projects where a locus list is contained in a non-included project
+        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(id=2))
+
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'projectCategoryGuid': 'PC000003_test_category_name'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -482,10 +484,7 @@ class VariantSearchAPITest(object):
             {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allProjectFamilies': True, 'search': SEARCH}}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertDictEqual(response_json, {
-            'savedSearchesByGuid': mock.ANY, 'projectsByGuid': {}, 'familiesByGuid': {}, 'individualsByGuid': {},
-            'samplesByGuid': {}, 'igvSamplesByGuid': {}, 'locusListsByGuid': {}, 'analysisGroupsByGuid': {},
-        })
+        self.assertDictEqual(response_json, {'savedSearchesByGuid': mock.ANY})
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
 
 
@@ -631,7 +630,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 11)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
         self.mock_get_ws_acl.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
@@ -640,11 +639,11 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 27)
+        assert_no_list_ws_has_al(self, 21)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 5)
+        assert_no_list_ws_has_al(self, 4)
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
@@ -675,11 +674,11 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_search_context(self):
         super(MixSavedVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 20)
+        assert_no_list_ws_has_al(self, 14)
 
     def test_query_single_variant(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 4)
+        assert_no_list_ws_has_al(self, 3)
 
     def test_saved_search(self):
         super(MixSavedVariantSearchAPITest, self).test_saved_search()

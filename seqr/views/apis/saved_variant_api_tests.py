@@ -15,6 +15,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FI
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
 GENE_GUID = 'ENSG00000135953'
 VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
+NO_TAG_VARIANT_GUID = 'SV0059957_11562437_f019313_1'
 
 COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
@@ -167,6 +168,11 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {VARIANT_GUID})
+
+        response = self.client.get('{}{}'.format(url, NO_TAG_VARIANT_GUID))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {NO_TAG_VARIANT_GUID})
 
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
@@ -806,7 +812,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 7)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import mock
-
+from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
@@ -197,16 +197,26 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
 
+    @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_family_fields(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({FAMILY_ID_FIELD: 'new_id', 'description': 'Updated description'}))
+        body = {FAMILY_ID_FIELD: 'new_id', 'description': 'Updated description', 'analysis_status': 'C'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(response_json[FAMILY_GUID]['description'], 'Updated description')
         self.assertEqual(response_json[FAMILY_GUID][FAMILY_ID_FIELD], '1')
+        self.assertEqual(response_json[FAMILY_GUID]['analysisStatus'], 'C')
+        self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedDate'], '2020-01-01T00:00:00')
+
+        # Do not update audit fields if value does not change
+        self.login_manager()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_receive_families_table_handler(self, mock_pm_group):

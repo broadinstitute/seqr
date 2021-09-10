@@ -1031,8 +1031,11 @@ class EsSearch(object):
         try:
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:
-            canceled = self._delete_long_running_tasks()
-            logger.warning('ES Query Timeout. Canceled {} long running searches'.format(canceled), self._user)
+            tasks = self._get_long_running_tasks()
+            if tasks:
+                logger.error('ES Query Timeout: Found {} long running searches'.format(len(tasks)), self._user, detail=tasks)
+            else:
+                logger.warning('ES Query Timeout. No long running searches found', self._user)
             raise e
         except elasticsearch.exceptions.TransportError as e:
             if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
@@ -1041,14 +1044,13 @@ class EsSearch(object):
                     'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
             raise e
 
-    def _delete_long_running_tasks(self):
+    def _get_long_running_tasks(self):
         search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
-        canceled = 0
+        long_running = []
         for parent_id, task in search_tasks['tasks'].items():
             if task['running_time_in_nanos'] > 10 ** 11:
-                canceled += 1
-                self._client.tasks.cancel(parent_task_id=parent_id)
-        return canceled
+                long_running.append({'task': task, 'parent_task_id': parent_id})
+        return long_running
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
