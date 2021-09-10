@@ -154,7 +154,9 @@ def _get_gs_rest_api_headers(range_header, gs_path, user=None):
     headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
     if range_header:
         headers['Range'] = range_header
-    headers['x-goog-user-project'] = get_google_project(gs_path)
+    google_project = get_google_project(gs_path)
+    if google_project:
+        headers['x-goog-user-project'] = get_google_project(gs_path)
 
     return headers
 
