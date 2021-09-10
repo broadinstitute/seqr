@@ -386,7 +386,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     COLLABORATOR_NAMES = {"test_user_pure_anvil@test.com"}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     USERNAME = "test_local_user"
-    EMAIL_SETUP_MESSAGE = "Please make sure this account is registered in AnVIL by signing in to https://anvil.terra.bio/ and registering. Once you are registered in AnVIL, you will be able to access seqr at /"
+    EMAIL_SETUP_MESSAGE = "You can now log into seqr using your Google account:\n    /login/google-oauth2"
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
