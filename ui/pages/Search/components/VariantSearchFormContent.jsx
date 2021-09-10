@@ -2,11 +2,10 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Header, List, Form } from 'semantic-ui-react'
+import { Header, List, Form, Grid } from 'semantic-ui-react'
 
 import { getUser, getAnnotationSecondary } from 'redux/selectors'
-import { VerticalSpacer } from 'shared/components/Spacers'
-import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
@@ -31,6 +30,10 @@ import {
   NUM_ALT_OPTIONS,
 } from '../constants'
 import { getDatasetTypes } from '../selectors'
+
+const SavedSearchColumn = styled(Grid.Column)`
+  font-size: 0.75em;
+`
 
 const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
@@ -239,9 +242,17 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
 const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
-    <VerticalSpacer height={10} />
-    <InlineHeader content="Saved Search:" />
-    {configuredField(SAVED_SEARCH_FIELD)}
+    <Header size="huge" block>
+      <Grid padded="horizontally" relaxed>
+        <Grid.Row>
+          <Grid.Column width={8} verticalAlign="middle">Select a Saved Search (Recommended)</Grid.Column>
+          <SavedSearchColumn width={4} floated="right" textAlign="right">
+            {configuredField(SAVED_SEARCH_FIELD)}
+          </SavedSearchColumn>
+        </Grid.Row>
+      </Grid>
+    </Header>
+    <Header content="Customize Search:" />
     <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
   </div>
 ))
