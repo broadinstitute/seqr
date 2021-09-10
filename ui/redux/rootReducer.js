@@ -342,6 +342,11 @@ export const updateVariantTags = (values, tagType = 'tags') => {
   return updateSavedVariant(values, urlPath)
 }
 
+export const updateVariantClassification = (values) => {
+  const urlPath = `${values.variant.variantGuid}/update_classification`
+  return updateSavedVariant(values, urlPath)
+}
+
 export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
   return (dispatch) => {
     return new HttpRequestHelper(`/api/saved_variant/${variantGuid}/update_transcript/${transcriptId}`,

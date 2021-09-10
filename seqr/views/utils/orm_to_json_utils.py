@@ -426,6 +426,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False):
         if add_details:
             variant_json.update(saved_variant.saved_variant_json)
         variant_json['familyGuids'] = [saved_variant.family.guid]
+        variant_json['classification'] = saved_variant.classification
         return variant_json
 
     prefetch_related_objects(saved_variants, 'family')

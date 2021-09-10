@@ -1044,6 +1044,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
   { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
+  { header: 'classification', getVal: variant => (variant.classification ? `${variant.classification.score}, ${variant.classification.classification}, ${variant.classification.criteria}` : '') },
 ]
 
 export const ALL_INHERITANCE_FILTER = 'all'
@@ -1107,4 +1108,3 @@ export const USER_NAME_FIELDS = [
     inline: true,
   },
 ]
-

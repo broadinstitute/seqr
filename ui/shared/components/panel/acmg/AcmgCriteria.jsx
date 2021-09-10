@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
 import AcmgRuleSpecification from './AcmgRuleSpecification'
 import dropDownOptions from './AcmgCriteriaDropDownOptions'
 import categoryCriteriaScore from './AcmgCategoryCriteriaScore'
+import { updateVariantClassification } from '../../../../redux/rootReducer'
 
 export const GetNewScoreValue = (criteria) => {
   let newScore = 0
@@ -29,8 +31,8 @@ const getNewScore = (criteria) => {
   return 'Benign'
 }
 
-const AcmgCriteria = (props) => {
-  const { criteria, setCriteria, setActive } = props
+const AcmgCriteria = React.memo((props) => {
+  const { criteria, setCriteria, setActive, variant } = props
   const { classification, setClassification } = props
   const [formWarning, setFormWarning] = useState('')
 
@@ -43,7 +45,7 @@ const AcmgCriteria = (props) => {
     setClassification(getNewScore(criteria))
   }
 
-  const addOrRemoveCriteria = (event, data) => {
+  const addOrRemoveCriteria = (_, data) => {
     const values = data.value.split('_')
 
     const value = `${values[1]}_${values[2]}`
@@ -74,6 +76,12 @@ const AcmgCriteria = (props) => {
     } else {
       setFormWarning(false)
       setActive(false)
+      variant.classification = {
+        score: GetNewScoreValue(criteria),
+        classification,
+        criteria,
+      }
+      props.dispatchUpdateVariantClassification()
     }
   }
 
@@ -1500,7 +1508,7 @@ const AcmgCriteria = (props) => {
       <AcmgRuleSpecification />
     </div>
   )
-}
+})
 
 AcmgCriteria.propTypes = {
   criteria: PropTypes.array.isRequired,
@@ -1508,6 +1516,16 @@ AcmgCriteria.propTypes = {
   classification: PropTypes.string.isRequired,
   setClassification: PropTypes.func.isRequired,
   setActive: PropTypes.func.isRequired,
+  variant: PropTypes.object.isRequired,
+  dispatchUpdateVariantClassification: PropTypes.func,
 }
 
-export default AcmgCriteria
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    dispatchUpdateVariantClassification: (updates) => {
+      dispatch(updateVariantClassification({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
+    },
+  }
+}
+
+export default connect(null, mapDispatchToProps)(AcmgCriteria)

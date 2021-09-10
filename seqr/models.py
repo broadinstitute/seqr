@@ -618,6 +618,8 @@ class SavedVariant(ModelWithGUID):
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
 
+    classification = JSONField(null=True) # ACMG based classification
+
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos)
         return "%s:%s-%s" % (chrom, pos, self.family.guid)
@@ -899,4 +901,3 @@ class VariantSearchResults(ModelWithGUID):
 
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
-

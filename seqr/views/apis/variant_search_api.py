@@ -265,9 +265,6 @@ def export_variants_handler(request, search_hash):
     variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
-    acmg_criteria = request.GET.get('acmg_criteria')
-    acmg_criteria_json = json.loads(base64.b64decode(acmg_criteria).decode('utf-8'))
-
     json_saved_variants, variants_to_saved_variants = _get_saved_variants(variants, families)
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
@@ -296,12 +293,6 @@ def export_variants_handler(request, search_hash):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
     for i in range(max_samples_per_variant):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_SAMPLE_DATA]
-
-    header += ['acmg_score', 'acmg_criteria']
-    acmg_criteria_keys = list(acmg_criteria_json.keys())
-    for idx in range(len(rows)):
-        rows[idx].append(acmg_criteria_json[acmg_criteria_keys[idx]]["score"])
-        rows[idx].append(', '.join(acmg_criteria_json[acmg_criteria_keys[idx]]["criteria"]))
 
     file_format = request.GET.get('file_format', 'tsv')
 

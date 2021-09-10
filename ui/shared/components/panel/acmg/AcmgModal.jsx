@@ -18,7 +18,7 @@ const getButonBackgroundColor = (classification) => {
 }
 
 const AcmgModal = (props) => {
-  const { classification, setClassification, active, setActive, criteria, setCriteria } = props
+  const { classification, setClassification, active, setActive, criteria, setCriteria, variant } = props
   const buttonBackgroundColor = getButonBackgroundColor(classification)
 
   return (
@@ -39,6 +39,7 @@ const AcmgModal = (props) => {
               classification={classification}
               setClassification={setClassification}
               setActive={setActive}
+              variant={variant}
             />
           </Modal.Content>
         </Modal>
@@ -54,6 +55,7 @@ AcmgModal.propTypes = {
   setActive: PropTypes.func.isRequired,
   criteria: PropTypes.array.isRequired,
   setCriteria: PropTypes.func.isRequired,
+  variant: PropTypes.object.isRequired,
 }
 
 export default AcmgModal

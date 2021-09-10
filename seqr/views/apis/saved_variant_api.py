@@ -209,6 +209,22 @@ def update_variant_tags_handler(request, variant_guids):
         get_tag_create_data=_get_tag_type_create_data, get_tags_json=get_json_for_variant_tags,
         delete_variants_if_empty=True)
 
+@login_and_policies_required
+def update_variant_classification_handler(request, variant_guids):
+    return _update_variant_classification(request, variant_guids)
+
+def _update_variant_classification(request, variant_guids):
+    request_json = json.loads(request.body)
+    all_variant_guids = set(variant_guids.split(','))
+    saved_variant = SavedVariant.objects.filter(guid__in=all_variant_guids)
+
+    variant = request_json.get('variant', [])
+    saved_variant.update(classification=variant['classification'])
+
+    return create_json_response({
+        'savedVariantByGuid': variant_guids,
+        'classification': variant['classification']
+    })
 
 @login_and_policies_required
 def update_variant_functional_data_handler(request, variant_guids):
