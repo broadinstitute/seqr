@@ -33,8 +33,8 @@ class ReferenceDataCommandTestCase(TestCase):
         call_command(command_name)
 
         log_calls = [
-            mock.call('Deleting {} existing {} records'.format(existing_records, model_name)),
             mock.call('Parsing file'),
+            mock.call('Deleting {} existing {} records'.format(existing_records, model_name)),
             mock.call('Creating {} {} records'.format(created_records, model_name)),
             mock.call('Done'),
             mock.call(
@@ -48,5 +48,5 @@ class ReferenceDataCommandTestCase(TestCase):
         self.mock_logger.reset_mock()
         responses.remove(responses.GET, self.URL)
         call_command(command_name, self.tmp_file)
-        log_calls[0] = mock.call('Deleting {} existing {} records'.format(created_records, model_name))
+        log_calls[1] = mock.call('Deleting {} existing {} records'.format(created_records, model_name))
         self.mock_logger.info.assert_has_calls(log_calls)
