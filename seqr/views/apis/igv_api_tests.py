@@ -6,7 +6,8 @@ import subprocess
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy, GS_STORAGE_ACCESS_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
+    igv_genomes_proxy
+from seqr.utils.file_utils import GS_STORAGE_ACCESS_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -21,8 +22,8 @@ class IgvAPITest(AuthenticationTestCase):
 
     @responses.activate
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.apis.igv_api.safe_redis_get_json')
-    @mock.patch('seqr.views.apis.igv_api.safe_redis_set_json')
+    @mock.patch('seqr.utils.file_utils.safe_redis_get_json')
+    @mock.patch('seqr.utils.file_utils.safe_redis_set_json')
     def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_subprocess):
         mock_subprocess.return_value.stdout = iter([b'token1\n', b'token2\n'])
         mock_subprocess.return_value.wait.side_effect = [-1, 0, 0]

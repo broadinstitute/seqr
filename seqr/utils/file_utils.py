@@ -2,8 +2,12 @@ import os
 import subprocess
 
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 logger = SeqrLogger(__name__)
+
+EXPIRATION_TIME_IN_SECONDS = 3600 - 5
+GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 
 
 def run_command(command, user=None):
@@ -25,6 +29,26 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
 
 def is_google_bucket_file_path(file_path):
     return file_path.startswith("gs://")
+
+
+def get_gs_rest_api_headers(range_header, gs_path, user=None):
+    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+    if range_header:
+        headers['Range'] = range_header
+    if gs_path.startswith('gs://fc-secure'):
+        headers['x-goog-user-project'] = 'anvil-datastorage'
+
+    return headers
+
+
+def _get_access_token(user):
+    access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
+    if not access_token:
+        process = run_command('gcloud auth print-access-token', user=user)
+        if process.wait() == 0:
+            access_token = next(process.stdout).decode('utf-8').strip()
+            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
+    return access_token
 
 
 def does_file_exist(file_path, user=None):

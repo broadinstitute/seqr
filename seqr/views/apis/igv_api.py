@@ -6,17 +6,13 @@ import requests
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist, run_command, is_google_bucket_file_path
+from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, get_gs_rest_api_headers
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
-from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-
-EXPIRATION_TIME_IN_SECONDS = 3600 - 5
-GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 
 
 @pm_or_data_manager_required
@@ -138,12 +134,7 @@ def fetch_igv_track(request, project_guid, igv_track_path):
 
 
 def _stream_gs(request, gs_path):
-    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(request.user))}
-    range_header = request.META.get('HTTP_RANGE')
-    if range_header:
-        headers['Range'] = range_header
-    if gs_path.startswith('gs://fc-secure'):
-        headers['x-goog-user-project'] = 'anvil-datastorage'
+    headers = get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
 
     response = requests.get(
         'https://storage.googleapis.com/{}'.format(gs_path.replace('gs://', '', 1)),
@@ -152,16 +143,6 @@ def _stream_gs(request, gs_path):
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
-
-
-def _get_access_token(user):
-    access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
-    if not access_token:
-        process = run_command('gcloud auth print-access-token', user=user)
-        if process.wait() == 0:
-            access_token = next(process.stdout).decode('utf-8').strip()
-            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
-    return access_token
 
 
 def _stream_file(request, path):
