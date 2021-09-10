@@ -157,6 +157,31 @@ SORT_FIELDS = {
             }
         }
     }],
+    'in_omim': [{
+        '_script': {
+            'type': 'number',
+            'order': 'desc',
+            'script': {
+                'params': {
+                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
+                        phenotype_mim_number__isnull=False).only('gene__gene_id')]
+                },
+                'source': """
+                    int total = 0; 
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.omim_gene_ids.contains(doc['geneIds'][i])) {
+                            total += 1;
+                            if (doc.containsKey('mainTranscript_gene_id') && 
+                                doc['geneIds'][i] == doc['mainTranscript_gene_id'].value) {
+                                total += 1
+                            }
+                        }
+                    } 
+                    return total
+                """
+            }
+        }
+    }],
     'protein_consequence': [{
         '_script': {
             'type': 'number',
@@ -212,19 +237,6 @@ SORT_FIELDS.update({
     sort: [{sort_field: {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}]
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
-
-def _get_omim_sort_functions():
-    omim_gene_ids = [
-        omim.gene.gene_id for omim in Omim.objects.filter(phenotype_mim_number__isnull=False).only('gene__gene_id')
-    ]
-    return [
-        {'filter': {'terms': {field: omim_gene_ids}}, 'weight': 2}
-        for field in ['mainTranscript_gene_id', 'geneIds']
-    ]
-
-FUNCTION_SORTS = {
-    'in_omim': _get_omim_sort_functions,
-}
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
