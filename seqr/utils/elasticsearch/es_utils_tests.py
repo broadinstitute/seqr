@@ -2745,7 +2745,16 @@ class EsUtilsTest(TestCase):
             {
                 '_script': {
                     'type': 'number',
-                    'order': 'desc',
+                    'script': {
+                        'params': {
+                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
+                        },
+                        'source': mock.ANY,
+                    }
+                }
+            }, {
+                '_script': {
+                    'type': 'number',
                     'script': {
                         'params': {
                             'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
