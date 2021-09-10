@@ -32,9 +32,10 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         project (object): Django ORM model for the project to add families to
         individual_records (list): A list of JSON records representing individuals. See
             the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
+        user (object): current user model
 
     Return:
-        2-tuple: updated_families, updated_individuals containing Django ORM models
+        3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
 
     """
     updated_families = set()
