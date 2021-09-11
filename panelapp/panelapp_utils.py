@@ -28,19 +28,23 @@ def import_all_panels(user):
     all_panels = _get_all_panels(panels_url, [])
 
     for panel in all_panels:
-        with transaction.atomic():
-            panel_app_id = panel.get('id')
-            panel_genes_url = '{}/panels/{}/genes'.format(PANEL_APP_API_URL, panel_app_id)
-            pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel)
-            all_genes_for_panel = _get_all_genes_for_panel('{}/?page=1'.format(panel_genes_url), [])
-            panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
-                                 if _extract_ensembl_id_from_json(gene)}
-            raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
-            genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv})
-            if len(invalid_items) > 0:
-                logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
-                               .format(panel_app_id, invalid_items), user)
-            _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user)
+        panel_app_id = panel.get('id')
+        logger.info('Importing panel id {}'.format(panel_app_id), user)
+        try:
+            with transaction.atomic():
+                panel_genes_url = '{}/panels/{}/genes'.format(PANEL_APP_API_URL, panel_app_id)
+                pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel)
+                all_genes_for_panel = _get_all_genes_for_panel('{}/?page=1'.format(panel_genes_url), [])
+                panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
+                                     if _extract_ensembl_id_from_json(gene)}
+                raw_ensbl_38_gene_ids_csv = ','.join(panel_genes_by_id.keys())
+                genes_by_id, _, invalid_items = parse_locus_list_items({'rawItems': raw_ensbl_38_gene_ids_csv})
+                if len(invalid_items) > 0:
+                    logger.warning('Genes found in panel {} but not in reference data, ignoring genes {}'
+                                   .format(panel_app_id, invalid_items), user)
+                _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user)
+        except Exception as e:
+            logger.error('Error occurred when importing gene panel_app_id={}, error={}'.format(panel_app_id, e), user)
 
 
 def _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user):
