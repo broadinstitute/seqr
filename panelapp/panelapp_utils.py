@@ -78,7 +78,6 @@ def _create_pa_locus_list_gene(seqr_locus_list_gene, panel_gene_json):
         penetrance=panel_gene_json.get('penetrance') or None,
         mode_of_pathogenicity=panel_gene_json.get('mode_of_pathogenicity') or None,
         mode_of_inheritance=panel_gene_json.get('mode_of_inheritance') or None,
-        raw_data=panel_gene_json,
     )
 
     return result
@@ -111,7 +110,7 @@ def _get_all_genes_for_panel(panel_genes_url, all_results):
 
 def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
     panel_app_id = panel_json.get('id')
-    existing = _safe_get_locus_list(panel_app_id)
+    pa_locus_list = _safe_get_locus_list(panel_app_id)
 
     name = panel_json['name']
     disease_group = panel_json.get('disease_group') or None
@@ -132,19 +131,16 @@ def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
         'version': version,
         'version_created': version_created,
         'url': panelgenes_url,
-        'raw_data': panel_json,
     }
-    if existing:
-        update_model_from_json(existing.seqr_locus_list, new_seqrlocuslist_json, user)
-        update_model_from_json(existing, new_palocuslist_json, user)
-
-        return existing
+    if pa_locus_list:
+        update_model_from_json(pa_locus_list.seqr_locus_list, new_seqrlocuslist_json, user)
     else:
         seqr_locus_list = create_model_from_json(SeqrLocusList, new_seqrlocuslist_json, user)
         pa_locus_list = PaLocusList.objects.create(seqr_locus_list=seqr_locus_list, panel_app_id=panel_app_id)
-        update_model_from_json(pa_locus_list, new_palocuslist_json, user)
 
-        return pa_locus_list
+    update_model_from_json(pa_locus_list, new_palocuslist_json, user)
+
+    return pa_locus_list
 
 
 def _create_panel_description(panel_app_id, version, disease_group, disease_sub_group):
