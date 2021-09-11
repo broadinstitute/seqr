@@ -149,40 +149,7 @@
       "status": "public",
       "version": "0.2",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://panelapp.url/api/v1/panels/3281/genes",
-      "raw_data": {
-        "id": 3281,
-        "name": "Sarcoma",
-        "stats": {
-          "number_of_strs": 0,
-          "number_of_genes": 4,
-          "number_of_regions": 0
-        },
-        "types": [
-          {
-            "name": "Adult Genetics Unit, Royal Adelaide Hospital",
-            "slug": "adult-genetics-unit-royal-adelaide-hospital",
-            "description": "Adult Genetics Unit, Royal Adelaide Hospital"
-          },
-          {
-            "name": "SA Pathology",
-            "slug": "sa-pathology",
-            "description": "SA Pathology"
-          },
-          {
-            "name": "Cancer Germline",
-            "slug": "cancer-germline",
-            "description": "Germline cancer panel"
-          }
-        ],
-        "status": "public",
-        "hash_id": null,
-        "version": "0.2",
-        "disease_group": "Cancer susceptibility",
-        "version_created": "2020-08-10T07:04:06.291247Z",
-        "disease_sub_group": "",
-        "relevant_disorders": []
-      }
+      "url": "https://panelapp.url/api/v1/panels/3281/genes"
     }
   },
   {
@@ -193,23 +160,7 @@
       "biotype": null,
       "penetrance": "complete",
       "mode_of_pathogenicity": "Other",
-      "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal",
-      "raw_data": {
-        "tags": [],
-        "evidence": [
-          "Expert Review Green",
-          "SA Pathology"
-        ],
-        "penetrance": null,
-        "phenotypes": [],
-        "transcript": null,
-        "entity_name": "EXT1",
-        "entity_type": "gene",
-        "publications": [],
-        "confidence_level": "3",
-        "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
-        "mode_of_pathogenicity": ""
-      }
+      "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
     }
   },
   {
@@ -220,23 +171,7 @@
       "biotype": null,
       "penetrance": "complete",
       "mode_of_pathogenicity": "Other",
-      "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
-      "raw_data": {
-        "tags": [],
-        "evidence": [
-          "Expert Review Green",
-          "SA Pathology"
-        ],
-        "penetrance": null,
-        "phenotypes": [],
-        "transcript": null,
-        "entity_name": "EXT2",
-        "entity_type": "gene",
-        "publications": [],
-        "confidence_level": "3",
-        "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted",
-        "mode_of_pathogenicity": ""
-      }
+      "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted"
     }
   }
 ]

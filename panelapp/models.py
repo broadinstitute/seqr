@@ -20,7 +20,6 @@ class PaLocusList(models.Model):
     version = models.TextField(null=True, blank=True)
     version_created = models.DateTimeField(null=True, blank=True)
     url = models.TextField(max_length=2000, null=False, blank=False)
-    raw_data = JSONField(default=dict)
 
     class Meta:
         json_fields = ['panel_app_id']
@@ -47,7 +46,6 @@ class PaLocusListGene(models.Model):
     penetrance = models.TextField(null=True, blank=True)
     mode_of_pathogenicity = models.TextField(null=True, blank=True)
     mode_of_inheritance = models.TextField(null=True, blank=True)
-    raw_data = JSONField(default=dict)
 
     class Meta:
         json_fields = ['confidence_level', 'penetrance', 'mode_of_pathogenicity', 'mode_of_inheritance']

@@ -25,7 +25,6 @@ class Migration(migrations.Migration):
                 ('version', models.TextField(blank=True, null=True)),
                 ('version_created', models.DateTimeField(blank=True, null=True)),
                 ('url', models.TextField(max_length=2000)),
-                ('raw_data', models.JSONField(default=dict)),
             ],
         ),
         migrations.CreateModel(
@@ -41,7 +40,6 @@ class Migration(migrations.Migration):
                 ('penetrance', models.TextField(blank=True, null=True)),
                 ('mode_of_pathogenicity', models.TextField(blank=True, null=True)),
                 ('mode_of_inheritance', models.TextField(blank=True, null=True)),
-                ('raw_data', models.JSONField(default=dict)),
             ],
         ),
     ]
