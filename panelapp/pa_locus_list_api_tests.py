@@ -21,7 +21,7 @@ PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
 
 PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
-PA_GENE_FIELDS = {'confidenceLevel', 'penetrance', 'modeOfPathogenicity', 'modeOfInheritance'}
+PA_GENE_FIELDS = {'confidenceLevel'}
 
 
 def _get_json_from_file(filepath):

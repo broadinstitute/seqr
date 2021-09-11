@@ -48,4 +48,4 @@ class PaLocusListGene(models.Model):
     mode_of_inheritance = models.TextField(null=True, blank=True)
 
     class Meta:
-        json_fields = ['confidence_level', 'penetrance', 'mode_of_pathogenicity', 'mode_of_inheritance']
+        json_fields = ['confidence_level']
