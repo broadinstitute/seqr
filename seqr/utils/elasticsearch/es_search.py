@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -307,7 +307,6 @@ class EsSearch(object):
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
 
-            genotypes_q = None
             if all_sample_search:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count[index]
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
@@ -318,27 +317,26 @@ class EsSearch(object):
                             sample_ids += [
                                 sample_id for sample_id, sample in samples_by_id.items()
                                 if self._family_individual_affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
-                        genotypes_q = _any_affected_sample_filter(sample_ids)
+                        self._index_searches[index].append(self._search.filter(_any_affected_sample_filter(sample_ids)))
                         self._any_affected_sample_filters = True
                     else:
                         # If searching across all families in an index with no inheritance mode we do not need to explicitly
                         # filter on inheritance, as all variants have some inheritance for at least one family
                         self._no_sample_filters = True
                         no_filter_indices.add(index)
-                        continue
+                    continue
 
-            if not genotypes_q:
-                for family_guid in sorted(family_samples_by_id.keys()):
-                    family_samples_q = self._get_family_sample_query(
-                        family_guid, family_samples_by_id, quality_filters_by_family,
-                        index_fields, inheritance_mode, inheritance_filter
-                    )
-                    if not genotypes_q:
-                        genotypes_q = family_samples_q
-                    else:
-                        genotypes_q |= family_samples_q
+            genotypes_qs = [
+                self._get_family_sample_query(
+                    family_guid, family_samples_by_id, quality_filters_by_family,
+                    index_fields, inheritance_mode, inheritance_filter
+                ) for family_guid in sorted(family_samples_by_id.keys())
+            ]
+            if len(genotypes_qs) > MAX_SEARCH_CLAUSES:
+                self._index_searches[index].append(self._search.filter(_or_filters(genotypes_qs[:MAX_SEARCH_CLAUSES])))
+                genotypes_qs = genotypes_qs[MAX_SEARCH_CLAUSES:]
 
-            self._index_searches[index].append(self._search.filter(genotypes_q))
+            self._index_searches[index].append(self._search.filter(_or_filters(genotypes_qs)))
 
         if no_filter_indices and self._index_searches:
             for index in no_filter_indices:
@@ -1327,9 +1325,13 @@ def _pop_freq_filter(filter_key, value):
 
 
 def _build_or_filter(op, filters):
-    q = Q(op, **filters[0])
-    for filter_kwargs in filters[1:]:
-        q |= Q(op, **filter_kwargs)
+    return  _or_filters([Q(op, **filter_kwargs) for filter_kwargs in filters])
+
+
+def _or_filters(filter_qs):
+    q = filter_qs[0]
+    for filter_q in filter_qs[1:]:
+        q |= filter_q
     return q
 
 
