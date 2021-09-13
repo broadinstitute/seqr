@@ -559,7 +559,7 @@ class EsSearch(object):
                     'total': response_total, 'loaded': response_total}
             else:
                 new_results += response_hits
-                self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
+                self.previous_search_results['loaded_variant_counts'][index_name]['total'] += response_total
                 self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
 
         total_results = sum(
