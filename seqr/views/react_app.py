@@ -5,7 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
 from django.template import loader
 from django.http import HttpResponse
-from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL
+from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL, GA_TOKEN_ID
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import login_active_required
 from seqr.views.utils.terra_api_utils import google_auth_enabled
@@ -56,6 +56,13 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         '<script type="text/javascript">',
         '<script type="text/javascript" nonce="{}">'.format(request.csp_nonce)
     )
+
+    # initialize Google Analytics
+    if GA_TOKEN_ID:
+        html = html.replace(
+            'window.gaTrackingId=null',
+            'window.gaTrackingId="{}"'.format(GA_TOKEN_ID),
+        )
 
     if request.get_host() == 'localhost:3000':
         html = re.sub(r'static/app(-.*)js', 'app.js', html)

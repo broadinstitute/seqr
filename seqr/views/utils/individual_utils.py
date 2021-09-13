@@ -4,7 +4,6 @@ APIs for retrieving, updating, creating, and deleting Individual records
 from collections import defaultdict
 
 from seqr.models import Sample, IgvSample, Individual, Family
-from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
     create_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
@@ -79,12 +78,14 @@ def add_or_update_individuals_and_families(project, individual_records, user):
             if not individual:
                 individual = create_model_from_json(
                     Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
+                updated_families.add(family)
 
         record['family'] = family
         record.pop('familyId', None)
         if individual.family != family:
-            family = individual.family
             updated_families.add(family)
+            updated_families.add(individual.family)
+            family = individual.family
 
         previous_id = record.pop(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN, None)
         if previous_id:
@@ -108,17 +109,12 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
             updated_individuals.add(individual)
-            updated_families.add(family)
 
     for update in parent_updates:
         individual = update.pop('individual')
         is_updated = update_individual_from_json(individual, update, user=user)
         if is_updated:
             updated_individuals.add(individual)
-            updated_families.add(individual.family)
-
-    # update pedigree images
-    update_pedigree_images(updated_families, user, project_guid=project.guid)
 
     return list(updated_families), list(updated_individuals)
 
@@ -143,8 +139,6 @@ def delete_individuals(project, individual_guids, user):
     families = {individual.family for individual in individuals_to_delete}
 
     Individual.bulk_delete(user, queryset=individuals_to_delete)
-
-    update_pedigree_images(families, user)
 
     families_with_deleted_individuals = list(families)
 

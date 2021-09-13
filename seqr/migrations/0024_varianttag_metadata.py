@@ -4,10 +4,9 @@ from django.contrib.postgres.aggregates import StringAgg
 from django.db import migrations, models
 from django.db.models.functions import Concat
 from django.utils import timezone
-import logging
-from seqr.utils.logging_utils import log_model_update, log_model_bulk_update
+from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 
-logger = logging.getLogger(__name__)
+logger = SeqrLogger(__name__)
 
 
 def _update_tag_type(tag_type, json):
@@ -30,7 +29,7 @@ def merge_project_sanger_tags(apps, schema_editor):
     db_alias = schema_editor.connection.alias
     project_sanger_tag_types = VariantTagType.objects.using(db_alias).filter(name='Sanger in progress')
     if project_sanger_tag_types:
-        logger.info('Merging "Sanger in progress" tags from {} projects'.format(len(project_sanger_tag_types)))
+        logger.info('Merging "Sanger in progress" tags from {} projects'.format(len(project_sanger_tag_types)), user=None)
         main_tag_type = project_sanger_tag_types[0]
         _update_tag_type(main_tag_type, {'project': None})
 
@@ -65,7 +64,7 @@ def update_validation_tag_types(apps, schema_editor):
 
     sanger_tag_types = VariantTagType.objects.using(db_alias).filter(project__isnull=True, name__in=SANGER_TAGS.keys())
     if not sanger_tag_types:
-        logger.info('No sanger tags found, skipping validation tag migration')
+        logger.info('No sanger tags found, skipping validation tag migration', user=None)
         return
 
     tag_type_map = {}
@@ -123,7 +122,7 @@ def merge_duplicate_tags(apps, schema_editor):
     updated_tags = VariantTag.objects.using(db_alias).filter(variant_tag_type__name__in=SANGER_TAGS.values()).annotate(
         group_id=Concat('variant_tag_type__guid', StringAgg('saved_variants__guid', ',', ordering='saved_variants__guid')))
     if not updated_tags:
-        logger.info('No updated tags found, skipping validation tag merging')
+        logger.info('No updated tags found, skipping validation tag merging', user=None)
         return
 
     grouped_tags = defaultdict(list)
@@ -131,7 +130,7 @@ def merge_duplicate_tags(apps, schema_editor):
         grouped_tags[tag.group_id].append(tag)
     duplicate_tags = [tags for tags in grouped_tags.values() if len(tags) > 1]
 
-    logger.info('Merging {} sets of tags'.format(len(duplicate_tags)))
+    logger.info('Merging {} sets of tags'.format(len(duplicate_tags)), user=None)
     for tags in duplicate_tags:
         log_model_update(logger, tags[0], user=None, update_type='update', update_fields=['metadata'])
         tags[0].metadata = ', '.join([t.metadata for t in tags])
@@ -146,7 +145,7 @@ def split_duplicate_tags(apps, schema_editor):
     db_alias = schema_editor.connection.alias
 
     duplicate_tags = VariantTag.objects.using(db_alias).filter(metadata__contains=',')
-    logger.info('Splitting {} sets of tags'.format(len(duplicate_tags)))
+    logger.info('Splitting {} sets of tags'.format(len(duplicate_tags)), user=None)
     for tag in duplicate_tags:
         meta_names = tag.metadata.split(', ')
         tag.metadata = meta_names[0]

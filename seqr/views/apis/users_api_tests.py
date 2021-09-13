@@ -244,6 +244,11 @@ class UsersAPITest(object):
     def test_delete_project_collaborator(self):
         self._test_delete_user(self.USERNAME)
 
+    def _test_password_auth_disabled(self, url):
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+
     @mock.patch("seqr.views.apis.users_api.SEQR_TOS_VERSION")
     @mock.patch("seqr.views.apis.users_api.SEQR_PRIVACY_VERSION")
     def test_update_policies(self, mock_privacy, mock_tos):
@@ -319,7 +324,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ["users", "1kg_project"]
     COLLABORATOR_NAMES = {"test_user_manager", "test_user_collaborator"}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
-    EMAIL_SETUP_MESSAGE = "Please click this link to set up your account:\n    /users/set_password/{password_token}"
+    EMAIL_SETUP_MESSAGE = "Please click this link to set up your account:\n    /login/set_password/{password_token}"
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
@@ -381,7 +386,7 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
     COLLABORATOR_NAMES = {"test_user_pure_anvil@test.com"}
     COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
     USERNAME = "test_local_user"
-    EMAIL_SETUP_MESSAGE = "Please make sure this account is registered in AnVIL by signing in to https://anvil.terra.bio/ and registering. Once you are registered in AnVIL, you will be able to access seqr at /"
+    EMAIL_SETUP_MESSAGE = "You can now log into seqr using your Google account:\n    /login/google-oauth2"
 
     def test_get_all_collaborator_options(self):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()

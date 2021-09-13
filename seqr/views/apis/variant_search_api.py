@@ -7,8 +7,7 @@ from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
-    IgvSample, AnalysisGroup, ProjectCategory, VariantTagType, LocusList
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
@@ -18,21 +17,11 @@ from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
-from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_variant_functional_data_tag_types, \
-    get_json_for_projects, \
-    _get_json_for_families, \
-    _get_json_for_individuals, \
-    get_json_for_analysis_groups, \
-    get_json_for_samples, \
-    get_json_for_locus_lists, \
-    get_json_for_saved_variants_with_tags, \
-    get_json_for_saved_search,\
-    get_json_for_saved_searches, \
-    get_json_for_discovery_tags, \
-    _get_json_for_models
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
+    get_json_for_saved_searches, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required
+from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 
 
@@ -79,7 +68,8 @@ def query_variants_handler(request, search_hash):
         results_model.families.set(families)
 
         projects = Project.objects.filter(family__in=families).distinct()
-        response_context = _get_projects_details(projects, request.user)
+        if projects:
+            response_context = _get_projects_details(projects, request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request.user)
     response['search'] = _get_search_context(results_model)
@@ -106,7 +96,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
                 all_families.update(project_family['familyGuids'])
             families = Family.objects.filter(guid__in=all_families)
         elif _is_all_project_family_search(search_context):
-            omit_projects = [p.guid for p in ProjectCategory.objects.get(name='Demo').projects.only('guid').all()]
+            omit_projects = [p.guid for p in Project.objects.filter(projectcategory__name='Demo').only('guid')]
             project_guids = [project_guid for project_guid in get_project_guids_user_can_view(user) if project_guid not in omit_projects]
             families = Family.objects.filter(project__guid__in=project_guids)
         elif search_context.get('projectGuids'):
@@ -323,7 +313,7 @@ def search_context_handler(request):
     elif context.get('searchHash'):
         search_context = context.get('searchParams')
         if _is_all_project_family_search(search_context):
-            projects = []
+            return create_json_response(response)
         else:
             try:
                 results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
@@ -343,104 +333,12 @@ def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
         check_project_permissions(project, user)
 
-    prefetch_related_objects(projects, 'can_view_group')
-    project_models_by_guid = {project.guid: project for project in projects}
-    projects_json = get_json_for_projects(projects, user)
-
-    locus_lists = LocusList.objects.filter(projects__in=projects).prefetch_related('projects')
-
-    project_guid = projects[0].guid if len(projects) == 1 else None
-
-    functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
-    variant_tag_types_by_guid = {
-        vtt.guid: vtt for vtt in
-        VariantTagType.objects.filter(Q(project__in=projects) | Q(project__isnull=True)).prefetch_related('project')
-    }
-    variant_tag_types = _get_json_for_models(list(variant_tag_types_by_guid.values()))
-    for project_json in projects_json:
-        project = project_models_by_guid[project_json['projectGuid']]
-
-        project_json.update({
-            'locusListGuids': [locus_list.guid for locus_list in locus_lists if project in locus_list.projects.all()],
-            'variantTagTypes': [
-                vtt for vtt in variant_tag_types
-                if variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project is None or
-                   variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project.guid == project_json['projectGuid']],
-            'variantFunctionalTagTypes': functional_data_tag_types,
-        })
-
-    family_models = Family.objects.filter(project__in=projects)
-    families = _get_json_for_families(family_models, user, project_guid=project_guid, skip_nested=True)
-
-    individual_models = Individual.objects.filter(family__in=family_models)
-    individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True)
-
-    sample_models = Sample.objects.filter(individual__in=individual_models)
-    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
-
-    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True)
-
-    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
-    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
-
-    if not project_guid:
-        project_id_to_guid = {project.id: project.guid for project in projects}
-        family_id_to_guid = {family.id: family.guid for family in family_models}
-        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
-        family_guid_to_project_guid = {}
-        individual_guid_to_project_guid = {}
-        for family in families:
-            project_guid = project_id_to_guid[family.pop('projectId')]
-            family['projectGuid'] = project_guid
-            family_guid_to_project_guid[family['familyGuid']] = project_guid
-        for individual in individuals:
-            family_guid = family_id_to_guid[individual.pop('familyId')]
-            project_guid = family_guid_to_project_guid[family_guid]
-            individual['familyGuid'] = family_guid
-            individual['projectGuid'] = project_guid
-            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
-        for sample in samples:
-            individual_guid = individual_id_to_guid[sample.pop('individualId')]
-            sample['individualGuid'] = individual_guid
-            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-        for sample in igv_samples:
-            individual_guid = individual_id_to_guid[sample.pop('individualId')]
-            sample['individualGuid'] = individual_guid
-            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-        for group in analysis_groups:
-            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
-
-    individual_guids_by_family = defaultdict(list)
-    for individual in individuals:
-        individual_guids_by_family[individual['familyGuid']].append(individual['individualGuid'])
-    for family in families:
-         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
-
-    sample_guids_by_individual = defaultdict(list)
-    for sample in samples:
-        sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
-    igv_sample_guids_by_individual = defaultdict(list)
-    for sample in igv_samples:
-        igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
-    for individual in individuals:
-        individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
-        individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
-
-    response = {
-        'projectsByGuid': {p['projectGuid']: p for p in projects_json},
-        'familiesByGuid': {f['familyGuid']: f for f in families},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals},
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
-        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
-        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists, user)},
-        'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
-    }
+    response = get_projects_child_entities(projects, user)
     if project_category_guid:
         response['projectCategoriesByGuid'] = {
             project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
         }
+
     return response
 
 

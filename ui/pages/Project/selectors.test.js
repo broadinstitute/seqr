@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 import orderBy from 'lodash/orderBy'
-import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getFamiliesExportData, getIndividualsExportData,
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
   getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getAnalystOptions
 } from './selectors'
@@ -26,18 +26,21 @@ test('getVisibleFamiliesInSortedOrder', () => {
 })
 
 
-test('getFamiliesExportData', () => {
-  const exportFamilies = getFamiliesExportData(STATE_WITH_2_FAMILIES, {})
+test('getProjectExportUrls', () => {
+  const exportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, {})
+
+  expect(exportUrls.length).toEqual(3)
+  expect(exportUrls.map(({ name }) => name)).toEqual(['Families', 'Individuals', 'Samples'])
+
+  const exportFamilies = exportUrls[0].getRawData(STATE_WITH_2_FAMILIES)
 
   expect(exportFamilies.length).toEqual(2)
   expect(exportFamilies[0].familyGuid).toEqual('F011652_2')
   expect(exportFamilies[1].familyGuid).toEqual('F011652_1')
   expect(exportFamilies[0].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
-  expect(exportFamilies[1].firstSample).toEqual(null)
-})
+  expect(exportFamilies[1].firstSample).toEqual(undefined)
 
-test('getIndividualsExportData', () => {
-  const exportIndividuals = getIndividualsExportData(STATE_WITH_2_FAMILIES, {})
+  const exportIndividuals = exportUrls[1].getRawData(STATE_WITH_2_FAMILIES)
 
   expect(exportIndividuals.length).toEqual(6)
   expect(exportIndividuals.map(individual => individual.individualId)).toEqual([
@@ -70,9 +73,7 @@ test('getCaseReviewStatusCounts', () => {
 
 test('getProjectAnalysisGroupFamiliesByGuid', () => {
 
-  const families = getProjectAnalysisGroupFamiliesByGuid.resultFunc(
-    STATE_WITH_2_FAMILIES.familiesByGuid, STATE_WITH_2_FAMILIES.analysisGroupsByGuid, 'AG0000183_test_group',
-  )
+  const families = getProjectAnalysisGroupFamiliesByGuid(STATE_WITH_2_FAMILIES, { analysisGroupGuid: 'AG0000183_test_group' })
 
   expect(Object.keys(families)).toEqual(['F011652_1'])
   expect(families.F011652_1.familyId).toEqual('1')

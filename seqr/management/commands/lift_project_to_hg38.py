@@ -1,15 +1,13 @@
 import logging
 from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import prefetch_related_objects
 from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant, Individual
-from seqr.views.apis.dataset_api import _update_variant_samples
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples
+from seqr.models import Project, SavedVariant
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples, \
+    validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
@@ -36,39 +34,17 @@ class Command(BaseCommand):
 
         # Validate the provided index
         logger.info('Validating es index {}'.format(elasticsearch_index))
-        sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
-        validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
-        sample_type = index_metadata['sampleType']
+        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
+            elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
+        samples, included_families, _ = match_sample_ids_to_sample_records(
             project=project,
             user=None,
             sample_ids=sample_ids,
-            sample_type=sample_type,
             elasticsearch_index=elasticsearch_index,
-            sample_id_to_individual_id_mapping={},
+            sample_type=sample_type,
+            raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
         )
-
-        unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
-        if len(unmatched_samples) > 0:
-            raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
-
-        prefetch_related_objects(list(matched_sample_id_to_sample_record.values()), 'individual__family')
-        included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
-        missing_individuals = Individual.objects.filter(
-            family__in=included_families,
-            sample__is_active=True,
-        ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
-        missing_family_individuals = defaultdict(list)
-        for individual in missing_individuals:
-            missing_family_individuals[individual.family].append(individual)
-
-        if missing_family_individuals:
-            raise CommandError(
-                'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
-                               for family, missing_indivs in missing_family_individuals.items()])
-                ))
 
         # Get expected saved variants
         saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
@@ -82,7 +58,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
-        _update_variant_samples(matched_sample_id_to_sample_record, None, elasticsearch_index)
+        update_variant_samples(samples, None, elasticsearch_index)
         saved_variants = get_json_for_saved_variants(list(saved_variant_models_by_guid.values()), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
