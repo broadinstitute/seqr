@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Change family note fields into lists of notes (REQUIRES DB MIGRATION)
 
 ## 9/10/21
 * Use google storage API instead of gsutil for IGV 

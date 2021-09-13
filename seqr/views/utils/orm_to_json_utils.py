@@ -256,6 +256,14 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
+def get_json_for_family_notes(notes):
+    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
+
+
+def get_json_for_family_note(note):
+    return _get_json_for_model(note, get_json_for_models=get_json_for_family_notes)
+
+
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
                               family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation for the given list of Individuals.
@@ -675,12 +683,7 @@ def get_json_for_gene_notes(notes, user):
         dict: json object
     """
 
-    def _process_result(result, note):
-        result.update({
-            'editable': user == note.created_by,
-        })
-
-    return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
+    return _get_json_for_models(notes, user=user, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes_by_gene_id(gene_ids, user):

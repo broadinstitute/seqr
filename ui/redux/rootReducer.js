@@ -133,9 +133,14 @@ export const updateProject = (values) => {
 }
 
 export const updateFamily = (values) => {
+  const urlBase = `/api/family/${values.familyGuid}`
+  if (values.nestedField) {
+    return updateEntity(values, RECEIVE_DATA, `${urlBase}/${values.nestedField}`, `${values.nestedField}Guid`)
+  }
+
+  const familyField = values.familyField ? `_${values.familyField}` : ''
   return (dispatch) => {
-    const familyField = values.familyField ? `_${values.familyField}` : ''
-    return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
+    return new HttpRequestHelper(`${urlBase}/update${familyField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
       },
@@ -385,6 +390,7 @@ const rootReducer = combineReducers(Object.assign({
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
+  familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),

@@ -144,6 +144,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertSetEqual({'F000001_1', 'F000003_3'}, set(response_json['familiesByGuid']))
         self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, CHILD_UPDATE_GUID, "I000003_na19679"},
                             set(response_json['familiesByGuid']['F000001_1']['individualGuids']))
@@ -167,6 +168,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertDictEqual({}, response_json['familiesByGuid'])
         self.assertSetEqual({ID_UPDATE_GUID}, set(response_json['individualsByGuid']))
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
@@ -295,13 +297,18 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid'})
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys())
         self.assertNotEqual(new_family_guid, 'F000001_1')
         self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], '21')
-        self.assertEqual(response_json['familiesByGuid'][new_family_guid]['analysisNotes'], 'a new family')
+
+        self.assertEqual(len(response_json['familyNotesByGuid']), 1)
+        new_note = list(response_json['familyNotesByGuid'].values())[0]
+        self.assertEqual(new_note['note'], 'a new family')
+        self.assertEqual(new_note['noteType'], 'C')
+        self.assertEqual(new_note['createdBy'], 'Test Manager User')
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         self.assertTrue('I000001_na19675' in response_json['individualsByGuid'])

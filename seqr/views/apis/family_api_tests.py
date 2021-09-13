@@ -6,8 +6,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
-    update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, receive_families_table_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase
+    update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
+    receive_families_table_handler, create_family_note, update_family_note, delete_family_note
+from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -282,3 +283,55 @@ class FamilyAPITest(AuthenticationTestCase):
 
         response = self.client.post(url, {'f': SimpleUploadedFile('families.tsv', 'Family ID\n1'.encode('utf-8'))})
         self.assertEqual(response.status_code, 200)
+
+    def test_create_update_and_delete_family_note(self):
+        # create the note
+        create_note_url = reverse(create_family_note, args=[FAMILY_GUID])
+        self.check_collaborator_login(create_note_url)
+
+        response = self.client.post(create_note_url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Missing required field(s): note, noteType'})
+
+        response = self.client.post(create_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'new analysis note', 'noteType': 'A'}
+        ))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'familyNotesByGuid'})
+        self.assertEqual(len(response_json['familyNotesByGuid']), 1)
+        new_note_guid = list(response_json['familyNotesByGuid'].keys())[0]
+        new_note_response = list(response_json['familyNotesByGuid'].values())[0]
+        self.assertSetEqual(set(new_note_response.keys()), FAMILY_NOTE_FIELDS)
+        self.assertEqual(new_note_response['noteGuid'], new_note_guid)
+        self.assertEqual(new_note_response['note'], 'new analysis note')
+        self.assertEqual(new_note_response['noteType'], 'A')
+        self.assertEqual(new_note_response['createdBy'], 'Test Collaborator User')
+
+        # update the note
+        update_note_url = reverse(update_family_note, args=[FAMILY_GUID, new_note_guid])
+        response = self.client.post(update_note_url, content_type='application/json',  data=json.dumps(
+            {'note': 'updated note'}))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {'familyNotesByGuid': {new_note_guid: mock.ANY}})
+        updated_note_response = response_json['familyNotesByGuid'][new_note_guid]
+        self.assertEqual(updated_note_response['note'], 'updated note')
+
+        # test other users cannot modify the note
+        self.login_manager()
+        response = self.client.post(update_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'further updated note'}))
+        self.assertEqual(response.status_code, 403)
+
+        # delete the gene_note
+        delete_note_url = reverse(delete_family_note, args=[FAMILY_GUID, new_note_guid])
+
+        response = self.client.post(delete_note_url, content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
+        response = self.client.post(delete_note_url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'familyNotesByGuid': {new_note_guid: None}})
