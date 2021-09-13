@@ -548,6 +548,7 @@ class EsSearch(object):
     def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         new_results = []
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
+        loaded_counts = defaultdict(lambda: defaultdict(int))
         for response_hits, response_total, is_compound_het, index_name in parsed_responses:
             if not response_total:
                 continue
@@ -560,10 +561,14 @@ class EsSearch(object):
                     self.previous_search_results['loaded_variant_counts'][index_name] = {'total': 0, 'loaded': 0}
             else:
                 new_results += response_hits
-                loaded_count =  len(response_hits)
+                loaded_count = len(response_hits)
 
-            self.previous_search_results['loaded_variant_counts'][index_name]['total'] += response_total
-            self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += loaded_count
+            loaded_counts[index_name]['total'] += response_total
+            loaded_counts[index_name]['loaded'] += loaded_count
+
+        for index_name, counts in loaded_counts.items():
+            self.previous_search_results['loaded_variant_counts'][index_name]['total'] = counts['total']
+            self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += counts['loaded']
 
         total_results = sum(
             counts['total'] for counts in self.previous_search_results['loaded_variant_counts'].values())
