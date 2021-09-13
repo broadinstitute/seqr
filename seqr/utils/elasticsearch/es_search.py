@@ -957,9 +957,9 @@ class EsSearch(object):
 
                     def _update_existing_variant(existing_variant, variant):
                         existing_variant['genotypes'].update(variant['genotypes'])
-                        existing_variant['familyGuids'] = sorted(
-                            existing_variant['familyGuids'] + variant['familyGuids']
-                        )
+                        family_guids = set(existing_variant['familyGuids'])
+                        family_guids.update(variant['familyGuids'])
+                        existing_variant['familyGuids'] = sorted(family_guids)
                     _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
                     _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
