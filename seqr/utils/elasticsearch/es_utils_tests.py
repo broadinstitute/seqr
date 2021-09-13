@@ -1178,19 +1178,14 @@ class EsUtilsTest(TestCase):
 
         urllib3_responses.reset()
         urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [
-            {'error': {'type': 'search_phase_execution_exception'}}]}, method=urllib3_responses.POST)
-        with self.assertRaises(TransportError):
-            get_es_variants(results_model)
-
-        urllib3_responses.replace_json('/test_index_sv,test_index/_msearch', {'responses': [
             {'error': {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]}}
         ]}, method=urllib3_responses.POST)
 
-        with self.assertRaises(InvalidSearchException) as cm:
+        with self.assertRaises(TransportError) as cm:
             get_es_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
+        self.assertDictEqual(
+            cm.exception.info,
+            {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
 
         _set_cache('index_metadata__test_index,test_index_sv', None)
         urllib3_responses.add(

@@ -1049,17 +1049,6 @@ class EsSearch(object):
             else:
                 logger.warning('ES Query Timeout. No long running searches found', self._user)
             raise e
-        except elasticsearch.exceptions.TransportError as e:
-            error_root_cause = None
-            if isinstance(e.info, dict):
-                error_root_cause = e.info.get('root_cause')
-                if not error_root_cause and e.info.get('error') and isinstance(e.info['error'], dict):
-                    error_root_cause = e.info['error'].get('root_cause')
-            if error_root_cause and error_root_cause[0].get('type') == 'too_many_clauses':
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
-                raise InvalidSearchException(
-                    'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
-            raise e
 
     def _get_long_running_tasks(self):
         search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
