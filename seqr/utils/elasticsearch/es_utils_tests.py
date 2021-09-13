@@ -2022,6 +2022,141 @@ class EsUtilsTest(TestCase):
             }}
         ])
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
+    @urllib3_responses.activate
+    def test_many_family_inheitance_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'recessive'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+
+        self.assertEqual(len(variants), 2)
+        self.assertEqual(total_results, 9)
+
+        # TODO fix otherSample dedup
+        PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
+        for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
+            PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+        self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
+        self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
+
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [PARSED_MULTI_SAMPLE_VARIANT],
+            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'duplicate_doc_count': 3,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2},
+                                      INDEX_NAME: {'loaded': 4, 'total': 10}},
+            'total_results': 9,
+        })
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                }},
+                            ]
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [{'term': {'samples_num_alt_1': 'NA20870'}}],
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }},
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_1': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'match': {'contig': 'X'}},
+                                                     {'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }}
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {'must': [
+                                            {'match': {'contig': 'X'}},
+                                            {'term': {'samples_num_alt_2': 'NA20870'}}
+                                        ]}},
+                                        {'term': {'samples_num_alt_2': 'NA20870'}},
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
+        ])
+
     @urllib3_responses.activate
     def test_multi_project_get_es_variants(self):
         setup_responses()
