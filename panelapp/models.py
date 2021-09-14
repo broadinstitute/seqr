@@ -52,7 +52,6 @@ class PaLocusListGene(models.Model):
     mode_of_inheritance = models.TextField(null=True, blank=True)
 
     class Meta:
-
         """Fields included in JSON in API calls."""
 
         json_fields = ['confidence_level']
