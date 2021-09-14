@@ -163,7 +163,8 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
   links.unshift(
     <Popup
-      trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
+      key="seqr"
+      trigger={<SearchResultsLink buttonText="seqr" {...seqrLinkProps} />}
       content="Search for this variant across all your seqr projects"
       size="tiny"
     />,

@@ -79,9 +79,12 @@ const BUTTON_PROPS = {
   [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
 }
 
-const TRACK_TYPE_OPTIONS = [
+const DNA_TRACK_TYPE_OPTIONS = [
   { value: ALIGNMENT_TYPE, text: 'Alignment', description: 'BAMs/CRAMs' },
   { value: GCNV_TYPE, text: 'gCNV' },
+]
+
+const RNA_TRACK_TYPE_OPTIONS = [
   { value: JUNCTION_TYPE, text: 'Splice Junctions' },
   { value: COVERAGE_TYPE, text: 'Coverage', description: 'RNASeq coverage' },
 ]
@@ -151,6 +154,251 @@ const REFERENCE_TRACKS = [
     order: 1001,
   },
 ]
+
+const GTEX_TRACKS = [
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.junctions.bed.gz',
+      }],
+    description: 'All splice junctions from all 803 GTEx v3 muscle samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Muscle',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.junctions.bed.gz',
+      }],
+    description: 'All splice junctions from all 755 GTEx v3 blood samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Blood',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.junctions.bed.gz',
+      },
+    ],
+    description: 'All splice junctions from all 504 GTEx v3 fibroblast samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Fibs',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.junctions.bed.gz',
+      },
+    ],
+    description: 'All splice junctions from all 174 GTEx v3 lymphocyte samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Lymph',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.junctions.bed.gz',
+      },
+    ],
+    description: 'All splice junctions from all 255 GTEx v3 cortex samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Brain: Cortex',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.junctions.bed.gz',
+      },
+    ],
+    description: 'All splice junctions from all 209 GTEx v3 frontal cortex samples. The junction-spanning read counts and read coverage are summed across all samples.',
+    text: 'GTEx Brain: Front. Cortex',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 803 GTEx v3 muscle samples. The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n\n  average_unique_reads_per_muscle_sample = (total_unqiue_reads_in_all_muscle_samples / number_of_muscle_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_muscle_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_muscle_samples',
+    text: 'Norm. GTEx Muscle',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 755 GTEx v3 blood samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_blood_sample = (total_unqiue_reads_in_all_blood_samples / number_of_blood_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_blood_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_blood_samples',
+    text: 'Norm. GTEx Blood',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 504 GTEx v3 fibroblast samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_fibs_sample = (total_unqiue_reads_in_all_fibs_samples / number_of_fibs_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_fibs_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_fibs_samples',
+    text: 'Norm. GTEx Fibs',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 174 GTEx v3 lymphocyte samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_lymph_sample = (total_unqiue_reads_in_all_lymph_samples / number_of_lymph_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_lymph_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_lymph_samples',
+    text: 'Norm. GTEx Lymph',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 255 GTEx v3 brain cortex samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below).\n Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_cortex_sample = (total_unqiue_reads_in_all_cortex_samples / number_of_cortex_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_cortex_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_cortex_samples',
+    text: 'Norm. GTEx Brain: Cortex',
+  },
+  {
+    data: [
+      {
+        type: 'coverage',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.bigWig',
+      },
+      {
+        type: 'junctions',
+        url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.normalized.junctions.bed.gz',
+      },
+    ],
+    description: 'Highly expressed junctions from all 209 GTEx v3 brain frontal cortex samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below).\n Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_cortex_sample = (total_unqiue_reads_in_all_cortex_samples / number_of_cortex_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_cortex_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_cortex_samples',
+    text: 'Norm. GTEx Brain: Front. Cortex',
+  },
+]
+
+const getRefTrackOptions = tracks => tracks.map(({ text, description }) => ({ value: text, text, description }))
+
+const GTEX_TRACK_OPTIONS = getRefTrackOptions(GTEX_TRACKS)
+
+const MAPPABILITY_TRACKS = [
+  {
+    data: [{
+      type: 'coverage',
+      url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k36_m2.bw',
+    }],
+    text: '36-mer mappability',
+    description: 'Mappability of 36-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
+  },
+  {
+    data: [{
+      type: 'coverage',
+      url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k50_m2.bw',
+    }],
+    text: '50-mer mappability',
+    description: 'Mappability of 50-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
+  },
+  {
+    data: [{
+      type: 'coverage',
+      url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k75_m2.bw',
+    }],
+    text: '75-mer mappability',
+    description: 'Mappability of 75-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
+  },
+  {
+    data: [{
+      type: 'coverage',
+      url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k100_m2.bw',
+    }],
+    text: '100-mer mappability',
+    description: 'Mappability of 100-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
+  },
+  {
+    data: [{
+      type: 'gtf',
+      url: 'https://storage.googleapis.com/tgg-viewer/ref/GRCh38/segdups/segdups.gtf.gz',
+    }],
+    text: 'SegDups >1000 bases',
+    description: 'Duplications of >1000 Bases of Non-RepeatMasked Sequence downloaded from UCSC',
+  },
+]
+
+const MAPPABILITY_TRACK_OPTIONS = getRefTrackOptions(MAPPABILITY_TRACKS)
+
+const parseTrackType = (type, url) => {
+  const track = { url }
+  if (type === 'coverage') {
+    track.type = 'wig'
+    track.format = 'bigWig'
+  } else if (type === 'junctions') {
+    track.type = 'spliceJunctions'
+    track.format = 'bed'
+  } else if (type === 'gtf') {
+    track.type = 'annotation'
+    track.format = 'gtf'
+  }
+  if (url.endsWith('.gz') || url.endsWith('.bgz')) {
+    track.indexURL = `${url}.tbi`
+  }
+  return track
+}
+
+const getRefTracks = (tracks, sampleTypes) => tracks.reduce((acc, { text, data }) => (sampleTypes.includes(text) ? [
+  ...acc,
+  data.length === 1 ? { name: text, ...parseTrackType(data[0].type, data[0].url) } : {
+    name: text,
+    type: 'merged',
+    tracks: data.map(track => (parseTrackType(track.type, track.url))),
+  },
+] : acc), [])
 
 const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   ...acc,
@@ -314,7 +562,7 @@ ReadButtons.propTypes = {
 }
 
 
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes }) => {
+const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, gtexRefs, mappabilityRefs }) => {
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
@@ -322,15 +570,18 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
   )
 
   const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)
+  const refTracks = getRefTracks(MAPPABILITY_TRACKS, mappabilityRefs).concat(getRefTracks(GTEX_TRACKS, gtexRefs))
 
   return (
-    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
+    <IGV tracks={tracks.concat(refTracks)} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
   )
 })
 
 IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.array,
+  gtexRefs: PropTypes.array,
+  mappabilityRefs: PropTypes.array,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -354,27 +605,41 @@ class FamilyReads extends React.PureComponent {
     super(props)
     this.state = {
       openFamily: null,
-      sampleTypes: [],
+      dnaSampleTypes: [],
+      rnaSampleTypes: [],
+      gtexReferences: [],
+      mappabilityRefs: [],
     }
   }
 
   showReads = familyGuid => sampleTypes => () => {
-    this.setState({
-      openFamily: familyGuid,
-      sampleTypes,
-    })
+    const isDnaType = DNA_TRACK_TYPE_OPTIONS.reduce((acc, { value }) => acc || sampleTypes.includes(value), false)
+    if (isDnaType) {
+      this.setState({
+        openFamily: familyGuid,
+        dnaSampleTypes: sampleTypes,
+      })
+    } else {
+      this.setState({
+        openFamily: familyGuid,
+        rnaSampleTypes: sampleTypes,
+      })
+    }
   }
 
   hideReads = () => {
     this.setState({
       openFamily: null,
-      sampleTypes: [],
+      dnaSampleTypes: [],
+      rnaSampleTypes: [],
+      gtexReferences: [],
+      mappabilityRefs: [],
     })
   }
 
-  updateSampleTypes = (sampleTypes) => {
+  updateSampleTypes = (key, sampleTypes) => {
     this.setState({
-      sampleTypes,
+      [key]: sampleTypes,
     })
   }
 
@@ -394,25 +659,53 @@ class FamilyReads extends React.PureComponent {
     />
 
     const igvSampleIndividuals = this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]
+    const trackOptions = trackTypeOptions => trackTypeOptions.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
+    const dnaTrackOptions = trackOptions(DNA_TRACK_TYPE_OPTIONS)
+    const rnaTrackOptions = trackOptions(RNA_TRACK_TYPE_OPTIONS)
     const reads = igvSampleIndividuals ?
       <Segment.Group horizontal>
-        {Object.keys(igvSampleIndividuals).length > 1 &&
-          <Segment>
+        <Segment>
+          { dnaTrackOptions &&
             <CheckboxGroup
-              groupLabel="Track Types"
-              value={this.state.sampleTypes}
-              options={TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])}
-              onChange={this.updateSampleTypes}
+              groupLabel="DNA Tracks"
+              value={this.state.dnaSampleTypes}
+              options={dnaTrackOptions}
+              onChange={sampleTypes => this.updateSampleTypes('dnaSampleTypes', sampleTypes)}
             />
-          </Segment>
-        }
+          }
+          { rnaTrackOptions &&
+            <div>
+              <CheckboxGroup
+                groupLabel="RNA Tracks"
+                value={this.state.rnaSampleTypes}
+                options={rnaTrackOptions}
+                onChange={sampleTypes => this.updateSampleTypes('rnaSampleTypes', sampleTypes)}
+              />
+              <b>Reference Tracks</b>
+              <CheckboxGroup
+                groupLabel="GTEx Tracks"
+                value={this.state.gtexReferences}
+                options={GTEX_TRACK_OPTIONS}
+                onChange={sampleTypes => this.updateSampleTypes('gtexReferences', sampleTypes)}
+              />
+              <CheckboxGroup
+                groupLabel="Mappability Tracks"
+                value={this.state.mappabilityRefs}
+                options={MAPPABILITY_TRACK_OPTIONS}
+                onChange={sampleTypes => this.updateSampleTypes('mappabilityRefs', sampleTypes)}
+              />
+            </div>
+          }
+        </Segment>
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
           <IgvPanel
             variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
-            sampleTypes={this.state.sampleTypes}
+            sampleTypes={this.state.dnaSampleTypes.concat(this.state.rnaSampleTypes)}
+            gtexRefs={this.state.gtexReferences}
+            mappabilityRefs={this.state.mappabilityRefs}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
           />
