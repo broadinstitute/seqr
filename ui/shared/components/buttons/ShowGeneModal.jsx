@@ -10,7 +10,6 @@ const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) =>
   <Modal
     trigger={
       <ButtonLink
-        padding="0.5em"
         {...linkProps}
       >
         {pagene?.confidenceLevel > 0 &&

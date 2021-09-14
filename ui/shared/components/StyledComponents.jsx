@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
-const BaseButtonLink = styled(({ color, padding, background, ...props }) => <Button {...props} />).attrs(
+const BaseButtonLink = styled(({ color, padding, ...props }) => <Button {...props} />).attrs(
   props => (props.as ? {} : { basic: true }),
 )`
   &.ui.button.basic {
@@ -11,7 +11,6 @@ const BaseButtonLink = styled(({ color, padding, background, ...props }) => <But
     border: none;
     padding: ${props => props.padding || 0};
     color: ${props => props.color || '#4183C4'} !important;
-    background: ${props => props.background || 'inherit'} !important;
     text-decoration: none;
     font-weight: ${props => props.fontWeight || 'inherit'};
     box-shadow: none !important;
@@ -19,8 +18,7 @@ const BaseButtonLink = styled(({ color, padding, background, ...props }) => <But
     
     &:hover, &:focus, &:active {
       color: #1e70bf !important;
-      background: ${props => props.background || 'transparent'} !important;
-      filter: contrast(0.5);
+      background: transparent !important;
     }
     
     &[class*="right labeled"].icon {
