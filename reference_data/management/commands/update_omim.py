@@ -91,14 +91,14 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     model_cls = Omim
     url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
-    def __init__(self, omim_key=None, cache_parsed_records=False, **kwargs):
+    def __init__(self, omim_key=None, skip_cache_parsed_records=False, **kwargs):
         """Init OMIM handler."""
         if not omim_key:
             raise CommandError("omim_key is required")
 
         self.url = self.url.format(omim_key=omim_key)
         self.omim_key = omim_key
-        self.cache_parsed_records = cache_parsed_records
+        self.cache_parsed_records = not skip_cache_parsed_records
         super(OmimReferenceDataHandler, self).__init__()
 
     @staticmethod
@@ -203,5 +203,5 @@ class Command(GeneCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
-        parser.add_argument('--cache-parsed-records', action='store_true', help='write the parsed records to google storage for reuse')
+        parser.add_argument('--skip-cache-parsed-records', action='store_true', help='write the parsed records to google storage for reuse')
         super(Command, self).add_arguments(parser)

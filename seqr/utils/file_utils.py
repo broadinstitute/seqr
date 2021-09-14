@@ -13,7 +13,8 @@ def run_command(command, user=None):
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
     #  Anvil buckets are requester-pays and we bill them to the anvil project
-    project_arg = '-u anvil-datastorage ' if gs_path.startswith('gs://fc-secure') else ''
+    google_project = get_google_project(gs_path)
+    project_arg = '-u {} '.format(google_project) if google_project else ''
     command = 'gsutil {project_arg}{command} {gs_path}'.format(
         project_arg=project_arg, command=command, gs_path=gs_path,
     )
@@ -25,6 +26,10 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
 
 def is_google_bucket_file_path(file_path):
     return file_path.startswith("gs://")
+
+
+def get_google_project(gs_path):
+    return 'anvil-datastorage' if gs_path.startswith('gs://fc-secure') else None
 
 
 def does_file_exist(file_path, user=None):

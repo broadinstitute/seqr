@@ -567,6 +567,7 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
     100,
+    variant.end && variant.end - variant.pos,
   )
 
   const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)

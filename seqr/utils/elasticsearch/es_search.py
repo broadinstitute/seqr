@@ -163,9 +163,15 @@ class EsSearch(object):
 
         # Add parameters to scripts
         if main_sort_dict and main_sort_dict.get('_script', {}).get('script', {}).get('params'):
+            called_params = None
             for key, val_func in self._sort[0]['_script']['script']['params'].items():
                 if callable(val_func):
                     self._sort[0]['_script']['script']['params'][key] = val_func()
+                    called_params = self._sort[0]['_script']['script']['params']
+            if called_params:
+                for sort_dict in self._sort[1:]:
+                    sort_dict['_script']['script']['params'] = called_params
+
 
         # Add unmapped_type
         if main_sort_dict and 'unmapped_type' in list(main_sort_dict.values())[0]:

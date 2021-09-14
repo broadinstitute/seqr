@@ -160,24 +160,25 @@ SORT_FIELDS = {
     'in_omim': [{
         '_script': {
             'type': 'number',
-            'order': 'desc',
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
                         phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
+                'source': "(!doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
+            }
+        }
+    }, {
+        '_script': {
+            'type': 'number',
+            'script': {
                 'source': """
-                    int total = 0; 
                     for (int i = 0; i < doc['geneIds'].length; ++i) {
                         if (params.omim_gene_ids.contains(doc['geneIds'][i])) {
-                            total += 1;
-                            if (doc.containsKey('mainTranscript_gene_id') && 
-                                doc['geneIds'][i] == doc['mainTranscript_gene_id'].value) {
-                                total += 1
-                            }
+                            return 0;
                         }
                     } 
-                    return total
+                    return 1
                 """
             }
         }

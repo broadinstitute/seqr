@@ -6,14 +6,14 @@ import requests
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist, run_command, is_google_bucket_file_path
+from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
-from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
 EXPIRATION_TIME_IN_SECONDS = 3600 - 5
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
@@ -85,6 +85,7 @@ SAMPLE_TYPE_MAP = [
     ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
 ]
 
+
 @pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
@@ -138,19 +139,26 @@ def fetch_igv_track(request, project_guid, igv_track_path):
 
 
 def _stream_gs(request, gs_path):
-    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(request.user))}
-    range_header = request.META.get('HTTP_RANGE')
-    if range_header:
-        headers['Range'] = range_header
+    headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
 
-    bucket_object = gs_path.replace('gs://', '', 1).split('/', 1)
     response = requests.get(
-        'https://{bucket}.storage.googleapis.com/{object}'.format(bucket=bucket_object[0], object=bucket_object[1]),
+        'https://storage.googleapis.com/{}'.format(gs_path.replace('gs://', '', 1)),
         headers=headers,
         stream=True)
 
     return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
                                  content_type='application/octet-stream')
+
+
+def _get_gs_rest_api_headers(range_header, gs_path, user=None):
+    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+    if range_header:
+        headers['Range'] = range_header
+    google_project = get_google_project(gs_path)
+    if google_project:
+        headers['x-goog-user-project'] = get_google_project(gs_path)
+
+    return headers
 
 
 def _get_access_token(user):

@@ -10,10 +10,11 @@ from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
     get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_family
-from seqr.models import Family, FamilyAnalysedBy, Individual
+from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
+from seqr.views.utils.orm_to_json_utils import _get_json_for_family, get_json_for_family_note
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
-    login_and_policies_required
+    login_and_policies_required, check_user_created_object_permissions
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -265,3 +266,29 @@ def receive_families_table_handler(request, project_guid):
         'warnings': [],
         'info': info,
     })
+
+@login_and_policies_required
+def create_family_note(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    check_project_permissions(family.project, request.user)
+
+    return create_note_handler(
+        request, FamilyNote, parent_fields={'family': family}, additional_note_fields=['noteType'],
+        get_response_json=lambda note: {'familyNotesByGuid': {note.guid: get_json_for_family_note(note)}},
+    )
+
+
+@login_and_policies_required
+def update_family_note(request, family_guid, note_guid):
+    return update_note_handler(
+        request, FamilyNote, family_guid, note_guid, parent_field='family__guid',
+        get_response_json=lambda note: {'familyNotesByGuid': {note_guid: get_json_for_family_note(note)}},
+    )
+
+
+@login_and_policies_required
+def delete_family_note(request, family_guid, note_guid):
+    return delete_note_handler(
+        request, FamilyNote, family_guid, note_guid, parent_field='family__guid',
+        get_response_json=lambda: {'familyNotesByGuid': {note_guid: None}},
+    )

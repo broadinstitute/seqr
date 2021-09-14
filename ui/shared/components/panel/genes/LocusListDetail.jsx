@@ -87,9 +87,9 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
       </Header>
       <Grid columns={8}>
         {items.length ?
-          items.map(({ display, gene }) =>
+          items.map(({ display, gene, pagene }) =>
             <Grid.Column key={display}>
-              {gene ? <ShowGeneModal gene={gene} /> : display}
+              {gene ? <ShowGeneModal gene={gene} pagene={pagene} /> : display}
             </Grid.Column>,
           ) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
         }

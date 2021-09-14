@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import DataLoader from 'shared/components/DataLoader'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
-import { Dropdown, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { Select, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { saveSearch, loadSavedSearches } from '../reducers'
 import {
   getSearchInput,
@@ -28,13 +28,6 @@ const FormButtonContainer = styled.div`
   position: absolute;
   right: 150px;
   bottom: 10px;
-`
-
-const ButtonDropdown = styled(Dropdown).attrs({ button: true, basic: true })`
-  .ui.basic.button.dropdown {
-    color: ${props => props.color} !important;
-    box-shadow: 0px 0px 0px 1px ${props => props.color} inset !important;
-  }
 `
 
 const SaveSearch = React.memo(({ search, savedSearch, onSubmit }) =>
@@ -72,9 +65,7 @@ export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(Sav
 
 const SavedSearches = React.memo(({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
-    <ButtonDropdown
-      color="black"
-      inline
+    <Select
       includeCategories
       loading={loading}
       placeholder="Select a Saved Search"

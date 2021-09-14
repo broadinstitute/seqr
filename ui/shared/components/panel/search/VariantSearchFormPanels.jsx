@@ -81,7 +81,7 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
 const ExpandCollapseCategoryContainer = styled.span`
   float: right;
   position: relative;
-  top: -1em;
+  top: -2em;
 `
 
 const JsonSelectPropsWithAll = (options, all) => ({
@@ -246,7 +246,7 @@ class VariantSearchFormPanels extends React.PureComponent {
           <b>| &nbsp;&nbsp;</b>
           <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
         </ExpandCollapseCategoryContainer>
-        <VerticalSpacer height={25} />
+        <VerticalSpacer height={10} />
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
             {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
