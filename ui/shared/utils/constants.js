@@ -1146,12 +1146,10 @@ export const INHERITANCE_FILTER_OPTIONS = [
   },
 ]
 
-export const VARIANT_ICON_COLORS = {
-  default: '#4183C4',
+const VARIANT_ICON_COLORS = {
   red: '#eaa8a8',
   amber: '#f5d55c',
   green: '#21a926',
-  lightBlue: '#f3f8fa',
 }
 
 export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
