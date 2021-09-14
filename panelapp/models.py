@@ -22,7 +22,6 @@ class PaLocusList(models.Model):
     url = models.TextField(max_length=2000, null=False, blank=False)
 
     class Meta:
-
         """Fields included in JSON in API calls."""
 
         json_fields = ['panel_app_id']
