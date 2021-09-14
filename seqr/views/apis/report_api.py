@@ -728,7 +728,7 @@ def discovery_sheet(request, project_guid):
     initial_row.update(DEFAULT_ROW)
 
     now = timezone.now()
-    for family in project.families:
+    for family in sorted(project.families, key=lambda family: family.id):
         samples = loaded_samples_by_family.get(family.guid)
         if not samples:
             errors.append("No data loaded for family: %s. Skipping..." % family)

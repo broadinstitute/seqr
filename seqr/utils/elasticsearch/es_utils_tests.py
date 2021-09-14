@@ -543,6 +543,11 @@ PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
+PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
+for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
+    PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
@@ -2036,12 +2041,6 @@ class EsUtilsTest(TestCase):
 
         self.assertEqual(len(variants), 2)
         self.assertEqual(total_results, 9)
-
-        # TODO fix otherSample dedup
-        PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
-        for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
-            PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
-
         self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
         self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
 
