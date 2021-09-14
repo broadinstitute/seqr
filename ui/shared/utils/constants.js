@@ -1163,19 +1163,28 @@ export const INHERITANCE_FILTER_OPTIONS = [
   },
 ]
 
-export const VARIANT_BACKGROUND_COLORS = {
-  red: '#eaa8a857',
-  amber: '#f5d55c57',
-  green: '#21a92624',
+export const VARIANT_ICON_COLORS = {
+  default: '#4183C4',
+  red: '#eaa8a8',
+  amber: '#f5d55c',
+  green: '#21a926',
   lightBlue: '#f3f8fa',
 }
 
+export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
+  0: 'No Panel App confidence level',
+  1: 'Red, lowest level of confidence; 1 of the 4 sources or from other sources.',
+  2: 'Amber, intermediate; a gene from 2 sources',
+  3: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
+  4: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
+}
+
 export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
-  0: 'None',
-  1: VARIANT_BACKGROUND_COLORS.red,
-  2: VARIANT_BACKGROUND_COLORS.amber,
-  3: VARIANT_BACKGROUND_COLORS.green,
-  4: VARIANT_BACKGROUND_COLORS.green,
+  0: 'none',
+  1: VARIANT_ICON_COLORS.red,
+  2: VARIANT_ICON_COLORS.amber,
+  3: VARIANT_ICON_COLORS.green,
+  4: VARIANT_ICON_COLORS.green,
 }
 
 // Users
