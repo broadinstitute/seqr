@@ -215,8 +215,12 @@ export const loadLocusLists = () => {
 
 export const loadLocusListItems = (locusListId) => {
   return (dispatch, getState) => {
+    if (!locusListId) {
+      return
+    }
     const locusList = getState().locusListsByGuid[locusListId]
-    if (locusListId && !(locusList && locusList.items)) {
+    const isLoaded = locusList && locusList.items && (!locusList.paLocusList || locusList.items.some(({ pagene }) => pagene))
+    if (!isLoaded) {
       dispatch({ type: REQUEST_GENE_LIST })
       new HttpRequestHelper(`/api/locus_lists/${locusListId}`,
         (responseJson) => {
