@@ -24,6 +24,7 @@ const noteAnnotation = note => note.createdBy && (
 )
 
 const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props }) => {
+  const nonEmptyInitialValues = initialValues || {}
   const addField =
     <TextFieldView
       {...props}
@@ -34,12 +35,12 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
       editLabel="Add Note"
       idField={idField}
       modalTitle={`Add ${modalTitle}`}
-      initialValues={initialValues}
+      initialValues={nonEmptyInitialValues}
     />
   return (
     <div>
       {fieldName && addField}
-      {(notes || (initialValues || {}).notes || []).map(note =>
+      {(notes || nonEmptyInitialValues.notes || []).map(note =>
         <div key={note.noteGuid}>
           <TextFieldView
             {...props}
