@@ -1,10 +1,10 @@
 from django.db import models
-from django.db.models import JSONField
 
 from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
 
 
 class PaLocusList(models.Model):
+
     """PanelApp extension of seqr.models.LocusList."""
 
     seqr_locus_list = models.OneToOneField(
@@ -26,6 +26,7 @@ class PaLocusList(models.Model):
 
 
 class PaLocusListGene(models.Model):
+
     """PanelApp extension of seqr.models.LocusListGene."""
 
     CONFIDENCE_LEVEL_CHOICES = [
