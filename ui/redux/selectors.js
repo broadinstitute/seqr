@@ -20,6 +20,7 @@ export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDa
 export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
+export const getPaGenesById = state => state.pagenesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getHpoTermsByParent = state => state.hpoTermsByParent
 export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
@@ -234,13 +235,26 @@ export const getFunctionalTagTypesTypesByProject = createSelector(
 const getLocusListsWithGenes = createSelector(
   getLocusListsByGuid,
   getGenesById,
-  (locusListsByGuid, genesById) =>
-    Object.entries(locusListsByGuid).reduce((acc, [locusListGuid, locusList]) => ({
-      ...acc,
-      [locusListGuid]: {
-        ...locusList,
-        items: locusList.items && locusList.items.map(item => ({ ...item, gene: genesById[item.geneId] })),
-      } }), {}),
+  getPaGenesById,
+  (locusListsByGuid, genesById, pagenesById) =>
+    Object.entries(locusListsByGuid).reduce(
+      (acc, [locusListGuid, locusList]) => ({
+        ...acc,
+        [locusListGuid]: {
+          ...locusList,
+          items:
+            locusList.items &&
+            locusList.items.map((item) => {
+              return {
+                ...item,
+                gene: genesById[item.geneId],
+                pagene: pagenesById[item.geneId],
+              }
+            }),
+        },
+      }),
+      {},
+    ),
 )
 
 export const getParsedLocusList = createSelector(
