@@ -5,7 +5,8 @@ from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusLi
 
 class PaLocusList(models.Model):
 
-    """PanelApp extension of seqr.models.LocusList."""
+    """PanelApp extension of seqr.models.LocusList.
+    """
 
     seqr_locus_list = models.OneToOneField(
         SeqrLocusList,
@@ -22,12 +23,17 @@ class PaLocusList(models.Model):
     url = models.TextField(max_length=2000, null=False, blank=False)
 
     class Meta:
+
+        """Fields included in JSON in API calls
+        """
+
         json_fields = ['panel_app_id']
 
 
 class PaLocusListGene(models.Model):
 
-    """PanelApp extension of seqr.models.LocusListGene."""
+    """PanelApp extension of seqr.models.LocusListGene.
+    """
 
     CONFIDENCE_LEVEL_CHOICES = [
         ('1', 'RED'),
@@ -49,4 +55,8 @@ class PaLocusListGene(models.Model):
     mode_of_inheritance = models.TextField(null=True, blank=True)
 
     class Meta:
+
+        """Fields included in JSON in API calls
+        """
+
         json_fields = ['confidence_level']
