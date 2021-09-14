@@ -7,12 +7,11 @@ from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusLi
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
-from settings import PANEL_APP_API_URL
 
 logger = SeqrLogger(__name__)
 
 
-def import_all_panels(user):
+def import_all_panels(user, panel_app_api_url):
     def _extract_ensembl_id_from_json(raw_gene_json):
         ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
         if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
@@ -23,7 +22,7 @@ def import_all_panels(user):
         else:
             return None
 
-    panels_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL)
+    panels_url = '{}/panels/?page=1'.format(panel_app_api_url)
 
     all_panels = _get_all_panels(panels_url, [])
 
@@ -32,7 +31,7 @@ def import_all_panels(user):
         logger.info('Importing panel id {}'.format(panel_app_id), user)
         try:
             with transaction.atomic():
-                panel_genes_url = '{}/panels/{}/genes'.format(PANEL_APP_API_URL, panel_app_id)
+                panel_genes_url = '{}/panels/{}/genes'.format(panel_app_api_url, panel_app_id)
                 pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel)
                 all_genes_for_panel = _get_all_genes_for_panel('{}/?page=1'.format(panel_genes_url), [])
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel

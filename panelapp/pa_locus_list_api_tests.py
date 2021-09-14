@@ -1,14 +1,13 @@
 import json
 
 import responses
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
 from django.urls.base import reverse
 
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
     delete_project_locus_lists
 from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS
-from settings import PANEL_APP_API_URL
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -23,6 +22,7 @@ PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 PA_GENE_FIELDS = {'confidenceLevel'}
 
+PANEL_APP_API_URL = 'https://test-panelapp.url/api'
 
 def _get_json_from_file(filepath):
     with open(filepath, 'r') as file:
@@ -140,8 +140,13 @@ class PaLocusListAPITest(AuthenticationTestCase):
         responses.add(responses.GET, genes_260_url, json=genes_260_json, status=200)
         responses.add(responses.GET, genes_3069_url, json=genes_3069_json, status=200)
 
+        # URl argument is required
+        with self.assertRaises(CommandError) as err:
+            call_command('import_all_panels')
+        self.assertEqual(str(err.exception), 'Error: the following arguments are required: panel_app_url')
+
         # when import_all_panels()
-        call_command('import_all_panels')
+        call_command('import_all_panels', PANEL_APP_API_URL)
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
@@ -161,7 +166,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000090861'})
 
         # and import is idempotent
-        call_command('import_all_panels')
+        call_command('import_all_panels', PANEL_APP_API_URL)
         self._assert_lists_imported()
 
     def _assert_lists_imported(self):
