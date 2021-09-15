@@ -46,6 +46,12 @@ def import_all_panels(user, panel_app_api_url):
             logger.error('Error occurred when importing gene panel_app_id={}, error={}'.format(panel_app_id, e), user)
 
 
+def delete_all_panels(user, panel_app_api_url):
+    with transaction.atomic():
+        to_delete_qs = SeqrLocusList.objects.filter(palocuslist__url__startswith=panel_app_api_url)
+        SeqrLocusList.bulk_delete(user, queryset=to_delete_qs)
+
+
 def _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user):
     seqr_locus_list = pa_locus_list.seqr_locus_list
     logger.info('Bulk updating genes for list {}'.format(seqr_locus_list), user)
@@ -113,7 +119,7 @@ def _get_all_genes_for_panel(panel_genes_url, all_results):
 
 def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
     panel_app_id = panel_json.get('id')
-    pa_locus_list = _safe_get_locus_list(panel_app_id)
+    pa_locus_list = _safe_get_locus_list(panelgenes_url)
 
     name = panel_json['name']
     disease_group = panel_json.get('disease_group') or None
@@ -153,7 +159,7 @@ def _create_panel_description(panel_app_id, version, disease_group, disease_sub_
         if disease_groups else 'PanelApp_{}_{}'.format(panel_app_id, version)
 
 
-def _safe_get_locus_list(panel_app_id):
-    result = PaLocusList.objects.filter(panel_app_id=panel_app_id)
+def _safe_get_locus_list(panelgenes_url):
+    result = PaLocusList.objects.filter(url=panelgenes_url)
 
     return result.first() if result else None

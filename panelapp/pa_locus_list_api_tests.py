@@ -13,7 +13,8 @@ PROJECT_GUID = 'R0001_1kg'
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PRIVATE_LOCUS_LIST_GUID = 'LL00005_retina_proteome'
-PA_LOCUS_LIST_GUID = 'LL01705_sarcoma'
+EXISTING_AU_PA_LOCUS_LIST_GUID = 'LL01705_sarcoma'
+EXISTING_UK_PA_LOCUS_LIST_GUID = 'LL02064_autosomal_recessive_pr'
 
 PA_LOCUS_LIST_FIELDS = {'paLocusList'}
 PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
@@ -22,7 +23,9 @@ PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 PA_GENE_FIELDS = {'confidenceLevel'}
 
-PANEL_APP_API_URL = 'https://test-panelapp.url/api'
+PANEL_APP_API_URL_AU = 'https://test-panelapp.url.au/api'
+PANEL_APP_API_URL_UK = 'https://test-panelapp.url.uk/api'
+
 
 def _get_json_from_file(filepath):
     with open(filepath, 'r') as file:
@@ -42,10 +45,11 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, PA_LOCUS_LIST_GUID})
+        self.assertSetEqual(set(locus_lists_dict.keys()),
+                            {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
         self.assertTrue(all('pagene' not in item for k, v in locus_lists_dict.items() for item in v['items']))
 
-        locus_list = locus_lists_dict[PA_LOCUS_LIST_GUID]
+        locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
         fields = {'numProjects'}
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
@@ -55,10 +59,11 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()),
-                            {LOCUS_LIST_GUID, PRIVATE_LOCUS_LIST_GUID, PA_LOCUS_LIST_GUID})
+                            {LOCUS_LIST_GUID, PRIVATE_LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID,
+                             EXISTING_UK_PA_LOCUS_LIST_GUID})
 
     def test_public_locus_list_info(self):
-        url = reverse(locus_list_info, args=[PA_LOCUS_LIST_GUID])
+        url = reverse(locus_list_info, args=[EXISTING_AU_PA_LOCUS_LIST_GUID])
         self.check_require_login(url)
 
         response = self.client.get(url)
@@ -66,10 +71,10 @@ class PaLocusListAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         locus_lists_dict = response_json['locusListsByGuid']
-        self.assertListEqual(list(locus_lists_dict.keys()), [PA_LOCUS_LIST_GUID])
+        self.assertListEqual(list(locus_lists_dict.keys()), [EXISTING_AU_PA_LOCUS_LIST_GUID])
         self.assertTrue(all('pagene' in item for k, v in locus_lists_dict.items() for item in v['items']))
 
-        locus_list = locus_lists_dict[PA_LOCUS_LIST_GUID]
+        locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
         self.assertSetEqual(set(locus_list.keys()), PA_LOCUS_LIST_DETAIL_FIELDS)
         self.assertSetEqual(
             {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
@@ -102,43 +107,49 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [PA_LOCUS_LIST_GUID]}))
+                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json()['locusListGuids']), {PA_LOCUS_LIST_GUID, existing_guid})
-        ll_projects = LocusList.objects.get(guid=PA_LOCUS_LIST_GUID).projects.all()
+        self.assertSetEqual(set(response.json()['locusListGuids']), {EXISTING_AU_PA_LOCUS_LIST_GUID, existing_guid})
+        ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
         self.assertEqual(ll_projects.count(), 2)
         self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
 
         # remove previously added locus list from project
         url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [PA_LOCUS_LIST_GUID]}))
+                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 403)
 
         self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [PA_LOCUS_LIST_GUID]}))
+                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
-        ll_projects = LocusList.objects.get(guid=PA_LOCUS_LIST_GUID).projects.all()
+        ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
         self.assertEqual(ll_projects.count(), 1)
         self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})
 
     @responses.activate
     def test_import_all_panels(self):
         # Given all PanelApp gene lists and associated genes
-        panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL)
-        panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL)
-        genes_260_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL, 260)
-        genes_3069_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL, 3069)
-        panels_p1_json = _get_json_from_file('panelapp/test_resources/panelapp_panels_p1.json')
-        panels_p2_json = _get_json_from_file('panelapp/test_resources/panelapp_panels_p2.json')
-        genes_260_json = _get_json_from_file('panelapp/test_resources/panel_260_genes.json')
-        genes_3069_json = _get_json_from_file('panelapp/test_resources/panel_3069_genes.json')
-        responses.add(responses.GET, panels_p1_url, json=panels_p1_json, status=200)
-        responses.add(responses.GET, panels_p2_url, json=panels_p2_json, status=200)
-        responses.add(responses.GET, genes_260_url, json=genes_260_json, status=200)
-        responses.add(responses.GET, genes_3069_url, json=genes_3069_json, status=200)
+        au_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_AU)
+        au_panels_p2_url = '{}/panels/?page=2'.format(PANEL_APP_API_URL_AU)
+        uk_panels_p1_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL_UK)
+        au_genes_260_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_AU, 260)
+        au_genes_3069_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_AU, 3069)
+        uk_genes_260_url = '{}/panels/{}/genes/?page=1'.format(PANEL_APP_API_URL_UK, 260)
+        au_panels_p1_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p1.json')
+        au_panels_p2_json = _get_json_from_file('panelapp/test_resources/au_panelapp_panels_p2.json')
+        uk_panels_p1_json = _get_json_from_file('panelapp/test_resources/uk_panelapp_panels_p1.json')
+        au_genes_260_json = _get_json_from_file('panelapp/test_resources/au_panel_260_genes.json')
+        au_genes_3069_json = _get_json_from_file('panelapp/test_resources/au_panel_3069_genes.json')
+        uk_genes_260_json = _get_json_from_file('panelapp/test_resources/uk_panel_260_genes.json')
+        responses.add(responses.GET, au_panels_p1_url, json=au_panels_p1_json, status=200)
+        responses.add(responses.GET, au_panels_p2_url, json=au_panels_p2_json, status=200)
+        responses.add(responses.GET, uk_panels_p1_url, json=uk_panels_p1_json, status=200)
+        responses.add(responses.GET, au_genes_260_url, json=au_genes_260_json, status=200)
+        responses.add(responses.GET, au_genes_3069_url, json=au_genes_3069_json, status=200)
+        responses.add(responses.GET, uk_genes_260_url, json=uk_genes_260_json, status=200)
 
         # URl argument is required
         with self.assertRaises(CommandError) as err:
@@ -146,27 +157,36 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertEqual(str(err.exception), 'Error: the following arguments are required: panel_app_url')
 
         # when import_all_panels()
-        call_command('import_all_panels', PANEL_APP_API_URL)
+        call_command('import_all_panels', PANEL_APP_API_URL_AU)
+        call_command('import_all_panels', PANEL_APP_API_URL_UK)
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
 
-        # and list 260 contains expected two genes
-        url260 = reverse(locus_list_info, args=['LL00004_hereditary_haemorrhagi'])
-        response = self.client.get(url260)
+        # and AU list 260 contains expected two genes
+        url_au260 = reverse(locus_list_info, args=['LL00005_hereditary_haemorrhagi'])
+        response = self.client.get(url_au260)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000106991', 'ENSG00000139567'})
 
         # and list 3069 contains only one gene because the other one was skipped during import
-        url3069 = reverse(locus_list_info, args=['LL00005_hereditary_neuropathy_'])
+        url3069 = reverse(locus_list_info, args=['LL00006_hereditary_neuropathy_'])
         response = self.client.get(url3069)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000090861'})
 
+        # and UK list 260 contains expected one gene
+        url_uk260 = reverse(locus_list_info, args=['LL00007_auditory_neuropathy_sp'])
+        response = self.client.get(url_uk260)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000139734'})
+
         # and import is idempotent
-        call_command('import_all_panels', PANEL_APP_API_URL)
+        call_command('import_all_panels', PANEL_APP_API_URL_AU)
+        call_command('import_all_panels', PANEL_APP_API_URL_UK)
         self._assert_lists_imported()
 
     def _assert_lists_imported(self):
@@ -178,5 +198,28 @@ class PaLocusListAPITest(AuthenticationTestCase):
 
         # both existing and new lists are present
         self.assertSetEqual(set(locus_lists_dict.keys()),
-                            {LOCUS_LIST_GUID, PA_LOCUS_LIST_GUID, 'LL00004_hereditary_haemorrhagi',
-                             'LL00005_hereditary_neuropathy_'})
+                            {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID,
+                             'LL00005_hereditary_haemorrhagi', 'LL00006_hereditary_neuropathy_',
+                             'LL00007_auditory_neuropathy_sp'})
+
+    def test_delete_all_panels(self):
+        # when delete all AU panels
+        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_AU)
+
+        locuslists_url = reverse(locus_lists)
+        self.login_base_user()
+
+        # then only non panelapp and UK panelapp gene lists remain
+        response = self.client.get(locuslists_url)
+        self.assertEqual(response.status_code, 200)
+        locus_lists_dict = response.json()['locusListsByGuid']
+        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
+
+        # when delete all UK panels
+        call_command('import_all_panels', '--delete', PANEL_APP_API_URL_UK)
+
+        # then only non panelapp gene lists remain
+        response = self.client.get(locuslists_url)
+        self.assertEqual(response.status_code, 200)
+        locus_lists_dict = response.json()['locusListsByGuid']
+        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
