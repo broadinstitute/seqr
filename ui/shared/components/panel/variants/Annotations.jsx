@@ -8,7 +8,7 @@ import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
@@ -279,7 +279,14 @@ const Annotations = React.memo(({ variant }) => {
         </Modal>
       }
       {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
-      {Number.isInteger(numExon) && <b>, {numExon} exons</b>}
+      {Number.isInteger(numExon) &&
+        <b>, {numExon} exons
+          <Popup
+            trigger={<HelpIcon />}
+            content="CNV size and exon number are estimated from exome data and should be confirmed by an alternative method"
+          />
+        </b>
+      }
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />
