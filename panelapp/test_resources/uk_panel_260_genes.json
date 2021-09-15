@@ -1,0 +1,87 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+      {
+        "gene_data": {
+          "alias": [
+            "DRF3",
+            "FLJ34705",
+            "AN",
+            "NSDAN"
+          ],
+          "biotype": "protein_coding",
+          "hgnc_id": "HGNC:15480",
+          "gene_name": "diaphanous related formin 3",
+          "omim_gene": [
+            "614567"
+          ],
+          "alias_name": null,
+          "gene_symbol": "DIAPH3",
+          "hgnc_symbol": "DIAPH3",
+          "hgnc_release": "2017-11-03T00:00:00",
+          "ensembl_genes": {
+            "GRch37": {
+              "82": {
+                "location": "13:60239717-60738121",
+                "ensembl_id": "ENSG00000139734"
+              }
+            },
+            "GRch38": {
+              "90": {
+                "location": "13:59665583-60163987",
+                "ensembl_id": "ENSG00000139734"
+              }
+            }
+          },
+          "hgnc_date_symbol_changed": "2001-05-02"
+        },
+        "entity_type": "gene",
+        "entity_name": "DIAPH3",
+        "confidence_level": "2",
+        "penetrance": "Complete",
+        "mode_of_pathogenicity": "",
+        "publications": [
+          "20624953",
+          "27658576"
+        ],
+        "evidence": [
+          "Expert Review Amber",
+          "Radboud University Medical Center, Nijmegen"
+        ],
+        "phenotypes": [
+          "Auditory neuropathy, autosomal dominant, 1, 609129"
+        ],
+        "mode_of_inheritance": "BOTH monoallelic and biallelic, autosomal or pseudoautosomal",
+        "tags": [],
+        "panel": {
+          "id": 260,
+          "hash_id": "55b20bdf22c1fc7dd6b9bbb7",
+          "name": "Auditory Neuropathy Spectrum Disorde",
+          "disease_group": "Hearing and ear disorders",
+          "disease_sub_group": "Non-syndromic hearing loss",
+          "status": "public",
+          "version": "1.8",
+          "version_created": "2019-02-17T23:29:21.469051Z",
+          "relevant_disorders": [
+            "Auditory Neuropathy Spectrum Disorder",
+            "Auditory Neuropathy Spectrum Disorde"
+          ],
+          "stats": {
+            "number_of_genes": 5,
+            "number_of_strs": 0,
+            "number_of_regions": 0
+          },
+          "types": [
+            {
+              "name": "Rare Disease 100K",
+              "slug": "rare-disease-100k",
+              "description": "Rare Disease 100K"
+            }
+          ]
+        },
+        "transcript": null
+      }
+  ]
+}
