@@ -1,5 +1,5 @@
 import json
-
+import mock
 import responses
 from django.core.management import call_command, CommandError
 from django.urls.base import reverse
@@ -15,6 +15,8 @@ LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PRIVATE_LOCUS_LIST_GUID = 'LL00005_retina_proteome'
 EXISTING_AU_PA_LOCUS_LIST_GUID = 'LL01705_sarcoma'
 EXISTING_UK_PA_LOCUS_LIST_GUID = 'LL02064_autosomal_recessive_pr'
+NEW_AU_PA_LOCUS_LIST_GUID = 'LL00006_hereditary_neuropathy_'
+NEW_UK_PA_LOCUS_LIST_GUID = 'LL00007_auditory_neuropathy_sp'
 
 PA_LOCUS_LIST_FIELDS = {'paLocusList'}
 PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
@@ -158,7 +160,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
 
         # when import_all_panels()
         call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK)
+        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
 
         # then lists from PanelApp are created
         self._assert_lists_imported()
@@ -186,7 +188,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
 
         # and import is idempotent
         call_command('import_all_panels', PANEL_APP_API_URL_AU)
-        call_command('import_all_panels', PANEL_APP_API_URL_UK)
+        call_command('import_all_panels', PANEL_APP_API_URL_UK, '--label', 'UK')
         self._assert_lists_imported()
 
     def _assert_lists_imported(self):
@@ -199,8 +201,23 @@ class PaLocusListAPITest(AuthenticationTestCase):
         # both existing and new lists are present
         self.assertSetEqual(set(locus_lists_dict.keys()),
                             {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID,
-                             'LL00005_hereditary_haemorrhagi', 'LL00006_hereditary_neuropathy_',
-                             'LL00007_auditory_neuropathy_sp'})
+                             'LL00005_hereditary_haemorrhagi', NEW_AU_PA_LOCUS_LIST_GUID, NEW_UK_PA_LOCUS_LIST_GUID})
+        self.assertDictEqual(locus_lists_dict[NEW_AU_PA_LOCUS_LIST_GUID], {
+            'locusListGuid': NEW_AU_PA_LOCUS_LIST_GUID,
+            'name': 'Hereditary Neuropathy_CMT - isolated',
+            'description': 'PanelApp_3069_0.199_Neurology and neurodevelopmental disorders',
+            'items': [{'geneId': 'ENSG00000090861'}], 'paLocusList': {'panelAppId': 3069},
+            'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
+            'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
+        })
+        self.assertDictEqual(locus_lists_dict[NEW_UK_PA_LOCUS_LIST_GUID], {
+            'locusListGuid': NEW_UK_PA_LOCUS_LIST_GUID,
+            'name': 'Auditory Neuropathy Spectrum Disorde',
+            'description': 'PanelApp_UK_260_1.8_Hearing and ear disorders;Non-syndromic hearing loss',
+            'items': [{'geneId': 'ENSG00000139734'}], 'paLocusList': {'panelAppId': 260},
+            'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
+            'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
+        })
 
     def test_delete_all_panels(self):
         # when delete all AU panels

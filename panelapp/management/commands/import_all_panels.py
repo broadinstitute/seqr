@@ -11,6 +11,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('panel_app_url', help='Panel App API URL')
+        parser.add_argument('--label', help='Optional label to add to the list description')
         parser.add_argument(
             '--delete',
             action='store_true',
@@ -24,6 +25,6 @@ class Command(BaseCommand):
             delete_all_panels(None, panel_app_url)
         else:
             logger.info('Starting import of all gene lists from Panel App [{}]'.format(panel_app_url))
-            import_all_panels(None, panel_app_url)
+            import_all_panels(None, panel_app_url, label=options['label'])
 
         logger.info('---Done---')
