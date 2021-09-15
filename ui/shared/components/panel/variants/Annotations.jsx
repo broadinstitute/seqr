@@ -233,7 +233,7 @@ const svSizeDisplay = (size) => {
     // dividing by 1 removes trailing 0s
     return `${((size) / 1000).toPrecision(3) / 1}kb`
   }
-  return `${(size / 1000000).toFixed(2) / 1}mb`
+  return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
 const Annotations = React.memo(({ variant }) => {
