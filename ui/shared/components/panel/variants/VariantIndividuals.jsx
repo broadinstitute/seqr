@@ -111,7 +111,7 @@ const svGenotype = (genotype, isHemiX) => {
   }
   return (
     <span>
-      {genotype.numAlt > 0 ? <b><i>X</i></b> : '-'}/{isHemiX || genotype.numAlt < 2 ? '-' : <b><i>X</i></b>}
+      {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
       {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
     </span>
   )
@@ -198,6 +198,10 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     warning = 'Potential UPD/ Hemizygosity'
   } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
     warning = 'Variant absent in parents'
+  }
+
+  if ((variant.svType === 'DUP' && genotype.cn < 2) || (variant.svType === 'DEL' && genotype.cn > 2)) {
+    warning = [warning, 'Copy Number does not match Call Type.'].join(warning ? '. ' : '')
   }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt

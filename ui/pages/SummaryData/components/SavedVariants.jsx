@@ -79,7 +79,7 @@ const BaseSavedVariants = React.memo(({ loadAllProjectSavedVariants, geneDetail,
     const hasUpdatedTagOrGene = tag !== newParams.tag || gene !== newParams.gene
 
     if (hasUpdatedTagOrGene) {
-      props.updateTable({ page: 1 })
+      props.updateTableField('page')(1)
     }
     if (isInitialLoad || hasUpdatedTagOrGene) {
       loadAllProjectSavedVariants(newParams)
@@ -123,16 +123,20 @@ const mapStateToProps = (state, ownProps) => ({
   geneDetail: getGenesById(state)[ownProps.match.params.gene],
 })
 
-const mapDispatchToProps = {
-  updateTable: updateAllProjectSavedVariantTable,
-  loadAllProjectSavedVariants: loadSavedVariants,
-}
+const mapDispatchToProps = dispatch => ({
+  updateTableField: field => (value) => {
+    dispatch(updateAllProjectSavedVariantTable({ [field]: value }))
+  },
+  loadAllProjectSavedVariants: (data) => {
+    dispatch(loadSavedVariants(data))
+  },
+})
 
 BaseSavedVariants.propTypes = {
   match: PropTypes.object,
   history: PropTypes.object,
   geneDetail: PropTypes.object,
-  updateTable: PropTypes.func,
+  updateTableField: PropTypes.func,
   loadAllProjectSavedVariants: PropTypes.func,
 }
 

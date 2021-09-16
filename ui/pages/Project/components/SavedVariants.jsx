@@ -115,7 +115,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
 
   const getUpdateTagUrl = (newTag) => {
     const isCategory = categoryOptions.includes(newTag)
-    props.updateTable({ categoryFilter: isCategory ? newTag : null })
+    props.updateTableField('categoryFilter')(isCategory ? newTag : null)
     return getSavedVariantsLinkPath({
       project,
       analysisGroup,
@@ -132,7 +132,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
 
     const familyGuids = newParams.familyGuid ? [newParams.familyGuid] : (analysisGroup || {}).familyGuids
 
-    props.updateTable({ page: 1 })
+    props.updateTableField('page')(1)
     if (isInitialLoad || hasUpdatedFamilies) {
       loadProjectSavedVariants({ familyGuids, ...newParams })
     }
@@ -202,7 +202,7 @@ BaseProjectSavedVariants.propTypes = {
   match: PropTypes.object,
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
-  updateTable: PropTypes.func,
+  updateTableField: PropTypes.func,
   loadProjectSavedVariants: PropTypes.func,
 }
 
@@ -211,10 +211,14 @@ const mapStateToProps = (state, ownProps) => ({
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
 })
 
-const mapDispatchToProps = {
-  updateTable: updateSavedVariantTable,
-  loadProjectSavedVariants: loadSavedVariants,
-}
+const mapDispatchToProps = dispatch => ({
+  updateTableField: field => (value) => {
+    dispatch(updateSavedVariantTable({ [field]: value }))
+  },
+  loadProjectSavedVariants: (data) => {
+    dispatch(loadSavedVariants(data))
+  },
+})
 
 const ProjectSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseProjectSavedVariants)
 

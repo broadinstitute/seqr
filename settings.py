@@ -67,13 +67,16 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src-elem']
-CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:')
-CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://storage.googleapis.com') # used by IGV
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'")
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
+CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
+CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
+CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
-IGV_CSS_HASH = "'sha256-D1ouVPg7bXVEm/f4h9NNmEBwWO5vkjlDOIHPeV3tFPg='"
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS_HASH)
+IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
+IGV_CSS2_HASH = "'sha256-m7BbAVh3TyZH136+WARZw8eulS+0pHbppq98KGFYbhA='"
+CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -182,6 +185,7 @@ LOGGING = {
 }
 
 TERRA_API_ROOT_URL = os.environ.get('TERRA_API_ROOT_URL')
+ANVIL_UI_URL = 'https://anvil.terra.bio/'
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
@@ -262,6 +266,7 @@ SEQR_PRIVACY_VERSION = float(os.environ.get('SEQR_PRIVACY_VERSION', 1.0))
 SEQR_TOS_VERSION = float(os.environ.get('SEQR_TOS_VERSION', 1.1))
 
 BASE_URL = os.environ.get("BASE_URL", "/")
+GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
@@ -270,6 +275,7 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
+POLICY_REQUIRED_URL = '/accept_policies'
 
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
@@ -322,6 +328,7 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
+SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL = 'anvil-data-loading'
 
 #########################################################
 #  Social auth specific settings

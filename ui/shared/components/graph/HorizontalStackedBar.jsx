@@ -21,10 +21,10 @@ const BarContainer = styled.div.attrs(props => ({
   text-align: center;
   border: 1px solid gray;`
 
-const BarSection = styled(({ to, ...props }) => React.createElement(to ? Link : 'div', { to, ...props }))`  
+const BarSection = styled(({ to, ...props }) => React.createElement(to ? Link : 'div', { to, ...props })).attrs(
+  props => ({ style: { width: `${props.percent}%` } }))`  
   display: inline-block;
   height: 100%;
-  width: ${props => props.percent}%;
   background-color: ${props => props.color};`
 
 const NoWrap = styled.span`

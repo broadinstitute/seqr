@@ -8,7 +8,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { VEP_GROUP_OTHER, VEP_GROUP_SV } from 'shared/utils/constants'
+import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -81,7 +81,7 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
 const ExpandCollapseCategoryContainer = styled.span`
   float: right;
   position: relative;
-  top: -1em;
+  top: -2em;
 `
 
 const JsonSelectPropsWithAll = (options, all) => ({
@@ -144,7 +144,7 @@ export const ANNOTATION_PANEL = {
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
 }
 
 export const FREQUENCY_PANEL = {
@@ -246,7 +246,7 @@ class VariantSearchFormPanels extends React.PureComponent {
           <b>| &nbsp;&nbsp;</b>
           <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
         </ExpandCollapseCategoryContainer>
-        <VerticalSpacer height={25} />
+        <VerticalSpacer height={10} />
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
             {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {

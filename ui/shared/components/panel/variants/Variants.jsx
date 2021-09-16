@@ -5,7 +5,7 @@ import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-re
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
-import FamilyReads from '../FamilyReads'
+import FamilyReads from '../family/FamilyReads'
 import FamilyVariantTags, { LoadedFamilyLabel, taggedByPopup } from './FamilyVariantTags'
 import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'

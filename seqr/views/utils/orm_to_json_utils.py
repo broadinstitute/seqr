@@ -5,13 +5,14 @@ Utility functions for converting Django ORM object to JSON
 import json
 import os
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, \
+    get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
@@ -36,16 +37,20 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         return []
 
     model_class = type(models[0])
-    fields = copy(model_class._meta.json_fields)
+    fields = set(model_class._meta.json_fields)
     if is_analyst is None:
         is_analyst = user and user_is_analyst(user)
     if is_analyst:
-        fields += getattr(model_class._meta, 'internal_json_fields', [])
+        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
     if additional_model_fields:
-        fields += additional_model_fields
+        fields.update(additional_model_fields)
+    audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
+    for audit_field in audit_fields:
+        fields.update(get_audit_field_names(audit_field))
 
-    if 'created_by' in fields:
-        prefetch_related_objects(models, 'created_by')
+    user_fields = [field for field in fields if field.endswith('last_modified_by') or field == 'created_by']
+    for field in user_fields:
+        prefetch_related_objects(models, field)
     for nested_field in nested_fields or []:
         if not nested_field.get('value'):
             prefetch_related_objects(models, '__'.join(nested_field['fields'][:-1]))
@@ -65,8 +70,10 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         if result.get('guid'):
             guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
             result[guid_key] = result.pop('guid')
-        if result.get('createdBy'):
-            result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
+        for field in user_fields:
+            result_field = _to_camel_case(field)
+            if result.get(result_field):
+                result[result_field] = result[result_field].get_full_name() or result[result_field].email
         if process_result:
             process_result(result, model)
         results.append(result)
@@ -266,15 +273,11 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if not individuals:
         return []
 
-    def _get_case_review_status_modified_by(modified_by):
-        return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
-
     def _process_result(result, individual):
         mother = result.pop('mother', None)
         father = result.pop('father', None)
 
         result.update({
-            'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'maternalGuid': mother.guid if mother else None,
             'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,
@@ -308,8 +311,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
-    if 'case_review_status_last_modified_by' in kwargs['additional_model_fields']:
-        prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')

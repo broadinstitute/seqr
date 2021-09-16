@@ -27,15 +27,16 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
     variant_guids = variant_guids.split(',') if variant_guids else None
 
-    if family_guids:
-        variant_query = SavedVariant.objects.filter(family__guid__in=family_guids)
-    else:
-        get_note_only = bool(request.GET.get('includeNoteVariants'))
-        variant_query = SavedVariant.objects.filter(family__project=project, varianttag__isnull=get_note_only).distinct()
+    variant_query = SavedVariant.objects.filter(family__project=project)
     if variant_guids:
         variant_query = variant_query.filter(guid__in=variant_guids)
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
+    elif family_guids:
+        variant_query = variant_query.filter(family__guid__in=family_guids)
+    else:
+        get_note_only = bool(request.GET.get('includeNoteVariants'))
+        variant_query = variant_query.filter(varianttag__isnull=get_note_only).distinct()
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
 

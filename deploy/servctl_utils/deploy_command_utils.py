@@ -5,8 +5,8 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment, get_disk_names
-from deploy.servctl_utils.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
+from deploy.servctl_utils.other_command_utils import get_disk_names
+from deploy.servctl_utils.kubectl_utils import is_pod_running, get_node_name, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
 from deploy.servctl_utils.yaml_settings_utils import process_jinja_template, load_settings
@@ -30,7 +30,6 @@ DEPLOYMENT_TARGETS = [
     "kibana",
     "redis",
     "seqr",
-    "kube-scan",
     "elasticsearch-snapshot-infra",
     "elasticsearch-snapshot-config",
 ]
@@ -50,7 +49,7 @@ SECRETS = {
     'postgres': ['{deploy_to}/password'],
     'seqr': [
         'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret'
+        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
     ],
 }
 
@@ -67,7 +66,7 @@ def deploy_init_cluster(settings):
     if not node_name:
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
-    set_environment(settings["DEPLOY_TO"])
+    run('deploy/kubectl_helpers/set_env.sh {}'.format(settings['DEPLOYMENT_TYPE']))
 
     create_namespace(settings)
 
@@ -260,8 +259,8 @@ def deploy_postgres(settings):
         '--root-password={}'.format(password),
         '--project={}'.format(settings['GCLOUD_PROJECT']),
         '--zone={}'.format(settings['GCLOUD_ZONE']),
-        '--availability-type=regional',
-        '--cpu=4', '--memory=26',
+        '--availability-type={}'.format(settings['CLOUDSQL_AVAILABILITY_TYPE']),
+        '--cpu=2', '--memory=4',
         '--assign-ip',
         '--backup',
         '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',
@@ -331,19 +330,6 @@ def deploy_seqr(settings):
     deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
 
 
-def redeploy_seqr(deployment_target):
-    print_separator('re-deploying seqr')
-
-    seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-    if not seqr_pod_name:
-        raise ValueError('No seqr pod found, unable to re-deploy')
-    sleep_until_pod_is_running('seqr', deployment_target=deployment_target)
-
-    run_in_pod(seqr_pod_name, 'git pull', verbose=True)
-    run_in_pod(seqr_pod_name, './manage.py migrate', verbose=True)
-    run_in_pod(seqr_pod_name, '/usr/local/bin/restart_server.sh')
-
-
 def deploy_kibana(settings):
     print_separator("kibana")
 
@@ -377,18 +363,6 @@ def deploy_pipeline_runner(settings):
     ])
 
 
-def deploy_kube_scan(settings):
-    print_separator("kube-scan")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl delete -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
-
-        if settings["ONLY_PUSH_TO_REGISTRY"]:
-            return
-
-    run("kubectl apply -f https://raw.githubusercontent.com/octarinesec/kube-scan/master/kube-scan.yaml")
-
-
 def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
@@ -404,7 +378,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         raise ValueError("components list is empty")
 
     if components and "init-cluster" not in components:
-        check_kubernetes_context(deployment_target)
+        run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
 
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
@@ -426,24 +400,6 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
                 f(settings)
             else:
                 raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
-
-def redeploy(deployment_target, components):
-    if not components:
-        raise ValueError("components list is empty")
-
-    check_kubernetes_context(deployment_target)
-
-    # call redeploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
-    for component in DEPLOYABLE_COMPONENTS:
-        if component in components:
-            # only deploy requested components
-            func_name = "redeploy_" + component.replace("-", "_")
-            f = globals().get(func_name)
-            if f is not None:
-                f(deployment_target)
-            else:
-                raise ValueError(
-                    "'redeploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
 
 
 def prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings):

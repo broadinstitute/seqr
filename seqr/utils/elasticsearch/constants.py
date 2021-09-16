@@ -82,6 +82,7 @@ POPULATIONS = {
     },
     'topmed': {
         'filter_AF': [],
+        'Het': None,
     },
     'g1k': {
         'filter_AF': ['g1k_POPMAX_AF'],
@@ -222,7 +223,7 @@ POPULATION_SORTS = {
                 'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
             }
         }
-    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', '1kg': 'g1k', 'callset_af': 'callset'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
 PREDICTOR_SORT_FIELDS = {
     'cadd': 'cadd_PHRED',
@@ -313,5 +314,5 @@ for pop_config in POPULATIONS.values():
     for pop_field in pop_config.values():
         if isinstance(pop_field, list):
             QUERY_FIELD_NAMES += pop_field
-        else:
+        elif pop_field is not None:
             QUERY_FIELD_NAMES.append(pop_field)

@@ -10,7 +10,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { getVisibleFamiliesInSortedOrder, getProjectDetailsIsLoading } from '../../selectors'
+import { getVisibleFamiliesInSortedOrder, getProjectDetailsIsLoading, getProjectExportUrls } from '../../selectors'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -144,6 +144,7 @@ FamilyTable.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
   loading: getProjectDetailsIsLoading(state),
+  exportUrls: getProjectExportUrls(state, ownProps),
 })
 
 export default withRouter(connect(mapStateToProps)(FamilyTable))

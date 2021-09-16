@@ -4,11 +4,11 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 
-import { FamilyLayout } from 'shared/components/panel/family'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
+import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
-import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
+import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 
 import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
@@ -79,7 +79,7 @@ export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetail
     compact
     offset={offset}
     fields={fields}
-    fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+    fieldDisplay={field => FAMILY_FIELD_NAME_LOOKUP[field.id]}
     rightContent={showVariantDetails ? 'Saved Variants' : null}
   />,
 )
@@ -93,7 +93,7 @@ TableHeaderDetail.propTypes = {
 
 const TableHeaderRow = React.memo((
   { visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
+    updateFamiliesTableField, showVariantDetails,
   }) =>
     <Table.Header fullWidth>
       <Table.Row>
@@ -107,14 +107,10 @@ const TableHeaderRow = React.memo((
           &nbsp; families
         </RegularFontHeaderCell>
         <OverflowHeaderCell width={16} textAlign="right">
-          <ReduxFormWrapper
-            onSubmit={dispatchUpdateFamiliesTable}
-            form={`edit${tableName || ''}FamiliesTable`}
+          <StateChangeForm
             initialValues={familiesTableState}
-            closeOnSuccess={false}
-            submitOnChange
-            inline
-            fields={tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS}
+            updateField={updateFamiliesTableField}
+            fields={(tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS)}
           />
         </OverflowHeaderCell>
       </Table.Row>
@@ -132,7 +128,7 @@ TableHeaderRow.propTypes = {
   visibleFamiliesCount: PropTypes.number.isRequired,
   totalFamiliesCount: PropTypes.number.isRequired,
   familiesTableState: PropTypes.object.isRequired,
-  updateFamiliesTable: PropTypes.func.isRequired,
+  updateFamiliesTableField: PropTypes.func.isRequired,
   fields: PropTypes.array,
   tableName: PropTypes.string,
   showVariantDetails: PropTypes.bool,
@@ -146,8 +142,8 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    updateFamiliesTable: (updates) => {
-      dispatch(updateFamiliesTable(updates, ownProps.tableName))
+    updateFamiliesTableField: field => (value) => {
+      dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
     },
   }
 }

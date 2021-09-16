@@ -179,79 +179,26 @@ class UsersAPITest(object):
     def test_set_password(self):
         username = 'test_new_user'
         user = User.objects.create_user(username)
-        password = user.password
         auth_user = auth.get_user(self.client)
         self.assertNotEqual(user, auth_user)
 
         set_password_url = reverse(set_password, args=[username])
-        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self._test_set_password(set_password_url, user.password)
 
-        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
-            {'userToken': 'invalid'}))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+    def _test_set_password(self, url, *args, **kwargs):
+        self._test_password_auth_disabled(url)
 
-        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
-            {'userToken': quote_plus(password)}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Password is required')
-
-        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({
-            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test', 'isSuperuser': True}))
-        self.assertEqual(response.status_code, 200)
-
-        user = User.objects.get(username='test_new_user')
-        self.assertEqual(user.first_name, 'Test')
-        self.assertFalse(user.password == password)
-        self.assertFalse(user.is_superuser)
-
-        auth_user = auth.get_user(self.client)
-        self.assertEqual(user, auth_user)
-
-    @mock.patch('django.contrib.auth.models.send_mail')
-    def test_forgot_password(self, mock_send_mail):
+    def test_forgot_password(self):
         url = reverse(forgot_password)
+        self._test_forgot_password(url)
 
-        # send invalid requests
+    def _test_forgot_password(self, url, *args, **kwargs):
+        self._test_password_auth_disabled(url)
+
+    def _test_password_auth_disabled(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Email is required')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_new_user@test.com'
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'No account found for this email')
-
-        # Send valid request
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@broadinstitute.org'
-        }))
-        self.assertEqual(response.status_code, 200)
-
-        expected_email_content = """
-        Hi there Test User--
-
-        Please click this link to reset your seqr password:
-        /users/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
-        """
-        mock_send_mail.assert_called_with(
-            'Reset your seqr password',
-            expected_email_content,
-            None,
-            ['test_user@broadinstitute.org'],
-            fail_silently=False,
-        )
-
-        # Test email failure
-        mock_send_mail.side_effect = AnymailError('Connection err')
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'email': 'test_user@broadinstitute.org'
-        }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Connection err')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
 
     @mock.patch('seqr.views.apis.users_api.SEQR_TOS_VERSION')
     @mock.patch('seqr.views.apis.users_api.SEQR_PRIVACY_VERSION')
@@ -308,7 +255,75 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
     LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
-    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /users/set_password/{password_token}'
+    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /login/set_password/{password_token}'
+
+    @mock.patch('django.contrib.auth.models.send_mail')
+    def _test_forgot_password(self, url, mock_send_mail): # pylint: disable=arguments-differ
+        # send invalid requests
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Email is required')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_new_user@test.com'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'No account found for this email')
+
+        # Send valid request
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_user@broadinstitute.org'
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        expected_email_content = """
+        Hi there Test User--
+
+        Please click this link to reset your seqr password:
+        /login/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
+        """
+        mock_send_mail.assert_called_with(
+            'Reset your seqr password',
+            expected_email_content,
+            None,
+            ['test_user@broadinstitute.org'],
+            fail_silently=False,
+        )
+
+        # Test email failure
+        mock_send_mail.side_effect = AnymailError('Connection err')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_user@broadinstitute.org'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Connection err')
+
+    def _test_set_password(self, set_password_url, password): # pylint: disable=arguments-differ
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
+            {'userToken': 'invalid'}))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
+            {'userToken': quote_plus(password)}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Password is required')
+
+        response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({
+            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test', 'isSuperuser': True}))
+        self.assertEqual(response.status_code, 200)
+
+        user = User.objects.get(username='test_new_user')
+        self.assertEqual(user.first_name, 'Test')
+        self.assertFalse(user.password == password)
+        self.assertFalse(user.is_superuser)
+
+        auth_user = auth.get_user(self.client)
+        self.assertEqual(user, auth_user)
 
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):

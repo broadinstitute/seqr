@@ -124,22 +124,6 @@ def wait_for_not_resource(resource_name, json_path, invalid_status, deployment_t
             resource_type=resource_type)
 
 
-def get_pod_name(pod_name_label, deployment_target=None, pod_number=0):
-    """Takes a pod name label (eg. "phenotips") and returns the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx").
-
-    If there are multiple pods with the given label, it returns the 1st one by default.
-
-    Args:
-          pod_name_label (string): the "name" label of the pod
-          deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
-          pod_number (int): if there are multiple pods with the given label, it returns this one of the pods.
-
-    Returns:
-        string: full name of the pod, or None if such a pod doesn't exist
-    """
-    return get_resource_name(pod_name_label, 'pod', deployment_target=deployment_target, pod_number=pod_number)
-
-
 def get_resource_name(name_label, resource_type, deployment_target=None, pod_number=0):
     """Takes a resource label (eg. "phenotips") and returns the full resource name (eg. "phenotips-cdd4d7dc9-vgmjx").
 
@@ -176,32 +160,3 @@ def get_node_name():
         errors_to_ignore=["array index out of bounds: index 0"],
         verbose=True,
     )
-
-
-def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, print_command=True, verbose=False, is_interactive=False):
-    """Execute an arbitrary linux command inside the given pod. Assumes there's only 1 instance with the given pod_name.
-
-    Args:
-        pod_name (str): either the pod's "name" label (eg. 'phenotips' or 'nginx'), or the full pod name (eg. "phenotips-cdd4d7dc9-vgmjx")
-        command (str): linux command to execute inside the pod
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
-        errors_to_ignore (list): if the command's return code isn't in ok_return_codes, but its
-            output contains one of the strings in this list, the bad return code will be ignored,
-            and this function will return None. Otherwise, it raises a RuntimeException.
-        print_command (bool):
-        verbose (bool):
-        is_interactive (bool): whether the command expects input from the user
-    """
-
-    full_pod_name = get_pod_name(pod_name, deployment_target=deployment_target)
-    if not full_pod_name:
-        # assume it's already a full pod name
-        full_pod_name = pod_name
-
-    it_arg = "-it" if is_interactive else ""
-    run("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(),
-        errors_to_ignore=errors_to_ignore,
-        print_command=print_command,
-        verbose=verbose,
-        is_interactive=is_interactive)
-

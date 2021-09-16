@@ -75,3 +75,9 @@ body {
 .ui.fullscreen.scrolling.modal {
   left: auto !important; /* csslint allow: important */
 }
+
+/* jquery UI dialogs should display over semantic UI modals. Used for pedigree editing */
+.ui-dialog.ui-widget {
+  z-index: 2000 !important; /* csslint allow: important */
+}
+

@@ -2,11 +2,10 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Header, List, Form } from 'semantic-ui-react'
+import { Header, List, Form, Grid } from 'semantic-ui-react'
 
 import { getUser, getAnnotationSecondary } from 'redux/selectors'
-import { VerticalSpacer } from 'shared/components/Spacers'
-import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
@@ -18,7 +17,7 @@ import {
   HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
 } from 'shared/components/panel/search/constants'
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
-import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV } from 'shared/utils/constants'
+import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -31,6 +30,10 @@ import {
   NUM_ALT_OPTIONS,
 } from '../constants'
 import { getDatasetTypes } from '../selectors'
+
+const SavedSearchColumn = styled(Grid.Column)`
+  font-size: 0.75em;
+`
 
 const BaseDetailLink = styled(ButtonLink)`
   &.ui.button.basic {
@@ -123,7 +126,7 @@ const ANNOTATION_PANEL_MAP = {
   ...ANNOTATION_PANEL,
   [DATASET_TYPE_SV_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV]], true),
+    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]], true),
   },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
@@ -171,7 +174,11 @@ SVFrequecyHeaderFilter.propTypes = {
 const QS_FILTER_FIELD = {
   name: 'min_qs',
   label: 'SV Quality Score',
-  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplications > 50; deletions > 100; homdel (CN=0) > 400',
+  labelHelp: (
+    <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
+      WGS: &gt; 10; <br />
+      WES: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
+    </span>),
   min: 0,
   max: 1000,
   step: 10,
@@ -235,9 +242,17 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
 const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
-    <VerticalSpacer height={10} />
-    <InlineHeader content="Saved Search:" />
-    {configuredField(SAVED_SEARCH_FIELD)}
+    <Header size="huge" block>
+      <Grid padded="horizontally" relaxed>
+        <Grid.Row>
+          <Grid.Column width={8} verticalAlign="middle">Select a Saved Search (Recommended)</Grid.Column>
+          <SavedSearchColumn width={4} floated="right" textAlign="right">
+            {configuredField(SAVED_SEARCH_FIELD)}
+          </SavedSearchColumn>
+        </Grid.Row>
+      </Grid>
+    </Header>
+    <Header content="Customize Search:" />
     <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
   </div>
 ))
