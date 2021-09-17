@@ -166,7 +166,7 @@ SORT_FIELDS = {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
                         phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
-                'source': "(!doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
+                'source': "(doc.containsKey('mainTranscript_gene_id') && !doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
             }
         }
     }, {
