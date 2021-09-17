@@ -387,7 +387,6 @@ const OPTIONAL_REFERENCE_TRACKS = [].concat(
   })),
 )
 
-
 const getRefTracks = sampleTypes => OPTIONAL_REFERENCE_TRACKS.reduce((acc, { text, ...fields }) =>
   (sampleTypes.includes(text) ? [...acc, { ...fields }] : acc), [])
 
@@ -707,8 +706,6 @@ class FamilyReads extends React.PureComponent {
             variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={this.state.sampleTypes}
-            gtexRefs={this.state.gtexReferences}
-            mappabilityRefs={this.state.mappabilityRefs}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
           />
