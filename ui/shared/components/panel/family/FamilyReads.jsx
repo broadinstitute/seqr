@@ -166,11 +166,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.junctions.bed.gz',
       }],
     description: 'All splice junctions from all 803 GTEx v3 muscle samples. The junction-spanning read counts and read coverage are summed across all samples.',
@@ -179,11 +179,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.junctions.bed.gz',
       }],
     description: 'All splice junctions from all 755 GTEx v3 blood samples. The junction-spanning read counts and read coverage are summed across all samples.',
@@ -192,11 +192,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.junctions.bed.gz',
       },
     ],
@@ -206,11 +206,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.junctions.bed.gz',
       },
     ],
@@ -220,11 +220,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.junctions.bed.gz',
       },
     ],
@@ -234,11 +234,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.junctions.bed.gz',
       },
     ],
@@ -248,11 +248,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -262,11 +262,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -276,11 +276,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_fibs.504_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -290,11 +290,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_lymphocytes.174_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -304,11 +304,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_brain_cortex.255_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -318,11 +318,11 @@ const GTEX_TRACKS = [
   {
     data: [
       {
-        type: 'coverage',
+        type: COVERAGE_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.bigWig',
       },
       {
-        type: 'junctions',
+        type: JUNCTION_TYPE,
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_frontal_cortex.209_samples.normalized.junctions.bed.gz',
       },
     ],
@@ -337,42 +337,32 @@ const GTEX_TRACK_OPTIONS = getRefTrackOptions(GTEX_TRACKS)
 
 const MAPPABILITY_TRACKS = [
   {
-    data: [{
-      type: 'coverage',
-      url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k36_m2.bw',
-    }],
+    type: COVERAGE_TYPE,
+    url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k36_m2.bw',
     text: '36-mer mappability',
     description: 'Mappability of 36-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
-    data: [{
-      type: 'coverage',
-      url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k50_m2.bw',
-    }],
+    type: COVERAGE_TYPE,
+    url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k50_m2.bw',
     text: '50-mer mappability',
     description: 'Mappability of 50-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
-    data: [{
-      type: 'coverage',
-      url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k75_m2.bw',
-    }],
+    type: COVERAGE_TYPE,
+    url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k75_m2.bw',
     text: '75-mer mappability',
     description: 'Mappability of 75-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
-    data: [{
-      type: 'coverage',
-      url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k100_m2.bw',
-    }],
+    type: COVERAGE_TYPE,
+    url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k100_m2.bw',
     text: '100-mer mappability',
     description: 'Mappability of 100-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
-    data: [{
-      type: 'gtf',
-      url: 'gs://tgg-viewer/ref/GRCh38/segdups/segdups.gtf.gz',
-    }],
+    type: ANNOTATION_TYPE,
+    url: 'gs://tgg-viewer/ref/GRCh38/segdups/segdups.gtf.gz',
     text: 'SegDups >1000 bases',
     description: 'Duplications of >1000 Bases of Non-RepeatMasked Sequence downloaded from UCSC',
   },
@@ -380,30 +370,26 @@ const MAPPABILITY_TRACKS = [
 
 const MAPPABILITY_TRACK_OPTIONS = getRefTrackOptions(MAPPABILITY_TRACKS)
 
-const parseTrackType = (type, url) => {
-  const track = { url }
-  if (type === 'coverage') {
-    track.type = COVERAGE_TYPE
-  } else if (type === 'junctions') {
-    track.type = JUNCTION_TYPE
-  } else {
-    track.type = ANNOTATION_TYPE
-  }
-  if (url.endsWith('.gz') || url.endsWith('.bgz')) {
-    track.indexURL = `${url}.tbi`
-  }
-  return { ...track, ...TRACK_OPTIONS[track.type] }
-}
-
-const getRefTracks = (tracks, sampleTypes) => tracks.reduce((acc, { text, data }) => (sampleTypes.includes(text) ? [
-  ...acc,
-  data.length === 1 ? { name: text, ...parseTrackType(data[0].type, data[0].url) } : {
+const OPTIONAL_REFERENCE_TRACKS = [].concat(
+  MAPPABILITY_TRACKS.map(({ type, url, text }) => {
+    const track = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
+    return { type, url, text, name: text, ...track, ...TRACK_OPTIONS[type] }
+  }),
+  GTEX_TRACKS.map(({ text, data }) => ({
+    text,
     name: text,
     type: 'merged',
     height: 170,
-    tracks: data.map(track => (parseTrackType(track.type, track.url))),
-  },
-] : acc), [])
+    tracks: data.map(({ type, url }) => {
+      const track = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
+      return { type, url, ...track, ...TRACK_OPTIONS[type] }
+    }),
+  })),
+)
+
+
+const getRefTracks = sampleTypes => OPTIONAL_REFERENCE_TRACKS.reduce((acc, { text, ...fields }) =>
+  (sampleTypes.includes(text) ? [...acc, { ...fields }] : acc), [])
 
 const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   ...acc,
@@ -567,7 +553,7 @@ ReadButtons.propTypes = {
 }
 
 
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, gtexRefs, mappabilityRefs }) => {
+const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes }) => {
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
@@ -575,19 +561,19 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
     variant.end && variant.end - variant.pos,
   )
 
-  const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)
-  const refTracks = getRefTracks(MAPPABILITY_TRACKS, mappabilityRefs).concat(getRefTracks(GTEX_TRACKS, gtexRefs))
+  const tracks = [].concat(
+    getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes),
+    getRefTracks(sampleTypes),
+  )
 
   return (
-    <IGV tracks={tracks.concat(refTracks)} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
+    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
   )
 })
 
 IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.array,
-  gtexRefs: PropTypes.array,
-  mappabilityRefs: PropTypes.array,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -612,8 +598,6 @@ class FamilyReads extends React.PureComponent {
     this.state = {
       openFamily: null,
       sampleTypes: [],
-      gtexReferences: [],
-      mappabilityRefs: [],
     }
   }
 
@@ -628,38 +612,38 @@ class FamilyReads extends React.PureComponent {
     this.setState({
       openFamily: null,
       sampleTypes: [],
-      gtexReferences: [],
-      mappabilityRefs: [],
     })
   }
 
-  getRnaDnaSampleTypes = trackTypeOption => this.state.sampleTypes.reduce(
+  getExcludedSampleTypes = trackTypeOption => this.state.sampleTypes.reduce(
     (acc, sampleType) => (trackTypeOption.find(option => option.text === sampleType) ?
-      [...acc, sampleType] : acc), [])
+      acc : [...acc, sampleType]), [])
 
   updateDnaSampleTypes = (sampleTypes) => {
-    const rnaSampleTypes = this.getRnaDnaSampleTypes(RNA_TRACK_TYPE_OPTIONS)
+    const excludedSampleTypes = this.getExcludedSampleTypes(DNA_TRACK_TYPE_OPTIONS)
     this.setState({
-      sampleTypes: rnaSampleTypes.concat(sampleTypes),
+      sampleTypes: excludedSampleTypes.concat(sampleTypes),
     })
   }
 
   updateRnaSampleTypes = (sampleTypes) => {
-    const dnaSampleTypes = this.getRnaDnaSampleTypes(DNA_TRACK_TYPE_OPTIONS)
+    const excludedSampleTypes = this.getExcludedSampleTypes(RNA_TRACK_TYPE_OPTIONS)
     this.setState({
-      sampleTypes: dnaSampleTypes.concat(sampleTypes),
+      sampleTypes: excludedSampleTypes.concat(sampleTypes),
     })
   }
 
-  updateGtexReferences = (gtexReferences) => {
+  updateGtexReferences = (sampleTypes) => {
+    const excludedSampleTypes = this.getExcludedSampleTypes(GTEX_TRACK_OPTIONS)
     this.setState({
-      gtexReferences,
+      sampleTypes: excludedSampleTypes.concat(sampleTypes),
     })
   }
 
-  updateMappabilityRefs = (mappabilityRefs) => {
+  updateMappabilityRefs = (sampleTypes) => {
+    const excludedSampleTypes = this.getExcludedSampleTypes(MAPPABILITY_TRACK_OPTIONS)
     this.setState({
-      mappabilityRefs,
+      sampleTypes: excludedSampleTypes.concat(sampleTypes),
     })
   }
 
@@ -703,13 +687,13 @@ class FamilyReads extends React.PureComponent {
               <b>Reference Tracks</b>
               <CheckboxGroup
                 groupLabel="GTEx Tracks"
-                value={this.state.gtexReferences}
+                value={this.state.sampleTypes}
                 options={GTEX_TRACK_OPTIONS}
                 onChange={this.updateGtexReferences}
               />
               <CheckboxGroup
                 groupLabel="Mappability Tracks"
-                value={this.state.mappabilityRefs}
+                value={this.state.sampleTypes}
                 options={MAPPABILITY_TRACK_OPTIONS}
                 onChange={this.updateMappabilityRefs}
               />
