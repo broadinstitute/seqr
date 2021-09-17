@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
-import { getUser, getAnnotationSecondary } from 'redux/selectors'
+import { getAnnotationSecondary } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
@@ -29,7 +29,7 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
-import { getDatasetTypes } from '../selectors'
+import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 
 const SavedSearchColumn = styled(Grid.Column)`
   font-size: 0.75em;
@@ -239,7 +239,7 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   }
 }, {})
 
-const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
+const VariantSearchFormContent = React.memo(({ hasHgmdPermission, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
     <Header size="huge" block>
@@ -253,19 +253,18 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary,
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    {/* TODO */}
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][displayAnnotationSecondary]} />
   </div>
 ))
 
 VariantSearchFormContent.propTypes = {
-  user: PropTypes.object,
+  hasHgmdPermission: PropTypes.bool,
   displayAnnotationSecondary: PropTypes.bool,
   datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
+  hasHgmdPermission: getHasHgmdPermission(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
   datasetTypes: getDatasetTypes(state),
 })

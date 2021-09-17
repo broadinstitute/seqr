@@ -4,8 +4,8 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Label, Icon } from 'semantic-ui-react'
 
-import { getUser } from 'redux/selectors'
-import { CLINSIG_SEVERITY } from '../../../utils/constants'
+import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
+import { CLINSIG_SEVERITY, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
@@ -77,9 +77,9 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const Pathogenicity = React.memo(({ variant, user }) => {
+const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
-  if (!clinvar.variationId && !clinvar.alleleId && !(user.isAnalyst && (variant.hgmd || {}).class)) {
+  if (!clinvar.variationId && !clinvar.alleleId && !showHgmd) {
     return null
   }
 
@@ -97,7 +97,7 @@ const Pathogenicity = React.memo(({ variant, user }) => {
           />
         </span>
       }
-      {user.isAnalyst && variant.hgmd.class && // TODO
+      {showHgmd &&
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>
@@ -114,12 +114,12 @@ const Pathogenicity = React.memo(({ variant, user }) => {
 
 Pathogenicity.propTypes = {
   variant: PropTypes.object,
-  user: PropTypes.object,
+  showHgmd: PropTypes.bool,
 }
 
 
-const mapStateToProps = state => ({
-  user: getUser(state),
+const mapStateToProps = (state, ownProps) => ({
+  showHgmd: !!getPermissionedHgmdClass(ownProps.variant, getUser(state), getFamiliesByGuid(state), getProjectsByGuid(state)),
 })
 
 export { Pathogenicity as BasePathogenicity }
