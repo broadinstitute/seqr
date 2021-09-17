@@ -543,6 +543,11 @@ PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
+PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
+for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
+    PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
@@ -1178,19 +1183,14 @@ class EsUtilsTest(TestCase):
 
         urllib3_responses.reset()
         urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [
-            {'error': {'type': 'search_phase_execution_exception'}}]}, method=urllib3_responses.POST)
-        with self.assertRaises(TransportError):
-            get_es_variants(results_model)
-
-        urllib3_responses.replace_json('/test_index_sv,test_index/_msearch', {'responses': [
             {'error': {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]}}
         ]}, method=urllib3_responses.POST)
 
-        with self.assertRaises(InvalidSearchException) as cm:
+        with self.assertRaises(TransportError) as cm:
             get_es_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
+        self.assertDictEqual(
+            cm.exception.info,
+            {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
 
         _set_cache('index_metadata__test_index,test_index_sv', None)
         urllib3_responses.add(
@@ -2025,6 +2025,135 @@ class EsUtilsTest(TestCase):
                     {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
                 ]
             }}
+        ])
+
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
+    @urllib3_responses.activate
+    def test_many_family_inheitance_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'recessive'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+
+        self.assertEqual(len(variants), 2)
+        self.assertEqual(total_results, 9)
+        self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
+        self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
+
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [PARSED_MULTI_SAMPLE_VARIANT],
+            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'duplicate_doc_count': 3,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2},
+                                      INDEX_NAME: {'loaded': 4, 'total': 10}},
+            'total_results': 9,
+        })
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                }},
+                            ]
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [{'term': {'samples_num_alt_1': 'NA20870'}}],
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }},
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_1': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'match': {'contig': 'X'}},
+                                                     {'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }}
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {'must': [
+                                            {'match': {'contig': 'X'}},
+                                            {'term': {'samples_num_alt_2': 'NA20870'}}
+                                        ]}},
+                                        {'term': {'samples_num_alt_2': 'NA20870'}},
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
         ])
 
     @urllib3_responses.activate
