@@ -97,7 +97,7 @@ const Pathogenicity = React.memo(({ variant, user }) => {
           />
         </span>
       }
-      {user.isAnalyst && variant.hgmd.class &&
+      {user.isAnalyst && variant.hgmd.class && // TODO
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>

@@ -877,7 +877,7 @@ const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 const clinsigSeverity = (variant, user) => {
   const { clinvar = {}, hgmd = {} } = variant
   const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.isAnalyst && hgmd.class
+  const hgmdSignificance = user.isAnalyst && hgmd.class // TODO
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {
