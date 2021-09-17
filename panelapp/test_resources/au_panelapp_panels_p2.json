@@ -1,0 +1,40 @@
+{
+  "count": 1,
+  "next": null,
+  "previous": "https://test-panelapp.url.au/api/panels/",
+  "results": [
+    {
+      "id": 3069,
+      "hash_id": null,
+      "name": "Hereditary Neuropathy_CMT - isolated",
+      "disease_group": "Neurology and neurodevelopmental disorders",
+      "disease_sub_group": "",
+      "status": "public",
+      "version": "0.199",
+      "version_created": "2021-05-28T10:22:27.229961Z",
+      "relevant_disorders": [],
+      "stats": {
+        "number_of_genes": 104,
+        "number_of_strs": 0,
+        "number_of_regions": 0
+      },
+      "types": [
+        {
+          "name": "Victorian Clinical Genetics Services",
+          "slug": "victorian-clinical-genetics-services",
+          "description": "Panel used by VCGS."
+        },
+        {
+          "name": "Rare Disease",
+          "slug": "rare-disease",
+          "description": "Rare disease panels"
+        },
+        {
+          "name": "Royal Melbourne Hospital",
+          "slug": "royal-melbourne-hospital",
+          "description": "Royal Melbourne Hospital"
+        }
+      ]
+    }
+  ]
+}

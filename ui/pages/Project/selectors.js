@@ -5,6 +5,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_NOTES_FIELDS,
   SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
@@ -17,7 +18,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid,
 } from 'redux/selectors'
 
@@ -117,23 +118,33 @@ export const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
   getIndividualsByFamily,
-  getGenesById,
-  (submissionsByGuid, familiesByGuid, individualsByFamily, genesById) =>
+  (submissionsByGuid, familiesByGuid, individualsByFamily) =>
     Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
       ...acc,
       ...(individualsByFamily[familyGuid] || []).map(individual => (
-        individual.mmeSubmissionGuid && {
-          mmeNotes: familiesByGuid[individual.familyGuid].mmeNotes,
-          familyName: familiesByGuid[individual.familyGuid].displayName,
-          individualName: individual.displayName,
-          familyGuid: individual.familyGuid,
-          projectGuid: individual.projectGuid,
-          geneSymbols: (submissionsByGuid[individual.mmeSubmissionGuid].geneIds || []).map(
-            geneId => (genesById[geneId] || {}).geneSymbol || geneId),
-          ...submissionsByGuid[individual.mmeSubmissionGuid],
-        }
+        individual.mmeSubmissionGuid && submissionsByGuid[individual.mmeSubmissionGuid]
       )).filter(submission => submission),
     ]), []),
+)
+
+export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
+  getProjectAnalysisGroupMmeSubmissions,
+  getProjectAnalysisGroupFamiliesByGuid,
+  getIndividualsByGuid,
+  getGenesById,
+  getNotesByFamilyType,
+  (submissions, familiesByGuid, individualsByGuid, genesById, notesByFamilyType) =>
+    submissions.map((submission) => {
+      const individual = individualsByGuid[submission.individualGuid]
+      return {
+        mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
+        familyName: familiesByGuid[individual.familyGuid].displayName,
+        familyGuid: individual.familyGuid,
+        projectGuid: individual.projectGuid,
+        geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
+        ...submission,
+      }
+    }),
 )
 
 export const getTaggedVariantsByFamily = createSelector(
@@ -308,9 +319,15 @@ export const getEntityExportConfig = ({ project, tableName, fileName, fields }) 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSamplesByFamily,
-  (visibleFamilies, samplesByFamily) =>
+  getNotesByFamilyType,
+  (visibleFamilies, samplesByFamily, notesByFamilyType) =>
     visibleFamilies.reduce((acc, family) =>
-      [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0] }], []),
+      [...acc, {
+        ...family,
+        ...FAMILY_NOTES_FIELDS.reduce((noteAcc, { id, noteType }) => (
+          { ...noteAcc, [id]: (notesByFamilyType[family.familyGuid] || {})[noteType] }), {}),
+        [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0],
+      }], []),
 )
 
 const getIndividualsExportData = createSelector(

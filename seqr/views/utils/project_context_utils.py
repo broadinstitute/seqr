@@ -2,9 +2,10 @@ from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects
 
 from seqr.models import Family, Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
-    VariantFunctionalData
+    VariantFunctionalData, FamilyNote
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
+    get_json_for_family_notes
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 
 
@@ -28,6 +29,8 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
         family_models, user, project_guid=project_guid, skip_nested=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid))
+
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
         individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True,
@@ -49,6 +52,7 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
     response = {
         'projectsByGuid': projects_by_guid,
         'familiesByGuid': {f['familyGuid']: f for f in families},
+        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
         'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},

@@ -180,6 +180,26 @@ export const STATE_WITH_2_FAMILIES = {
       ],
     },
   },
+  familyNotesByGuid: {
+    FAN001_F011652_1_A: {
+      noteGuid: 'FAN001_F011652_1_A',
+      familyGuid: 'F011652_2',
+      note: 'A note',
+      noteType: 'A',
+    },
+    FAN002_F011652_1_A: {
+      noteGuid: 'FAN002_F011652_1_A',
+      familyGuid: 'F011652_2',
+      note: 'Another note',
+      noteType: 'A',
+    },
+    FAN003_F011652_1_A: {
+      noteGuid: 'FAN003_F011652_1_A',
+      familyGuid: 'F011652_2',
+      note: 'A matchmaker note',
+      noteType: 'M',
+    },
+  },
   individualsByGuid: {
     I021476_na19678_1: {
       projectGuid: 'R0237_1000_genomes_demo',

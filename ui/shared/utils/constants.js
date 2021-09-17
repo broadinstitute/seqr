@@ -170,7 +170,7 @@ export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
 export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
 export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
-export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_CASE_NOTES = 'caseNotes'
 export const FAMILY_FIELD_MME_NOTES = 'mmeNotes'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'caseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'caseReviewSummary'
@@ -189,8 +189,8 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: 'Success Story Type',
   [FAMILY_FIELD_SUCCESS_STORY]: 'Success Story',
   [FAMILY_FIELD_FIRST_SAMPLE]: 'Data Loaded?',
-  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Notes',
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: 'Analysis Summary',
+  [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
+  [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
   [FAMILY_FIELD_CODED_PHENOTYPE]: 'Coded Phenotype',
   [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
@@ -199,6 +199,12 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
 }
 
+export const FAMILY_NOTES_FIELDS = [
+  { id: FAMILY_FIELD_CASE_NOTES, noteType: 'C' },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, noteType: 'A' },
+  { id: FAMILY_FIELD_MME_NOTES, noteType: 'M' },
+]
+
 export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
@@ -206,9 +212,7 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
-  { id: FAMILY_FIELD_MME_NOTES },
+  ...FAMILY_NOTES_FIELDS,
   { id: FAMILY_FIELD_CODED_PHENOTYPE },
   { id: FAMILY_FIELD_OMIM_NUMBER },
   { id: FAMILY_FIELD_PMIDS },
@@ -1141,6 +1145,28 @@ export const INHERITANCE_FILTER_OPTIONS = [
     detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
   },
 ]
+
+const VARIANT_ICON_COLORS = {
+  red: '#eaa8a8',
+  amber: '#f5d55c',
+  green: '#21a926',
+}
+
+export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
+  0: 'No Panel App confidence level',
+  1: 'Red, lowest level of confidence; 1 of the 4 sources or from other sources.',
+  2: 'Amber, intermediate; a gene from 2 sources',
+  3: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
+  4: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
+}
+
+export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
+  0: 'none',
+  1: VARIANT_ICON_COLORS.red,
+  2: VARIANT_ICON_COLORS.amber,
+  3: VARIANT_ICON_COLORS.green,
+  4: VARIANT_ICON_COLORS.green,
+}
 
 // Users
 

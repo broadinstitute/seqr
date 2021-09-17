@@ -11,7 +11,8 @@ from seqr.models import Individual, Family
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
+    _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
@@ -143,22 +144,9 @@ def edit_individuals_handler(request, project_guid):
 
     validate_fam_file_records(individuals_list, fail_on_warnings=True)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
+    return _update_and_parse_individuals_and_families(
         project, modified_individuals_list, user=request.user
     )
-
-    individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
-    }
-    families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)
-        for family in updated_families
-    }
-
-    return create_json_response({
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
-    })
 
 
 @login_and_policies_required
@@ -323,23 +311,32 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     json_records = load_uploaded_file(upload_file_id)
+    return _update_and_parse_individuals_and_families(project, individual_records=json_records, user=request.user)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, individual_records=json_records, user=request.user
+
+def _update_and_parse_individuals_and_families(project, individual_records, user):
+    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
+        project, individual_records, user
     )
 
-    # edit individuals
-    individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
-    individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
-    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
-    families_by_guid = {family['familyGuid']: family for family in families}
+    individuals_by_guid = {
+        individual['individualGuid']: individual for individual in
+        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
+    }
+    families_by_guid = {
+        family['familyGuid']: family for family in
+        _get_json_for_families(updated_families, user, add_individual_guids_field=True)
+    }
 
-    updated_families_and_individuals_by_guid = {
+    response = {
         'individualsByGuid': individuals_by_guid,
         'familiesByGuid': families_by_guid,
     }
+    if updated_notes:
+        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
+        response['familyNotesByGuid'] = family_notes_by_guid
 
-    return create_json_response(updated_families_and_individuals_by_guid)
+    return create_json_response(response)
 
 
 FAMILY_ID_COL = 'family_id'

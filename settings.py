@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'reference_data',
     'matchmaker',
     'social_django',
+    'panelapp',
 ]
 
 MIDDLEWARE = [

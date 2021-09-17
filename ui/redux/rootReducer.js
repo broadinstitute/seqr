@@ -133,9 +133,14 @@ export const updateProject = (values) => {
 }
 
 export const updateFamily = (values) => {
+  const urlBase = `/api/family/${values.familyGuid}`
+  if (values.nestedField) {
+    return updateEntity(values, RECEIVE_DATA, `${urlBase}/${values.nestedField}`, `${values.nestedField}Guid`)
+  }
+
+  const familyField = values.familyField ? `_${values.familyField}` : ''
   return (dispatch) => {
-    const familyField = values.familyField ? `_${values.familyField}` : ''
-    return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
+    return new HttpRequestHelper(`${urlBase}/update${familyField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
       },
@@ -210,8 +215,12 @@ export const loadLocusLists = () => {
 
 export const loadLocusListItems = (locusListId) => {
   return (dispatch, getState) => {
+    if (!locusListId) {
+      return
+    }
     const locusList = getState().locusListsByGuid[locusListId]
-    if (locusListId && !(locusList && locusList.items)) {
+    const isLoaded = locusList && locusList.items && (!locusList.paLocusList || locusList.items.some(({ pagene }) => pagene))
+    if (!isLoaded) {
       dispatch({ type: REQUEST_GENE_LIST })
       new HttpRequestHelper(`/api/locus_lists/${locusListId}`,
         (responseJson) => {
@@ -385,6 +394,7 @@ const rootReducer = combineReducers(Object.assign({
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
+  familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
@@ -392,6 +402,7 @@ const rootReducer = combineReducers(Object.assign({
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
+  pagenesById: createObjectsByIdReducer(RECEIVE_DATA, 'pagenesById'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
   hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
