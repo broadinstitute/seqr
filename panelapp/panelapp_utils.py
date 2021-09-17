@@ -7,12 +7,11 @@ from seqr.models import LocusList as SeqrLocusList, LocusListGene as SeqrLocusLi
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
-from settings import PANEL_APP_API_URL
 
 logger = SeqrLogger(__name__)
 
 
-def import_all_panels(user):
+def import_all_panels(user, panel_app_api_url, label=None):
     def _extract_ensembl_id_from_json(raw_gene_json):
         ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
         if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
@@ -23,7 +22,7 @@ def import_all_panels(user):
         else:
             return None
 
-    panels_url = '{}/panels/?page=1'.format(PANEL_APP_API_URL)
+    panels_url = '{}/panels/?page=1'.format(panel_app_api_url)
 
     all_panels = _get_all_panels(panels_url, [])
 
@@ -32,8 +31,8 @@ def import_all_panels(user):
         logger.info('Importing panel id {}'.format(panel_app_id), user)
         try:
             with transaction.atomic():
-                panel_genes_url = '{}/panels/{}/genes'.format(PANEL_APP_API_URL, panel_app_id)
-                pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel)
+                panel_genes_url = '{}/panels/{}/genes'.format(panel_app_api_url, panel_app_id)
+                pa_locus_list = _create_or_update_locus_list_from_panel(user, panel_genes_url, panel, label)
                 all_genes_for_panel = _get_all_genes_for_panel('{}/?page=1'.format(panel_genes_url), [])
                 panel_genes_by_id = {_extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
                                      if _extract_ensembl_id_from_json(gene)}
@@ -45,6 +44,12 @@ def import_all_panels(user):
                 _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user)
         except Exception as e:
             logger.error('Error occurred when importing gene panel_app_id={}, error={}'.format(panel_app_id, e), user)
+
+
+def delete_all_panels(user, panel_app_api_url):
+    with transaction.atomic():
+        to_delete_qs = SeqrLocusList.objects.filter(palocuslist__url__startswith=panel_app_api_url)
+        SeqrLocusList.bulk_delete(user, queryset=to_delete_qs)
 
 
 def _update_locus_list_genes_bulk(pa_locus_list, genes_by_id, panel_genes_by_id, user):
@@ -112,9 +117,9 @@ def _get_all_genes_for_panel(panel_genes_url, all_results):
         return _get_all_genes_for_panel(next_page, all_results)
 
 
-def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
+def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json, label):
     panel_app_id = panel_json.get('id')
-    pa_locus_list = _safe_get_locus_list(panel_app_id)
+    pa_locus_list = _safe_get_locus_list(panelgenes_url)
 
     name = panel_json['name']
     disease_group = panel_json.get('disease_group') or None
@@ -122,7 +127,7 @@ def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
     status = panel_json.get('status') or None
     version = panel_json.get('version') or None
     version_created = panel_json.get('version_created') or None
-    description = _create_panel_description(panel_app_id, version, disease_group, disease_sub_group)
+    description = _create_panel_description(panel_app_id, version, disease_group, disease_sub_group, label)
     new_seqrlocuslist_json = {
         'name': name,
         'description': description,
@@ -147,14 +152,18 @@ def _create_or_update_locus_list_from_panel(user, panelgenes_url, panel_json):
     return pa_locus_list
 
 
-def _create_panel_description(panel_app_id, version, disease_group, disease_sub_group):
+def _create_panel_description(panel_app_id, version, disease_group, disease_sub_group, label):
     disease_groups = [d for d in [disease_group, disease_sub_group] if d]
 
-    return 'PanelApp_{}_{}_{}'.format(panel_app_id, version, ';'.join(disease_groups)) \
-        if disease_groups else 'PanelApp_{}_{}'.format(panel_app_id, version)
+    return 'PanelApp_{label}{panel_app_id}_{version}{disease_groups}'.format(
+        panel_app_id=panel_app_id,
+        label='{}_'.format(label) if label else '',
+        version=version,
+        disease_groups='_{}'.format(';'.join(disease_groups)) if disease_groups else '',
+    )
 
 
-def _safe_get_locus_list(panel_app_id):
-    result = PaLocusList.objects.filter(panel_app_id=panel_app_id)
+def _safe_get_locus_list(panelgenes_url):
+    result = PaLocusList.objects.filter(url=panelgenes_url)
 
     return result.first() if result else None

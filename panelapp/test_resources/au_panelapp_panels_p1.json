@@ -1,6 +1,6 @@
 {
   "count": 1,
-  "next": "https://panelapp.url/api/v1/panels/?page=2",
+  "next": "https://test-panelapp.url.au/api/panels/?page=2",
   "previous": null,
   "results": [
     {

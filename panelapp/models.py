@@ -13,13 +13,13 @@ class PaLocusList(models.Model):
         primary_key=True,
     )
 
-    panel_app_id = models.IntegerField(null=False, blank=False, unique=True)
+    url = models.TextField(max_length=2000, null=False, blank=False, unique=True)
+    panel_app_id = models.IntegerField(null=False, blank=False)
     disease_group = models.TextField(null=True, blank=True)
     disease_sub_group = models.TextField(null=True, blank=True)
     status = models.TextField(null=True, blank=True)
     version = models.TextField(null=True, blank=True)
     version_created = models.DateTimeField(null=True, blank=True)
-    url = models.TextField(max_length=2000, null=False, blank=False)
 
     class Meta:
         """Fields included in JSON in API calls."""

@@ -100,6 +100,46 @@
     }
   },
   {
+    "model": "reference_data.geneinfo",
+    "pk": 55,
+    "fields": {
+      "gene_id": "ENSG00000164120",
+      "gene_symbol": "HPGD",
+      "chrom_grch37": "4",
+      "start_grch37": 175411326,
+      "end_grch37": 175444305,
+      "strand_grch37": "-",
+      "coding_region_size_grch37": 798,
+      "chrom_grch38": "4",
+      "start_grch38": 174490175,
+      "end_grch38": 174523154,
+      "strand_grch38": "-",
+      "coding_region_size_grch38": 798,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
+    "model": "reference_data.geneinfo",
+    "pk": 55,
+    "fields": {
+      "gene_id": "ENSG00000139734",
+      "gene_symbol": "DIAPH3",
+      "chrom_grch37": "13",
+      "start_grch37": 60239717,
+      "end_grch37": 60738121,
+      "strand_grch37": "-",
+      "coding_region_size_grch37": 3579,
+      "chrom_grch38": "13",
+      "start_grch38": 59665583,
+      "end_grch38": 60163987,
+      "strand_grch38": "-",
+      "coding_region_size_grch38": 3579,
+      "gencode_gene_type": "protein_coding",
+      "gencode_release": 31
+    }
+  },
+  {
     "model": "seqr.locuslist",
     "pk": 3,
     "fields": {
@@ -149,7 +189,7 @@
       "status": "public",
       "version": "0.2",
       "version_created": "2017-02-07T12:55:30.700Z",
-      "url": "https://panelapp.url/api/v1/panels/3281/genes"
+      "url": "https://test-panelapp.url.au/api/v1/panels/3281/genes"
     }
   },
   {
@@ -172,6 +212,58 @@
       "penetrance": "complete",
       "mode_of_pathogenicity": "Other",
       "mode_of_inheritance": "MONOALLELIC, autosomal or pseudoautosomal, NOT imprinted"
+    }
+  },
+  {
+    "model": "seqr.locuslist",
+    "pk": 4,
+    "fields": {
+      "guid": "LL02064_autosomal_recessive_pr",
+      "projects": [
+        3
+      ],
+      "created_date": "2017-02-07T12:55:30.700Z",
+      "created_by": 11,
+      "last_modified_date": "2018-05-01T00:02:38.733Z",
+      "name": "Autosomal recessive primary hypertrophic osteoarthropathy",
+      "description": "PanelApp_557_1.9",
+      "is_public": true
+    }
+  },
+  {
+    "model": "seqr.locuslistgene",
+    "pk": 41,
+    "fields": {
+      "guid": "LL02064_ENSG00000164120",
+      "created_date": "2018-04-28T00:03:25.341Z",
+      "created_by": null,
+      "last_modified_date": "2018-04-28T00:03:25.341Z",
+      "locus_list": 4,
+      "gene_id": "ENSG00000164120"
+    }
+  },
+  {
+    "model": "panelapp.palocuslist",
+    "pk": 4,
+    "fields": {
+      "panel_app_id": "557",
+      "disease_group": "Hearing and ear disorders",
+      "disease_sub_group": "2017-02-07T12:55:30.700Z",
+      "status": "public",
+      "version": "1.9",
+      "version_created": "2017-02-07T12:55:30.700Z",
+      "url": "https://test-panelapp.url.uk/api/v1/panels/557/genes"
+    }
+  },
+  {
+    "model": "panelapp.palocuslistgene",
+    "pk": 41,
+    "fields": {
+      "confidence_level": "3",
+      "biotype": null,
+      "penetrance": null,
+      "mode_of_pathogenicity": null,
+      "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
     }
   }
 ]
