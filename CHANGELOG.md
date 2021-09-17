@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 9/17/21
 * Change family note fields into lists of notes (REQUIRES DB MIGRATION)
 * Add Panel App gene list integration (REQUIRES DB MIGRATION)
 
