@@ -69,6 +69,7 @@ const GCNV_TRACK_OPTIONS = {
 
 const ANNOTATION_TRACK_OPTIONS = {
   format: 'gtf',
+  height: 100,
 }
 
 const TRACK_OPTIONS = {
@@ -385,7 +386,7 @@ const parseTrackType = (type, url) => {
     track.type = COVERAGE_TYPE
   } else if (type === 'junctions') {
     track.type = JUNCTION_TYPE
-  } else if (type === 'gtf') {
+  } else {
     track.type = ANNOTATION_TYPE
   }
   if (url.endsWith('.gz') || url.endsWith('.bgz')) {
@@ -678,9 +679,8 @@ class FamilyReads extends React.PureComponent {
     />
 
     const igvSampleIndividuals = this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]
-    const trackOptions = trackTypeOptions => trackTypeOptions.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
-    const dnaTrackOptions = trackOptions(DNA_TRACK_TYPE_OPTIONS)
-    const rnaTrackOptions = trackOptions(RNA_TRACK_TYPE_OPTIONS)
+    const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
+    const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
     const reads = igvSampleIndividuals ?
       <Segment.Group horizontal>
         <Segment>
