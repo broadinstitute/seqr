@@ -615,8 +615,12 @@ class FamilyReads extends React.PureComponent {
   }
 
   getExcludedSampleTypes = trackTypeOption => this.state.sampleTypes.reduce(
-    (acc, sampleType) => (trackTypeOption.find(option => option.text === sampleType) ?
+    (acc, sampleType) => (trackTypeOption.find(option => option.value === sampleType) ?
       acc : [...acc, sampleType]), [])
+
+  getIncludedSampleTypes = trackTypeOption => this.state.sampleTypes.reduce(
+    (acc, sampleType) => (trackTypeOption.find(option => option.value === sampleType) ?
+      [...acc, sampleType] : acc), [])
 
   updateDnaSampleTypes = (sampleTypes) => {
     const excludedSampleTypes = this.getExcludedSampleTypes(DNA_TRACK_TYPE_OPTIONS)
@@ -670,7 +674,7 @@ class FamilyReads extends React.PureComponent {
           { dnaTrackOptions &&
             <CheckboxGroup
               groupLabel="DNA Tracks"
-              value={this.state.sampleTypes}
+              value={this.getIncludedSampleTypes(DNA_TRACK_TYPE_OPTIONS)}
               options={dnaTrackOptions}
               onChange={this.updateDnaSampleTypes}
             />
@@ -679,20 +683,20 @@ class FamilyReads extends React.PureComponent {
             <div>
               <CheckboxGroup
                 groupLabel="RNA Tracks"
-                value={this.state.sampleTypes}
+                value={this.getIncludedSampleTypes(RNA_TRACK_TYPE_OPTIONS)}
                 options={rnaTrackOptions}
                 onChange={this.updateRnaSampleTypes}
               />
               <b>Reference Tracks</b>
               <CheckboxGroup
                 groupLabel="GTEx Tracks"
-                value={this.state.sampleTypes}
+                value={this.getIncludedSampleTypes(GTEX_TRACK_OPTIONS)}
                 options={GTEX_TRACK_OPTIONS}
                 onChange={this.updateGtexReferences}
               />
               <CheckboxGroup
                 groupLabel="Mappability Tracks"
-                value={this.state.sampleTypes}
+                value={this.getIncludedSampleTypes(MAPPABILITY_TRACK_OPTIONS)}
                 options={MAPPABILITY_TRACK_OPTIONS}
                 onChange={this.updateMappabilityRefs}
               />
