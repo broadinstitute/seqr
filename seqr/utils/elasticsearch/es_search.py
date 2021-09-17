@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -307,7 +307,6 @@ class EsSearch(object):
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
 
-            genotypes_q = None
             if all_sample_search:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count[index]
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
@@ -318,27 +317,26 @@ class EsSearch(object):
                             sample_ids += [
                                 sample_id for sample_id, sample in samples_by_id.items()
                                 if self._family_individual_affected_status[family_guid][sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED]
-                        genotypes_q = _any_affected_sample_filter(sample_ids)
+                        self._index_searches[index].append(self._search.filter(_any_affected_sample_filter(sample_ids)))
                         self._any_affected_sample_filters = True
                     else:
                         # If searching across all families in an index with no inheritance mode we do not need to explicitly
                         # filter on inheritance, as all variants have some inheritance for at least one family
                         self._no_sample_filters = True
                         no_filter_indices.add(index)
-                        continue
+                    continue
 
-            if not genotypes_q:
-                for family_guid in sorted(family_samples_by_id.keys()):
-                    family_samples_q = self._get_family_sample_query(
-                        family_guid, family_samples_by_id, quality_filters_by_family,
-                        index_fields, inheritance_mode, inheritance_filter
-                    )
-                    if not genotypes_q:
-                        genotypes_q = family_samples_q
-                    else:
-                        genotypes_q |= family_samples_q
+            genotypes_qs = [
+                self._get_family_sample_query(
+                    family_guid, family_samples_by_id, quality_filters_by_family,
+                    index_fields, inheritance_mode, inheritance_filter
+                ) for family_guid in sorted(family_samples_by_id.keys())
+            ]
+            if len(genotypes_qs) > MAX_SEARCH_CLAUSES:
+                self._index_searches[index].append(self._search.filter(_or_filters(genotypes_qs[:MAX_SEARCH_CLAUSES])))
+                genotypes_qs = genotypes_qs[MAX_SEARCH_CLAUSES:]
 
-            self._index_searches[index].append(self._search.filter(genotypes_q))
+            self._index_searches[index].append(self._search.filter(_or_filters(genotypes_qs)))
 
         if no_filter_indices and self._index_searches:
             for index in no_filter_indices:
@@ -399,7 +397,7 @@ class EsSearch(object):
                             paired_index_families[var_index].update({sv_index: overlapping_families})
 
         seen_paired_indices = set()
-        comp_het_q_by_index = {}
+        comp_het_qs_by_index = defaultdict(list)
         for index in sorted(indices, reverse = True):
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
@@ -432,21 +430,20 @@ class EsSearch(object):
                     family_index = ','.join(sorted([index, paired_index]))
 
                 samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
+                comp_het_qs_by_index[family_index].append(samples_q)
 
-                index_comp_het_q = comp_het_q_by_index.get(family_index)
-                if not index_comp_het_q:
-                    comp_het_q_by_index[family_index] = samples_q
-                else:
-                    comp_het_q_by_index[family_index] |= samples_q
-
-        for index, compound_het_q in comp_het_q_by_index.items():
-            compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
-            compound_het_search.aggs.bucket(
-                'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES + 1
-            ).metric(
-                'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
-            )
-            self._index_searches[index].append(compound_het_search)
+        for index, compound_het_qs in comp_het_qs_by_index.items():
+            comp_het_qs_list = [
+                compound_het_qs[:MAX_SEARCH_CLAUSES], compound_het_qs[MAX_SEARCH_CLAUSES:]
+            ] if len(compound_het_qs) > MAX_SEARCH_CLAUSES else [compound_het_qs]
+            for compound_het_q in comp_het_qs_list:
+                compound_het_search = (annotations_secondary_search or self._search).filter(_or_filters(compound_het_q))
+                compound_het_search.aggs.bucket(
+                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES + 1
+                ).metric(
+                    'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
+                )
+                self._index_searches[index].append(compound_het_search)
 
     def search(self,  **kwargs):
         indices = self._indices
@@ -551,18 +548,27 @@ class EsSearch(object):
     def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         new_results = []
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
+        loaded_counts = defaultdict(lambda: defaultdict(int))
         for response_hits, response_total, is_compound_het, index_name in parsed_responses:
             if not response_total:
                 continue
 
             if is_compound_het:
                 compound_het_results += response_hits
-                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {
-                    'total': response_total, 'loaded': response_total}
+                loaded_count = response_total
+                index_name = '{}_compound_het'.format(index_name)
+                if not self.previous_search_results['loaded_variant_counts'].get(index_name):
+                    self.previous_search_results['loaded_variant_counts'][index_name] = {'total': 0, 'loaded': 0}
             else:
                 new_results += response_hits
-                self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
-                self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
+                loaded_count = len(response_hits)
+
+            loaded_counts[index_name]['total'] += response_total
+            loaded_counts[index_name]['loaded'] += loaded_count
+
+        for index_name, counts in loaded_counts.items():
+            self.previous_search_results['loaded_variant_counts'][index_name]['total'] = counts['total']
+            self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += counts['loaded']
 
         total_results = sum(
             counts['total'] for counts in self.previous_search_results['loaded_variant_counts'].values())
@@ -956,9 +962,9 @@ class EsSearch(object):
 
                     def _update_existing_variant(existing_variant, variant):
                         existing_variant['genotypes'].update(variant['genotypes'])
-                        existing_variant['familyGuids'] = sorted(
-                            existing_variant['familyGuids'] + variant['familyGuids']
-                        )
+                        family_guids = set(existing_variant['familyGuids'])
+                        family_guids.update(variant['familyGuids'])
+                        existing_variant['familyGuids'] = sorted(family_guids)
                     _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
                     _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     duplicates += 1
@@ -1042,12 +1048,6 @@ class EsSearch(object):
                 logger.error('ES Query Timeout: Found {} long running searches'.format(len(tasks)), self._user, detail=tasks)
             else:
                 logger.warning('ES Query Timeout. No long running searches found', self._user)
-            raise e
-        except elasticsearch.exceptions.TransportError as e:
-            if isinstance(e.info, dict) and e.info.get('root_cause') and e.info['root_cause'][0].get('type') == 'too_many_clauses':
-                from seqr.utils.elasticsearch.utils import InvalidSearchException
-                raise InvalidSearchException(
-                    'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
             raise e
 
     def _get_long_running_tasks(self):
@@ -1322,9 +1322,13 @@ def _pop_freq_filter(filter_key, value):
 
 
 def _build_or_filter(op, filters):
-    q = Q(op, **filters[0])
-    for filter_kwargs in filters[1:]:
-        q |= Q(op, **filter_kwargs)
+    return  _or_filters([Q(op, **filter_kwargs) for filter_kwargs in filters])
+
+
+def _or_filters(filter_qs):
+    q = filter_qs[0]
+    for filter_q in filter_qs[1:]:
+        q |= filter_q
     return q
 
 

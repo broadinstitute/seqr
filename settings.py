@@ -46,11 +46,6 @@ INSTALLED_APPS = [
     'panelapp',
 ]
 
-###########
-# PanelApp
-###########
-PANEL_APP_API_URL = os.environ.get('PANEL_APP_API_URL', 'https://panelapp.url/api/v1')
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

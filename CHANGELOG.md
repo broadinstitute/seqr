@@ -1,7 +1,10 @@
 # _seqr_ Changes
 
 ## dev
+
+## 9/17/21
 * Change family note fields into lists of notes (REQUIRES DB MIGRATION)
+* Add Panel App gene list integration (REQUIRES DB MIGRATION)
 
 ## 9/10/21
 * Use google storage API instead of gsutil for IGV 
