@@ -1,6 +1,5 @@
 import json
 import jmespath
-import base64
 from collections import defaultdict
 from django.utils import timezone
 from django.core.exceptions import MultipleObjectsReturned
