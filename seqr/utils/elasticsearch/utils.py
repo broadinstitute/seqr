@@ -133,7 +133,12 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         es_search.filter_by_frequency(search['freqs'])
 
     if search.get('in_silico'):
-        es_search.filter_by_in_silico(search['in_silico'])
+        in_silico_filters = search.get('in_silico')
+        for in_silico_filter_key in list(in_silico_filters.keys()):
+            if len(in_silico_filters[in_silico_filter_key]) == 0:
+                del in_silico_filters[in_silico_filter_key]
+
+        es_search.filter_by_in_silico(in_silico_filters)
 
     es_search.filter_by_annotation_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),

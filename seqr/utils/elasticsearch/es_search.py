@@ -228,8 +228,7 @@ class EsSearch(object):
 
                     q &= Q('prefix', **{prediction_key: prediction_value})
                 else:
-                    q &= Q('range', **{prediction_key: {'lte': prediction_value}})
-
+                    q &= Q('range', **{prediction_key: {'gte': prediction_value}})
         self.filter(q)
 
     def filter_by_frequency(self, frequencies):
