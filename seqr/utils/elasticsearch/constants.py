@@ -292,6 +292,26 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
+NON_NUMERIC_IN_SILICO_PREDICTIONS = [
+    'dbnsfp_Polyphen2_HVAR_pred',
+    'dbnsfp_SIFT_pred',
+    'dbnsfp_MutationTaster_pred',
+    'dbnsfp_FATHMM_pred',
+    'dbnsfp_MetaSVM_pred',
+]
+
+NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING = {
+    'tolerated': 'T',
+    'damaging': 'D',
+    'polymorphism (n)': 'N',
+    'polymorphism (p)': 'P',
+    'polymorphism (d)': 'D',
+    'probably damaging': 'D',
+    'benign': 'B',
+    'possibly damaging': 'P',
+    'disease causing': 'D'
+}
+
 QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},

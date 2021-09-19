@@ -6,13 +6,14 @@ import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { Select, LabeledSlider, AlignedCheckboxGroup, InlineInputGroup } from 'shared/components/form/Inputs'
+import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
   FREQUENCIES,
+  IN_SILICO_FIELDS,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
   ANALYST_PATHOGENICITY_FIELDS,
@@ -20,7 +21,6 @@ import {
   ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
-  ANNOTATION_FILTER_FIELDS,
   ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
@@ -104,6 +104,29 @@ export const ANALYST_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
+const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 3
+
+export const inSilicoFieldLayout = (fieldComponents) => {
+  const numberOfRows = Math.ceil(fieldComponents.length / 3)
+  const fieldComponentsCopy = [...fieldComponents]
+  const fieldComponentChunks = []
+  for (let i = numberOfRows; i > 0; i--) {
+    const fieldComponentChunk = fieldComponentsCopy.splice(0, IN_SILICO_FILTER_ROW_CHUNK_SIZE)
+    fieldComponentChunks.push(fieldComponentChunk)
+  }
+  return (
+    <Form.Field>
+      {fieldComponentChunks.map((chunk) => {
+        return (
+          <Form.Group widths="equal">
+            {chunk}
+          </Form.Group>
+        )
+      })
+      }
+    </Form.Field>
+  )
+}
 
 export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
   ...annotationGroups.map(groups =>
@@ -171,17 +194,18 @@ export const LOCATION_PANEL = {
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 
+export const IN_SILICO_PANEL = {
+  name: 'in_silico',
+  headerProps: { title: 'In Silico Filters' },
+  fields: IN_SILICO_FIELDS,
+  fieldLayout: inSilicoFieldLayout,
+}
+
 export const QUALITY_PANEL = {
   name: 'qualityFilter',
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
-}
-
-export const ANNOTATION_FILTER_PANEL = {
-  name: 'AnnotationFilter',
-  fields: ANNOTATION_FILTER_FIELDS,
-  fieldProps: { control: InlineInputGroup, format: val => val || [] },
 }
 
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>

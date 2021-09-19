@@ -10,7 +10,7 @@ import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, ANNOTATION_FILTER_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL, IN_SILICO_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -110,6 +110,14 @@ const INHERITANCE_PANEL = {
   ),
 }
 
+const IN_SILICO_PANEL_MAP = {
+  ...IN_SILICO_PANEL,
+  headerProps: {
+    title: 'In Silico Filters',
+    name: 'in_silico',
+  },
+}
+
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
@@ -131,14 +139,6 @@ const ANNOTATION_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
     fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
-  },
-}
-
-const ANNOTATION_FILTER_PANEL_MAP = {
-  ...ANNOTATION_FILTER_PANEL,
-  headerProps: {
-    title: 'In Silico Filters',
-    name: 'custom_annotation_filter',
   },
 }
 
@@ -200,7 +200,7 @@ const PANELS = [
     isAnalyst: { [true]: ANALYST_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
-  ANNOTATION_FILTER_PANEL_MAP,
+  IN_SILICO_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
   {
     ...FREQUENCY_PANEL,

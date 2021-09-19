@@ -1,4 +1,4 @@
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput, InlineInputGroup } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput, StyledSemanticInput } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -375,246 +375,157 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const ANNOTATION_FILTER_OPTIONS_LIST = [
+export const IN_SILICO_FIELDS = [
   {
     name: 'cadd',
     label: 'CADD',
-    labelHelp: 'Cadd value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    labelHelp: 'CADD value',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'revel',
     label: 'Revel',
     labelHelp: 'Revel value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'primate_ai',
     label: 'Primate AI',
     labelHelp: 'Primate AI value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'mpc',
     label: 'MPC',
     labelHelp: 'MPC value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'splice_ai',
     label: 'Splice AI',
     labelHelp: 'Splice AI value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'eigen',
     label: 'Eigen',
     labelHelp: 'Eigen value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'dann',
     label: 'Dann',
     labelHelp: 'Dann value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'strvctvre',
     label: 'STRVCTVRE',
     labelHelp: 'STRVCTVRE value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'polyphen',
     label: 'Polyphen',
     labelHelp: 'Polyphen value',
-    value: '',
-    operator: '',
-    numericOption: false,
-    possibleValues: [{
-      title: 'benign',
-      value: 'B',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
     },
-    {
-      title: 'possibly damaging',
-      value: 'P',
-    },
-    {
-      title: 'probably damaging',
-      value: 'D',
-    }],
   },
   {
     name: 'sift',
     label: 'Sift',
     labelHelp: 'Sift value',
-    value: '',
-    operator: '',
-    numericOption: false,
-    possibleValues: [{
-      title: 'tolerated',
-      value: 'T',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
     },
-    {
-      title: 'damaging',
-      value: 'D',
-    }],
   },
   {
     name: 'mut_taster',
     label: 'Mut Taster',
     labelHelp: 'Mut Taster value',
-    value: '',
-    operator: '',
-    numericOption: false,
-    possibleValues: [{
-      title: 'polymorphism (N)',
-      value: 'N',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
     },
-    {
-      title: 'polymorphism (P)',
-      value: 'P',
-    },
-    {
-      title: 'damaging',
-      value: 'D',
-    },
-    {
-      title: 'disease causing',
-      value: 'A',
-    }],
   },
   {
     name: 'fathmm',
     label: 'FATHMM',
     labelHelp: 'FATHMM value',
-    value: '',
-    operator: '',
-    numericOption: false,
-    possibleValues: [{
-      title: 'tolerated',
-      value: 'T',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
     },
-    {
-      title: 'damaging',
-      value: 'D',
-    }],
   },
   {
     name: 'metasvm',
     label: 'METASVM',
     labelHelp: 'METASVM value',
-    value: '',
-    operator: '',
-    numericOption: false,
-    possibleValues: [{
-      title: 'tolerated',
-      value: 'T',
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
     },
-    {
-      title: 'damaging',
-      value: 'D',
-    }],
   },
   {
     name: 'gerp_rs',
     label: 'GERP RS',
     labelHelp: 'GERP RS value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
   {
     name: 'phastcons_100_vert',
     label: 'Phastcons 100 Vert',
     labelHelp: 'Phastcons 100 Vert value',
-    value: '',
-    operator: '',
-    numericOption: true,
+    component: StyledSemanticInput,
+    inputType: 'Input',
+    inputStyle: {
+      padding: '10px',
+    },
   },
-]
-
-
-export const COMPARE_OPTIONS = [
-  {
-    key: 'Option_None',
-    text: '',
-    value: null,
-  },
-  {
-    key: 'Option_Less',
-    text: '<',
-    value: 'LT',
-  },
-  {
-    key: 'Option_Greater',
-    text: '>',
-    value: 'GT',
-  },
-  {
-    key: 'Option_LessEqual',
-    text: '<=',
-    value: 'LEQ',
-  },
-  {
-    key: 'Option_GreaterEqual',
-    text: '>=',
-    value: 'GEQ',
-  },
-  {
-    key: 'Option_Equal',
-    text: '=',
-    value: 'EQ',
-  },
-]
-
-export const NON_NUMERIC_COMPARE_OPTIONS = [
-  {
-    key: 'Option_is_None',
-    text: '',
-    value: null,
-  },
-  {
-    key: 'Option_is',
-    text: 'is',
-    value: 'EQ',
-  },
-]
-
-
-export const ANNOTATION_FILTER_OPTION_LIST = [
-  {
-    control: InlineInputGroup,
-    options: ANNOTATION_FILTER_OPTIONS_LIST,
-  },
-]
-
-const ANNOTATION_FILTER_FIELD = {
-  name: 'annotationFilterField',
-  options: ANNOTATION_FILTER_OPTION_LIST,
-  compareOptions: COMPARE_OPTIONS,
-  nonNumericCompareOptions: NON_NUMERIC_COMPARE_OPTIONS,
-  width: 9,
-}
-
-export const ANNOTATION_FILTER_FIELDS = [
-  ANNOTATION_FILTER_FIELD,
 ]
 
 export const QUALITY_FILTER_FIELDS = [

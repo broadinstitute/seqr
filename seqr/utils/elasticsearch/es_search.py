@@ -16,7 +16,8 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
+    GRCH38_LOCUS_FIELD, NON_NUMERIC_IN_SILICO_PREDICTIONS, NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING, \
+    MAX_SEARCH_CLAUSES
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -196,6 +197,40 @@ class EsSearch(object):
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
         return self
+
+    def filter_by_in_silico(self, in_silico_filters):
+
+        q = Q()
+        for in_silico_filter in in_silico_filters:
+            prediction_key = None
+            for prediction_field in PREDICTION_FIELDS_CONFIG:
+                if prediction_field.lower().find(in_silico_filter.lower()) != -1:
+                    # confirm if the same value exists in 'response_key'
+                    if len(PREDICTION_FIELDS_CONFIG[prediction_field]) != 0:
+                        if PREDICTION_FIELDS_CONFIG[prediction_field]['response_key'] == in_silico_filter:
+                            prediction_key = prediction_field
+                            break
+                    else:
+                        prediction_key = prediction_field
+                        break
+                else:
+                    if len(PREDICTION_FIELDS_CONFIG[prediction_field]) != 0 and PREDICTION_FIELDS_CONFIG[prediction_field]['response_key'] == in_silico_filter:
+                        prediction_key = prediction_field
+                        break
+
+            if prediction_key:
+                prediction_value = in_silico_filters[in_silico_filter]
+                if prediction_key in NON_NUMERIC_IN_SILICO_PREDICTIONS:
+                    for non_numeric_mapping_key in NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING:
+                        if non_numeric_mapping_key.find(prediction_value.lower()) != -1:
+                            prediction_value = NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING[non_numeric_mapping_key]
+                            break
+
+                    q &= Q('prefix', **{prediction_key: prediction_value})
+                else:
+                    q &= Q('range', **{prediction_key: {'lte': prediction_value}})
+
+        self.filter(q)
 
     def filter_by_frequency(self, frequencies):
         q = Q()

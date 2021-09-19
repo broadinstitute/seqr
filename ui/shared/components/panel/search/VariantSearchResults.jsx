@@ -21,8 +21,6 @@ import ExportTableButton from '../../buttons/ExportTableButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
-import { filteredPredictions } from '../../form/Inputs'
-import { PREDICTOR_FIELDS } from '../../panel/variants/Predictions'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
@@ -50,88 +48,6 @@ DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
-const getFilterPredictionOperator = (operator, predictionKey) => {
-  if (operator === undefined) {
-    throw new Error(`Error: Please specify operator for prediction ${predictionKey}`)
-  }
-
-  if (operator === 'LT') {
-    return '<'
-  } else if (operator === 'GT') {
-    return '>'
-  } else if (operator === 'LEQ') {
-    return '<='
-  } else if (operator === 'GEQ') {
-    return '>='
-  }
-
-  return '=='
-}
-
-const getCorrectVariantPredictionValue = (value) => {
-  /* eslint-disable-next-line no-restricted-globals */
-  const isFloat = value !== '' && !isNaN(value) && Math.round(value) !== value
-  if (isFloat) {
-    return parseFloat(value).toPrecision(2)
-  }
-
-  if (typeof (value) === 'string') {
-    return `"${value}"`
-  }
-
-  return value
-}
-
-const filterVariants = (variants) => {
-  const filteredVariants = []
-  const filteredPredictionKeys = Object.keys(filteredPredictions)
-
-  filteredPredictionKeys.forEach(filteredPrediction => PREDICTOR_FIELDS.push({ field: filteredPrediction }))
-
-  if (filteredPredictionKeys.length === 0) {
-    return variants
-  }
-
-  let filterVariantExpression = ''
-  for (let variantIdx = 0; variantIdx < variants.length; variantIdx++) {
-    const variant = variants[variantIdx]
-    let nonExistingKey = false
-    for (let predictionKeyIdx = 0; predictionKeyIdx < filteredPredictionKeys.length; predictionKeyIdx++) {
-      const predictionKey = filteredPredictionKeys[predictionKeyIdx]
-      const filteredPredictionValue = getCorrectVariantPredictionValue(filteredPredictions[predictionKey].value)
-      if (filteredPredictionValue === '' || filteredPredictionValue === undefined) {
-        throw new Error(`Error: Please specify value for ${predictionKey}`)
-      }
-
-      const filteredPredictionOperator = getFilterPredictionOperator(filteredPredictions[predictionKey].operator, predictionKey)
-      const variantPredictionValue = getCorrectVariantPredictionValue(variant.predictions[predictionKey])
-
-      if (filterVariantExpression !== '') {
-        filterVariantExpression += ' && '
-      }
-
-      if (variant.predictions[predictionKey] !== undefined) {
-        filterVariantExpression += `${variantPredictionValue} ${filteredPredictionOperator} ${filteredPredictionValue}`
-      } else {
-        nonExistingKey = true
-        break
-      }
-    }
-
-    if (!nonExistingKey) {
-      /* eslint-disable-next-line no-eval */
-      const result = eval(filterVariantExpression)
-      if (result === true) {
-        filteredVariants.push(variant)
-      }
-    }
-
-    filterVariantExpression = ''
-  }
-
-  return filteredVariants
-}
-
 const BaseVariantSearchResultsContent = React.memo((
   { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants }) => {
   const { searchHash } = match.params
@@ -140,15 +56,13 @@ const BaseVariantSearchResultsContent = React.memo((
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
 
-  let filteredVariants = []
   try {
-    filteredVariants = filterVariants(displayVariants)
 
     return [
       <LargeRow key="resultsSummary">
         <Grid.Column width={5}>
           {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
-          <b>{totalVariantsCount}</b> variants{filteredVariants.length < totalVariantsCount ? <span>, after filtering showing <b>{filteredVariants.length}</b> variants</span> : null}
+          <b>{totalVariantsCount}</b> variants{displayVariants.length < totalVariantsCount ? <span>, after filtering showing <b>{displayVariants.length}</b> variants</span> : null}
         </Grid.Column>
         <Grid.Column width={11} floated="right" textAlign="right">
           {additionalDisplayEdit}
@@ -167,7 +81,7 @@ const BaseVariantSearchResultsContent = React.memo((
           <GeneBreakdown searchHash={searchHash} />
         </Grid.Column>
       </LargeRow>,
-      <DisplayVariants key="variants" displayVariants={filteredVariants} />,
+      <DisplayVariants key="variants" displayVariants={displayVariants} />,
       <LargeRow key="bottomPagination">
         <Grid.Column width={11} floated="right" textAlign="right">
           <ReduxFormWrapper
