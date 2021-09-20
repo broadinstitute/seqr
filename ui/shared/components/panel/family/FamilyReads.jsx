@@ -79,9 +79,12 @@ const BUTTON_PROPS = {
   [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
 }
 
-const TRACK_TYPE_OPTIONS = [
+const DNA_TRACK_TYPE_OPTIONS = [
   { value: ALIGNMENT_TYPE, text: 'Alignment', description: 'BAMs/CRAMs' },
   { value: GCNV_TYPE, text: 'gCNV' },
+]
+
+const RNA_TRACK_TYPE_OPTIONS = [
   { value: JUNCTION_TYPE, text: 'Splice Junctions' },
   { value: COVERAGE_TYPE, text: 'Coverage', description: 'RNASeq coverage' },
 ]
@@ -395,18 +398,28 @@ class FamilyReads extends React.PureComponent {
     />
 
     const igvSampleIndividuals = this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]
+    const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
+    const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
     const reads = igvSampleIndividuals ?
       <Segment.Group horizontal>
-        {Object.keys(igvSampleIndividuals).length > 1 &&
-          <Segment>
+        <Segment>
+          { dnaTrackOptions &&
             <CheckboxGroup
-              groupLabel="Track Types"
+              groupLabel="DNA Tracks"
               value={this.state.sampleTypes}
-              options={TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])}
+              options={dnaTrackOptions}
               onChange={this.updateSampleTypes}
             />
-          </Segment>
-        }
+          }
+          { rnaTrackOptions &&
+            <CheckboxGroup
+              groupLabel="RNA Tracks"
+              value={this.state.sampleTypes}
+              options={rnaTrackOptions}
+              onChange={this.updateSampleTypes}
+            />
+          }
+        </Segment>
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
