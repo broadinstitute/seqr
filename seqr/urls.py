@@ -102,7 +102,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, elasticsearch_mapping, elasticsearch_index_data, upload_qc_pipeline_output, delete_index, proxy_to_kibana
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, proxy_to_kibana
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -269,9 +269,6 @@ api_endpoints = {
     'data_management/delete_index': delete_index,
     'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'data_management/get_all_users': get_all_users,
-
-    'data_management/elasticsearch_mapping': elasticsearch_mapping,
-    'data_management/elasticsearch_index_data/(?P<index_name>[^/]+)': elasticsearch_index_data,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,

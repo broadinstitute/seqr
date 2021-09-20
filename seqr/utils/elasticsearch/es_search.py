@@ -4,7 +4,6 @@ import elasticsearch
 from elasticsearch_dsl import Search, Q, MultiSearch
 import hashlib
 import json
-import requests
 from pyliftover.liftover import LiftOver
 from sys import maxsize
 from itertools import combinations
@@ -640,31 +639,6 @@ class EsSearch(object):
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
-    def _search_hit_by_id(self, id):
-        headers = {
-            "Content-Type": "application/json",
-        }
-        data = f'{{ "query": {{ "match": {{ "_id": "{id}" }} }} }}'
-        response = requests.get("http://localhost:9200/_search", headers=headers, data=data)
-        results = json.loads(response.text)
-        return results
-
-    def _parse_searched_hit(self, search_result):
-        search_result_source = search_result["hits"]["hits"][0]["_source"]
-        pairs = {}
-        for key in search_result_source:
-            value_type = type(search_result_source[key]).__name__
-            if value_type == "NoneType":
-                continue
-            if value_type != "list":
-                pairs[key.lower()] = search_result_source[key]
-            else:
-                value_list = search_result_source[key]
-                if len(value_list) > 0:
-                    value_list_element_type = type(value_list[0]).__name__
-                    if value_list_element_type == "str":
-                        pairs[key.lower()] = ", ".join(value_list)
-        return pairs
 
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
@@ -798,8 +772,6 @@ class EsSearch(object):
             ),
             'transcripts': dict(transcripts),
         })
-
-        result["predictions"].update(self._parse_searched_hit(self._search_hit_by_id(result["variantId"])))
         return result
 
     def _parse_compound_het_response(self, response):

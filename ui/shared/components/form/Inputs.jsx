@@ -13,7 +13,6 @@ import { helpLabel } from './ReduxFormWrapper'
 export class BaseSemanticInput extends React.Component {
 
   static propTypes = {
-    inputStyle: PropTypes.any,
     onChange: PropTypes.func,
     inputType: PropTypes.string.isRequired,
     options: PropTypes.array,
@@ -24,8 +23,8 @@ export class BaseSemanticInput extends React.Component {
   }
 
   render() {
-    const { inputStyle, inputType, ...props } = this.props
-    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null, style: inputStyle !== undefined ? inputStyle : null })
+    const { inputType, ...props } = this.props
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
   }
 
   shouldComponentUpdate(nextProps, nextState) {

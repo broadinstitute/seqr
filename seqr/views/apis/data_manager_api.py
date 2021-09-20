@@ -117,17 +117,6 @@ def delete_index(request):
 
 
 @data_manager_required
-def elasticsearch_mapping(request):
-    response = requests.get("http://localhost:9200/_mapping")
-    return create_json_response(json.loads(response.content))
-
-@data_manager_required
-def elasticsearch_index_data(request, index_name):
-    response = requests.get(f"http://localhost:9200/{index_name}")
-    return create_json_response(json.loads(response.content))
-
-
-@data_manager_required
 def upload_qc_pipeline_output(request):
     file_path = json.loads(request.body)['file'].strip()
     if not does_file_exist(file_path, user=request.user):

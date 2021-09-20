@@ -78,7 +78,7 @@ Prediction.propTypes = {
   dangerThreshold: PropTypes.number,
 }
 
-export const PREDICTOR_FIELDS = [
+const PREDICTOR_FIELDS = [
   { field: 'cadd', warningThreshold: 10, dangerThreshold: 20 },
   { field: 'revel', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
