@@ -22,7 +22,6 @@ const ALIGNMENT_TYPE = 'alignment'
 const COVERAGE_TYPE = 'wig'
 const JUNCTION_TYPE = 'spliceJunctions'
 const GCNV_TYPE = 'gcnv'
-const ANNOTATION_TYPE = 'annotation'
 
 
 const ALIGNMENT_TRACK_OPTIONS = {
@@ -67,17 +66,11 @@ const GCNV_TRACK_OPTIONS = {
   onlyHandleClicksForHighlightedSamples: true,
 }
 
-const ANNOTATION_TRACK_OPTIONS = {
-  format: 'gtf',
-  height: 100,
-}
-
 const TRACK_OPTIONS = {
   [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
   [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
   [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
   [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
-  [ANNOTATION_TYPE]: ANNOTATION_TRACK_OPTIONS,
 }
 
 const BUTTON_PROPS = {
@@ -361,7 +354,11 @@ const MAPPABILITY_TRACKS = [
     description: 'Mappability of 100-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
-    type: ANNOTATION_TYPE,
+    type: 'annotation',
+    options: {
+      format: 'gtf',
+      height: 100,
+    },
     url: 'gs://tgg-viewer/ref/GRCh38/segdups/segdups.gtf.gz',
     text: 'SegDups >1000 bases',
     description: 'Duplications of >1000 Bases of Non-RepeatMasked Sequence downloaded from UCSC',
@@ -371,9 +368,9 @@ const MAPPABILITY_TRACKS = [
 const MAPPABILITY_TRACK_OPTIONS = getRefTrackOptions(MAPPABILITY_TRACKS)
 
 const OPTIONAL_REFERENCE_TRACKS = [].concat(
-  MAPPABILITY_TRACKS.map(({ type, url, text }) => {
+  MAPPABILITY_TRACKS.map(({ type, url, text, options }) => {
     const track = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
-    return { type, url, text, name: text, ...track, ...TRACK_OPTIONS[type] }
+    return { type, url, text, name: text, ...TRACK_OPTIONS[type], ...options, ...track }
   }),
   GTEX_TRACKS.map(({ text, data }) => ({
     text,
@@ -382,7 +379,7 @@ const OPTIONAL_REFERENCE_TRACKS = [].concat(
     height: 170,
     tracks: data.map(({ type, url }) => {
       const track = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
-      return { type, url, ...track, ...TRACK_OPTIONS[type] }
+      return { type, url, ...TRACK_OPTIONS[type], ...track }
     }),
   })),
 )
