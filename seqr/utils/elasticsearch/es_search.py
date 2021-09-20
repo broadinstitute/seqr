@@ -227,7 +227,15 @@ class EsSearch(object):
 
                     q &= Q('prefix', **{prediction_key: prediction_value})
                 else:
-                    q &= Q('range', **{prediction_key: {'gte': prediction_value}})
+                    if prediction_value.isnumeric():
+                        numeric_prediction_value = float(prediction_value)
+                        if numeric_prediction_value >= 0.5:
+                            numeric_prediction_value = numeric_prediction_value - 0.5
+
+                        q &= Q('range', **{prediction_key: {'gte': numeric_prediction_value}})
+                    else:
+                        raise ValueError("Non numeric value for numeric in silico filter was entered")
+
         self.filter(q)
 
     def filter_by_frequency(self, frequencies):
