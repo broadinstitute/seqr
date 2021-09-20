@@ -879,7 +879,7 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
 
 const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
   const { clinvar = {} } = variant
-  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
+  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0].toLowerCase()
   const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
