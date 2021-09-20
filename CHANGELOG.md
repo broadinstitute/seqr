@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Allow project-specific HGMD access (REQUIRES DB MIGRATION)
 
 ## 9/17/21
 * Change family note fields into lists of notes (REQUIRES DB MIGRATION)
