@@ -397,10 +397,10 @@ class FamilyReads extends React.PureComponent {
       showReads={this.showReads}
     />
 
-    const igvSampleIndividuals = this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]
-    const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
-    const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals && igvSampleIndividuals[value])
-    const reads = igvSampleIndividuals ?
+    const igvSampleIndividuals = (this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
+    const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
+    const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
+    const reads = Object.keys(igvSampleIndividuals).length ?
       <Segment.Group horizontal>
         <Segment>
           { dnaTrackOptions &&
