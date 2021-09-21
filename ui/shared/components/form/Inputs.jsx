@@ -127,6 +127,10 @@ Select.propTypes = {
 }
 
 export const StyledSemanticInput = styled(BaseSemanticInput)`
+  div.ui.input {
+    padding: 10px;
+  }
+  
   div.ui.input > input {
     padding: 0.3em 1em;
   }
