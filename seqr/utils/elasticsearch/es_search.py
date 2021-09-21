@@ -228,11 +228,8 @@ class EsSearch(object):
                     q &= Q('prefix', **{prediction_key: prediction_value})
                 else:
                     if prediction_value.isnumeric():
-                        numeric_prediction_value = float(prediction_value)
-                        if numeric_prediction_value >= 0.5:
-                            numeric_prediction_value = numeric_prediction_value - 0.5
 
-                        q &= Q('range', **{prediction_key: {'gte': numeric_prediction_value}})
+                        q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
                     else:
                         raise ValueError("Non numeric value for numeric in silico filter was entered")
 

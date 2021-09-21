@@ -379,7 +379,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'cadd',
     label: 'CADD',
-    labelHelp: 'CADD value',
+    labelHelp: 'Enter a numeric value for Cadd prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -389,7 +389,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'revel',
     label: 'Revel',
-    labelHelp: 'Revel value',
+    labelHelp: 'Enter a numeric value for Revel prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -399,7 +399,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'primate_ai',
     label: 'Primate AI',
-    labelHelp: 'Primate AI value',
+    labelHelp: 'Enter a numeric value for Primate AI prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -409,7 +409,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'mpc',
     label: 'MPC',
-    labelHelp: 'MPC value',
+    labelHelp: 'Enter a numeric value for MPC prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -419,7 +419,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'splice_ai',
     label: 'Splice AI',
-    labelHelp: 'Splice AI value',
+    labelHelp: 'Enter a numeric value for Splice AI prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -429,7 +429,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'eigen',
     label: 'Eigen',
-    labelHelp: 'Eigen value',
+    labelHelp: 'Enter a numeric value for Eigen prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -439,7 +439,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'dann',
     label: 'Dann',
-    labelHelp: 'Dann value',
+    labelHelp: 'Enter a numeric value for Dann prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -449,7 +449,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'strvctvre',
     label: 'STRVCTVRE',
-    labelHelp: 'STRVCTVRE value',
+    labelHelp: 'Enter a numeric value for STRVCTVRE prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -459,7 +459,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'polyphen',
     label: 'Polyphen',
-    labelHelp: 'Polyphen value',
+    labelHelp: 'Enter a value for Polyphen prediction',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -469,7 +469,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'sift',
     label: 'Sift',
-    labelHelp: 'Sift value',
+    labelHelp: 'Enter a value for Sift prediction',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -479,7 +479,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'mut_taster',
     label: 'Mut Taster',
-    labelHelp: 'Mut Taster value',
+    labelHelp: 'Enter value for Mutation Taster prediction',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -489,7 +489,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'fathmm',
     label: 'FATHMM',
-    labelHelp: 'FATHMM value',
+    labelHelp: 'Enter a value for FATHMM prediction',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -499,7 +499,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'metasvm',
     label: 'METASVM',
-    labelHelp: 'METASVM value',
+    labelHelp: 'Enter a value for METASVM prediction',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -509,7 +509,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'gerp_rs',
     label: 'GERP RS',
-    labelHelp: 'GERP RS value',
+    labelHelp: 'Enter a value for GERP RS prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
@@ -519,7 +519,7 @@ export const IN_SILICO_FIELDS = [
   {
     name: 'phastcons_100_vert',
     label: 'Phastcons 100 Vert',
-    labelHelp: 'Phastcons 100 Vert value',
+    labelHelp: 'Enter a value for Phastcons 100 Vert prediction. During filtering, some variants might be left out, since their annotation value might be rounded up or down from their original value',
     component: StyledSemanticInput,
     inputType: 'Input',
     inputStyle: {
