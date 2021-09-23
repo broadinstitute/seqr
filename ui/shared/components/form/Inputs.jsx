@@ -290,7 +290,7 @@ export const CheckboxGroup = React.memo((props) => {
         </List.Header>
         <List.List>
           {options.map(option =>
-            <List.Item key={option.value}>
+            <List.Item key={option.key}>
               <BaseSemanticInput
                 {...baseProps}
                 inputType="Checkbox"
