@@ -400,10 +400,11 @@ class FamilyReads extends React.PureComponent {
     const igvSampleIndividuals = (this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
-    const reads = Object.keys(igvSampleIndividuals).length ?
+    const reads = Object.keys(igvSampleIndividuals).length > 0 ?
       <Segment.Group horizontal>
+        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) &&
         <Segment>
-          { dnaTrackOptions &&
+          { dnaTrackOptions.length > 0 &&
             <CheckboxGroup
               groupLabel="DNA Tracks"
               value={this.state.sampleTypes}
@@ -411,7 +412,7 @@ class FamilyReads extends React.PureComponent {
               onChange={this.updateSampleTypes}
             />
           }
-          { rnaTrackOptions &&
+          { rnaTrackOptions.length > 0 &&
             <CheckboxGroup
               groupLabel="RNA Tracks"
               value={this.state.sampleTypes}
@@ -419,7 +420,7 @@ class FamilyReads extends React.PureComponent {
               onChange={this.updateSampleTypes}
             />
           }
-        </Segment>
+        </Segment>}
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
