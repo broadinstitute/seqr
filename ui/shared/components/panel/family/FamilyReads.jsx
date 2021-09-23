@@ -25,13 +25,13 @@ const ALIGNMENT_TRACK_OPTIONS = {
   showSoftClips: true,
 }
 
-export const CRAM_PROXY_TRACK_OPTIONS = {
+const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
 }
 
-export const BAM_TRACK_OPTIONS = {
+const BAM_TRACK_OPTIONS = {
   indexed: true,
   format: 'bam',
 }
