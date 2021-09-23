@@ -212,7 +212,7 @@ def get_project_guids_user_can_view(user):
             workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
             workspace__in=workspaces).only('guid')]
 
-    safe_redis_set_json(cache_key, project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
 
