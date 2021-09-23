@@ -179,7 +179,7 @@ const GTEX_TRACKS = [
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_muscle.803_samples.junctions.bed.gz',
       }],
     description: 'All splice junctions from all 803 GTEx v3 muscle samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Muscle',
+    value: 'GTEx Muscle',
   },
   {
     data: [
@@ -192,7 +192,7 @@ const GTEX_TRACKS = [
         url: 'gs://tgg-viewer/ref/GRCh38/gtex_v8/GTEX_blood.755_samples.junctions.bed.gz',
       }],
     description: 'All splice junctions from all 755 GTEx v3 blood samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Blood',
+    value: 'GTEx Blood',
   },
   {
     data: [
@@ -206,7 +206,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'All splice junctions from all 504 GTEx v3 fibroblast samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Fibs',
+    value: 'GTEx Fibs',
   },
   {
     data: [
@@ -220,7 +220,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'All splice junctions from all 174 GTEx v3 lymphocyte samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Lymph',
+    value: 'GTEx Lymph',
   },
   {
     data: [
@@ -234,7 +234,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'All splice junctions from all 255 GTEx v3 cortex samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Brain: Cortex',
+    value: 'GTEx Brain: Cortex',
   },
   {
     data: [
@@ -248,7 +248,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'All splice junctions from all 209 GTEx v3 frontal cortex samples. The junction-spanning read counts and read coverage are summed across all samples.',
-    text: 'GTEx Brain: Front. Cortex',
+    value: 'GTEx Brain: Front. Cortex',
   },
   {
     data: [
@@ -262,7 +262,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 803 GTEx v3 muscle samples. The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n\n  average_unique_reads_per_muscle_sample = (total_unqiue_reads_in_all_muscle_samples / number_of_muscle_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_muscle_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_muscle_samples',
-    text: 'Norm. GTEx Muscle',
+    value: 'Norm. GTEx Muscle',
   },
   {
     data: [
@@ -276,7 +276,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 755 GTEx v3 blood samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_blood_sample = (total_unqiue_reads_in_all_blood_samples / number_of_blood_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_blood_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_blood_samples',
-    text: 'Norm. GTEx Blood',
+    value: 'Norm. GTEx Blood',
   },
   {
     data: [
@@ -290,7 +290,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 504 GTEx v3 fibroblast samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_fibs_sample = (total_unqiue_reads_in_all_fibs_samples / number_of_fibs_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_fibs_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_fibs_samples',
-    text: 'Norm. GTEx Fibs',
+    value: 'Norm. GTEx Fibs',
   },
   {
     data: [
@@ -304,7 +304,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 174 GTEx v3 lymphocyte samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below). Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_lymph_sample = (total_unqiue_reads_in_all_lymph_samples / number_of_lymph_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_lymph_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_lymph_samples',
-    text: 'Norm. GTEx Lymph',
+    value: 'Norm. GTEx Lymph',
   },
   {
     data: [
@@ -318,7 +318,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 255 GTEx v3 brain cortex samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below).\n Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_cortex_sample = (total_unqiue_reads_in_all_cortex_samples / number_of_cortex_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_cortex_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_cortex_samples',
-    text: 'Norm. GTEx Brain: Cortex',
+    value: 'Norm. GTEx Brain: Cortex',
   },
   {
     data: [
@@ -332,7 +332,7 @@ const GTEX_TRACKS = [
       },
     ],
     description: 'Highly expressed junctions from all 209 GTEx v3 brain frontal cortex samples.\n The junction-spanning read counts are normalized to represent the average spanning read count per-sample (see formula below).\n Only junctions with rounded normalized spanning read count > 0 are included in this track.\n \n average_unique_reads_per_cortex_sample = (total_unqiue_reads_in_all_cortex_samples / number_of_cortex_samples)\n per_sample_normalized_read_count = raw_read_count * average_unique_reads_per_cortex_sample / total_unqiue_reads_in_this_sample\n normalized read count for junction = sum(per_sample_normalized_read_counts) / number_of_cortex_samples',
-    text: 'Norm. GTEx Brain: Front. Cortex',
+    value: 'Norm. GTEx Brain: Front. Cortex',
   },
 ]
 
@@ -340,25 +340,25 @@ const MAPPABILITY_TRACKS = [
   {
     type: COVERAGE_TYPE,
     url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k36_m2.bw',
-    text: '36-mer mappability',
+    value: '36-mer mappability',
     description: 'Mappability of 36-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
     type: COVERAGE_TYPE,
     url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k50_m2.bw',
-    text: '50-mer mappability',
+    value: '50-mer mappability',
     description: 'Mappability of 50-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
     type: COVERAGE_TYPE,
     url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k75_m2.bw',
-    text: '75-mer mappability',
+    value: '75-mer mappability',
     description: 'Mappability of 75-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
     type: COVERAGE_TYPE,
     url: 'gs://tgg-viewer/ref/GRCh38/mappability/GRCh38_no_alt_analysis_set_GCA_000001405.15-k100_m2.bw',
-    text: '100-mer mappability',
+    value: '100-mer mappability',
     description: 'Mappability of 100-mers allowing for 2 mismatches. Generated using the same pipeline as the UCSC hg19 mappability tracks.',
   },
   {
@@ -368,19 +368,14 @@ const MAPPABILITY_TRACKS = [
       height: 100,
     },
     url: 'gs://tgg-viewer/ref/GRCh38/segdups/segdups.gtf.gz',
-    text: 'SegDups >1000 bases',
+    value: 'SegDups >1000 bases',
     description: 'Duplications of >1000 Bases of Non-RepeatMasked Sequence downloaded from UCSC',
   },
 ]
 
-const GTEX_TRACK_OPTIONS = GTEX_TRACKS.map(({ text, description }) => ({ value: text, text, description }))
-
-const MAPPABILITY_TRACK_OPTIONS = MAPPABILITY_TRACKS.map(({ text, description }) => ({ value: text, text, description }))
-
 const RNA_REFERENCE_TRACKS = [].concat(
-  GTEX_TRACKS.map(({ text, data }, i) => ({
-    text,
-    name: text,
+  GTEX_TRACKS.map(({ value, data }, i) => ({
+    name: value,
     type: 'merged',
     height: 170,
     order: 300 + i,
@@ -389,14 +384,14 @@ const RNA_REFERENCE_TRACKS = [].concat(
       return { type, url, ...TRACK_OPTIONS[type], ...track }
     }),
   })),
-  MAPPABILITY_TRACKS.map(({ type, url, text, options }, i) => {
+  MAPPABILITY_TRACKS.map(({ type, url, value, options }, i) => {
     const track = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
-    return { type, url, text, name: text, order: 400 + i, ...TRACK_OPTIONS[type], ...options, ...track }
+    return { type, url, name: value, order: 400 + i, ...TRACK_OPTIONS[type], ...options, ...track }
   }),
 )
 
-const getRnaRefTracks = sampleTypes => RNA_REFERENCE_TRACKS.reduce((acc, { text, ...fields }) =>
-  (sampleTypes.includes(text) ? [...acc, { ...fields }] : acc), [])
+const getRnaRefTracks = sampleTypes => RNA_REFERENCE_TRACKS.reduce((acc, track) =>
+  (sampleTypes.includes(track.name) ? [...acc, track] : acc), [])
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
@@ -672,13 +667,13 @@ class FamilyReads extends React.PureComponent {
                   <CheckboxGroup
                     groupLabel="GTEx Tracks"
                     value={this.state.rnaReferences}
-                    options={GTEX_TRACK_OPTIONS}
+                    options={GTEX_TRACKS}
                     onChange={this.updateRnaReferences}
                   />
                   <CheckboxGroup
                     groupLabel="Mappability Tracks"
                     value={this.state.rnaReferences}
-                    options={MAPPABILITY_TRACK_OPTIONS}
+                    options={MAPPABILITY_TRACKS}
                     onChange={this.updateRnaReferences}
                   />
                 </div>
