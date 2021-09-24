@@ -873,11 +873,14 @@ const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 
+export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) =>
+  (user.isAnalyst || variant.familyGuids.some(familyGuid =>
+    projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd)) && variant.hgmd && variant.hgmd.class
 
-const clinsigSeverity = (variant, user) => {
-  const { clinvar = {}, hgmd = {} } = variant
-  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.isAnalyst && hgmd.class
+const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
+  const { clinvar = {} } = variant
+  const clinvarSignificance = clinvar.clinicalSignificance && clinvar.clinicalSignificance.split('/')[0].toLowerCase()
+  const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {
@@ -930,7 +933,12 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
   { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: predictionComparator('splice_ai') },
   { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: predictionComparator('primate_ai') },
-  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b, geneId, user) => clinsigSeverity(b, user) - clinsigSeverity(a, user) },
+  {
+    value: SORT_BY_PATHOGENICITY,
+    text: 'Pathogenicity',
+    comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) =>
+      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid),
+  },
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
@@ -952,7 +960,7 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_TAGGED_DATE,
     text: 'Last Tagged',
-    comparator: (a, b, genesById, user, tagsByGuid) =>
+    comparator: (a, b, genesById, tagsByGuid) =>
       (b.tagGuids.map(
         tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || '').localeCompare(
         a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',

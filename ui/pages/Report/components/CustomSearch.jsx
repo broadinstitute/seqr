@@ -8,7 +8,7 @@ import { Select, InlineToggle, JsonInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
@@ -67,7 +67,7 @@ const INHERITANCE_PANEL = {
 }
 
 const PANELS = [
-  INHERITANCE_PANEL, ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  INHERITANCE_PANEL, HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
 const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>

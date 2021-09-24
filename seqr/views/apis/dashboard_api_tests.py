@@ -6,6 +6,7 @@ from seqr.views.apis.dashboard_api import dashboard_page_data
 from seqr.views.utils.terra_api_utils import TerraAPIException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase,\
     PROJECT_FIELDS
+from seqr.models import Project
 
 DASHBOARD_PROJECT_FIELDS = {
     'numIndividuals', 'numFamilies', 'sampleTypeCounts', 'numVariantTags', 'analysisStatusCounts',
@@ -50,12 +51,6 @@ class DashboardPageTest(object):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['projectsByGuid']), 3)
 
-        if hasattr(self, 'mock_list_workspaces'):
-            self.mock_list_workspaces.side_effect = TerraAPIException('AnVIL Error', 400)
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.json()['error'], 'AnVIL Error')
-
         self.login_data_manager_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -69,13 +64,29 @@ class DashboardPageTest(object):
         mock_get_redis.assert_called_with('projects__test_data_manager')
         mock_set_redis.assert_not_called()
 
+        # Test all user projects
+        mock_get_redis.return_value = None
+        Project.objects.update(all_user_demo=True)
+        self.login_base_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        project_json = response.json()['projectsByGuid']
+        self.assertSetEqual(set(project_json.keys()), {'R0003_test'})
+        self.assertFalse(project_json['R0003_test']['canEdit'])
+
+        if hasattr(self, 'mock_list_workspaces'):
+            self.mock_list_workspaces.side_effect = TerraAPIException('AnVIL Error', 400)
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'AnVIL Error')
+
 # Tests for AnVIL access disabled
 class LocalDashboardPageTest(AuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 3
 
 
-def assert_has_list_workspaces_calls(self, call_count=4):
+def assert_has_list_workspaces_calls(self, call_count=5):
     self.assertEqual(self.mock_list_workspaces.call_count, call_count)
     calls = [
         mock.call(self.no_access_user),

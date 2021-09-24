@@ -4,13 +4,13 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
-import { getUser, getAnnotationSecondary } from 'redux/selectors'
+import { getAnnotationSecondary } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -29,7 +29,7 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
-import { getDatasetTypes } from '../selectors'
+import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 
 const SavedSearchColumn = styled(Grid.Column)`
   font-size: 0.75em;
@@ -199,7 +199,7 @@ const PANELS = [
   INHERITANCE_PANEL,
   {
     [DATASET_TYPE_SV_CALLS]: null,
-    isAnalyst: { [true]: ANALYST_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
+    hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
@@ -237,11 +237,11 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
   return {
     ...typeAcc,
-    [type]: [true, false].reduce((analystAcc, isAnalystBool) => {
-      const analystPanels = typePanels.map(({ isAnalyst, ...panel }) => (isAnalyst === undefined ? panel : isAnalyst[isAnalystBool]))
+    [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
+      const analystPanels = typePanels.map(({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]))
       return {
         ...analystAcc,
-        [isAnalystBool]: [true, false].reduce((acc, annSecondaryBool) => ({
+        [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
           [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
@@ -249,7 +249,7 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   }
 }, {})
 
-const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
+const VariantSearchFormContent = React.memo(({ hasHgmdPermission, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
     <Header size="huge" block>
@@ -263,18 +263,18 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary,
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][displayAnnotationSecondary]} />
   </div>
 ))
 
 VariantSearchFormContent.propTypes = {
-  user: PropTypes.object,
+  hasHgmdPermission: PropTypes.bool,
   displayAnnotationSecondary: PropTypes.bool,
   datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
+  hasHgmdPermission: getHasHgmdPermission(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
   datasetTypes: getDatasetTypes(state),
 })
