@@ -153,6 +153,9 @@ class WarningMessage(models.Model):
     message =  models.TextField()
     header = models.TextField(null=True, blank=True)
 
+    class Meta:
+        app_label = 'admin'
+
     def json(self):
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 

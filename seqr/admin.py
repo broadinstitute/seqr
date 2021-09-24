@@ -31,11 +31,11 @@ for model_class in [
         list_per_page = 2000
 
 @admin.register(WarningMessage)
-class SpecificModelAdmin(admin.ModelAdmin):
+class WarningMessageModelAdmin(admin.ModelAdmin):
     list_display = ['header', 'message']
 
 @admin.register(UserPolicy)
-class SpecificModelAdmin(admin.ModelAdmin):
+class UserPolicyModelAdmin(admin.ModelAdmin):
     search_fields = ['user', 'privacy_version', 'tos_version']
     list_display = ['user', 'privacy_version', 'tos_version']
 
