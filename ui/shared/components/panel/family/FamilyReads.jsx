@@ -16,129 +16,10 @@ import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/Annotations'
-import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants'
-import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, REFERENCE_URLS, REFERENCE_TRACKS, GTEX_TRACKS, MAPPABILITY_TRACKS } from './constants'
-
-const ALIGNMENT_TRACK_OPTIONS = {
-  alignmentShading: 'strand',
-  format: 'cram',
-  showSoftClips: true,
-}
-
-const CRAM_PROXY_TRACK_OPTIONS = {
-  sourceType: 'pysam',
-  alignmentFile: '/placeholder.cram',
-  referenceFile: '/placeholder.fa',
-}
-
-const BAM_TRACK_OPTIONS = {
-  indexed: true,
-  format: 'bam',
-}
-
-const COVERAGE_TRACK_OPTIONS = {
-  format: 'bigwig',
-  height: 170,
-}
-
-const JUNCTION_TRACK_OPTIONS = {
-  format: 'bed',
-  height: 170,
-  minUniquelyMappedReads: 0,
-  minTotalReads: 1,
-  maxFractionMultiMappedReads: 1,
-  minSplicedAlignmentOverhang: 0,
-  colorBy: 'isAnnotatedJunction',
-  labelUniqueReadCount: true,
-}
-
-const GCNV_TRACK_OPTIONS = {
-  format: 'gcnv',
-  height: 200,
-  min: 0,
-  max: 5,
-  autoscale: true,
-  onlyHandleClicksForHighlightedSamples: true,
-}
-
-const TRACK_OPTIONS = {
-  [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
-  [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
-  [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
-  [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
-}
-
-const BUTTON_PROPS = {
-  [ALIGNMENT_TYPE]: { icon: 'options', content: 'SHOW READS' },
-  [JUNCTION_TYPE]: { icon: { name: 'dna', rotated: 'clockwise' }, content: 'SHOW RNASeq' },
-  [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
-}
-
-const DNA_TRACK_TYPE_OPTIONS = [
-  { value: ALIGNMENT_TYPE, text: 'Alignment', description: 'BAMs/CRAMs' },
-  { value: GCNV_TYPE, text: 'gCNV' },
-]
-
-const RNA_TRACK_TYPE_OPTIONS = [
-  { value: JUNCTION_TYPE, text: 'Splice Junctions' },
-  { value: COVERAGE_TYPE, text: 'Coverage', description: 'RNASeq coverage' },
-]
-
-const RNA_TRACK_TYPE_LOOKUP = new Set(RNA_TRACK_TYPE_OPTIONS.map(({ value }) => value))
-
-const IGV_OPTIONS = {
-  loadDefaultGenomes: false,
-  showKaryo: false,
-  showIdeogram: true,
-  showNavigation: true,
-  showRuler: true,
-  showCenterGuide: true,
-  showCursorTrackingGuide: true,
-  showCommandBar: true,
-}
-
-const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
-  ...acc,
-  [genome]: {
-    id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
-    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, indexPostfix, ...track }) => ({
-      url: `${baseUrl}/${path[genome]}`,
-      indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
-      ...track })),
-    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
-  },
-}), {})
-
-const GTEX_TRACK_OPTIONS = GTEX_TRACKS.map((track, i) => ({
-  text: track.value,
-  description: track.description,
-  value: {
-    name: track.value,
-    type: 'merged',
-    height: 170,
-    order: 300 + i,
-    tracks: track.data.map(({ type, url }) => {
-      const idx = url.endsWith('.gz') ? { indexURL: `${url}.tbi` } : {}
-      return { type, url, ...TRACK_OPTIONS[type], ...idx }
-    }),
-  },
-}))
-
-const MAPPABILITY_TRACK_OPTIONS = MAPPABILITY_TRACKS.map((track, i) => {
-  const idx = track.url.endsWith('.gz') ? { indexURL: `${track.url}.tbi` } : {}
-  return {
-    text: track.value,
-    description: track.description,
-    value: {
-      url: track.url,
-      name: track.value,
-      order: 400 + i,
-      ...TRACK_OPTIONS[track.type],
-      ...track.options,
-      ...idx,
-    },
-  }
-})
+import { AFFECTED } from '../../../utils/constants'
+import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
+  GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
+  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP } from './constants'
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
@@ -352,7 +233,7 @@ class FamilyReads extends React.PureComponent {
   }
 
   updateSampleTypes = (sampleTypes) => {
-    if (RNA_TRACK_TYPE_OPTIONS.some(opt => sampleTypes.includes(opt.value))) {
+    if (sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType))) {
       this.setState({
         sampleTypes,
       })
