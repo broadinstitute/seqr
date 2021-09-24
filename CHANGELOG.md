@@ -2,6 +2,7 @@
 
 ## dev
 * Allow project-specific HGMD access (REQUIRES DB MIGRATION)
+* Update pedigree label display (requires manual cleanup for saved pedigree datasets)
 
 ## 9/17/21
 * Change family note fields into lists of notes (REQUIRES DB MIGRATION)
