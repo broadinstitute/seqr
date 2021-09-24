@@ -153,6 +153,9 @@ class WarningMessage(models.Model):
     message =  models.TextField()
     header = models.TextField(null=True, blank=True)
 
+    def json(self):
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+
 
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
