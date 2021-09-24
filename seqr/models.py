@@ -149,6 +149,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return queryset.delete()
 
 
+class WarningMessage(models.Model):
+    message =  models.TextField()
+    header = models.TextField(null=True, blank=True)
+
+
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     privacy_version = models.FloatField(null=True)
