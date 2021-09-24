@@ -537,7 +537,6 @@ class EsSearch(object):
                     self.previous_search_results[self.CACHED_COUNTS_KEY][index_name] = {'loaded': 0, 'total': 0}
 
             searches = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
-            ms = ms.index(index_name.split(','))
             for search in searches:
                 ms = ms.add(search)
 
