@@ -292,7 +292,7 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
-QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
+QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10, 'gq_sv': 10}
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},
     'dp': {},

@@ -171,18 +171,28 @@ SVFrequecyHeaderFilter.propTypes = {
   onChange: PropTypes.func,
 }
 
-const QS_FILTER_FIELD = {
+const SV_QS_FILTER_FIELD = {
   name: 'min_qs',
-  label: 'SV Quality Score',
+  label: 'Exome SV Quality Score',
   labelHelp: (
     <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
-      WGS: &gt; 10; <br />
-      WES: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
+      duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
     </span>),
   min: 0,
   max: 1000,
   step: 10,
   component: DividedFormField,
+}
+
+const SV_GQ_FILTER_FIELD = {
+  name: 'min_gq_sv',
+  label: 'Genome SV Genotype Quality',
+  labelHelp: (
+    <span>The genotype quality (QS) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: &gt; 50.
+    </span>),
+  min: 0,
+  max: 1000,
+  step: 10,
 }
 
 const PANELS = [
@@ -214,11 +224,11 @@ const PANELS = [
     ...QUALITY_PANEL,
     [ALL_DATASET_TYPE]: {
       ...QUALITY_PANEL,
-      fields: [...QUALITY_PANEL.fields, QS_FILTER_FIELD],
+      fields: [...QUALITY_PANEL.fields, SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
     [DATASET_TYPE_SV_CALLS]: {
       ...QUALITY_PANEL,
-      fields: [QS_FILTER_FIELD],
+      fields: [SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
   },
 ]
