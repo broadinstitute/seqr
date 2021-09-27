@@ -24,8 +24,8 @@ class WarningMessages extends React.PureComponent {
   }
 
   render() {
-    const warningMessages = this.props.warningMessages.filter(({ message }) => !this.state[message])
-    return warningMessages && warningMessages.length > 0 && warningMessages.map(({ header, message }) =>
+    const warningMessages = (this.props.warningMessages || []).filter(({ message }) => !this.state[message])
+    return warningMessages.length > 0 && warningMessages.map(({ header, message }) =>
       <Grid.Row>
         <Grid.Column textAlign="center">
           <Message key={message} header={header} content={message} warning compact onDismiss={this.hide(message)} />
