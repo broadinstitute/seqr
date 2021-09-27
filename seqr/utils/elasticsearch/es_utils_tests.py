@@ -361,6 +361,15 @@ ES_SV_VARIANT = {
           'num_exon': 2,
           'start': 49045487,
           'end': 49045899,
+        },
+        {
+          'qs': 80,
+          'cn': 2,
+          'defragged': False,
+          'sample_id': 'HG00733',
+          'num_exon': 1,
+          'start': 49045987,
+          'end': 49045890,
         }
       ],
       'xpos': 1049045387,
@@ -1554,7 +1563,7 @@ class EsUtilsTest(TestCase):
             {'bool': {
                 'must': [
                     {'bool': {
-                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                        'must_not': [{'term': {'samples': 'HG00732'}}, {'term': {'samples': 'HG00733'}}],
                         'must': [{'term': {'samples': 'HG00731'}}],
                     }},
                     {'bool': {
@@ -1563,6 +1572,8 @@ class EsUtilsTest(TestCase):
                             {'term': {'samples_qs_10_to_20': 'HG00731'}},
                             {'term': {'samples_qs_0_to_10': 'HG00732'}},
                             {'term': {'samples_qs_10_to_20': 'HG00732'}},
+                            {'term': {'samples_qs_0_to_10': 'HG00733'}},
+                            {'term': {'samples_qs_10_to_20': 'HG00733'}},
                         ],
                     }}
                 ],
@@ -1787,6 +1798,8 @@ class EsUtilsTest(TestCase):
                                         'must_not': [
                                             {'term': {'samples_cn_0': 'HG00732'}},
                                             {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
                                         ]
                                     }},
                                     {'bool': {
@@ -1796,7 +1809,11 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must_not': [
+                                            {'term': {'samples': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
+                                        ],
                                         'must': [{'match': {'contig': 'X'}}],
                                     }}
                                 ]
@@ -1933,6 +1950,8 @@ class EsUtilsTest(TestCase):
                                         'must_not': [
                                             {'term': {'samples_cn_0': 'HG00732'}},
                                             {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
                                         ]
                                     }},
                                     {'bool': {
@@ -1942,7 +1961,11 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must_not': [
+                                            {'term': {'samples': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
+                                        ],
                                         'must': [{'match': {'contig': 'X'}}],
                                     }}
                                 ]
@@ -2981,7 +3004,7 @@ class EsUtilsTest(TestCase):
         })
 
         _execute_inheritance_search(mode='de_novo', dataset_type='SV', expected_filter={'bool': {
-                'must_not': [{'term': {'samples': 'HG00732'}}],
+                'must_not': [{'term': {'samples': 'HG00732'}}, {'term': {'samples': 'HG00733'}}],
                 'must': [{'term': {'samples': 'HG00731'}}],
             }
         })
@@ -3051,6 +3074,8 @@ class EsUtilsTest(TestCase):
                 'must_not': [
                     {'term': {'samples_cn_0': 'HG00732'}},
                     {'term': {'samples_cn_gte_4': 'HG00732'}},
+                    {'term': {'samples_cn_0': 'HG00733'}},
+                    {'term': {'samples_cn_gte_4': 'HG00733'}},
                 ]
             }
         }
@@ -3140,7 +3165,11 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_2': 'HG00731'}},
                     {'term': {'samples_cn_gte_4': 'HG00731'}},
                 ],
-                'must_not': [{'term': {'samples': 'HG00732'}}],
+                'must_not': [
+                    {'term': {'samples': 'HG00732'}},
+                    {'term': {'samples_cn_0': 'HG00733'}},
+                    {'term': {'samples_cn_gte_4': 'HG00733'}},
+                ],
                 'must': [{'match': {'contig': 'X'}}],
             }
         }

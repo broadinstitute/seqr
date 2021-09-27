@@ -844,6 +844,10 @@ PARSED_SV_VARIANT = {
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
             'sampleType': None,
         },
+        'I000006_hg00733': {
+            'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00733', 'numAlt': -1, 'dp': None, 'pl': None,
+            'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80, 'sampleType': 'WES',
+        },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
     'hgmd': {'accession': None, 'class': None},
