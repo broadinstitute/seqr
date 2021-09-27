@@ -16,157 +16,10 @@ import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/Annotations'
-import { AFFECTED, GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants'
-
-const ALIGNMENT_TYPE = 'alignment'
-const COVERAGE_TYPE = 'wig'
-const JUNCTION_TYPE = 'spliceJunctions'
-const GCNV_TYPE = 'gcnv'
-
-
-const ALIGNMENT_TRACK_OPTIONS = {
-  alignmentShading: 'strand',
-  format: 'cram',
-  showSoftClips: true,
-}
-
-const CRAM_PROXY_TRACK_OPTIONS = {
-  sourceType: 'pysam',
-  alignmentFile: '/placeholder.cram',
-  referenceFile: '/placeholder.fa',
-}
-
-const BAM_TRACK_OPTIONS = {
-  indexed: true,
-  format: 'bam',
-}
-
-const COVERAGE_TRACK_OPTIONS = {
-  format: 'bigwig',
-  height: 170,
-}
-
-const JUNCTION_TRACK_OPTIONS = {
-  format: 'bed',
-  height: 170,
-  minUniquelyMappedReads: 0,
-  minTotalReads: 1,
-  maxFractionMultiMappedReads: 1,
-  minSplicedAlignmentOverhang: 0,
-  colorBy: 'isAnnotatedJunction',
-  labelUniqueReadCount: true,
-}
-
-const GCNV_TRACK_OPTIONS = {
-  format: 'gcnv',
-  height: 200,
-  min: 0,
-  max: 5,
-  autoscale: true,
-  onlyHandleClicksForHighlightedSamples: true,
-}
-
-const TRACK_OPTIONS = {
-  [ALIGNMENT_TYPE]: ALIGNMENT_TRACK_OPTIONS,
-  [COVERAGE_TYPE]: COVERAGE_TRACK_OPTIONS,
-  [JUNCTION_TYPE]: JUNCTION_TRACK_OPTIONS,
-  [GCNV_TYPE]: GCNV_TRACK_OPTIONS,
-}
-
-const BUTTON_PROPS = {
-  [ALIGNMENT_TYPE]: { icon: 'options', content: 'SHOW READS' },
-  [JUNCTION_TYPE]: { icon: { name: 'dna', rotated: 'clockwise' }, content: 'SHOW RNASeq' },
-  [GCNV_TYPE]: { icon: 'industry', content: 'SHOW gCNV' },
-}
-
-const DNA_TRACK_TYPE_OPTIONS = [
-  { value: ALIGNMENT_TYPE, text: 'Alignment', description: 'BAMs/CRAMs' },
-  { value: GCNV_TYPE, text: 'gCNV' },
-]
-
-const RNA_TRACK_TYPE_OPTIONS = [
-  { value: JUNCTION_TYPE, text: 'Splice Junctions' },
-  { value: COVERAGE_TYPE, text: 'Coverage', description: 'RNASeq coverage' },
-]
-
-const IGV_OPTIONS = {
-  loadDefaultGenomes: false,
-  showKaryo: false,
-  showIdeogram: true,
-  showNavigation: true,
-  showRuler: true,
-  showCenterGuide: true,
-  showCursorTrackingGuide: true,
-  showCommandBar: true,
-}
-
-const BASE_REFERENCE_URL = '/api/igv_genomes'
-
-const REFERENCE_URLS = [
-  {
-    key: 'fastaURL',
-    baseUrl: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq`,
-    path: {
-      37: 'hg19/hg19.fasta',
-      38: 'hg38/hg38.fa',
-    },
-  },
-  {
-    key: 'cytobandURL',
-    baseUrl: BASE_REFERENCE_URL,
-    path: {
-      37: 'broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-      38: 'org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
-    },
-  },
-  {
-    key: 'aliasURL',
-    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
-    path: {
-      37: 'hg19/hg19_alias.tab',
-      38: 'hg38/hg38_alias.tab',
-    },
-  },
-]
-
-const REFERENCE_TRACKS = [
-  {
-    name: 'Gencode v32',
-    indexPostfix: 'tbi',
-    baseUrl: 'https://storage.googleapis.com/seqr-reference-data',
-    path: {
-      37: 'GRCh37/gencode/gencode.v32lift37.annotation.sorted.bed.gz',
-      38: 'GRCh38/gencode/gencode_v32_knownGene.sorted.txt.gz',
-    },
-    format: 'refgene',
-    order: 1000,
-  },
-  {
-    name: 'Refseq',
-    indexPostfix: 'tbi',
-    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
-    path: {
-      37: 'hg19/refGene.sorted.txt.gz',
-      38: 'hg38/refGene.sorted.txt.gz',
-    },
-    format: 'refgene',
-    visibilityWindow: -1,
-    order: 1001,
-  },
-]
-
-const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
-  ...acc,
-  [genome]: {
-    id: GENOME_VERSION_DISPLAY_LOOKUP[GENOME_VERSION_LOOKUP[genome]],
-    tracks: REFERENCE_TRACKS.map(({ baseUrl, path, indexPostfix, ...track }) => ({
-      url: `${baseUrl}/${path[genome]}`,
-      indexURL: indexPostfix ? `${baseUrl}/${path[genome]}.${indexPostfix}` : null,
-      ...track })),
-    ...REFERENCE_URLS.reduce((acc2, { key, baseUrl, path }) => ({ ...acc2, [key]: `${baseUrl}/${path[genome]}` }), {}),
-  },
-}), {})
-
+import { AFFECTED } from '../../../utils/constants'
+import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
+  GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
+  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP } from './constants'
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
@@ -317,7 +170,7 @@ ReadButtons.propTypes = {
 }
 
 
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes }) => {
+const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences }) => {
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
@@ -325,7 +178,7 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
     variant.end && variant.end - variant.pos,
   )
 
-  const tracks = getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)
+  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
@@ -335,6 +188,7 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
 IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.array,
+  rnaReferences: PropTypes.array,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -359,6 +213,7 @@ class FamilyReads extends React.PureComponent {
     this.state = {
       openFamily: null,
       sampleTypes: [],
+      rnaReferences: [],
     }
   }
 
@@ -373,12 +228,26 @@ class FamilyReads extends React.PureComponent {
     this.setState({
       openFamily: null,
       sampleTypes: [],
+      rnaReferences: [],
     })
   }
 
   updateSampleTypes = (sampleTypes) => {
+    if (sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType))) {
+      this.setState({
+        sampleTypes,
+      })
+    } else {
+      this.setState({
+        sampleTypes,
+        rnaReferences: [],
+      })
+    }
+  }
+
+  updateRnaReferences = (rnaReferences) => {
     this.setState({
-      sampleTypes,
+      rnaReferences,
     })
   }
 
@@ -413,12 +282,31 @@ class FamilyReads extends React.PureComponent {
             />
           }
           { rnaTrackOptions.length > 0 &&
-            <CheckboxGroup
-              groupLabel="RNA Tracks"
-              value={this.state.sampleTypes}
-              options={rnaTrackOptions}
-              onChange={this.updateSampleTypes}
-            />
+            <div>
+              <CheckboxGroup
+                groupLabel="RNA Tracks"
+                value={this.state.sampleTypes}
+                options={rnaTrackOptions}
+                onChange={this.updateSampleTypes}
+              />
+              { this.state.sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) &&
+                <div>
+                  <b>RNA-seq Reference Tracks</b>
+                  <CheckboxGroup
+                    groupLabel="GTEx Tracks"
+                    value={this.state.rnaReferences}
+                    options={GTEX_TRACK_OPTIONS}
+                    onChange={this.updateRnaReferences}
+                  />
+                  <CheckboxGroup
+                    groupLabel="Mappability Tracks"
+                    value={this.state.rnaReferences}
+                    options={MAPPABILITY_TRACK_OPTIONS}
+                    onChange={this.updateRnaReferences}
+                  />
+                </div>
+              }
+            </div>
           }
         </Segment>}
         <Segment>
@@ -428,6 +316,7 @@ class FamilyReads extends React.PureComponent {
             variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={this.state.sampleTypes}
+            rnaReferences={this.state.rnaReferences}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
           />

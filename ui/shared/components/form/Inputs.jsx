@@ -265,7 +265,8 @@ const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
 `
 
 export const CheckboxGroup = React.memo((props) => {
-  const { value, options, label, groupLabel, onChange, ...baseProps } = props
+  const { value, label, groupLabel, onChange, ...baseProps } = props
+  const options = props.options.map(styledOption)
   const numSelected = options.filter(opt => value.includes(opt.value)).length
   return (
     <List>
@@ -289,7 +290,7 @@ export const CheckboxGroup = React.memo((props) => {
         </List.Header>
         <List.List>
           {options.map(option =>
-            <List.Item key={option.value}>
+            <List.Item key={option.key}>
               <BaseSemanticInput
                 {...baseProps}
                 inputType="Checkbox"
