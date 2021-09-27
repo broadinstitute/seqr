@@ -1092,9 +1092,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: (variant, tagsByGuid, notesByGuid) => (notesByGuid[variant.variantGuid] || []).map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
-  { header: 'classification', getVal: variant => (variant.classification ? `${variant.classification.score}, ${variant.classification.classification}, ${variant.classification.criteria}` : '') },
-  { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
+  { header: 'classification', getVal: variant => (variant.acmgClassification ? `${variant.acmgClassification.score}, ${variant.acmgClassification.classify}, ${variant.acmgClassification.criteria}` : '') },
   {
     header: 'notes',
     getVal: (variant, tagsByGuid, notesByGuid) => variant.noteGuids.map((noteGuid) => {

@@ -46,7 +46,7 @@ from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
     create_saved_variant_handler, \
     update_variant_tags_handler, \
-    update_variant_classification_handler, \
+    update_variant_acmg_classification_handler, \
     update_variant_functional_data_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -213,7 +213,7 @@ api_endpoints = {
 
     'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
-    'saved_variant/(?P<variant_guids>[^/]+)/update_classification': update_variant_classification_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/update_acmg_classification': update_variant_acmg_classification_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_functional_data': update_variant_functional_data_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,

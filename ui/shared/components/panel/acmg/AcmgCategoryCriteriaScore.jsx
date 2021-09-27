@@ -1,4 +1,4 @@
-export default {
+const CATEGORY_CRITERIA_SCORE = {
   BA1_S: -4,
   BP1_S: -4,
   BP2_S: -4,
@@ -65,3 +65,5 @@ export default {
   PS2_VS: 8,
   PVS1_VS: 8,
 }
+
+export default CATEGORY_CRITERIA_SCORE

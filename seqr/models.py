@@ -656,7 +656,7 @@ class SavedVariant(ModelWithGUID):
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
 
-    classification = JSONField(null=True) # ACMG based classification
+    acmg_classification = JSONField(null=True) # ACMG based classification
 
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos)
@@ -668,7 +668,7 @@ class SavedVariant(ModelWithGUID):
     class Meta:
         unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id', 'acmg_classification']
 
 
 class VariantTagType(ModelWithGUID):

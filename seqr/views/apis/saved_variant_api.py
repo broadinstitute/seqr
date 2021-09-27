@@ -211,20 +211,24 @@ def update_variant_tags_handler(request, variant_guids):
         delete_variants_if_empty=True)
 
 @login_and_policies_required
-def update_variant_classification_handler(request, variant_guids):
-    return _update_variant_classification(request, variant_guids)
+def update_variant_acmg_classification_handler(request, variant_guid):
+    return _update_variant_acmg_classification(request, variant_guid)
 
-def _update_variant_classification(request, variant_guids):
+def _update_variant_acmg_classification(request, variant_guid):
     request_json = json.loads(request.body)
-    all_variant_guids = set(variant_guids.split(','))
-    saved_variant = SavedVariant.objects.filter(guid__in=all_variant_guids)
 
-    variant = request_json.get('variant', [])
-    saved_variant.update(classification=variant['classification'])
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_project_permissions(saved_variant.family.project, request.user)
+
+    variant = request_json.get('variant')
+    update_model_from_json(saved_variant, {'acmg_classification': variant['acmgClassification']}, request.user)
 
     return create_json_response({
-        'savedVariantByGuid': variant_guids,
-        'classification': variant['classification']
+        'savedVariantByGuid': {
+            variant_guid: {
+                'acmgClassification': variant['acmgClassification'],
+            }
+        },
     })
 
 @login_and_policies_required

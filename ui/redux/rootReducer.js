@@ -352,8 +352,7 @@ export const updateVariantTags = (values, tagType = 'tags') => {
 }
 
 export const updateVariantClassification = (values) => {
-  const urlPath = `${values.variant.variantGuid}/update_classification`
-  return updateSavedVariant(values, urlPath)
+  return updateSavedVariant(values, `${values.variant.variantGuid}/update_acmg_classification`)
 }
 
 export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
