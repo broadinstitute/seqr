@@ -3,13 +3,13 @@ from django.contrib import admin
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult, MatchmakerContactNotes
 from seqr.models import Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, \
     VariantTag, VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, \
-    FamilyAnalysedBy, VariantSearch, VariantSearchResults, IgvSample
+    FamilyAnalysedBy, VariantSearch, VariantSearchResults, IgvSample, UserPolicy, WarningMessage
 
 for model_class in [
     Project, Family, Individual, Sample, IgvSample, LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag,
     VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, FamilyAnalysedBy,
     VariantSearch, VariantSearchResults, MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult,
-    MatchmakerContactNotes
+    MatchmakerContactNotes,
 ]:
 
     @admin.register(model_class)
@@ -29,6 +29,15 @@ for model_class in [
             list_display.append('last_modified_date')
         save_on_top = True
         list_per_page = 2000
+
+@admin.register(WarningMessage)
+class WarningMessageModelAdmin(admin.ModelAdmin):
+    list_display = ['header', 'message']
+
+@admin.register(UserPolicy)
+class UserPolicyModelAdmin(admin.ModelAdmin):
+    search_fields = ['user', 'privacy_version', 'tos_version']
+    list_display = ['user', 'privacy_version', 'tos_version']
 
 @admin.register(admin.models.LogEntry)
 class LogEntryModelAdmin(admin.ModelAdmin):
