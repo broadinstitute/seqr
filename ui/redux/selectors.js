@@ -8,6 +8,7 @@ export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
+export const getFamilyNotesByGuid = state => state.familyNotesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
@@ -19,6 +20,7 @@ export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDa
 export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
+export const getPaGenesById = state => state.pagenesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getHpoTermsByParent = state => state.hpoTermsByParent
 export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
@@ -64,18 +66,34 @@ export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid,
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
-const groupIndividualsByFamilyGuid = individuals =>
-  individuals.reduce((acc, individual) => {
-    if (!acc[individual.familyGuid]) {
-      acc[individual.familyGuid] = []
+const groupByFamilyGuid = objs =>
+  objs.reduce((acc, o) => {
+    if (!acc[o.familyGuid]) {
+      acc[o.familyGuid] = []
     }
-    acc[individual.familyGuid].push(individual)
+    acc[o.familyGuid].push(o)
     return acc
   }, {})
 
+export const getNotesByFamilyType = createSelector(
+  getFamilyNotesByGuid,
+  notesByGuid =>
+    Object.values(notesByGuid).reduce((acc, note) => {
+      if (!acc[note.familyGuid]) {
+        acc[note.familyGuid] = {}
+      }
+      if (!acc[note.familyGuid][note.noteType]) {
+        acc[note.familyGuid][note.noteType] = []
+      }
+      acc[note.familyGuid][note.noteType].push(note)
+      return acc
+    }, {})
+  ,
+)
+
 export const getIndividualsByFamily = createSelector(
   getIndividualsByGuid,
-  individualsByGuid => groupIndividualsByFamilyGuid(Object.values(individualsByGuid)),
+  individualsByGuid => groupByFamilyGuid(Object.values(individualsByGuid)),
 )
 
 const getSortedIndividuals = createSelector(
@@ -101,7 +119,7 @@ const getSortedIndividuals = createSelector(
 
 export const getSortedIndividualsByFamily = createSelector(
   getSortedIndividuals,
-  groupIndividualsByFamilyGuid,
+  groupByFamilyGuid,
 )
 
 const getSortedSamples = createSelector(
@@ -217,13 +235,26 @@ export const getFunctionalTagTypesTypesByProject = createSelector(
 const getLocusListsWithGenes = createSelector(
   getLocusListsByGuid,
   getGenesById,
-  (locusListsByGuid, genesById) =>
-    Object.entries(locusListsByGuid).reduce((acc, [locusListGuid, locusList]) => ({
-      ...acc,
-      [locusListGuid]: {
-        ...locusList,
-        items: locusList.items && locusList.items.map(item => ({ ...item, gene: genesById[item.geneId] })),
-      } }), {}),
+  getPaGenesById,
+  (locusListsByGuid, genesById, pagenesById) =>
+    Object.entries(locusListsByGuid).reduce(
+      (acc, [locusListGuid, locusList]) => ({
+        ...acc,
+        [locusListGuid]: {
+          ...locusList,
+          items:
+            locusList.items &&
+            locusList.items.map((item) => {
+              return {
+                ...item,
+                gene: genesById[item.geneId],
+                pagene: pagenesById[item.geneId],
+              }
+            }),
+        },
+      }),
+      {},
+    ),
 )
 
 export const getParsedLocusList = createSelector(

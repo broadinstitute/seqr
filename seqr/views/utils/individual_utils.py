@@ -3,9 +3,8 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
-from seqr.models import Sample, IgvSample, Individual, Family
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json, \
-    create_model_from_json
+from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
 
@@ -33,13 +32,15 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         project (object): Django ORM model for the project to add families to
         individual_records (list): A list of JSON records representing individuals. See
             the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
+        user (object): current user model
 
     Return:
-        2-tuple: updated_families, updated_individuals containing Django ORM models
+        3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
 
     """
     updated_families = set()
     updated_individuals = set()
+    updated_notes = []
     parent_updates = []
 
     family_ids = {_get_record_family_id(record) for record in individual_records}
@@ -103,8 +104,8 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
         family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
         if family_notes:
-            update_family_from_json(family, {'analysis_notes': family_notes}, user)
-            updated_families.add(family)
+            note = create_model_from_json(FamilyNote, {'note': family_notes, 'note_type': 'C', 'family': family}, user)
+            updated_notes.append(note)
 
         is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
@@ -116,7 +117,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         if is_updated:
             updated_individuals.add(individual)
 
-    return list(updated_families), list(updated_individuals)
+    return list(updated_individuals), list(updated_families), updated_notes
 
 
 def delete_individuals(project, individual_guids, user):

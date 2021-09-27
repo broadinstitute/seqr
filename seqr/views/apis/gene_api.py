@@ -1,11 +1,9 @@
-import json
-
 from seqr.models import GeneNote
 from seqr.utils.gene_utils import get_gene, get_genes_with_detail
-from seqr.views.utils.json_to_orm_utils import update_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
-from seqr.views.utils.permissions_utils import check_user_created_object_permissions, login_and_policies_required
+from seqr.views.utils.permissions_utils import login_and_policies_required
 
 
 @login_and_policies_required
@@ -23,35 +21,29 @@ def gene_info(request, gene_id):
 
 @login_and_policies_required
 def create_gene_note_handler(request, gene_id):
-    request_json = json.loads(request.body)
-    create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
-
-    return create_json_response({'genesById': {gene_id: {
-        'notes': _get_gene_notes(gene_id, request.user)
-    }}})
+    return create_note_handler(
+        request, GeneNote, parent_fields={'gene_id': gene_id},
+        get_response_json=_get_gene_notes_response_func(gene_id, request.user),
+    )
 
 
 @login_and_policies_required
 def update_gene_note_handler(request, gene_id, note_guid):
-    note = GeneNote.objects.get(guid=note_guid)
-    check_user_created_object_permissions(note, request.user)
-
-    request_json = json.loads(request.body)
-    update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
-
-    return create_json_response({'genesById': {gene_id: {
-        'notes': _get_gene_notes(gene_id, request.user)
-    }}})
+    return update_note_handler(
+        request, GeneNote, gene_id, note_guid, parent_field='gene_id',
+        get_response_json=_get_gene_notes_response_func(gene_id, request.user),
+    )
 
 
 @login_and_policies_required
 def delete_gene_note_handler(request, gene_id, note_guid):
-    note = GeneNote.objects.get(guid=note_guid)
-    note.delete_model(request.user)
-    return create_json_response({'genesById': {gene_id: {
-        'notes': _get_gene_notes(gene_id, request.user)
-    }}})
+    return delete_note_handler(
+        request, GeneNote, gene_id, note_guid, parent_field='gene_id',
+        get_response_json=_get_gene_notes_response_func(gene_id, request.user),
+    )
 
 
-def _get_gene_notes(gene_id, user):
-    return get_json_for_gene_notes_by_gene_id([gene_id], user).get(gene_id, [])
+def _get_gene_notes_response_func(gene_id, user):
+    return lambda *args: {'genesById': {gene_id: {
+        'notes': get_json_for_gene_notes_by_gene_id([gene_id], user).get(gene_id, [])
+    }}}

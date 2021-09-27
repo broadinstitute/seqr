@@ -20,8 +20,8 @@ import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
 import { StyledForm } from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
+import NoteListFieldView from '../view-fields/NoteListFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
-import TextFieldView from '../view-fields/TextFieldView'
 
 const TagTitle = styled.span`
   font-weight: bolder;
@@ -124,38 +124,6 @@ VariantTagField.propTypes = {
   variantTagNotes: PropTypes.object,
   fieldName: PropTypes.string,
   variantId: PropTypes.string.isRequired,
-  family: PropTypes.object.isRequired,
-}
-
-const noteRequired = value => (value ? undefined : 'Note is required')
-
-const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ...props }) => {
-  const values = { ...variantTagNotes, ...note }
-  return (
-    <div>
-      <TextFieldView
-        noModal
-        showInLine
-        isEditable
-        field="note"
-        modalId={family.familyGuid}
-        modalTitle={`${action} Variant Note for Family ${family.displayName}`}
-        additionalEditFields={VARIANT_NOTE_FIELDS}
-        fieldValidator={noteRequired}
-        initialValues={values}
-        idField={note ? 'noteGuid' : 'variantGuids'}
-        deleteConfirm="Are you sure you want to delete this note?"
-        textPopup={note && taggedByPopup(note, 'Note By')}
-        {...props}
-      />
-    </div>
-  )
-})
-
-VariantNoteField.propTypes = {
-  note: PropTypes.object,
-  variantTagNotes: PropTypes.object,
-  action: PropTypes.string,
   family: PropTypes.object.isRequired,
 }
 
@@ -263,25 +231,17 @@ const FamilyVariantTags = React.memo((
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
           <Table.Cell colSpan={isCompoundHet ? 2 : 3}>
-            {((variantTagNotes || {}).notes || []).map(note =>
-              <VariantNoteField
-                key={note.noteGuid}
-                note={note}
-                variantTagNotes={variantTagNotes}
-                family={family}
-                isDeletable
-                compact
-                action="Edit"
-                onSubmit={dispatchUpdateVariantNote}
-              />,
-            )}
-            <VariantNoteField
-              variantTagNotes={variantTagNotes}
+            <NoteListFieldView
+              initialValues={variantTagNotes}
+              modalId={family.familyGuid}
+              modalTitle={`Variant Note for Family ${family.displayName}`}
+              additionalEditFields={VARIANT_NOTE_FIELDS}
               defaultId={variantId}
-              family={family}
-              editIconName="plus"
-              editLabel="Add Note"
-              action="Add"
+              idField="variantGuids"
+              isEditable
+              showInLine
+              compact
+              getTextPopup={note => note && taggedByPopup(note, 'Note By')}
               onSubmit={dispatchUpdateVariantNote}
             />
           </Table.Cell>

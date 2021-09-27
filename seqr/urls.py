@@ -20,7 +20,10 @@ from seqr.views.apis.family_api import \
     update_family_assigned_analyst, \
     update_family_analysed_by, \
     receive_families_table_handler, \
-    update_family_pedigree_image
+    update_family_pedigree_image, \
+    create_family_note, \
+    update_family_note, \
+    delete_family_note
 
 from seqr.views.apis.individual_api import \
     get_hpo_terms, \
@@ -163,6 +166,9 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
+    'family/(?P<family_guid>[\w.|-]+)/note/create': create_family_note,
+    'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
+    'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
 
     'dashboard': dashboard_page_data,
 

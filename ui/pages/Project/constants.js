@@ -21,12 +21,13 @@ import {
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_CASE_NOTES,
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
@@ -40,6 +41,7 @@ import {
   exportConfigForField,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
+  FAMILY_NOTES_FIELDS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -355,22 +357,22 @@ const tableConfigForField = fieldConfigs => (field) => {
   return { name: field,  content: label, width, formFieldProps }
 }
 
-const FAMILY_FIELD_CONFIGS = {
+const formatNotes = notes => (notes || []).map(({ note }) => stripMarkdown(note)).join(';')
+
+const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
   [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst', format: analyst => (analyst ? analyst.email : '') },
-  [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
+  [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
-}
+  ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
+}).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
 export const FAMILY_FIELDS = [
   FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
@@ -385,8 +387,8 @@ export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_CASE_NOTES,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const FAMILY_BULK_EDIT_EXPORT_DATA = [
