@@ -340,13 +340,13 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     if not components:
         raise ValueError("components list is empty")
 
-    if components and "init-cluster" not in components:
+    if components:
         run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
 
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
     # make sure namespace exists
-    if "init-cluster" not in components and not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
+    if not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
 
     if components[0] == 'secrets':
