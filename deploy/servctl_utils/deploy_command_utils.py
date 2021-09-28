@@ -422,32 +422,6 @@ def create_namespace(settings):
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
-def _init_gcloud_disks(settings):
-    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
-        setting_prefix = disk_label.upper().replace('-', '_')
-
-        disk_names = get_disk_names(disk_label, settings)
-
-        snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
-        if snapshots and len(snapshots) != len(disk_names):
-            raise Exception('Invalid configuration for {}: {} disks to create and {} snapshots'.format(
-                disk_label, len(disk_names), len(snapshots)
-            ))
-
-        for i, disk_name in enumerate(disk_names):
-            command = [
-                'gcloud compute disks create', disk_name, '--zone', settings['GCLOUD_ZONE'],
-            ]
-            if settings.get('{}_DISK_TYPE'.format(setting_prefix)):
-                command += ['--type', settings['{}_DISK_TYPE'.format(setting_prefix)]]
-            if snapshots:
-                command += ['--source-snapshot', snapshots[i]]
-            else:
-                command += ['--size', str(settings['{}_DISK_SIZE'.format(setting_prefix)])]
-
-            run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
-
-
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
