@@ -20,7 +20,6 @@ logger.setLevel(logging.INFO)
 DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 
 DEPLOYMENT_TARGETS = [
-    "init-cluster",
     "settings",
     "secrets",
     "linkerd",
@@ -52,42 +51,6 @@ SECRETS = {
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
     ],
 }
-
-
-def deploy_init_cluster(settings):
-    """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
-
-    print_separator("init-cluster")
-
-    # initialize the VM
-    _init_cluster_gcloud(settings)
-
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
-
-    run('deploy/kubectl_helpers/set_env.sh {}'.format(settings['DEPLOYMENT_TYPE']))
-
-    create_namespace(settings)
-
-    # create priority classes - " Priority affects scheduling order of Pods and out-of-resource eviction ordering
-    # on the Node.... A PriorityClass is a non-namespaced object .. The higher the value, the higher the priority."
-    # (from https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass)
-    run("kubectl create priorityclass medium-priority --value=1000" % settings, errors_to_ignore=["already exists"])
-    run("kubectl create priorityclass high-priority --value=10000" % settings, errors_to_ignore=["already exists"])
-
-    # print cluster info
-    run("kubectl cluster-info", verbose=True)
-
-    # wait for the cluster to initialize
-    for retry_i in range(1, 5):
-        try:
-            deploy_settings(settings)
-            break
-        except RuntimeError as e:
-            logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
-                          "initializing. Retrying...") % locals())
-            time.sleep(5)
 
 
 def deploy_settings(settings):
@@ -458,72 +421,6 @@ def create_namespace(settings):
     # switch kubectl to use the new namespace
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
-
-def _init_cluster_gcloud(settings):
-    """Starts and configures a kubernetes cluster on Google Container Engine based on parameters in settings"""
-
-    run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
-
-    # create private network so that dataproc jobs can connect to GKE cluster nodes
-    # based on: https://medium.com/@DazWilkin/gkes-cluster-ipv4-cidr-flag-69d25884a558
-    create_vpc(gcloud_project="%(GCLOUD_PROJECT)s" % settings, network_name="%(GCLOUD_PROJECT)s-auto-vpc" % settings)
-
-    # create cluster
-    run(" ".join([
-        "gcloud beta container clusters create %(CLUSTER_NAME)s",
-        "--enable-autorepair",
-        "--enable-autoupgrade",
-        "--maintenance-window 7:00",
-        "--enable-stackdriver-kubernetes",
-        "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
-        "--project %(GCLOUD_PROJECT)s",
-        "--zone %(GCLOUD_ZONE)s",
-        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
-        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
-        "--no-enable-legacy-authorization",
-        "--metadata disable-legacy-endpoints=true",
-        "--no-enable-basic-auth",
-        "--no-enable-legacy-authorization",
-        "--no-issue-client-certificate",
-        "--enable-master-authorized-networks",
-        "--master-authorized-networks %(MASTER_AUTHORIZED_NETWORKS)s",
-        #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-        #"--local-ssd-count 1",
-        "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
-    ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
-
-    # create cluster nodes - breaking them up into node pools of several machines each.
-    # This way, the cluster can be scaled up and down when needed using the technique in
-    #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
-    #
-
-    for pool_name, pool_settings in settings['NODE_POOLS'].items():
-        command = [
-            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
-            "--cluster %(CLUSTER_NAME)s",
-            "--project %(GCLOUD_PROJECT)s",
-            "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %s" % pool_settings.get('machine_type', settings['DEFAULT_POOL_MACHINE_TYPE']),
-            "--node-version %(KUBERNETES_VERSION)s",
-            #"--no-enable-legacy-authorization",
-            "--enable-autorepair",
-            "--enable-autoupgrade",
-            "--num-nodes %s" % pool_settings.get('num_nodes', settings['DEFAULT_POOL_NUM_NODES']),
-            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-            #"--local-ssd-count 1",
-            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]
-        if pool_settings.get('labels'):
-            command += ['--node-labels', pool_settings['labels']]
-        run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
-
-    run(" ".join([
-        "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
-        "--project %(GCLOUD_PROJECT)s",
-        "--zone %(GCLOUD_ZONE)s",
-    ]) % settings)
-
-    _init_gcloud_disks(settings)
 
 def _init_gcloud_disks(settings):
     for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
