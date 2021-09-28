@@ -149,14 +149,3 @@ def get_resource_name(name_label, resource_type, deployment_target=None, pod_num
         errors_to_ignore=["array index out of bounds: index 0"],
         verbose=False,
     )
-
-
-def get_node_name():
-    """Returns kubernetes cluster node name. If there are multiple nodes, it returns the 1st one."""
-
-    return _get_resource_info(
-        resource_type="nodes",
-        json_path="{.items[0].metadata.name}",
-        errors_to_ignore=["array index out of bounds: index 0"],
-        verbose=True,
-    )
