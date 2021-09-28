@@ -495,29 +495,3 @@ def delete_pod(component_label, settings, custom_yaml_filename=None):
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
     while is_pod_running(component_label, deployment_target):
         time.sleep(5)
-
-
-def create_vpc(gcloud_project, network_name):
-    run(" ".join([
-        #"gcloud compute networks create seqr-project-custom-vpc --project=%(GCLOUD_PROJECT)s --mode=custom"
-        "gcloud compute networks create %(network_name)s",
-        "--project=%(gcloud_project)s",
-        "--subnet-mode=auto"
-    ]) % locals(), errors_to_ignore=["already exists"])
-
-    # add recommended firewall rules to enable ssh, etc.
-    run(" ".join([
-        "gcloud compute firewall-rules create custom-vpc-allow-tcp-udp-icmp",
-        "--project %(gcloud_project)s",
-        "--network %(network_name)s",
-        "--allow tcp,udp,icmp",
-        "--source-ranges 10.0.0.0/8",
-    ]) % locals(), errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "gcloud compute firewall-rules create custom-vpc-allow-ports",
-        "--project %(gcloud_project)s",
-        "--network %(network_name)s",
-        "--allow tcp:22,tcp:3389,icmp",
-        "--source-ranges 10.0.0.0/8",
-    ]) % locals(), errors_to_ignore=["already exists"])
