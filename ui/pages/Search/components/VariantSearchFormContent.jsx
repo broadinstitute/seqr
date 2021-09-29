@@ -174,10 +174,7 @@ SVFrequecyHeaderFilter.propTypes = {
 const SV_QS_FILTER_FIELD = {
   name: 'min_qs',
   label: 'Exome SV Quality Score',
-  labelHelp: (
-    <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
-      duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
-    </span>),
+  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.',
   min: 0,
   max: 1000,
   step: 10,
@@ -187,9 +184,7 @@ const SV_QS_FILTER_FIELD = {
 const SV_GQ_FILTER_FIELD = {
   name: 'min_gq_sv',
   label: 'Genome SV Genotype Quality',
-  labelHelp: (
-    <span>The genotype quality (QS) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: &gt; 50.
-    </span>),
+  labelHelp: 'The genotype quality (QS) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: &gt; 50.',
   min: 0,
   max: 1000,
   step: 10,

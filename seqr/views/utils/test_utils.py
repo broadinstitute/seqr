@@ -828,12 +828,12 @@ PARSED_VARIANTS = [
         '_sort': [2103343353],
     },
 ]
+
 PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
     'familyGuids': ['F000002_2'],
-    'cpxIntervals': [{'chrom': '1', 'end': 3000, 'start': 1000, 'type': 'DUP'},
-                     {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INS'}],
+    'cpxIntervals': None,
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
@@ -862,7 +862,7 @@ PARSED_SV_VARIANT = {
         'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
         'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
-        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': 'gnomAD-SV_v2.1_BND_1_1'},
+        'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': None},
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
@@ -892,6 +892,62 @@ PARSED_SV_VARIANT = {
     'svTypeDetail': None,
     'numExon': 2,
     '_sort': [1049045387],
+}
+
+PARSED_SV_WGS_VARIANT = {
+    'alt': None,
+    'chrom': '2',
+    'familyGuids': ['F000014_14'],
+    'cpxIntervals': [{'chrom': '2', 'end': 3000, 'start': 1000, 'type': 'DUP'},
+                     {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],
+    'genotypes': {
+        'I000018_na21234': {
+            'ab': None, 'ad': None, 'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'dp': None, 'pl': None,
+            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'gqSv': None, 'sampleType': 'WGS',
+        },
+    },
+    'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+    'hgmd': {'accession': None, 'class': None},
+    'genomeVersion': '37',
+    'genotypeFilters': '',
+    'liftedOverChrom': None,
+    'liftedOverGenomeVersion': None,
+    'liftedOverPos': None,
+    'mainTranscriptId': None,
+    'originalAltAlleles': [],
+    'populations': {
+        'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
+        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': 'gnomAD-SV_v2.1_BND_1_1'},
+    },
+    'pos': 49045387,
+    'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
+                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
+                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+                    'splice_ai_consequence': None},
+    'ref': None,
+    'rsid': None,
+    'transcripts': {
+        'ENSG00000228198': [
+            {
+                'geneSymbol': 'OR4F5',
+                'majorConsequence': 'DUP_PARTIAL',
+                'geneId': 'ENSG00000228198'
+            },
+        ],
+    },
+    'variantId': 'prefix_19107_CPX',
+    'xpos': 2049045387,
+    'end': 49045898,
+    'svType': 'CPX',
+    'svTypeDetail': 'dupINV',
+    'numExon': None,
+    '_sort': [2049045387],
 }
 
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
