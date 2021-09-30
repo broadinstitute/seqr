@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -656,20 +656,20 @@ class EsSearch(object):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
-            end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
-            num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
-            if start != hit['start']:
-                hit['start'] = start
-                hit['xpos'] = get_xpos(hit['contig'], start)
-            if end != hit['end']:
-                hit['end'] = end
-            if num_exon != hit['num_exon']:
-                hit['num_exon'] = num_exon
+            for field, op in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                val = op([
+                    gen.get(_to_camel_case(field)) or hit[field] for gen in genotypes.values() if not gen.get('isRef')
+                ])
+                if val != hit[field]:
+                    hit[field] = val
+                    if field == 'start':
+                        hit['xpos'] = get_xpos(hit['contig'], val)
+
             for gen in genotypes.values():
-                if gen.get('start') == start and gen.get('end') == end:
-                    gen['start'] = None
-                    gen['end'] = None
+                for field in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.keys():
+                    gen_field = _to_camel_case(field)
+                    if gen.get(gen_field) == hit[field]:
+                        gen[gen_field] = None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({

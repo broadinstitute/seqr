@@ -837,7 +837,7 @@ PARSED_SV_VARIANT = {
     'genotypes': {
         'I000004_hg00731': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00731', 'numAlt': -1, 'dp': None, 'pl': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': 2, 'defragged': False, 'qs': 33, 'sampleType': 'WES',
+            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'sampleType': 'WES',
         },
         'I000005_hg00732': {
             'ab': None, 'ad': None, 'gq': None, 'sampleId': 'HG00732', 'numAlt': -1, 'dp': None, 'pl': None,

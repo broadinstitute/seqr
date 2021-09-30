@@ -318,3 +318,5 @@ for pop_config in POPULATIONS.values():
             QUERY_FIELD_NAMES += pop_field
         elif pop_field is not None:
             QUERY_FIELD_NAMES.append(pop_field)
+
+SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {'start': min, 'end': max, 'num_exon': max}
