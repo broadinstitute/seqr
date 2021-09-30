@@ -932,11 +932,8 @@ def create_mock_response(search, index=INDEX_NAME):
         for search_filter in search['query']['bool']['filter']:
             if not variant_id_filters:
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
-            possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
+            possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
-                include_matched_queries = True
-                break
-            if '_name' in search_filter.get('bool', {}):
                 include_matched_queries = True
                 break
 
@@ -2359,7 +2356,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.exclude(guid='F000014_14'))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
@@ -2414,7 +2411,7 @@ class EsUtilsTest(TestCase):
         },
         )
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.exclude(guid='F000014_14'))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT]
@@ -2524,7 +2521,7 @@ class EsUtilsTest(TestCase):
             'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.exclude(guid='F000014_14'))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         # Test liftover variant to hg37 when liftover fails
         mock_liftover.side_effect = Exception()
@@ -2596,7 +2593,7 @@ class EsUtilsTest(TestCase):
     def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.exclude(guid='F000014_14'))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         setup_search_responses()
         urllib3_responses.add_json(
@@ -2796,7 +2793,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.exclude(guid='F000014_14'))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
         gene_counts = get_es_variant_gene_counts(results_model, None)
 
