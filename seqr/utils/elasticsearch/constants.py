@@ -292,21 +292,32 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
-QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
+SNP_QUALITY_FIELDS = {'gq': 5, 'ab': 5}
+SV_QUALITY_FIELDS = {'qs': 10}
+QUALITY_FIELDS = {}
+QUALITY_FIELDS.update(SNP_QUALITY_FIELDS)
+QUALITY_FIELDS.update(SV_QUALITY_FIELDS)
+BASE_GENOTYPE_FIELDS_CONFIG = {
+    'sample_id': {},
+    'sample_type': {},
+    'num_alt': {'format_value': int, 'default_value': -1},
+}
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},
     'dp': {},
     'pl': {},
+}
+GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
+GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
+SV_GENOTYPE_FIELDS_CONFIG = {
     'cn': {'format_value': int, 'default_value': 2},
     'end': {},
     'start': {},
     'num_exon': {},
     'defragged': {'format_value': bool},
-    'sample_id': {},
-    'sample_type': {},
-    'num_alt': {'format_value': int, 'default_value': -1},
 }
-GENOTYPE_FIELDS_CONFIG.update({field: {} for field in QUALITY_FIELDS.keys()})
+SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
+SV_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SV_QUALITY_FIELDS.keys()})
 
 QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
                     [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
