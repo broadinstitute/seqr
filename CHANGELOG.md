@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 9/30/21
 * Allow project-specific HGMD access (REQUIRES DB MIGRATION)
 * Demo project available to all users (REQUIRES DB MIGRATION)
 * Update pedigree label display (requires manual cleanup for saved pedigree datasets)
