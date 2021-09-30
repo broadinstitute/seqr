@@ -66,7 +66,7 @@
     "draft-js": "^0.11.7",
     "draftjs-md-converter": "^1.5.1",
     "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
-    "igv": "^2.8.6",
+    "igv": "^2.10.1",
     "jquery": "^3.6.0",
     "jquery-ui": "^1.12.1",
     "js-cookie": "^2.2.1",
