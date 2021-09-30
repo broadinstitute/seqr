@@ -1,4 +1,4 @@
-import { GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants';
+import { GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants'
 
 export const ALIGNMENT_TYPE = 'alignment'
 export const COVERAGE_TYPE = 'wig'
