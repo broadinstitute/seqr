@@ -6,6 +6,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
+@mock.patch('seqr.views.react_app.DEBUG', False)
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
@@ -16,7 +17,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
         self.assertSetEqual(set(initial_json[user_key].keys()), USER_FIELDS)
         self.assertEqual(initial_json[user_key]['username'], user)
-        self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
+        self.assertDictEqual(initial_json['meta'], {
+            'version': mock.ANY,
+            'hijakEnabled': False,
+            'googleLoginEnabled': google_enabled,
+            'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
+        })
 
         self.assertEqual(self.get_initial_page_window('gaTrackingId', response), ga_token_id)
         nonce = self.get_initial_page_window('__webpack_nonce__', response)

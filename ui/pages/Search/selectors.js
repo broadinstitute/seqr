@@ -10,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
   getSamplesGroupedByProjectGuid,
+  getUser,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
@@ -152,6 +153,14 @@ export const getDatasetTypes = createSelector(
         ({ isActive }) => isActive).map(({ datasetType }) => datasetType)]), new Set())
     return [...datasetTypes].sort().join(',')
   },
+)
+
+export const getHasHgmdPermission = createSelector(
+  getUser,
+  getProjectsInput,
+  getProjectsByGuid,
+  (user, projectGuids, projectsByGuid) => user.isAnalyst || projectGuids.some(
+    projectGuid => (projectsByGuid[projectGuid] || {}).enableHgmd),
 )
 
 const getSingleFamlilyGuidInput = createSelector(

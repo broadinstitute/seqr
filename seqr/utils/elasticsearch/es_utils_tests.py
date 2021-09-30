@@ -963,7 +963,7 @@ def get_msearch_callback(request):
 
 def setup_search_responses():
     urllib3_responses.add_callback(
-        urllib3_responses.POST, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
+        urllib3_responses.POST, '/_msearch', callback=get_msearch_callback,
         content_type='application/json', match_querystring=True)
     urllib3_responses.add_callback(
         urllib3_responses.POST, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
@@ -1167,7 +1167,7 @@ class EsUtilsTest(TestCase):
         search_model.save()
         urllib3_responses.reset()
         urllib3_responses.add(
-            urllib3_responses.POST, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
+            urllib3_responses.POST, '/_msearch', body=ReadTimeoutError('', '', 'timeout'))
         urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
             123: {'running_time_in_nanos': 10},
             456: {'running_time_in_nanos': 10 ** 12},
@@ -1176,13 +1176,13 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertListEqual(
             [call.request.url for call in urllib3_responses.calls],
-            ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents'])
+            ['/_msearch', '/_tasks?actions=%2Asearch&group_by=parents'])
         mock_logger.error.assert_called_with('ES Query Timeout: Found 1 long running searches', None, detail=[
             {'task': {'running_time_in_nanos': 10 ** 12}, 'parent_task_id': '456'},
         ])
 
         urllib3_responses.reset()
-        urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [
+        urllib3_responses.add_json('/_msearch', {'responses': [
             {'error': {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]}}
         ]}, method=urllib3_responses.POST)
 

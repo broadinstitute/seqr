@@ -14,6 +14,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, 
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
+DEMO_PROJECT_GUID = 'R0003_test'
 
 PROJECT_PAGE_RESPONSE_KEYS = {
     'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
@@ -213,6 +214,19 @@ class ProjectAPITest(object):
         expected_response = {k: {} for k in PROJECT_PAGE_RESPONSE_KEYS}
         expected_response['projectsByGuid'] = {EMPTY_PROJECT_GUID: mock.ANY}
         self.assertDictEqual(response_json, expected_response)
+
+    def test_all_user_demo_project_page_data(self):
+        Project.objects.update(all_user_demo=True)
+        url = reverse(project_page_data, args=[DEMO_PROJECT_GUID])
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), PROJECT_PAGE_RESPONSE_KEYS)
+        self.assertListEqual(list(response_json['projectsByGuid'].keys()), [DEMO_PROJECT_GUID])
+        self.assertFalse(response_json['projectsByGuid'][DEMO_PROJECT_GUID]['canEdit'])
 
 
 BASE_COLLABORATORS = [
