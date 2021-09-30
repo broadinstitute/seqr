@@ -314,6 +314,7 @@ SV_GENOTYPE_FIELDS_CONFIG = {
     'end': {},
     'start': {},
     'num_exon': {},
+    'geneIds': {'response_key': 'geneIds'},
     'defragged': {'format_value': bool},
 }
 SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
@@ -330,4 +331,12 @@ for pop_config in POPULATIONS.values():
         elif pop_field is not None:
             QUERY_FIELD_NAMES.append(pop_field)
 
-SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {'start': min, 'end': max, 'num_exon': max}
+SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {
+    'start': {'select_val': min},
+    'end': {'select_val': max},
+    'num_exon':{'select_val': max, 'genotype_field': 'numExon'},
+    'geneIds': {
+        'select_val': lambda gene_lists: set([gene_id for gene_list in gene_lists for gene_id in (gene_list or [])]),
+        'compare': lambda a, b: set(a or []) == set(b or [])
+    },
+}

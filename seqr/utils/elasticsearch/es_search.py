@@ -657,19 +657,21 @@ class EsSearch(object):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            for field, op in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
-                val = op([
-                    gen.get(_to_camel_case(field)) or hit[field] for gen in genotypes.values() if not gen.get('isRef')
+            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                gen_field = conf.get('genotype_field', field)
+                val = conf['select_val']([
+                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
                 ])
-                if val != hit[field]:
+                if val != hit.get(field):
                     hit[field] = val
                     if field == 'start':
                         hit['xpos'] = get_xpos(hit['contig'], val)
 
             for gen in genotypes.values():
-                for field in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.keys():
-                    gen_field = _to_camel_case(field)
-                    if gen.get(gen_field) == hit[field]:
+                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                    gen_field = conf.get('genotype_field', field)
+                    compare_func = conf.get('compare') or (lambda a, b: a == b)
+                    if compare_func(gen.get(gen_field), hit[field]):
                         gen[gen_field] = None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
@@ -721,6 +723,9 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
+        if hit.get('geneIds'):
+            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in hit['geneIds']}
+
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 

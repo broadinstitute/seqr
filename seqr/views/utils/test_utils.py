@@ -836,16 +836,16 @@ PARSED_SV_VARIANT = {
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INS'}],
     'genotypes': {
         'I000004_hg00731': {
-            'sampleId': 'HG00731', 'numAlt': -1,
-            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'sampleType': 'WES',
+            'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
+            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33,
         },
         'I000005_hg00732': {
-            'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,
+            'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,  'geneIds': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
         },
         'I000006_hg00733': {
-            'sampleId': 'HG00733', 'numAlt': -1,
-            'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80, 'sampleType': 'WES',
+            'sampleId': 'HG00733', 'sampleType': 'WES', 'numAlt': -1,  'geneIds': None,
+            'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
@@ -877,14 +877,12 @@ PARSED_SV_VARIANT = {
     'transcripts': {
         'ENSG00000228198': [
             {
-              'transcriptId': 'ENST00000371839',
-              'biotype': 'protein_coding',
               'geneId': 'ENSG00000228198'
             },
+        ],
+        'ENSG00000135953': [
             {
-              'transcriptId': 'ENST00000416121',
-              'biotype': 'protein_coding',
-              'geneId': 'ENSG00000228198'
+              'geneId': 'ENSG00000135953'
             },
         ],
     },

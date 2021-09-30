@@ -161,7 +161,7 @@ const GENOTYPE_DETAILS = [
   { title: 'Phred Likelihoods', field: 'pl' },
   { title: 'Quality Score', field: 'qs' },
   { title: 'Start', field: 'start' },
-  { title: 'End', field: 'end' },
+  { title: 'End', field: 'end' }, // TODO geneIds, numExon
 ]
 
 const genotypeDetails = (genotype, variant) =>

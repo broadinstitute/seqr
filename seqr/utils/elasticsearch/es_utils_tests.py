@@ -361,6 +361,7 @@ ES_SV_VARIANT = {
           'num_exon': 2,
           'start': 49045487,
           'end': 49045899,
+          'geneIds': ['ENSG00000228198'],
         },
         {
           'qs': 80,
@@ -370,6 +371,7 @@ ES_SV_VARIANT = {
           'num_exon': 1,
           'start': 49045987,
           'end': 49045890,
+          'geneIds': ['ENSG00000228198', 'ENSG00000135953'],
         }
       ],
       'xpos': 1049045387,
@@ -387,14 +389,13 @@ ES_SV_VARIANT = {
       'contig': '1',
       'sortedTranscriptConsequences': [
         {
-          'transcript_id': 'ENST00000371839',
-          'biotype': 'protein_coding',
           'gene_id': 'ENSG00000228198'
         },
         {
-          'transcript_id': 'ENST00000416121',
-          'biotype': 'protein_coding',
-          'gene_id': 'ENSG00000228198'
+          'gene_id': 'ENSG00000135953'
+        },
+        {
+          'gene_id': 'ENSG00000037183'
         },
       ],
       'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
