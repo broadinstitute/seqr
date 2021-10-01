@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Button } from 'semantic-ui-react'
 import { Editor, EditorState, RichUtils, convertToRaw, convertFromRaw } from 'draft-js'
-import { mdToDraftjs, draftjsToMd } from 'draftjs-md-converter'
+// import { mdToDraftjs, draftjsToMd } from 'draftjs-md-converter' TODO fix
 
 import 'draft-js/dist/Draft.css'
 
