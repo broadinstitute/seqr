@@ -124,16 +124,6 @@ Select.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
 }
 
-export const StyledSemanticInput = styled(BaseSemanticInput)`
-  div.ui.input {
-    padding: 10px;
-  }
-  
-  div.ui.input > input {
-    padding: 0.3em 1em;
-  }
-`
-
 export class Multiselect extends React.PureComponent {
 
   static propTypes = {
@@ -231,6 +221,35 @@ export class AddableSelect extends React.PureComponent {
 
 }
 
+<<<<<<< HEAD
+=======
+export const SearchableInput = React.memo((props) => {
+  const { label, labelHelp, options, value, onChange, ...baseProps } = props
+  return (
+    <div style={{ fontWeight: 'bold' }}>
+      {/* eslint-disable-next-line jsx-a11y/label-has-for */}
+      {label && helpLabel(label, labelHelp)}
+      <SearchInput
+        {...baseProps}
+        onChange={(e, newValue) => {
+          console.log(newValue)
+        }}
+        options={options}
+        value={value}
+      />
+    </div>)
+})
+
+SearchableInput.propTypes = {
+  options: PropTypes.array,
+  label: PropTypes.string,
+  labelHelp: PropTypes.string,
+  onChange: PropTypes.func,
+  value: PropTypes.string,
+}
+
+
+>>>>>>> 4ad5d46a7... Updated custom annotations logic as requested
 export class SearchInput extends React.PureComponent {
 
   static propTypes = {

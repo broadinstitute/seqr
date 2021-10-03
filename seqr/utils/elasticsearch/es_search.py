@@ -14,9 +14,14 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
+<<<<<<< HEAD
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING, NON_NUMERIC_IN_SILICO_PREDICTIONS
+=======
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, PREDICTION_FIELD_LOOKUP
+>>>>>>> 4ad5d46a7... Updated custom annotations logic as requested
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -200,38 +205,18 @@ class EsSearch(object):
     def filter_by_in_silico(self, in_silico_filters):
 
         q = Q()
+        for in_silico_filter_key in list(in_silico_filters.keys()):
+            if len(in_silico_filters[in_silico_filter_key]) == 0:
+                del in_silico_filters[in_silico_filter_key]
+
         for in_silico_filter in in_silico_filters:
-            prediction_key = None
-            for prediction_field in PREDICTION_FIELDS_CONFIG:
-                if prediction_field.lower().find(in_silico_filter.lower()) != -1:
-                    # confirm if the same value exists in 'response_key'
-                    if len(PREDICTION_FIELDS_CONFIG[prediction_field]) != 0:
-                        if PREDICTION_FIELDS_CONFIG[prediction_field]['response_key'] == in_silico_filter:
-                            prediction_key = prediction_field
-                            break
-                    else:
-                        prediction_key = prediction_field
-                        break
-                else:
-                    if len(PREDICTION_FIELDS_CONFIG[prediction_field]) != 0 and PREDICTION_FIELDS_CONFIG[prediction_field]['response_key'] == in_silico_filter:
-                        prediction_key = prediction_field
-                        break
+            prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
 
-            if prediction_key:
-                prediction_value = in_silico_filters[in_silico_filter]
-                if prediction_key in NON_NUMERIC_IN_SILICO_PREDICTIONS:
-                    for non_numeric_mapping_key in NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING:
-                        if non_numeric_mapping_key.find(prediction_value.lower()) != -1:
-                            prediction_value = NON_NUMERIC_IN_SILICO_PREDICTION_RESULT_MAPPING[non_numeric_mapping_key]
-                            break
-
-                    q &= Q('prefix', **{prediction_key: prediction_value})
-                else:
-                    if prediction_value.isnumeric():
-
-                        q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
-                    else:
-                        raise ValueError("Non numeric value for numeric in silico filter was entered")
+            prediction_value = in_silico_filters[in_silico_filter]
+            if prediction_value.isnumeric():
+                q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
+            else:
+                q &= Q('prefix', **{prediction_key: prediction_value})
 
         self.filter(q)
 

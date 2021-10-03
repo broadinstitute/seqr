@@ -104,10 +104,25 @@ export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
-const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 3
+const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 5
+
+export const inSilicoFilterGridLayout = (fieldComponentChunk) => {
+  return (
+    <Grid.Row>
+      { fieldComponentChunk.map((fieldComponent) => {
+        return (
+          <Grid.Column width={3}>
+            {fieldComponent}
+          </Grid.Column>
+        )
+      },
+    )}
+    </Grid.Row>
+  )
+}
 
 export const inSilicoFieldLayout = (fieldComponents) => {
-  const numberOfRows = Math.ceil(fieldComponents.length / 3)
+  const numberOfRows = Math.ceil(fieldComponents.length / IN_SILICO_FILTER_ROW_CHUNK_SIZE)
   const fieldComponentsCopy = [...fieldComponents]
   const fieldComponentChunks = []
   for (let i = numberOfRows; i > 0; i--) {
@@ -116,14 +131,12 @@ export const inSilicoFieldLayout = (fieldComponents) => {
   }
   return (
     <Form.Field>
-      {fieldComponentChunks.map((chunk) => {
-        return (
-          <Form.Group widths="equal">
-            {chunk}
-          </Form.Group>
-        )
-      })
-      }
+      <Grid>
+        {fieldComponentChunks.map((fieldComponentChunk, index) => {
+          return inSilicoFilterGridLayout(fieldComponentChunk, index, fieldComponentChunks.length)
+        })
+        }
+      </Grid>
     </Form.Field>
   )
 }
@@ -203,6 +216,7 @@ export const IN_SILICO_PANEL = {
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
   fieldLayout: inSilicoFieldLayout,
+  helpText: 'Filter by in-silico predictors. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned. For text filters, variants with exactly matching classifications will be returned',
 }
 
 export const QUALITY_PANEL = {
