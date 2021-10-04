@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
@@ -19,77 +19,73 @@ export const getNewScoreValue = (criteria) => {
   return newScore
 }
 
-const getNewScore = (criteria) => {
-  const newScore = getNewScoreValue(criteria)
+class AcmgCriteria extends React.PureComponent {
+  constructor(props) {
+    super(props)
 
-  if (newScore >= 10) {
-    return 'Pathogenic'
-  } else if (newScore >= 6 && newScore <= 9) {
-    return 'Likely Pathogenic'
-  } else if (newScore >= 0 && newScore <= 5) {
-    return 'Uncertain'
-  } else if (newScore >= -6 && newScore <= -1) {
-    return 'Likely Benign'
+    this.state = {
+      formWarning: '',
+    }
   }
 
-  return 'Benign'
-}
-
-const AcmgCriteria = React.memo((props) => {
-  const { criteria, setCriteria, setActive, variant } = props
-  const { acmgClassification, setAcmgClassification } = props
-  const [formWarning, setFormWarning] = useState('')
-
-  const criteriaUsed = {}
-  for (let i = 0; i < criteria.length; i++) {
-    criteriaUsed[criteria[i]] = true
+  setFormWarning(warning) {
+    this.setState({
+      formWarning: warning,
+    })
   }
 
-  if (criteria.length > 0) {
-    setAcmgClassification(getNewScore(criteria))
+  getCriteriaUsed() {
+    const criteriaUsed = {}
+    for (let i = 0; i < this.props.criteria.length; i++) {
+      criteriaUsed[this.props.criteria[i]] = true
+    }
+
+    return criteriaUsed
   }
 
-  const addOrRemoveCriteria = (_, data) => {
+  addOrRemoveCriteria = (_, data) => {
     const values = data.value.split('_')
 
     const value = `${values[1]}_${values[2]}`
     const answer = values[3]
 
     const fullCriteria = value
-    const criteriaCopy = [...criteria]
+    const criteriaCopy = [...this.props.criteria]
+
+    const criteriaUsed = this.getCriteriaUsed()
 
     if (answer === 'No' && criteriaUsed[fullCriteria] === true) {
       const filteredCriteria = criteriaCopy.filter(item => item !== fullCriteria)
-      setCriteria(filteredCriteria)
+      this.props.setCriteria(filteredCriteria)
     } else if (answer === 'Yes' && (criteriaUsed[fullCriteria] === false || criteriaUsed[fullCriteria] === undefined)) {
       criteriaCopy.push(fullCriteria)
-      setCriteria(criteriaCopy)
+      this.props.setCriteria(criteriaCopy)
     }
   }
 
-  const clearFields = () => {
-    setCriteria([])
-    setAcmgClassification('Unknown')
+  clearFields = () => {
+    this.props.setCriteria([])
+    this.props.setAcmgClassification('Unknown')
   }
 
-  const submitForm = () => {
-    if (acmgClassification === 'Unknown') {
-      setFormWarning('Please select at least one criteria from the table below.')
-    } else if (acmgClassification === 'Conflicting') {
-      setFormWarning('You have conflicting score. Please verify your selections.')
+  submitForm = () => {
+    if (this.props.acmgClassification === 'Unknown') {
+      this.setFormWarning('Please select at least one criteria from the table below.')
+    } else if (this.props.acmgClassification === 'Conflicting') {
+      this.setFormWarning('You have conflicting score. Please verify your selections.')
     } else {
-      setFormWarning(false)
-      setActive(false)
-      variant.acmgClassification = {
-        score: getNewScoreValue(criteria),
-        classify: acmgClassification,
-        criteria,
+      this.setFormWarning(false)
+      this.props.setActive(false)
+      this.props.variant.acmgClassification = {
+        score: getNewScoreValue(this.props.criteria),
+        classify: this.props.acmgClassification,
+        criteria: this.props.criteria,
       }
-      props.dispatchUpdateVariantClassification()
+      this.props.dispatchUpdateVariantClassification()
     }
   }
 
-  const getTableRows = () => {
+  getTableRows = () => {
     return ACMG_DROP_DOWN_OPTIONS.map((dropDownOption) => {
       let startArray = 0
       let endArray = TABLE_ROW_TOTAL_COLUMNS
@@ -104,6 +100,7 @@ const AcmgCriteria = React.memo((props) => {
       }
 
       const elements = rows.map((row, rowIdx) => {
+        const criteriaUsed = this.getCriteriaUsed()
         return (
           <Table.Row>
             { rowIdx === 0 ? <Table.Cell rowSpan={dropDownOption.optionRowSpan}><span style={FONT_STYLE_WRITING_MODE}>{dropDownOption.optionTitle}</span></Table.Cell> : null }
@@ -126,7 +123,7 @@ const AcmgCriteria = React.memo((props) => {
                             value={option.key ? 'Y' : ''}
                             key={`dropdown-${option.key}`}
                             options={option.values}
-                            onChange={addOrRemoveCriteria}
+                            onChange={this.addOrRemoveCriteria}
                             text={criteriaUsed[option.key] ? 'Y' : 'N'}
                           />
                         </Table.Cell>
@@ -144,44 +141,64 @@ const AcmgCriteria = React.memo((props) => {
     })
   }
 
-  return (
-    <div>
-      {formWarning !== '' &&
-        <Message warning>
-          <Message.Header>Warning</Message.Header>
-          <p>{formWarning}</p>
-        </Message>
-      }
-      <Button primary onClick={submitForm}>Submit</Button>
-      <Button onClick={clearFields} color="grey">Clear Form</Button>
-      <Table celled structured textAlign="center">
-        <Table.Header>
-          <Table.Row key="table-row-headercell">
-            <Table.HeaderCell colSpan="1"></Table.HeaderCell>
-            <Table.HeaderCell colSpan="2">Benign</Table.HeaderCell>
-            <Table.HeaderCell colSpan="4">Pathogenic</Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
+  getNewScore = (criteria) => {
+    const newScore = getNewScoreValue(criteria)
+    if (newScore >= 10) {
+      return 'Pathogenic'
+    } else if (newScore >= 6 && newScore <= 9) {
+      return 'Likely Pathogenic'
+    } else if (newScore >= 0 && newScore <= 5) {
+      return 'Uncertain'
+    } else if (newScore >= -6 && newScore <= -1) {
+      return 'Likely Benign'
+    }
+    return 'Benign'
+  }
 
-        <Table.Body>
-          <Table.Row key="table-row-headers">
-            <Table.Cell></Table.Cell>
-            <Table.Cell width={2}>Strong</Table.Cell>
-            <Table.Cell width={3}>Supporting</Table.Cell>
-            <Table.Cell width={3}>Supporting</Table.Cell>
-            <Table.Cell width={3}>Moderate</Table.Cell>
-            <Table.Cell width={3}>Strong</Table.Cell>
-            <Table.Cell width={3}>Very Strong</Table.Cell>
-          </Table.Row>
+  render() {
+    if (this.props.criteria.length > 0) {
+      this.props.setAcmgClassification(this.getNewScore(this.props.criteria))
+    }
 
-          { getTableRows().map(rows => rows.map(row => row)) }
-        </Table.Body>
-      </Table>
-      <br />
-      <AcmgRuleSpecification />
-    </div>
-  )
-})
+    return (
+      <div>
+        {this.state.formWarning !== '' &&
+          <Message warning>
+            <Message.Header>Warning</Message.Header>
+            <p>{this.state.formWarning}</p>
+          </Message>
+        }
+        <Button primary onClick={this.submitForm}>Submit</Button>
+        <Button onClick={this.clearFields} color="grey">Clear Form</Button>
+        <Table celled structured textAlign="center">
+          <Table.Header>
+            <Table.Row key="table-row-headercell">
+              <Table.HeaderCell colSpan="1"></Table.HeaderCell>
+              <Table.HeaderCell colSpan="2">Benign</Table.HeaderCell>
+              <Table.HeaderCell colSpan="4">Pathogenic</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+
+          <Table.Body>
+            <Table.Row key="table-row-headers">
+              <Table.Cell></Table.Cell>
+              <Table.Cell width={2}>Strong</Table.Cell>
+              <Table.Cell width={3}>Supporting</Table.Cell>
+              <Table.Cell width={3}>Supporting</Table.Cell>
+              <Table.Cell width={3}>Moderate</Table.Cell>
+              <Table.Cell width={3}>Strong</Table.Cell>
+              <Table.Cell width={3}>Very Strong</Table.Cell>
+            </Table.Row>
+
+            { this.getTableRows().map(rows => rows.map(row => row)) }
+          </Table.Body>
+        </Table>
+        <br />
+        <AcmgRuleSpecification />
+      </div>
+    )
+  }
+}
 
 AcmgCriteria.propTypes = {
   criteria: PropTypes.array.isRequired,

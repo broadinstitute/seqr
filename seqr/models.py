@@ -149,14 +149,6 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return queryset.delete()
 
 
-class WarningMessage(models.Model):
-    message =  models.TextField()
-    header = models.TextField(null=True, blank=True)
-
-    def json(self):
-        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
-
-
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     privacy_version = models.FloatField(null=True)
@@ -180,8 +172,6 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     has_case_review = models.BooleanField(default=False)
-    enable_hgmd = models.BooleanField(default=False)
-    all_user_demo = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -247,7 +237,7 @@ class Project(ModelWithGUID):
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
-            'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd'
+            'workspace_namespace', 'workspace_name', 'has_case_review'
         ]
 
 
@@ -666,7 +656,7 @@ class SavedVariant(ModelWithGUID):
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
 
-    # acmg_classification = JSONField(null=True) # ACMG based classification
+    acmg_classification = JSONField(null=True) # ACMG based classification
 
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos)
@@ -678,7 +668,7 @@ class SavedVariant(ModelWithGUID):
     class Meta:
         unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id', 'acmg_classification']
 
 
 class VariantTagType(ModelWithGUID):
