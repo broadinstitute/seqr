@@ -22,14 +22,14 @@ def get_projects_child_entities(projects, user, is_analyst=None):
     return response
 
 def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm):
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user)}
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
 
     family_models = Family.objects.filter(project__in=projects)
     families = _get_json_for_families(
         family_models, user, project_guid=project_guid, skip_nested=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid))
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid), is_analyst=is_analyst)
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
@@ -37,13 +37,13 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     sample_models = Sample.objects.filter(individual__in=individual_models)
-    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
+    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
     igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True)
+    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
-    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
     locus_lists_models = LocusList.objects.filter(projects__in=projects)
     locus_lists_by_guid = {
