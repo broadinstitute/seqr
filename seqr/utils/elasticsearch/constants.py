@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
@@ -292,7 +294,9 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
-QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10, 'gq_sv': 10}
+QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
+QUALITY_VALIDATION_FIELDS = deepcopy(QUALITY_FIELDS)
+QUALITY_VALIDATION_FIELDS.update({'gq_sv': 10})
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},
     'dp': {},
