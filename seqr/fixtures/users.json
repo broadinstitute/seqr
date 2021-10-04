@@ -208,6 +208,14 @@
     }
 },
 {
+    "model": "seqr.warningmessage",
+    "pk": 1,
+    "fields": {
+        "header": "Warning!",
+        "message": "A sample warning"
+    }
+},
+{
   "model": "seqr.userpolicy",
   "pk": 1,
   "fields": {

@@ -10,6 +10,8 @@ from settings import REDIS_SERVICE_HOSTNAME
 logger = logging.getLogger(__name__)
 
 
+MAX_VARIANTS_FETCH = 1000
+
 def update_project_saved_variant_json(project, family_id=None, user=None):
     saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
     if family_id:
@@ -26,7 +28,11 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
         variant_ids.add(v.variant_id)
         saved_variants_map[(v.variant_id, v.family.guid)] = v
 
-    variants_json = get_es_variants_for_variant_ids(sorted(families, key=lambda f: f.guid), sorted(variant_ids), user=user)
+    variant_ids = sorted(variant_ids)
+    families = sorted(families, key=lambda f: f.guid)
+    variants_json = []
+    for sub_var_ids in [variant_ids[i:i+MAX_VARIANTS_FETCH] for i in range(0, len(variant_ids), MAX_VARIANTS_FETCH)]:
+        variants_json += get_es_variants_for_variant_ids(families, sub_var_ids, user=user)
 
     updated_saved_variant_guids = []
     for var in variants_json:
