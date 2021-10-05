@@ -32,6 +32,9 @@
     "function-paren-newline": 0,
     "implicit-arrow-linebreak": 0,
     "import/no-cycle": 0, // TODO re-enable
+    "import/no-useless-path-segments": 0, // TODO re-enable
+    "indent": 0, // TODO re-enable
+    "max-classes-per-file": [2, 5], // TODO re-enable
     "max-len": 0, //["warn", 80, 2],
     "no-console": 0,
     "no-else-return": 0, // TODO re-enable
@@ -39,27 +42,43 @@
     "no-multiple-empty-lines": 0, // TODO re-enable
     "no-param-reassign": 0,
     "no-plusplus": 0,
+    "no-self-assign": 0, // TODO re-enable
+    "no-unused-vars": 0, // TODO re-enable
     "brace-style": 0,
     "object-curly-newline": 0,
     "operator-linebreak": 0, // TODO should be [2, "after"],
     "padded-blocks": 0,
     "prefer-object-spread": 0,
+    "react/destructuring-assignment": 0,
     "react/jsx-first-prop-new-line": 0,
     "react/jsx-wrap-multilines": 0,
+    "react/no-access-state-in-setstate": 0, // TODO re-enable
+    "react/no-deprecated": 0, // TODO re-enable
     "react/prefer-stateless-function": 0,
     "react/sort-comp": 0,  // more freedom in arranging class functions
+    "react/state-in-constructor": 0, // TODO re-enable
+    "react/static-property-placement": 0, // TODO should be [2, "static public field"],
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,
     "no-class-assign": 0,
     "react/jsx-curly-newline": 0, // TODO re-enable
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
+    "react/jsx-fragments": 0, // TODO re-enable
     "react/require-default-props": 0,
     "react/require-optimization": 2,
     "react/jsx-max-props-per-line": 0,
+    "react/jsx-one-expression-per-line": 0, // TODO should be [2, { "allow": "single-child" }],
+    "react/jsx-props-no-multi-spaces": 0, // TODO re-enable
+    "react/jsx-props-no-spreading": 0,
     "react/jsx-no-target-blank": 0,
+    "react/jsx-tag-spacing": 0, // TODO re-enable
+    "react-perf/jsx-no-new-array-as-prop": 0, // TODO re-enable
+    "react-perf/jsx-no-new-function-as-prop": 0, // TODO re-enable
+    "react-perf/jsx-no-new-object-as-prop": 0, // TODO re-enable
     "spaced-comment": 0,
 
     "jsx-a11y/iframe-has-title": 0,
+    "jsx-a11y/label-has-associated-control": 0,
     "jsx-a11y/tabindex-no-positive": 0,
     "jsx-a11y/click-events-have-key-events": 0,
     "jsx-a11y/anchor-is-valid": 0

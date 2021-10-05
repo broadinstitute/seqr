@@ -168,7 +168,7 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       formatter: eslintFormatter,
-      eslintPath: require.resolve('eslint'),
+      extensions: ['js', 'jsx'],
     }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
     // Makes some environment variables available to the JS code, for example:
