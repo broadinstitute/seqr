@@ -6,7 +6,6 @@ const webpack = require('webpack');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const PurgeCSSPlugin = require('purgecss-webpack-plugin');
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const glob = require('glob');
@@ -156,7 +155,6 @@ module.exports = {
       formatter: eslintFormatter,
     }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
-    new CleanWebpackPlugin(),
 
     new PurgeCSSPlugin({
       paths: glob.sync(path.join(__dirname, 'pages/*.html')),
