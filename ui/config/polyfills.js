@@ -1,5 +1,6 @@
 /* eslint-disable global-require */
 /* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable import/extensions */
 
 if (typeof Promise === 'undefined') {
   // Rejection tracking prevents a common issue where React gets into an

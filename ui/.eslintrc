@@ -22,20 +22,28 @@
       "babel-module": {}
     }
   },
+  //"reportUnusedDisableDirectives": true, // TODO re-enable
   "rules": {
     "semi": [2, "never"],
     "no-shadow": ["error", { "allow": ["error"] }],
     "arrow-body-style": 0,
+    "arrow-parens": ["error", "as-needed", { "requireForBlockBody": true }],
     "func-names": 0,
     "function-paren-newline": 0,
+    "implicit-arrow-linebreak": 0,
+    "import/no-cycle": 0, // TODO re-enable
     "max-len": 0, //["warn", 80, 2],
     "no-console": 0,
+    "no-else-return": 0, // TODO re-enable
     "no-multi-str": 0,
+    "no-multiple-empty-lines": 0, // TODO re-enable
     "no-param-reassign": 0,
     "no-plusplus": 0,
     "brace-style": 0,
     "object-curly-newline": 0,
+    "operator-linebreak": 0, // TODO should be [2, "after"],
     "padded-blocks": 0,
+    "prefer-object-spread": 0,
     "react/jsx-first-prop-new-line": 0,
     "react/jsx-wrap-multilines": 0,
     "react/prefer-stateless-function": 0,
@@ -43,6 +51,7 @@
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,
     "no-class-assign": 0,
+    "react/jsx-curly-newline": 0, // TODO re-enable
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
     "react/require-default-props": 0,
     "react/require-optimization": 2,

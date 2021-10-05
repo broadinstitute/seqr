@@ -152,11 +152,9 @@ module.exports = {
     ],
   },
   plugins: [
-    // TODO RENABLE AND FIX LINTING
-    // new ESLintPlugin({
-    //   formatter: eslintFormatter,
-    //   eslintPath: require.resolve('eslint'),
-    // }),
+    new ESLintPlugin({
+      formatter: eslintFormatter,
+    }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
     new CleanWebpackPlugin(),
 
