@@ -12,7 +12,7 @@
     "@babel/preset-env": "^7.8.3",
     "@babel/preset-react": "^7.8.3",
     "acorn": "^8.5.0",
-    "ajv": "^8.6.3",
+    "ajv": "^6.12.6",
     "autoprefixer": "7.1.6",
     "babel-eslint": "^8.2.5",
     "babel-loader": "^8.0.6",
@@ -59,8 +59,7 @@
     "webpack-dev-server": "^4.3.0",
     "webpack-manifest-plugin": "^4.0.2",
     "whatwg-fetch": "2.0.3",
-    "why-did-you-update": "^0.1.1",
-    "workbox-webpack-plugin": "^6.3.0"
+    "why-did-you-update": "^0.1.1"
   },
   "dependencies": {
     "draft-js": "^0.11.7",

@@ -80,7 +80,7 @@ module.exports = {
             test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
             type: 'asset',
             generator: {
-              filename: '[name].[hash:8].[ext]'
+              filename: '[name].[contenthash:8][ext]'
             },
           },
           // Process JS with Babel.
