@@ -153,6 +153,7 @@ module.exports = {
   plugins: [
     new ESLintPlugin({
       formatter: eslintFormatter,
+      // extensions: ['js', 'jsx', 'css'], TODO enable linting for all files
     }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
 

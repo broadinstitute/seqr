@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Button } from 'semantic-ui-react'
 import { Editor, EditorState, RichUtils, convertToRaw, convertFromRaw } from 'draft-js'
-// import { mdToDraftjs, draftjsToMd } from 'draftjs-md-converter' TODO fix
+import { draftToMarkdown, markdownToDraft } from 'markdown-draft-js'
 
 import 'draft-js/dist/Draft.css'
 
@@ -42,7 +42,7 @@ class RichTextEditor extends React.PureComponent {
 
     let editorState
     if (this.props.value) {
-      const rawData = mdToDraftjs(this.props.value || '')
+      const rawData = markdownToDraft(this.props.value || '', { preserveNewlines: true })
       const contentState = convertFromRaw(rawData)
       editorState = EditorState.createWithContent(contentState)
     } else {
@@ -57,7 +57,7 @@ class RichTextEditor extends React.PureComponent {
 
   getMarkdown() {
     const content = this.state.editorState.getCurrentContent()
-    const markdown = draftjsToMd(convertToRaw(content))
+    const markdown = draftToMarkdown(convertToRaw(content), { preserveNewlines: true })
     // Support for tabs. Required for RGP datstat imported notes
     return markdown ? markdown.replace(/' '{5}/g, TAB).replace(/\u00A0{5}/g, TAB) : markdown
   }
