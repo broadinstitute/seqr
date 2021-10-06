@@ -10,7 +10,7 @@ import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, QUALITY_PANEL,
   IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -24,6 +24,7 @@ import {
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
+import LocationFilter from './filters/LocationFilter'
 import ProjectFamiliesField from './filters/ProjectFamiliesField'
 import {
   INHERITANCE_FILTER_JSON_OPTIONS,
@@ -128,6 +129,20 @@ const IN_SILICO_PANEL_MAP = {
     ...IN_SILICO_PANEL,
     fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
   },
+}
+
+const LOCATION_PANEL = {
+  name: 'locus',
+  headerProps: { title: 'Location' },
+  fields: [
+    {
+      name: 'filter',
+      width: 14,
+      control: LocationFilter,
+      format: val => val || {},
+    },
+  ],
+  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 
 const LOCATION_PANEL_WITH_GENE_LIST = {
