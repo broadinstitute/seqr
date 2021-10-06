@@ -3,7 +3,7 @@ import { Header } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 
-export default () =>
+export default () => (
   <div>
     <VerticalSpacer height={40} />
     <Header dividing content="Disclaimer" subheader="The Broad Institute Matchmaker Exchange" size="huge" />
@@ -38,4 +38,4 @@ export default () =>
     User will not attempt to use the data or Matchmaker Exchange to establish the individual identities of any of the
     subjects from whom the data were obtained. This applies to matches made within Broad Institute or with any other
     database included in the Matchmaker Exchange.
-  </div>
+  </div>)

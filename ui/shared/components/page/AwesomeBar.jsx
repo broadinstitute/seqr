@@ -28,8 +28,7 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
   }
 `
 
-class AwesomeBar extends React.PureComponent
-{
+class AwesomeBar extends React.PureComponent {
   static propTypes = {
     categories: PropTypes.array,
     newWindow: PropTypes.bool,
@@ -113,9 +112,9 @@ class AwesomeBar extends React.PureComponent
 
 export { AwesomeBar as AwesomeBarComponent }
 
-export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = result => result.key, ...props }) =>
-  <AwesomeBar onResultSelect={result => onChange(parseResultItem(result))} asFormInput {...props} />,
-)
+export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = result => result.key, ...props }) => (
+  <AwesomeBar onResultSelect={result => onChange(parseResultItem(result))} asFormInput {...props} />
+))
 
 AwesomeBarFormInput.propTypes = {
   onChange: PropTypes.func,

@@ -4,10 +4,8 @@ import styled from 'styled-components'
 
 import { Popup, Table } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
-//import randomMC from 'random-material-color'
 
 import { ColoredIcon, NoBorderTable } from '../StyledComponents'
-
 
 const BarContainer = styled.div.attrs(props => ({
   w: props.width ? `${props.width}${typeof props.width === 'number' ? 'px' : ''}` : '100%',
@@ -22,7 +20,8 @@ const BarContainer = styled.div.attrs(props => ({
   border: 1px solid gray;`
 
 const BarSection = styled(({ to, ...props }) => React.createElement(to ? Link : 'div', { to, ...props })).attrs(
-  props => ({ style: { width: `${props.percent}%` } }))`  
+  props => ({ style: { width: `${props.percent}%` } }),
+)`  
   display: inline-block;
   height: 100%;
   background-color: ${props => props.color};`
@@ -95,8 +94,8 @@ class HorizontalStackedBar extends React.PureComponent {
         <Popup
           trigger={
             <NoWrap>
-              {dataWithPercents.filter(d => d.percent >= minPercent).map(d =>
-                <BarSection key={d.name} to={(sectionLinks && linkPath) ? `${linkPath}/${d.name}` : linkPath} color={d.color} percent={d.percent} />,
+              {dataWithPercents.filter(d => d.percent >= minPercent).map(
+                d => <BarSection key={d.name} to={(sectionLinks && linkPath) ? `${linkPath}/${d.name}` : linkPath} color={d.color} percent={d.percent} />,
               )}
             </NoWrap>
           }

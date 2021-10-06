@@ -37,9 +37,7 @@
 /**
  * Reducer that can be used to manage any state that doesn't change after it's initialized.
  */
-export const zeroActionsReducer = (state = {}) => {
-  return state
-}
+export const zeroActionsReducer = (state = {}) => state
 
 /**
  * Factory function that creates a reducer for managing any state object that's treated as a single

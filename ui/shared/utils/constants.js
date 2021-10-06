@@ -26,8 +26,9 @@ export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
   { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
-export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce((acc, { value, text }) =>
-  ({ ...acc, [value]: text }), {})
+export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce(
+  (acc, { value, text }) => ({ ...acc, [value]: text }), {},
+)
 export const GENOME_VERSION_FIELD = {
   name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
 }
@@ -127,9 +128,9 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
-export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
-  return { [tag.value]: tag, ...acc }
-}, {})
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+  (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
+)
 
 // SUCCESS STORY
 
@@ -149,15 +150,15 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
   { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
 ]
 
-export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
-  return { [tag.value]: tag, ...acc }
-}, {})
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce(
+  (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
+)
 
-export const successStoryTypeDisplay = tag =>
+export const successStoryTypeDisplay = tag => (
   <span>
     <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
     {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
-  </span>
+  </span>)
 
 // FAMILY FIELDS
 
@@ -816,9 +817,9 @@ export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, co
   return acc
 }, {})
 
-export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence, i) =>
-  ({ ...acc, [consequence.value]: i }),
-{})
+export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce(
+  (acc, consequence, i) => ({ ...acc, [consequence.value]: i }), {},
+)
 
 export const SVTYPE_LOOKUP = VEP_SV_TYPES.reduce((acc, { value, text }) => ({ ...acc, [value]: text }), {})
 
@@ -873,9 +874,10 @@ const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 
-export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) =>
-  (user.isAnalyst || variant.familyGuids.some(familyGuid =>
-    projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd)) && variant.hgmd && variant.hgmd.class
+export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
+  user.isAnalyst || variant.familyGuids.some(
+    familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
+  )) && variant.hgmd && variant.hgmd.class
 
 const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
   const { clinvar = {} } = variant
@@ -904,15 +906,16 @@ const getGeneConstraintSortScore = ({ constraints }) => {
   return constraints.louef - missenseOffset
 }
 
-const populationComparator = population => (a, b) =>
-  ((a.populations || {})[population] || {}).af - ((b.populations || {})[population] || {}).af
+const populationComparator =
+  population => (a, b) => ((a.populations || {})[population] || {}).af - ((b.populations || {})[population] || {}).af
 
-const predictionComparator = prediction => (a, b) =>
-  ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
+const predictionComparator =
+  prediction => (a, b) => ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
 
 const getConsequenceRank = ({ transcripts, svType }) => (
-  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(({ majorConsequence }) =>
-    VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
+  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(
+    ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
+  ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
 )
 
 const VARIANT_SORT_OPTONS = [
@@ -936,35 +939,37 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_PATHOGENICITY,
     text: 'Pathogenicity',
-    comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) =>
-      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid),
+    comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) => (
+      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid)),
   },
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
-    comparator: (a, b, genesById) =>
-      Math.min(...Object.keys(a.transcripts || {}).reduce((acc, geneId) =>
-        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])) -
-      Math.min(...Object.keys(b.transcripts || {}).reduce((acc, geneId) =>
-        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])),
+    comparator: (a, b, genesById) => (
+      Math.min(...Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+      )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
+        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+      ))),
   },
   {
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
-    comparator: (a, b, genesById) =>
+    comparator: (a, b, genesById) => (
       Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0) -
-      Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0),
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      ) - Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      )),
   },
   {
     value: SORT_BY_TAGGED_DATE,
     text: 'Last Tagged',
-    comparator: (a, b, genesById, tagsByGuid) =>
-      (b.tagGuids.map(
-        tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || '').localeCompare(
-        a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
-      ),
+    comparator: (a, b, genesById, tagsByGuid) => (
+      b.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || ''
+    ).localeCompare(
+      a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
+    ),
   },
 ]
 const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 1)
@@ -1051,8 +1056,8 @@ export const MUTTASTER_MAP = {
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
-    return (Object.entries(transcripts).find(entry =>
-      entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
+    return (Object.entries(transcripts).find(
+      entry => entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
     ) || [])[0]
   }
   if (Object.keys(transcripts).length === 1 && Object.values(transcripts)[0] && Object.values(transcripts)[0].length === 0) {
@@ -1062,10 +1067,9 @@ export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selec
 }
 
 
-export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
-  flatten(Object.values(transcripts)).find(
-    ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
-  ) || {}
+export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => flatten(
+  Object.values(transcripts),
+).find(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)) || {}
 
 const getPopAf = population => (variant) => {
   const populationData = (variant.populations || {})[population]

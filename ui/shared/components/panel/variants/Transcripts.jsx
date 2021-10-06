@@ -33,10 +33,10 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
+const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) => (
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
-  )).map(([geneId, geneTranscripts]) =>
+  )).map(([geneId, geneTranscripts]) => (
     <div key={geneId}>
       <Header
         size="huge"
@@ -47,7 +47,7 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
       <Segment attached="bottom">
         <Table basic="very">
           <Table.Body>
-            {geneTranscripts.map(transcript =>
+            {geneTranscripts.map(transcript => (
               <Table.Row key={transcript.transcriptId}>
                 <Table.Cell width={3}>
                   <TranscriptLink variant={variant} transcript={transcript} />
@@ -97,15 +97,15 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
                     <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
                   </AnnotationSection>
                 </Table.Cell>
-              </Table.Row>,
-            )}
+              </Table.Row>
+            ))}
           </Table.Body>
         </Table>
       </Segment>
       <VerticalSpacer height={10} />
-    </div>,
-  ),
-)
+    </div>
+  ))
+))
 
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
@@ -118,9 +118,9 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  updateMainTranscript: transcriptId => () => {
-    return dispatch(updateVariantMainTranscript(ownProps.variant.variantGuid, transcriptId))
-  },
+  updateMainTranscript: transcriptId => () => (
+    dispatch(updateVariantMainTranscript(ownProps.variant.variantGuid, transcriptId))
+  ),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transcripts)

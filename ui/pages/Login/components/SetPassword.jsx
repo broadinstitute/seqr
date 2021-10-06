@@ -59,12 +59,8 @@ const mapStateToProps = state => ({
   newUser: getNewUser(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: (updates) => {
-      return dispatch(setPassword({ ...updates, ...ownProps.match.params }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: updates => dispatch(setPassword({ ...updates, ...ownProps.match.params })),
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(SetPassword)

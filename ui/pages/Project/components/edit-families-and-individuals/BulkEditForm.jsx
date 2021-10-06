@@ -46,7 +46,7 @@ const mapStateToProps = (state, ownProps) => {
 
 const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
-const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
+const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) => (
   <ReduxFormWrapper
     form={`bulkUpload_${name}`}
     modalName={modalName}
@@ -58,8 +58,8 @@ const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
     size="small"
   >
     <BulkContent name={name} {...props} />
-  </ReduxFormWrapper>,
-)
+  </ReduxFormWrapper>
+))
 
 EditBulkForm.propTypes = {
   name: PropTypes.string.isRequired,
@@ -70,7 +70,7 @@ EditBulkForm.propTypes = {
 const FAMILY_ID_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(0, 1)
 const FAMILY_EXPORT_DATA = FAMILY_BULK_EDIT_EXPORT_DATA.slice(1)
 
-const FamiliesBulkForm = React.memo(props =>
+const FamiliesBulkForm = React.memo(props => (
   <EditBulkForm
     name="families"
     actionDescription="bulk-add or edit families"
@@ -87,8 +87,8 @@ const FamiliesBulkForm = React.memo(props =>
     blankDownload
     getRawData={getProjectAnalysisGroupFamiliesByGuid}
     {...props}
-  />,
-)
+  />
+))
 
 const mapFamiliesDispatchToProps = {
   onSubmit: updateFamilies,
@@ -96,7 +96,7 @@ const mapFamiliesDispatchToProps = {
 
 export const EditFamiliesBulkForm = connect(null, mapFamiliesDispatchToProps)(FamiliesBulkForm)
 
-const IndividualsBulkForm = React.memo(({ user, ...props }) =>
+const IndividualsBulkForm = React.memo(({ user, ...props }) => (
   <EditBulkForm
     name="individuals"
     actionDescription="bulk-add or edit individuals"
@@ -112,8 +112,8 @@ const IndividualsBulkForm = React.memo(({ user, ...props }) =>
     uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
     {...props}
-  />,
-)
+  />
+))
 
 IndividualsBulkForm.propTypes = {
   user: PropTypes.object,
@@ -130,7 +130,7 @@ const mapIndividualsDispatchToProps = {
 export const EditIndividualsBulkForm = connect(mapIndividualsStateToProps, mapIndividualsDispatchToProps)(IndividualsBulkForm)
 
 
-const IndividualMetadataBulkForm = React.memo(props =>
+const IndividualMetadataBulkForm = React.memo(props => (
   <EditBulkForm
     name="individuals_metadata"
     actionDescription="edit individual's metadata"
@@ -139,8 +139,8 @@ const IndividualMetadataBulkForm = React.memo(props =>
     optionalFields={INDIVIDUAL_DETAIL_EXPORT_DATA}
     uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
-  />,
-)
+  />
+))
 
 const mapIndividualMetadataDispatchToProps = {
   onSubmit: updateIndividualsMetadata,

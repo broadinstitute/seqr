@@ -10,7 +10,7 @@ import { SEARCH_FORM_NAME } from '../constants'
 import { getIntitialSearch } from '../selectors'
 
 
-const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }) =>
+const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }) => (
   <div>
     <VariantSearchFormContainer
       history={history}
@@ -21,8 +21,8 @@ const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }
       <VariantSearchFormContent />
     </VariantSearchFormContainer>
     <SaveSearchButton />
-  </div>,
-)
+  </div>
+))
 
 VariantSearchForm.propTypes = {
   history: PropTypes.object,

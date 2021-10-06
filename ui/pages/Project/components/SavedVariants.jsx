@@ -77,7 +77,7 @@ const LINK_VARIANT_FIELDS = [
   },
 ]
 
-const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) =>
+const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   <UpdateButton
     modalTitle="Link Saved Variants"
     modalId={`${familyGuid}${BASE_FORM_ID}`}
@@ -87,22 +87,21 @@ const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) =>
     formFields={LINK_VARIANT_FIELDS}
     onSubmit={onSubmit}
     showErrorPanel
-  />
+  />)
 
 BaseLinkSavedVariants.propTypes = {
   familyGuid: PropTypes.string,
   onSubmit: PropTypes.func,
 }
 
-const mapVariantDispatchToProps = (dispatch, { familyGuid }) => {
-  return {
-    onSubmit: (values) => {
-      const variantGuids = Object.keys(values.variantGuids).filter(
-        variantGuid => values.variantGuids[variantGuid]).join(',')
-      dispatch(updateVariantTags({ ...values, familyGuid, variantGuids }))
-    },
-  }
-}
+const mapVariantDispatchToProps = (dispatch, { familyGuid }) => ({
+  onSubmit: (values) => {
+    const variantGuids = Object.keys(values.variantGuids).filter(
+      variantGuid => values.variantGuids[variantGuid],
+    ).join(',')
+    dispatch(updateVariantTags({ ...values, familyGuid, variantGuids }))
+  },
+})
 
 const LinkSavedVariants = connect(null, mapVariantDispatchToProps)(BaseLinkSavedVariants)
 
@@ -181,7 +180,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       loadVariants={loadVariants}
       project={project}
       tableSummaryComponent={
-        summaryProps =>
+        summaryProps => (
           <Grid.Row>
             <Grid.Column width={16}>
               <VariantTagTypeBar
@@ -191,7 +190,7 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
                 {...summaryProps}
               />
             </Grid.Column>
-          </Grid.Row>
+          </Grid.Row>)
       }
       {...props}
     />
@@ -222,13 +221,13 @@ const mapDispatchToProps = dispatch => ({
 
 const ProjectSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseProjectSavedVariants)
 
-const RoutedSavedVariants = ({ match }) =>
+const RoutedSavedVariants = ({ match }) => (
   <Switch>
     <Route path={`${match.url}/variant/:variantGuid`} component={ProjectSavedVariants} />
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={ProjectSavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={ProjectSavedVariants} />
     <Route path={`${match.url}/:tag?`} component={ProjectSavedVariants} />
-  </Switch>
+  </Switch>)
 
 RoutedSavedVariants.propTypes = {
   match: PropTypes.object,

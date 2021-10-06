@@ -24,7 +24,7 @@ const FIELDS = [
   },
 ]
 
-const SampleMetadataFilters = React.memo(({ load, match }) =>
+const SampleMetadataFilters = React.memo(({ load, match }) => (
   <ReduxFormWrapper
     onSubmit={values => load(match.params.projectGuid, values)}
     form="sampleMetadataFilters"
@@ -32,15 +32,15 @@ const SampleMetadataFilters = React.memo(({ load, match }) =>
     noModal
     inline
     submitOnChange
-  />,
-)
+  />
+))
 
 SampleMetadataFilters.propTypes = {
   match: PropTypes.object,
   load: PropTypes.func,
 }
 
-const SampleMetadata = React.memo(props =>
+const SampleMetadata = React.memo(props => (
   <BaseReport
     page="sample_metadata"
     viewAllCategory="CMG"
@@ -50,8 +50,8 @@ const SampleMetadata = React.memo(props =>
     filters={<SampleMetadataFilters {...props} />}
     rowsPerPage={100}
     {...props}
-  />,
-)
+  />
+))
 
 SampleMetadata.propTypes = {
   match: PropTypes.object,

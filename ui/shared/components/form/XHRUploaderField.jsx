@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable max-classes-per-file */
 
 import React from 'react'
 import Cookies from 'js-cookie'
@@ -170,7 +171,7 @@ const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'F
 export const validateUploadedFile = value => uploadedFileHasErrors(value) || hasUploadedFile(value)
 export const warnUploadedFile = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
-const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...props }) =>
+const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...props }) => (
   <Field
     name={name}
     validate={required ? validateUploadedFile : uploadedFileHasErrors}
@@ -179,8 +180,8 @@ const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...
     component={UploaderFieldComponent}
     onChange={onChange}
     normalize={normalize}
-  />,
-)
+  />
+))
 
 UploaderFormField.propTypes = {
   name: PropTypes.string.isRequired,

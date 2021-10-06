@@ -14,7 +14,6 @@ import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
 
-
 const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
 const CompactGrid = styled(Grid)`
@@ -25,7 +24,7 @@ const CompactGrid = styled(Grid)`
   }
 `
 
-const GeneSection = React.memo(({ details }) =>
+const GeneSection = React.memo(({ details }) => (
   <CompactGrid>
     {details.map(row => row &&
       <Grid.Row key={row.title}>
@@ -33,10 +32,9 @@ const GeneSection = React.memo(({ details }) =>
           <b>{row.title}</b>
         </Grid.Column>
         <Grid.Column width={14}>{row.content}</Grid.Column>
-      </Grid.Row>,
-    )}
-  </CompactGrid>,
-)
+      </Grid.Row>)}
+  </CompactGrid>
+))
 
 GeneSection.propTypes = {
   details: PropTypes.array,
@@ -49,9 +47,8 @@ const textWithLinks = (text) => {
     MIM: 'http://www.omim.org/entry/',
   }
   const linkRegex = new RegExp(
-    Object.keys(linkMap).map(title => `(${title}:\\d+)`)
-      .concat(['(DISEASE:.*?=\\[MIM)', '(;)'])
-      .join('|'), 'g')
+    Object.keys(linkMap).map(title => `(${title}:\\d+)`).concat(['(DISEASE:.*?=\\[MIM)', '(;)']).join('|'), 'g',
+  )
   return (
     <span>
       {text && text.split(linkRegex).map((str, i) => {
@@ -68,14 +65,12 @@ const textWithLinks = (text) => {
           return <br key={i} />
         }
         return str
-      },
-      )}
+      })}
     </span>
   )
 }
 
-export const getOtherGeneNames = gene =>
-  (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
+export const getOtherGeneNames = gene => (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
 
 const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
   const fieldsToShow = fields.map(({ field, shouldShow, ...config }) => {
@@ -92,8 +87,7 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
           {label}: {value.toPrecision(4)}
           {rankField && <span> (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)</span>}
           <br />
-        </span>,
-      )}
+        </span>)}
       <i style={{ color: 'gray' }}>NOTE: {note}</i>
     </div> : 'No score available'
 }
@@ -182,15 +176,15 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
       title: 'OMIM',
       content: (gene.omimPhenotypes || []).length > 0 ?
         <div>
-          {gene.omimPhenotypes.map(phenotype =>
+          {gene.omimPhenotypes.map(phenotype => (
             <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?
               <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank">
                 {phenotype.phenotypeDescription}
               </a>
               : phenotype.phenotypeDescription}
               <br />
-            </span>,
-          )}
+            </span>
+          ))}
         </div>
         : <em>No disease associations</em>,
     },
@@ -219,13 +213,13 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   ]
   return (
     <div>
-      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
+      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig => (
         <Popup
           key={linkConfig.title}
           trigger={<a href={linkConfig.link} target="_blank"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
           content={linkConfig.description}
-        />,
-      )}
+        />
+      ))}
       <SectionHeader>Basics</SectionHeader>
       <GeneSection details={basicDetails} />
       <SectionHeader>Stats</SectionHeader>
@@ -254,15 +248,15 @@ GeneDetailContent.propTypes = {
   user: PropTypes.object,
 }
 
-const GeneDetail = React.memo(({ geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
+const GeneDetail = React.memo(({ geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) => (
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
       <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
     <Gtex geneId={geneId} />
-  </div>,
-)
+  </div>
+))
 
 GeneDetail.propTypes = {
   geneId: PropTypes.string.isRequired,

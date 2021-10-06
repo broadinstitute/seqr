@@ -47,26 +47,26 @@ const variantSummary = (variant, includeGenomeVersion) => (
   </div>
 )
 
-const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesById, dispatch, ...listProps }) =>
+const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesById, dispatch, ...listProps }) => (
   <List {...listProps}>
-    {Object.entries(geneVariants.reduce((acc, variant) =>
-      ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {}),
-    ).map(([geneId, variants]) =>
+    {Object.entries(geneVariants.reduce(
+      (acc, variant) => ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {},
+    )).map(([geneId, variants]) => (
       <TopAlignedItem key={geneId}>
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
         {variants.length > 0 && variants[0].pos &&
           <List.List>
-            {variants.map((variant, i) =>
+            {variants.map((variant, i) => (
               <List.Item key={`${variant.pos}-${variant.ref}-${variant.alt}`}>
                 {variantSummary(variant, (i + 1 === variants.length))}
-              </List.Item>,
-            )}
+              </List.Item>
+            ))}
           </List.List>
         }
-      </TopAlignedItem>,
-    )}
-  </List>,
-)
+      </TopAlignedItem>
+    ))}
+  </List>
+))
 
 BaseSubmissionGeneVariants.propTypes = {
   genesById: PropTypes.object,
@@ -81,15 +81,15 @@ const mapGeneStateToProps = state => ({
 
 export const SubmissionGeneVariants = connect(mapGeneStateToProps)(BaseSubmissionGeneVariants)
 
-export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) =>
+export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) => (
   <List bulleted {...listProps}>
-    {phenotypes.map(phenotype =>
+    {phenotypes.map(phenotype => (
       <PhenotypeListItem key={phenotype.id} observed={phenotype.observed} maxWidth={maxWidth}>
         {phenotype.label} ({phenotype.id})
-      </PhenotypeListItem>,
-    )}
-  </List>,
-)
+      </PhenotypeListItem>
+    ))}
+  </List>
+))
 
 Phenotypes.propTypes = {
   phenotypes: PropTypes.array,

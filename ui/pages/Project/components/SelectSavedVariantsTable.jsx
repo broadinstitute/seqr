@@ -29,16 +29,16 @@ export const TAG_COLUMN = {
   name: 'tags',
   content: 'Tags',
   width: 8,
-  format: val => val.tags.map(tag =>
-    <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
+  format: val => val.tags.map(
+    tag => <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
   ),
 }
 
-const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, dispatch, ...props }) =>
+const SelectSavedVariantsTable = React.memo(({ load, loading, familyGuid, dispatch, ...props }) => (
   <DataLoader content contentId={familyGuid} load={load} loading={false}>
     <SelectableTableFormInput defaultSortColumn="xpos" loading={loading} {...props} />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 SelectSavedVariantsTable.propTypes = {
   load: PropTypes.func,

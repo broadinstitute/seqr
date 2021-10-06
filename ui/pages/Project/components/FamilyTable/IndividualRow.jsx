@@ -109,7 +109,7 @@ const ratioLabel = (flag) => {
   return `Ratio ${words[1]}/${words[2]}`
 }
 
-const CaseReviewStatus = React.memo(({ individual }) =>
+const CaseReviewStatus = React.memo(({ individual }) => (
   <CaseReviewDropdownContainer>
     <CaseReviewStatusDropdown individual={individual} />
     {
@@ -120,21 +120,21 @@ const CaseReviewStatus = React.memo(({ individual }) =>
         </Detail>
       ) : null
     }
-  </CaseReviewDropdownContainer>,
-)
+  </CaseReviewDropdownContainer>
+))
 
 CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) =>
+const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
       {title}: {new Date(mmeSubmission[dateField]).toLocaleDateString()}
     </Label>
-  </Link>,
-)
+  </Link>
+))
 
 MmeStatusLabel.propTypes = {
   title: PropTypes.string,
@@ -144,12 +144,10 @@ MmeStatusLabel.propTypes = {
   mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
+const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) => (
   <div>
-    {loadedSamples.map(sample =>
-      <div key={sample.sampleGuid}>
-        <Sample loadedSample={sample} isOutdated={!sample.isActive} />
-      </div>,
+    {loadedSamples.map(
+      sample => <div key={sample.sampleGuid}><Sample loadedSample={sample} isOutdated={!sample.isActive} /></div>,
     )}
     {mmeSubmission && (
       mmeSubmission.deletedDate ? (
@@ -167,8 +165,8 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )
   }
-  </div>,
-)
+  </div>
+))
 
 DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
@@ -176,8 +174,7 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
-const formatGene = gene =>
-  <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
+const formatGene = gene => <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
 
 const AgeDetails = ({ birthYear, deathYear }) => {
   if (!!deathYear || deathYear === 0) {
@@ -216,7 +213,7 @@ AwesomebarItemSelector.propTypes = {
   value: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
 }
 
-const GeneEntry = ({ name, icon }) =>
+const GeneEntry = ({ name, icon }) => (
   <Form.Group inline>
     <Form.Field width={1}>{icon}</Form.Field>
     <Form.Field width={7}>
@@ -229,22 +226,20 @@ const GeneEntry = ({ name, icon }) =>
       />
     </Form.Field>
     <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
-  </Form.Group>
+  </Form.Group>)
 
 GeneEntry.propTypes = {
   icon: PropTypes.node,
   name: PropTypes.string,
 }
 
-const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) =>
-  Object.values(getHpoTermsForCategory(
-    (features || []).map((term, index) => ({ ...term, index })),
-    nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
-  )).reduce((acc, { categoryName, terms }) => {
-    terms[0].categoryName = categoryName
-    return [...acc, ...terms]
-  }, [])
-
+const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) => Object.values(getHpoTermsForCategory(
+  (features || []).map((term, index) => ({ ...term, index })),
+  nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
+)).reduce((acc, { categoryName, terms }) => {
+  terms[0].categoryName = categoryName
+  return [...acc, ...terms]
+}, [])
 
 const HPO_QUALIFIERS = [
   {
@@ -285,7 +280,7 @@ const HPO_QUALIFIERS = [
   },
 ]
 
-const HpoQualifiers = ({ input }) =>
+const HpoQualifiers = ({ input }) => (
   <Accordion
     exclusive={false}
     panels={HPO_QUALIFIERS.map(({ type, options }) => ({
@@ -302,13 +297,13 @@ const HpoQualifiers = ({ input }) =>
         ),
       },
     }))}
-  />
+  />)
 
 HpoQualifiers.propTypes = {
   input: PropTypes.object,
 }
 
-const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) =>
+const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) => (
   <div>
     {value.categoryName ? <Header content={value.categoryName} size="small" /> : null}
     <Form.Group inline>
@@ -337,8 +332,8 @@ const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showD
         <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />
       </Form.Group>,
     ]}
-  </div>,
-)
+  </div>
+))
 
 HpoTermDetails.propTypes = {
   icon: PropTypes.node,
@@ -359,16 +354,16 @@ const getTermPanes = (term, addItem) => ([{
   render: () => <HpoCategory category={term.id} addItem={addItem} />,
 }])
 
-const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) =>
+const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) => (
   <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
     {Object.values(hpoTerms || {}).length > 0 &&
       <Tab.Pane attached={false}>
-        {Object.values(hpoTerms).map(term =>
-          <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />,
+        {Object.values(hpoTerms).map(
+          term => <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />,
         )}
       </Tab.Pane>
     }
-  </DataLoader>
+  </DataLoader>)
 
 BaseHpoCategory.propTypes = {
   category: PropTypes.string,
@@ -392,16 +387,15 @@ const HpoCategory = connect(mapCategoryStateToProps, mapCategoryDispatchToProps)
 
 const HPO_CATEGORIES = ['hpo_terms']
 
-const getCategoryPanes = addItem =>
-  Object.entries(CATEGORY_NAMES).map(
-    ([key, menuItem]) => ({
-      key,
-      menuItem,
-      render: () => <HpoCategory category={key} addItem={addItem} />,
-    }),
-  ).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
+const getCategoryPanes = addItem => Object.entries(CATEGORY_NAMES).map(
+  ([key, menuItem]) => ({
+    key,
+    menuItem,
+    render: () => <HpoCategory category={key} addItem={addItem} />,
+  }),
+).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
 
-const HpoTermSelector = ({ addItem }) =>
+const HpoTermSelector = ({ addItem }) => (
   <div>
     <AwesomeBarFormInput
       parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
@@ -411,7 +405,7 @@ const HpoTermSelector = ({ addItem }) =>
     />
     <VerticalSpacer height={10} />
     <ScrollingTab panes={getCategoryPanes(addItem)} defaultActiveIndex={null} />
-  </div>
+  </div>)
 
 HpoTermSelector.propTypes = {
   addItem: PropTypes.func,
@@ -460,7 +454,7 @@ class HpoTermsEditor extends React.PureComponent {
     return (
       <div>
         {header && <div><Header dividing {...header} /><VerticalSpacer height={5} /></div>}
-        {value.map(({ index, ...item }) =>
+        {value.map(({ index, ...item }) => (
           <HpoTermDetails
             key={item.id}
             value={item}
@@ -468,8 +462,8 @@ class HpoTermsEditor extends React.PureComponent {
             icon={<Icon name="remove" link id={item.id} onClick={this.removeItem} />}
             showDetails={!!showDetails[item.id]}
             toggleShowDetails={this.toggleShowDetails(item.id)}
-          />,
-        )}
+          />
+        ))}
         {allowAdditions && (showAddItem ? <HpoTermSelector addItem={this.addItem} /> :
         <ButtonLink icon="plus" content="Add Feature" onClick={this.toggleShowAddItems} />)}
         {allowAdditions && <VerticalSpacer height={20} />}
@@ -564,9 +558,8 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   },
   ar: {
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
-      field => individual[field] || individual[field] === false).map(field =>
-        <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>,
-    ),
+      field => individual[field] || individual[field] === false,
+    ).map(field => <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>),
     subFieldProps: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD },
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
@@ -579,37 +572,37 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     fieldDisplay: population => POPULATION_MAP[population] || population,
   },
   filterFlags: {
-    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
+    fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
       <Label
         key={flag}
         basic
         horizontal
         color="orange"
         content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
-      />,
-    ),
+      />
+    )),
   },
   popPlatformFilters: {
-    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag =>
+    fieldDisplay: filterFlags => Object.keys(filterFlags).map(flag => (
       <Label
         key={flag}
         basic
         horizontal
         color="orange"
         content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
-      />,
-    ),
+      />
+    )),
   },
   svFlags: {
-    fieldDisplay: filterFlags => filterFlags.map(flag =>
+    fieldDisplay: filterFlags => filterFlags.map(flag => (
       <Label
         key={flag}
         basic
         horizontal
         color="orange"
         content={snakecaseToTitlecase(flag)}
-      />,
-    ),
+      />
+    )),
   },
   features: {
     fieldDisplay: individual => <HpoPanel individual={individual} />,
@@ -740,18 +733,18 @@ const IndividualRow = React.memo((
   return (
     <FamilyLayout
       fields={fields}
-      fieldDisplay={({ component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field }) =>
-        React.createElement(component || BaseFieldView, {
-          key: field.field,
-          isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
-          onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
-          modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${displayName}`,
-          initialValues: individual,
-          idField: 'individualGuid',
-          ...individualFields(individual),
-          ...field,
-        })
-      }
+      fieldDisplay={(
+        { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
+      ) => React.createElement(component || BaseFieldView, {
+        key: field.field,
+        isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+        onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
+        modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${displayName}`,
+        initialValues: individual,
+        idField: 'individualGuid',
+        ...individualFields(individual),
+        ...field,
+      })}
       leftContent={leftContent}
       rightContent={rightContent}
     />

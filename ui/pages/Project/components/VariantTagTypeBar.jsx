@@ -31,11 +31,11 @@ const VariantTagTypeBar = React.memo(({ project, familyGuid, analysisGroup, sect
     sectionLinks={sectionLinks}
     data={(project.variantTagTypes || []).filter(
       vtt => vtt.name !== NOTE_TAG_NAME && !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
-    ).map((vtt) => {
-      return { count: getVariantTagTypeCount(vtt,
+    ).map(vtt => ({
+      count: getVariantTagTypeCount(vtt,
           familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids),
         ...vtt }
-    })}
+    ))}
   />
 ))
 

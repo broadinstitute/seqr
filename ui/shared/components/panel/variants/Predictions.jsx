@@ -135,16 +135,16 @@ class Predictions extends React.PureComponent {
     return (
       <div>
         {
-          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField =>
-            <Prediction key={predictorField.field} {...predictorField} />)
+          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+            <Prediction key={predictorField.field} {...predictorField} />))
         }
         {
           predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD &&
             <Transition.Group animation="fade down" duration="500">
               {
-                this.state.showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField =>
-                  <Prediction key={predictorField.field} {...predictorField} />,
-                )
+                this.state.showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+                  <Prediction key={predictorField.field} {...predictorField} />
+                ))
               }
               <ButtonLink onClick={this.toggleShowMore}>
                 <HorizontalSpacer width={20} />

@@ -64,14 +64,14 @@ const NestedVariantTab = styled(Tab).attrs({
   }
 `
 
-const tagFamily = tag =>
+const tagFamily = tag => (
   <LoadedFamilyLabel
     familyGuid={tag.savedVariant.familyGuid}
     path={`saved_variants/variant/${tag.savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
   />
-
+)
 
 const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVariants, reads, showReads }) => {
   if (!mainGeneId) {
@@ -97,11 +97,11 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
           />
       }
       </Grid.Column>
-      {variant.familyGuids.map(familyGuid =>
+      {variant.familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} linkToSavedVariants={linkToSavedVariants} />
-        </Grid.Column>,
-      )}
+        </Grid.Column>
+      ))}
       <Grid.Column>
         {variant.svName && <Header size="medium" content={variant.svName} />}
         {!isCompoundHet && mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
@@ -137,9 +137,9 @@ Variant.propTypes = {
 
 const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />
 
-const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet =>
-  <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
-)
+const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet => (
+  <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />
+))
 
 const nestedVariantPanes = (variants, mainGeneId, props) => ([
   {
@@ -157,8 +157,9 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
 })))
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
-  const sharedGeneIds = variants.slice(1).reduce((acc, v) =>
-    acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}))
+  const sharedGeneIds = variants.slice(1).reduce(
+    (acc, v) => acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}),
+  )
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
     const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
@@ -175,11 +176,11 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
   return (
     <StyledVariantRow>
       <VerticalSpacer height={16} />
-      {allVariants[0].familyGuids.map(familyGuid =>
+      {allVariants[0].familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={allVariants} />
-        </Grid.Column>,
-      )}
+        </Grid.Column>
+      ))}
       <Grid.Column width={16}>
         {mainGeneId && <VariantGene geneId={mainGeneId} variant={allVariants[0]} areCompoundHets />}
       </Grid.Column>

@@ -24,8 +24,8 @@ export const REPORT_PAGES = [
 const Report = ({ match, user }) => (
   user.isAnalyst ? (
     <Switch>
-      {REPORT_PAGES.map(({ path, params, component }) =>
-        <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
+      {REPORT_PAGES.map(
+        ({ path, params, component }) => <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
       )}
       <Route path={match.url} component={null} />
       <Route component={() => <Error404 />} />

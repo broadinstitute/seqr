@@ -11,7 +11,7 @@ import LocusListTables from 'shared/components/table/LocusListTables'
 
 const LOCUS_LIST_TABLE_BUTTONS = { My: <CreateLocusListButton /> }
 
-const LocusLists = ({ match }) =>
+const LocusLists = ({ match }) => (
   <LocusListsLoader>
     <Container>
       <Switch>
@@ -19,7 +19,7 @@ const LocusLists = ({ match }) =>
         <Route path={`${match.url}`} component={() => <LocusListTables tableButtons={LOCUS_LIST_TABLE_BUTTONS} />} />
       </Switch>
     </Container>
-  </LocusListsLoader>
+  </LocusListsLoader>)
 
 LocusLists.propTypes = {
   match: PropTypes.object,

@@ -72,8 +72,8 @@ const GENOTYPE_FIELDS = [
     name: 'tags',
     content: 'Tags',
     width: 8,
-    format: val => val.tags.map(tag =>
-      <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
+    format: val => val.tags.map(
+      tag => <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
     ),
   },
 ]
@@ -96,7 +96,7 @@ const PHENOTYPE_FIELDS = [
 
 const EMPTY_LIST = []
 
-const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
+const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) => (
   <SelectableTableFormInput
     idField="id"
     defaultSortColumn="label"
@@ -106,8 +106,8 @@ const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
     onChange={newValue => onChange(
       individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
     )}
-  />,
-)
+  />
+))
 
 BaseEditPhenotypesTable.propTypes = {
   individual: PropTypes.object,
@@ -132,8 +132,9 @@ const SUBMISSION_EDIT_FIELDS = [
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
     normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)),
-    format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {}),
+    format: value => (value || []).reduce(
+      (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
+    ),
   },
   {
     name: 'phenotypes',
@@ -154,7 +155,7 @@ const CONTACT_FIELDS = [
   { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
 ]
 
-const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) =>
+const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) => (
   <UpdateButton
     onSubmit={onSubmit}
     initialValues={defaultContactEmail}
@@ -166,8 +167,8 @@ const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) =>
     showErrorPanel
     submitButtonText="Send"
     buttonFloated="right"
-  />,
-)
+  />
+))
 
 BaseContactHostButton.propTypes = {
   defaultContactEmail: PropTypes.object,
@@ -191,7 +192,7 @@ const contactedLabel = (val) => {
   return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
 }
 
-const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) =>
+const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) => (
   <BaseFieldView
     initialValues={initialValues}
     field="matchStatus"
@@ -202,16 +203,16 @@ const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) =>
     modalTitle="Edit MME Submission Status"
     formFields={MATCH_STATUS_EDIT_FIELDS}
     onSubmit={onSubmit}
-    fieldDisplay={val =>
+    fieldDisplay={val => (
       <div>
         <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
         {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
         {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
         <p>{val.comments}</p>
         <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
-      </div>}
-  />,
-)
+      </div>)}
+  />
+))
 
 BaseMatchStatus.propTypes = {
   initialValues: PropTypes.object,
@@ -224,7 +225,7 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
-const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) =>
+const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) => (
   <TextFieldView
     isVisible={user.isAnalyst}
     fieldName="Contact Notes"
@@ -235,8 +236,8 @@ const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...
     modalTitle={`Edit Shared Notes for "${contact.institution}"`}
     onSubmit={onSubmit}
     {...props}
-  />,
-)
+  />
+))
 
 BaseContactNotes.propTypes = {
   contact: PropTypes.object,
@@ -281,11 +282,10 @@ const DISPLAY_FIELDS = [
       return patientFields.length ? <Popup
         header="Patient Details"
         trigger={<MatchContainer>{displayName} <Icon link name="info circle" /></MatchContainer>}
-        content={patientFields.map(k =>
+        content={patientFields.map(k => (
           <div key={k}>
             <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
-          </div>,
-        )}
+          </div>))}
       /> : <MatchContainer>{displayName}</MatchContainer>
     },
   },
@@ -350,7 +350,7 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
+const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) => (
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
@@ -456,8 +456,8 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
           />
         </div>}
     </DataLoader>
-  </div>,
-)
+  </div>
+))
 
 BaseMatchmakerIndividual.propTypes = {
   individual: PropTypes.object.isRequired,
@@ -477,37 +477,29 @@ const mapStateToProps = (state, ownProps) => ({
   mmeResults: getMmeResultsBySubmission(state, ownProps)[ownProps.individual.mmeSubmissionGuid],
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false))
-    },
-    searchMme: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
-    },
-    onSubmit: (values) => {
-      return dispatch(updateMmeSubmission({
-        ...values,
-        submissionGuid: ownProps.individual.mmeSubmissionGuid,
-        individualGuid: ownProps.individual.individualGuid,
-      }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false)),
+  searchMme: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true)),
+  onSubmit: values => dispatch(updateMmeSubmission({
+    ...values,
+    submissionGuid: ownProps.individual.mmeSubmissionGuid,
+    individualGuid: ownProps.individual.individualGuid,
+  })),
+})
 
 const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMatchmakerIndividual)
 
 const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, colWidth: 16 }]
 
-const Matchmaker = React.memo(({ individuals, family }) =>
+const Matchmaker = React.memo(({ individuals, family }) => (
   <div>
     <Header dividing size="medium" content="Notes" />
     <Family family={family} compact useFullWidth hidePedigree fields={MME_FAMILY_FIELDS} />
-    {(individuals || []).filter(individual => individual.affected === AFFECTED).map(individual =>
-      <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
+    {(individuals || []).filter(individual => individual.affected === AFFECTED).map(
+      individual => <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
     )}
-  </div>,
-)
+  </div>
+))
 
 Matchmaker.propTypes = {
   family: PropTypes.object,

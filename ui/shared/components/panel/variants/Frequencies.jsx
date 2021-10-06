@@ -168,35 +168,28 @@ const POPULATIONS = [
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
-  const freqContent = (
-    <div>
-      {POPULATIONS.map(pop =>
-        <FreqSummary key={pop.field} variant={variant} {...pop} />,
-      )}
-    </div>
-  )
+  const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
 
   const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac)
-  const hasGlobalAfPops = POPULATIONS.filter(
-    pop => populations[pop.field] && populations[pop.field].filter_af && (populations[pop.field].filter_af !== populations[pop.field].af))
+  const hasGlobalAfPops = POPULATIONS.filter(pop => (
+    populations[pop.field] && populations[pop.field].filter_af &&
+    (populations[pop.field].filter_af !== populations[pop.field].af)))
 
   return (
     (hasAcPops.length || hasGlobalAfPops.length) ?
       <Popup position="top center" flowing trigger={freqContent}>
         {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
         <Popup.Content>
-          {hasGlobalAfPops.map(pop =>
-            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].af.toPrecision(pop.precision || 2)}</div>,
-          )}
+          {hasGlobalAfPops.map(pop => (
+            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].af.toPrecision(pop.precision || 2)}</div>
+          ))}
         </Popup.Content>
         {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
         {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
         <Popup.Content>
-          {hasAcPops.map(pop =>
-            <div key={pop.field}>
-              {pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}
-            </div>,
-          )}
+          {hasAcPops.map(pop => (
+            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>
+          ))}
         </Popup.Content>
       </Popup>
       : freqContent

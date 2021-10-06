@@ -75,7 +75,7 @@ const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, comp
     /> :
     <div style={containerStyle}>
       <React.Fragment>
-        {locusListGuids.map(locusListGuid =>
+        {locusListGuids.map(locusListGuid => (
           <GeneDetailSection
             key={locusListGuid}
             color="teal"
@@ -86,11 +86,10 @@ const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, comp
             details={(locusListsByGuid[locusListGuid] || {}).description}
             containerStyle={containerStyle}
             {...labelProps}
-          />,
-        )}
+          />
+        ))}
       </React.Fragment>
-    </div>),
-)
+    </div>))
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
@@ -137,9 +136,9 @@ const OMIM_SECTION = {
   label: 'IN OMIM',
   compactLabel: 'OMIM Disease Phenotypes',
   showDetails: gene => gene.omimPhenotypes.length > 0,
-  detailsDisplay: gene =>
+  detailsDisplay: gene => (
     <List>
-      {gene.omimPhenotypes.map(phenotype =>
+      {gene.omimPhenotypes.map(phenotype => (
         <ListItemLink
           key={phenotype.phenotypeDescription}
           content={phenotype.phenotypeInheritance ?
@@ -147,9 +146,10 @@ const OMIM_SECTION = {
             phenotype.phenotypeDescription}
           target="_blank"
           href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-        />,
-      )}
-    </List>,
+        />
+      ))}
+    </List>
+  ),
 }
 
 const GENE_DETAIL_SECTIONS = [
@@ -161,46 +161,46 @@ const GENE_DETAIL_SECTIONS = [
       (gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
       (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)
     ),
-    detailsDisplay: gene =>
+    detailsDisplay: gene => (
       `This gene ranks ${gene.constraints.misZRank} most constrained out of
       ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
       ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
       of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
       statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-      via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`,
+      via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`),
   },
   {
     color: 'red',
     description: 'Loss of Function Constraint',
     label: 'LOF CONSTR',
     showDetails: gene => gene.constraints.louef < LOF_THRESHHOLD,
-    detailsDisplay: gene =>
+    detailsDisplay: gene => (
       `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
        ${gene.constraints.totalGenes} genes under study (louef:
        ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
        LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
        observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
-       loss-of-function mutations`,
+       loss-of-function mutations`),
   },
   {
     color: 'red',
     description: 'HaploInsufficient',
     label: 'HI',
     showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
-    detailsDisplay: gene =>
+    detailsDisplay: gene => (
       `These are a score under development by the Talkowski lab that predict whether a gene is haploinsufficient based 
       on large chromosomal microarray data set analysis. Scores >0.84 are considered to have high likelihood to be 
-      haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`,
+      haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`),
   },
   {
     color: 'red',
     description: 'TriploSensitive',
     label: 'TS',
     showDetails: gene => gene.cnSensitivity.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
-    detailsDisplay: gene =>
+    detailsDisplay: gene => (
       `These are a score under development by the Talkowski lab that predict whether a gene is triplosensitive based on
        large chromosomal microarray dataset analysis. Scores >0.993 are considered to have high likelihood to be 
-       triplosensitive. This gene has a score of ${gene.cnSensitivity.pts.toPrecision(4)}.`,
+       triplosensitive. This gene has a score of ${gene.cnSensitivity.pts.toPrecision(4)}.`),
   },
 ]
 
@@ -223,15 +223,15 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containe
   const omimDetails = OMIM_SECTION.showDetails(gene) && OMIM_SECTION.detailsDisplay(gene)
   return (
     <div style={containerStyle}>
-      {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) =>
+      {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
         <GeneDetailSection
           key={sectionConfig.label}
           compact={compact}
           details={showDetails(gene) && detailsDisplay(gene)}
           {...sectionConfig}
           {...labelProps}
-        />,
-      )}
+        />
+      ))}
       {showLocusLists && gene.locusListGuids.length > 0 &&
         <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} containerStyle={INLINE_STYLE} {...labelProps} />
       }
@@ -248,8 +248,7 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containe
       )}
     </div>
   )
-},
-)
+})
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
@@ -369,7 +368,7 @@ class VariantGenes extends React.PureComponent {
     if (this.state.showAll) {
       return (
         <div>
-          {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId =>
+          {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId => (
             <BaseVariantGene
               key={geneId}
               geneId={geneId}
@@ -377,8 +376,8 @@ class VariantGenes extends React.PureComponent {
               variant={variant}
               showInlineDetails={!mainGeneId}
               compact
-            />,
-          )}
+            />
+          ))}
           {!mainGeneId && geneIds.length > 0 &&
             <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
           }
@@ -398,13 +397,13 @@ class VariantGenes extends React.PureComponent {
             return (
               <GeneDetailSection
                 key={sectionConfig.label}
-                details={sectionGenes.length > 0 && sectionGenes.map(gene =>
+                details={sectionGenes.length > 0 && sectionGenes.map(gene => (
                   <div key={gene.geneId}>
                     <Header size="small" content={gene.geneSymbol} />
                     {detailsDisplay(gene)}
                     <VerticalSpacer height={5} />
-                  </div>,
-                )}
+                  </div>
+                ))}
                 {...sectionConfig}
               />
             )

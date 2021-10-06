@@ -1,7 +1,7 @@
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <Segment basic padded="very">
     <Header dividing content="Terms Of Service" subheader="Last Updated 3/4/2021" size="huge" />
 
@@ -139,4 +139,4 @@ export default () =>
     storage of any PHI on the platform. You agree to indemnify and hold harmless seqr of and from any and all claims,
     demands, losses, causes of action, damage, lawsuits, judgments, including attorneys&apos; fees and costs, arising
     out of or relating to your uploading, storing, or transferring of PHI.
-  </Segment>
+  </Segment>)

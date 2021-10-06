@@ -26,8 +26,8 @@ const TextFieldView = React.memo((props) => {
           {textPopup ? textPopup(markdown) : markdown}
           {textAnnotation && <span><HorizontalSpacer width={10} />{textAnnotation}</span>}
         </span>
-      ) }
-    }
+      )
+    }}
     formFields={fields}
     {...baseProps}
   />

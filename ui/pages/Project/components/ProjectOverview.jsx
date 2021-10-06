@@ -46,13 +46,13 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
-const DetailSection = React.memo(({ title, content, button }) =>
+const DetailSection = React.memo(({ title, content, button }) => (
   <div>
     <b>{title}</b>
     <DetailContent>{content}</DetailContent>
     {button && <div><VerticalSpacer height={15} />{button}</div>}
-  </div>,
-)
+  </div>
+))
 
 DetailSection.propTypes = {
   title: PropTypes.string.isRequired,
@@ -65,10 +65,10 @@ const MME_COLUMNS = [
     name: 'href',
     content: '',
     width: 1,
-    format: row =>
+    format: row => (
       <NavLink to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
         <Icon name="linkify" link />
-      </NavLink>,
+      </NavLink>),
   },
   { name: 'familyName', content: 'Family', width: 2 },
   { name: 'geneSymbols', content: 'Genes', width: 3, format: ({ geneSymbols }) => (geneSymbols || []).join(', ') },
@@ -77,18 +77,16 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => {
-  return (
-    <DataTable
-      basic="very"
-      fixed
-      data={Object.values(mmeSubmissions)}
-      idField="submissionGuid"
-      defaultSortColumn="familyName"
-      columns={MME_COLUMNS}
-    />
-  )
-})
+const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => (
+  <DataTable
+    basic="very"
+    fixed
+    data={Object.values(mmeSubmissions)}
+    idField="submissionGuid"
+    defaultSortColumn="familyName"
+    columns={MME_COLUMNS}
+  />
+))
 
 BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.array,
@@ -118,10 +116,9 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
     <DetailSection
       title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
       content={
-        sortBy(Object.keys(familySizeHistogram)).map(size =>
-          <div key={size}>
-            {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
-          </div>)
+        sortBy(Object.keys(familySizeHistogram)).map(
+          size => <div key={size}>{familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}</div>,
+        )
       }
       button={editIndividualsButton}
     />
@@ -187,12 +184,13 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
     return {
       key: sampleTypeKey,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
-      content: Object.keys(loadedSampleCounts).sort().map(loadedDate =>
+      content: Object.keys(loadedSampleCounts).sort().map(loadedDate => (
         <div key={loadedDate}>
           { new Date(loadedDate).toLocaleDateString()} - {loadedSampleCounts[loadedDate]} samples
-        </div>,
-      ),
-    } }).sort((a, b) => a.title.localeCompare(b.title))
+        </div>
+      )),
+    }
+  }).sort((a, b) => a.title.localeCompare(b.title))
 
   if (!datasetSections.length) {
     datasetSections.push({
@@ -220,12 +218,12 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
       key: 'blank' })
   }
 
-  return datasetSections.map((sectionProps, i) =>
+  return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
       button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
-    />,
-  )
+    />
+  ))
 })
 
 Dataset.propTypes = {
@@ -262,12 +260,12 @@ const mapAnvilStateToProps = state => ({
 
 const AnvilOverview = connect(mapAnvilStateToProps)(Anvil)
 
-const AnalysisStatus = React.memo(({ analysisStatusCounts }) =>
+const AnalysisStatus = React.memo(({ analysisStatusCounts }) => (
   <DetailSection
     title="Analysis Status"
     content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}
-  />,
-)
+  />
+))
 
 AnalysisStatus.propTypes = {
   analysisStatusCounts: PropTypes.array.isRequired,
@@ -279,7 +277,7 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
-const ProjectOverview = React.memo(props =>
+const ProjectOverview = React.memo(props => (
   <Grid>
     <Grid.Column width={5}>
       <FamiliesIndividualsOverview {...props} />
@@ -294,8 +292,8 @@ const ProjectOverview = React.memo(props =>
       <AnvilOverview {...props} />
       <AnalysisStatusOverview {...props} />
     </Grid.Column>
-  </Grid>,
-)
+  </Grid>
+))
 
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,

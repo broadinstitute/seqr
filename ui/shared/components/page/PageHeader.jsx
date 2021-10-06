@@ -103,12 +103,12 @@ export const PageHeaderLayout = React.memo(({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(({ popup, content, ...linkProps }) =>
+            {entityLinks.map(({ popup, content, ...linkProps }) => (
               <div key={content}>
                 <ButtonLink as={NavLink} {...linkProps}>{content}</ButtonLink>
                 {popup && <Popup content={popup} trigger={<Icon name="question circle outline" color="grey" />} />}
-              </div>,
-            )}
+              </div>
+            ))}
           </b>
         }
         <br />
@@ -135,13 +135,13 @@ PageHeaderLayout.propTypes = {
 }
 
 
-const BaseGenePageHeader = React.memo(({ gene, match }) =>
+const BaseGenePageHeader = React.memo(({ gene, match }) => (
   <PageHeaderLayout
     entity="gene_info"
     entityGuid={match.params.geneId}
     title={match.params.geneId && (gene ? gene.geneSymbol : match.params.geneId)}
-  />,
-)
+  />
+))
 
 BaseGenePageHeader.propTypes = {
   gene: PropTypes.object,
@@ -159,8 +159,8 @@ export const SimplePageHeader = ({ page, pages }) => ([
     <Menu.Item key="title">
       <Header size="medium"><HorizontalSpacer width={90} /> {snakecaseToTitlecase(page)} Pages:</Header>
     </Menu.Item>
-    {pages.map(({ path }) =>
-      <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+    {pages.map(
+      ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
     )}
   </Menu>,
   <VerticalSpacer height={20} key="spacer" />,
@@ -181,17 +181,14 @@ const SIMPLE_HEADER_PAGES = [
   { page: 'report', pages: REPORT_PAGES },
 ]
 
-export default () =>
+export default () => (
   <Switch>
-    {NO_HEADER_PAGES.map(page =>
-      <Route key={page} path={page} component={() => null} />,
-    )}
-    {SIMPLE_HEADER_PAGES.map(({ page, ...props }) =>
-      <Route key={page} path={`/${page}`} component={() => <SimplePageHeader page={page} {...props} />} />,
-    )}
+    {NO_HEADER_PAGES.map(page => <Route key={page} path={page} component={() => null} />)}
+    {SIMPLE_HEADER_PAGES.map(({ page, ...props }) => (
+      <Route key={page} path={`/${page}`} component={() => <SimplePageHeader page={page} {...props} />} />))}
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
     <Route path="/summary_data" component={SummaryDataPageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
-  </Switch>
+  </Switch>)

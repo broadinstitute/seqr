@@ -13,7 +13,7 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
-const VariantTags = React.memo(({ project, analysisGroup }) =>
+const VariantTags = React.memo(({ project, analysisGroup }) => (
   <NoBorderTable basic="very" compact="very">
     <Table.Body>
       {
@@ -39,12 +39,11 @@ const VariantTags = React.memo(({ project, analysisGroup }) =>
                 />
               }
             </TableCell>
-          </TableRow>),
-        )
+          </TableRow>))
       }
     </Table.Body>
-  </NoBorderTable>,
-)
+  </NoBorderTable>
+))
 
 
 VariantTags.propTypes = {

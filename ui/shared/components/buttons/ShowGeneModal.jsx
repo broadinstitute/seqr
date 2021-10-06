@@ -6,7 +6,7 @@ import GeneDetail from '../panel/genes/GeneDetail'
 import { ColoredIcon, ButtonLink } from '../StyledComponents'
 import { PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION } from '../../utils/constants'
 
-const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) =>
+const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) => (
   <Modal
     trigger={
       <ButtonLink
@@ -26,7 +26,7 @@ const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) =>
     size="fullscreen"
   >
     <GeneDetail geneId={gene.geneId} />
-  </Modal>
+  </Modal>)
 
 ShowGeneModal.propTypes = {
   pagene: PropTypes.object,

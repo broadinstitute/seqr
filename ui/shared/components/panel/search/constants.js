@@ -17,10 +17,11 @@ import {
   UNAFFECTED,
 } from 'shared/utils/constants'
 
-export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
-  Object.values(analysisGroupsByGuid).filter(
-    group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
-  )
+export const getSelectedAnalysisGroups = (
+  analysisGroupsByGuid, familyGuids,
+) => Object.values(analysisGroupsByGuid).filter(
+  group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
+)
 
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
@@ -120,9 +121,8 @@ export const INHERITANCE_LOOKUP = {
   },
 }
 
-export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
+export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) => (
+  { ...acc, [JSON.stringify(filter)]: mode }), {})
 
 export const INHERITANCE_FILTER_OPTIONS = [
   ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,

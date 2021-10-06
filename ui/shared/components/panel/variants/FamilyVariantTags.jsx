@@ -44,7 +44,7 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
-export const taggedByPopup = (tag, title) => (trigger, hideMetadata) =>
+export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
     size="tiny"
@@ -61,6 +61,7 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) =>
       </div>
     }
   />
+)
 
 
 const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
@@ -74,17 +75,16 @@ ShortcutTagToggle.propTypes = {
 
 const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
   const { tags = [], ...variantMeta } = variantTagNotes || {}
-  const onSubmit = tagName => (value) => {
-    return dispatchUpdateFamilyVariantTags({
-      ...variantMeta,
-      tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
-    })
-  }
+  const onSubmit = tagName => value => dispatchUpdateFamilyVariantTags({
+    ...variantMeta,
+    tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
+  })
 
   return (
     <StyledForm inline hasSubmitButton={false}>
-      {SHORTCUT_TAGS.map(tagName =>
-        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />)}
+      {SHORTCUT_TAGS.map(tagName => (
+        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />
+      ))}
     </StyledForm>
   )
 })
@@ -99,7 +99,7 @@ const validateTags = tags => (tags.filter(({ category }) => category === DISCOVE
   'Only 1 Discovery Tag can be added' : undefined
 )
 
-const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) =>
+const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) => (
   <TagFieldView
     idField="variantGuids"
     defaultId={variantId}
@@ -117,8 +117,8 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
     popup={taggedByPopup}
     validate={validateTags}
     {...props}
-  />,
-)
+  />
+))
 
 VariantTagField.propTypes = {
   variantTagNotes: PropTypes.object,
@@ -127,7 +127,7 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
+const VariantLink = React.memo(({ variant, variantTagNotes, family }) => (
   <NavLink
     to={variantTagNotes ?
       `/project/${family.projectGuid}/saved_variants/variant/${variantTagNotes.variantGuids}` :
@@ -142,8 +142,8 @@ const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
       position="right center"
       wide
     />
-  </NavLink>,
-)
+  </NavLink>
+))
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -151,12 +151,12 @@ VariantLink.propTypes = {
   family: PropTypes.object,
 }
 
-const FamilyLabel = React.memo(props =>
+const FamilyLabel = React.memo(props => (
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <FamilyLink PopupClass={PopupWithModal} {...props} />
-  </InlineHeader>,
-)
+  </InlineHeader>
+))
 
 
 FamilyLabel.propTypes = {

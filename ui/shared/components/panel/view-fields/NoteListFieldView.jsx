@@ -40,7 +40,7 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
   return (
     <div>
       {fieldName && addField}
-      {(notes || nonEmptyInitialValues.notes || []).map(note =>
+      {(notes || nonEmptyInitialValues.notes || []).map(note => (
         <div key={note.noteGuid}>
           <TextFieldView
             {...props}
@@ -54,8 +54,8 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
             modalTitle={`Edit ${modalTitle}`}
             deleteConfirm="Are you sure you want to delete this note?"
           />
-        </div>,
-      )}
+        </div>
+      ))}
       {!fieldName && <div>{addField}</div>}
     </div>
   )

@@ -9,7 +9,9 @@ import { FILE_FIELD_NAME } from 'shared/utils/constants'
 
 const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
 
-const BulkUploadForm = React.memo(({ url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig }) =>
+const BulkUploadForm = React.memo((
+  { url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig },
+) => (
   <div>
     <NoBorderTable compact>
       <Table.Body>
@@ -19,12 +21,12 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
           </Table.Cell>
         </Table.Row>
         <Table.Row><Table.Cell /></Table.Row>
-        {uploadFormats.map(({ title, ext, formatLinks }) =>
+        {uploadFormats.map(({ title, ext, formatLinks }) => (
           <Table.Row key={title}>
             <Table.HeaderCell collapsing>
               {title} ({formatLinks ? formatLinks.map(
-                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
-                : `.${ext}`})
+                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>,
+              ) : `.${ext}`})
             </Table.HeaderCell>
             <Table.Cell>
               {ext &&
@@ -43,8 +45,8 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
                 </span>
               }
             </Table.Cell>
-          </Table.Row>,
-        )}
+          </Table.Row>
+        ))}
         <Table.Row><Table.Cell /></Table.Row>
         <Table.Row>
           <Table.Cell colSpan={2}>
@@ -56,24 +58,24 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
             Required Columns:
           </Table.HeaderCell>
         </Table.Row>
-        {requiredFields.map(field =>
+        {requiredFields.map(field => (
           <Table.Row key={field.header}>
             <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
             <Table.Cell>{field.description}</Table.Cell>
-          </Table.Row>,
-        )}
+          </Table.Row>
+        ))}
         <Table.Row><Table.Cell /></Table.Row>
         <Table.Row>
           <Table.HeaderCell colSpan={2}>
             Optional Columns:
           </Table.HeaderCell>
         </Table.Row>
-        {optionalFields.map(field =>
+        {optionalFields.map(field => (
           <Table.Row key={field.header} verticalAlign="top">
             <Table.HeaderCell collapsing>{field.header}</Table.HeaderCell>
             <Table.Cell>{field.description}</Table.Cell>
-          </Table.Row>,
-        )}
+          </Table.Row>
+        ))}
         {details &&
         <Table.Row>
           <Table.Cell colSpan={2}>
@@ -91,8 +93,8 @@ const BulkUploadForm = React.memo(({ url, actionDescription, details, project, n
       name={FILE_FIELD_NAME}
       styles={UPLOADER_STYLES}
     />
-  </div>,
-)
+  </div>
+))
 
 BulkUploadForm.propTypes = {
   url: PropTypes.string,

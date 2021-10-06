@@ -25,15 +25,15 @@ const POLICY_FORM_FIELDS = [
   },
 ]
 
-const AcceptPolicies = React.memo(({ onSubmit }) =>
+const AcceptPolicies = React.memo(({ onSubmit }) => (
   <UserFormLayout
     header="Seqr Policies"
     subheader="Before continuing to use seqr, please read and accept our policies"
     onSubmit={onSubmit}
     form="acceptPolicies"
     fields={POLICY_FORM_FIELDS}
-  />,
-)
+  />
+))
 
 AcceptPolicies.propTypes = {
   onSubmit: PropTypes.func,

@@ -1,4 +1,5 @@
 /* eslint-disable react/no-multi-comp */
+/* eslint-disable max-classes-per-file */
 
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
@@ -45,8 +46,7 @@ export class BaseSemanticInput extends React.Component {
   }
 }
 
-
-export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) =>
+export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) => (
   <BaseSemanticInput
     {...props}
     value={Number.isInteger(value) ? value : ''}
@@ -63,8 +63,8 @@ export const IntegerInput = React.memo(({ onChange, min, max, value, ...props })
         onChange(val)
       }
     }}
-  />,
-)
+  />
+))
 
 IntegerInput.propTypes = {
   onChange: PropTypes.func,
@@ -73,20 +73,17 @@ IntegerInput.propTypes = {
   max: PropTypes.number,
 }
 
+const labelStyle = color => (color ? { color: 'white', backgroundColor: color } : {})
 
-const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
-
-const styledOption = (option) => {
-  return {
-    value: option.value,
-    key: option.key || option.text || option.value,
-    text: option.text || option.name || option.value,
-    label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
-    color: option.color,
-    disabled: option.disabled,
-    description: option.description,
-  }
-}
+const styledOption = option => ({
+  value: option.value,
+  key: option.key || option.text || option.value,
+  text: option.text || option.name || option.value,
+  label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
+  color: option.color,
+  disabled: option.disabled,
+  description: option.description,
+})
 
 const processOptions = (options, includeCategories) => {
   let currCategory = null
@@ -102,25 +99,22 @@ const processOptions = (options, includeCategories) => {
   }, []).map(styledOption)
 }
 
-export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
+export const Dropdown = React.memo(({ options, includeCategories, ...props }) => (
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
     options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
-  />,
-)
-
+  />
+))
 
 Dropdown.propTypes = {
   options: PropTypes.array,
   includeCategories: PropTypes.bool,
 }
 
-export const Select = props =>
-  <Dropdown selection fluid {...props} />
-
+export const Select = props => <Dropdown selection fluid {...props} />
 
 Select.propTypes = {
   options: PropTypes.array,
@@ -132,9 +126,7 @@ export class Multiselect extends React.PureComponent {
     allowAdditions: PropTypes.bool,
   }
 
-  renderLabel = (data) => {
-    return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
-  }
+  renderLabel = data => ({ color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) })
 
   render() {
     return <AddableSelect
@@ -251,8 +243,8 @@ const yearOptions = (includeAlive, includeUnknown) => {
   return YEAR_OPTIONS
 }
 
-export const YearSelector = ({ includeAlive, includeUnknown, ...props }) =>
-  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />
+export const YearSelector = ({ includeAlive, includeUnknown, ...props }) => (
+  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />)
 
 YearSelector.propTypes = {
   includeAlive: PropTypes.bool,
@@ -289,7 +281,7 @@ export const CheckboxGroup = React.memo((props) => {
           />
         </List.Header>
         <List.List>
-          {options.map(option =>
+          {options.map(option => (
             <List.Item key={option.key}>
               <BaseSemanticInput
                 {...baseProps}
@@ -304,8 +296,8 @@ export const CheckboxGroup = React.memo((props) => {
                   }
                 }}
               />
-            </List.Item>,
-          )}
+            </List.Item>
+          ))}
         </List.List>
       </List.Item>
     </List>
@@ -331,15 +323,15 @@ const BaseRadioGroup = React.memo((props) => {
     <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
-      {options.map((option, i) =>
+      {options.map((option, i) => (
         <BaseSemanticInput
           {...baseProps}
           {...getOptionProps(option, value, onChange, i)}
           key={option.value}
           inline
           inputType="Radio"
-        />,
-      )}
+        />
+      ))}
     </InlineFormGroup>
   )
 })
@@ -365,9 +357,7 @@ const getRadioOptionProps = (option, value, onChange) => ({
   },
 })
 
-export const RadioGroup = React.memo((props) => {
-  return <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />
-})
+export const RadioGroup = React.memo(props => <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />)
 
 const getButtonRadioOptionProps = label => (option, value, onChange, i) => ({
   active: value === option.value,
@@ -495,7 +485,7 @@ export const LabeledSlider = styled(Slider).attrs(props => ({
   }
 `
 
-export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) =>
+export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) => (
   <LabeledSlider
     {...props}
     min={0}
@@ -505,9 +495,8 @@ export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...p
     value={steps.indexOf(value)}
     valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
     onChange={val => onChange(steps[val])}
-  />,
-)
-
+  />
+))
 
 StepSlider.propTypes = {
   value: PropTypes.any,
@@ -516,13 +505,13 @@ StepSlider.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const Pagination = React.memo(({ onChange, value, error, ...props }) =>
+export const Pagination = React.memo(({ onChange, value, error, ...props }) => (
   <PaginationComponent
     activePage={value}
     onPageChange={(e, data) => onChange(data.activePage)}
     {...props}
-  />,
-)
+  />
+))
 
 Pagination.propTypes = {
   value: PropTypes.number,
@@ -531,9 +520,8 @@ Pagination.propTypes = {
 }
 
 const JSON_EDITOR_MODES = ['code', 'tree']
-export const JsonInput = React.memo(({ value, onChange }) =>
-  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />,
-)
+export const JsonInput = React.memo(({ value, onChange }) => (
+  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />))
 
 JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),

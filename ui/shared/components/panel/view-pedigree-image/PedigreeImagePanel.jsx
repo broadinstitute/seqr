@@ -161,8 +161,7 @@ class BasePedigreeImage extends React.PureComponent {
       if (prevProps.family.pedigreeImage || // If uploaded pedigree image was deleted, draw
         (prevProps.family.pedigreeDataset !== this.props.family.pedigreeDataset) || // If saved dataset was updated, redraw
         (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) || // If individual data changed, redraw
-        (prevState.imgSrc && !this.state.imgSrc)) // If computed image src was cleared, redraw
-      {
+        (prevState.imgSrc && !this.state.imgSrc)) { // If computed image src was cleared, redraw
         if (this.state.imgSrc) {
           this.unsetPedigreeImage() // Cannot redraw pedigree if not rendering the svg container, so unset image first
         } else {
@@ -278,9 +277,7 @@ class BasePedigreeImage extends React.PureComponent {
     this.props.openIndividualModal()
   }
 
-  getPedigreeDataset = () => {
-    return currentDataset(this.state.pedigreeOpts)
-  }
+  getPedigreeDataset = () => currentDataset(this.state.pedigreeOpts)
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -297,8 +294,8 @@ const PedigreeImage = connect(mapStateToProps, mapDispatchToProps)(BasePedigreeI
 
 // Do not crash the entire page if pedigree js is breaking
 const PedigreeError = () => <Icon name="picture" />
-const SafePedigreeImage = props =>
-  <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>
+const SafePedigreeImage = props => (
+  <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>)
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1

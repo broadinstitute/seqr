@@ -21,13 +21,13 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
-const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) =>
+const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) => (
   <Sample
     loadedSample={firstFamilySample}
     hoverDetails={compact ? 'first loaded' : null}
     isOutdated={!hasActiveVariantSample}
-  />,
-)
+  />
+))
 
 BaseFirstSample.propTypes = {
   firstFamilySample: PropTypes.object,
@@ -42,7 +42,7 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) =>
+const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, ...props }) => (
   <DataLoader load={load} loading={false} content>
     <Select
       loading={loading}
@@ -53,8 +53,8 @@ const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, .
       search
       {...props}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 BaseAnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
@@ -97,10 +97,9 @@ export const analysisStatusIcon = (value, compact, { analysisStatusLastModifiedB
   )
 }
 
-const formatAnalysedByList = analysedByList =>
-  analysedByList.map(analysedBy =>
-    `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
-  ).join(', ')
+const formatAnalysedByList = analysedByList => analysedByList.map(
+  analysedBy => `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
+).join(', ')
 
 export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
   if (compact) {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <Segment basic padded="very">
     <Header dividing content="Privacy Policy" subheader="Last Updated 10/27/2020" size="huge" />
 
@@ -399,4 +399,4 @@ export default () =>
     requester’s identity.  We may charge you a reasonable fee for subsequent copies of Personal Information that you
     request.  In addition, if we consider that a request is manifestly unfounded or excessive, we may either request a
     reasonable fee to deal with the request or refuse to deal with the request.
-  </Segment>
+  </Segment>)

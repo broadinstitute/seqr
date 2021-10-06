@@ -79,7 +79,7 @@ FamilyTableRow.propTypes = {
 
 const FamilyTable = React.memo((
   { visibleFamilies, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
-) =>
+) => (
   <div>
     <ExportContainer>
       {headerStatus &&
@@ -110,7 +110,7 @@ const FamilyTable = React.memo((
       <Table.Body>
         {loading && <TableLoading />}
         {!loading && (visibleFamilies.length > 0 ?
-          visibleFamilies.map(family =>
+          visibleFamilies.map(family => (
             <FamilyTableRow
               key={family.familyGuid}
               familyGuid={family.familyGuid}
@@ -118,14 +118,14 @@ const FamilyTable = React.memo((
               showVariantDetails={showVariantDetails}
               tableName={tableName}
               {...props}
-            />,
-          ) : <EmptyTableRow tableName={tableName} />)
+            />
+          )) : <EmptyTableRow tableName={tableName} />)
         }
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>
-  </div>,
-)
+  </div>
+))
 
 
 export { FamilyTable as FamilyTableComponent }

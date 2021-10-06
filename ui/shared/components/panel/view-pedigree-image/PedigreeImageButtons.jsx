@@ -50,69 +50,57 @@ BaseEditPedigreeImageButton.propTypes = {
   onSuccess: PropTypes.func,
 }
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    onSuccess: (responseJson, modalId) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
-      dispatch(closeModal(modalId))
-    },
-  }
-}
+const mapDispatchToProps = dispatch => ({
+  onSuccess: (responseJson, modalId) => {
+    dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
+    dispatch(closeModal(modalId))
+  },
+})
 
 export const EditPedigreeImageButton = connect(null, mapDispatchToProps)(BaseEditPedigreeImageButton)
 
-const BaseDeletePedigreeImageButton = React.memo(({ onSubmit, onSuccess }) =>
+const BaseDeletePedigreeImageButton = React.memo(({ onSubmit, onSuccess }) => (
   <DeleteButton
     onSubmit={onSubmit}
     onSuccess={onSuccess}
     confirmDialog="Are you sure you want to delete the pedigree image for this family?"
     buttonText="Delete Pedigree Image"
-  />,
-)
+  />
+))
 
 BaseDeletePedigreeImageButton.propTypes = {
   onSubmit: PropTypes.func,
   onSuccess: PropTypes.func,
 }
 
-const mapDeleteDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: () => {
-      return dispatch(updateFamily({ familyField: 'pedigree_image', familyGuid: ownProps.familyGuid }))
-    },
-    onSuccess: () => {
-      dispatch(closeModal(ownProps.modalId))
-    },
-  }
-}
+const mapDeleteDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: () => dispatch(updateFamily({ familyField: 'pedigree_image', familyGuid: ownProps.familyGuid })),
+  onSuccess: () => dispatch(closeModal(ownProps.modalId)),
+})
 
 export const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
 
 
-const BaseSavePedigreeDatasetButton = React.memo(({ onSubmit, onSuccess }) =>
+const BaseSavePedigreeDatasetButton = React.memo(({ onSubmit, onSuccess }) => (
   <DispatchRequestButton
     onSubmit={onSubmit}
     onSuccess={onSuccess}
     icon="save"
     size="huge"
     confirmDialog="Are you sure you want to save this pedigree?"
-  />,
-)
+  />
+))
 
 BaseSavePedigreeDatasetButton.propTypes = {
   onSubmit: PropTypes.func,
   onSuccess: PropTypes.func,
 }
 
-const mapSaveDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: () => {
-      return dispatch(updateFamily({ pedigreeDataset: ownProps.getPedigreeDataset(), familyGuid: ownProps.familyGuid }))
-    },
-    onSuccess: () => {
-      dispatch(closeModal(ownProps.modalId))
-    },
-  }
-}
+const mapSaveDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: () => dispatch(
+    updateFamily({ pedigreeDataset: ownProps.getPedigreeDataset(), familyGuid: ownProps.familyGuid }),
+  ),
+  onSuccess: () => dispatch(closeModal(ownProps.modalId)),
+})
 
 export const SavePedigreeDatasetButton = connect(null, mapSaveDispatchToProps)(BaseSavePedigreeDatasetButton)

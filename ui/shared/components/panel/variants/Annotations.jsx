@@ -24,8 +24,8 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
-export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
+export const getLocus = (chrom, pos, rangeSize, endOffset = 0) => (
+  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`)
 
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
@@ -54,14 +54,14 @@ UcscBrowserLink.propTypes = {
 const MAX_SEQUENCE_LENGTH = 30
 const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
 
-const Sequence = React.memo(({ sequence, ...props }) =>
+const Sequence = React.memo(({ sequence, ...props }) => (
   <SequenceContainer {...props}>
     {sequence.length > MAX_SEQUENCE_LENGTH ?
       <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
       sequence
     }
-  </SequenceContainer>,
-)
+  </SequenceContainer>
+))
 
 Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
@@ -69,9 +69,7 @@ Sequence.propTypes = {
 
 const parseHgvs = hgvs => (hgvs || '').split(':').pop()
 
-export const ProteinSequence = React.memo(({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
-)
+export const ProteinSequence = React.memo(({ hgvs }) => <Sequence color="black" sequence={parseHgvs(hgvs)} />)
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
@@ -87,11 +85,10 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const addDividedLink = (links, name, href) =>
-  links.push(
-    <span key={`divider-${name}`}><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-    <a key={name} href={href} target="_blank">{name}</a>,
-  )
+const addDividedLink = (links, name, href) => links.push(
+  <span key={`divider-${name}`}><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+  <a key={name} href={href} target="_blank">{name}</a>,
+)
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = []
@@ -190,8 +187,8 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
     return null
   }
   const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
-  const locusListIntervals = familyGuids.reduce((acc, familyGuid) =>
-    [...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]], [])
+  const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
+    ...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]]), [])
   if (locusListIntervals.length < 1) {
     return null
   }
@@ -334,8 +331,8 @@ const Annotations = React.memo(({ variant }) => {
         )
       }
       {cpxIntervals && cpxIntervals.length > 0 &&
-      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e =>
-        <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
+      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e => (
+        <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>))]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />

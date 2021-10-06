@@ -76,19 +76,19 @@ export const configuredField = (field, formProps = {}) => {
     ...fieldProps,
   }
   return isArrayField ?
-    <FieldArray {...baseProps} component={({ fields }) =>
+    <FieldArray {...baseProps} component={({ fields }) => (
       <div className="field">
         <label>{label}</label>
-        {fields.map((fieldPath, i) =>
+        {fields.map((fieldPath, i) => (
           <Field
             key={fieldPath}
             name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
             removeField={(e) => { e.preventDefault(); fields.remove(i) }}
             index={i}
             {...singleFieldProps}
-          />)}
+          />))}
         {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
-      </div>}
+      </div>)}
     /> :
     <Field {...baseProps} {...singleFieldProps} />
 }
@@ -289,8 +289,8 @@ class ReduxFormWrapper extends React.Component {
 const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
 
 const shouldShowValidationErrors = props => props.submitFailed || (props.liveValidate && props.dirty)
-const getValidationErrorList = validationErrors =>
-  (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
+const getValidationErrorList =
+  validationErrors => (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
 const getValidationErrors = createSelector(
   (state, props) => (shouldShowValidationErrors(props) ? getFormSyncErrors(props.form)(state) : null),
   getValidationErrorList,
@@ -304,8 +304,8 @@ const getValidationWarnings = createSelector(
 const getSubmissionWarnings = (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
 const getSubmissionErrors = (state, props) => props.error && props.error.filter(error => !error.warning)
 
-const getErrors = (submissionErrors, validationErrors) =>
-  ((submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
+const getErrors = (submissionErrors, validationErrors) => (
+  (submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
 
 const getErrorMessages = createSelector(
   getSubmissionErrors,

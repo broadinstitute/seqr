@@ -41,10 +41,11 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
       }
       acc[filePath][individualGuid] = sampleId
       return acc
-    }, {})
+    }, {},
+  )
 
-  const getIndivSampleType = (type, individualGuid) =>
-    sampleTypes.includes(type) && (igvSampleIndividuals[type] || {})[individualGuid]
+  const getIndivSampleType =
+    (type, individualGuid) => sampleTypes.includes(type) && (igvSampleIndividuals[type] || {})[individualGuid]
 
   return Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => (
     sampleTypes.includes(type) ? [
@@ -94,7 +95,8 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
               ...higlightAcc,
             }), {}),
             name: individualGuids.length === 1 ? track.name : individualGuids.map(
-              iGuid => individualsByGuid[iGuid].displayName).join(', '),
+              iGuid => individualsByGuid[iGuid].displayName,
+            ).join(', '),
           } : null
         }
 
@@ -131,22 +133,23 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
         acc[type].push(fGuid)
       })
       return acc
-    }, {})
+    }, {},
+  )
 
   if (!Object.keys(sampleTypeFamilies).length) {
     return null
   }
 
   if (familyGuids.length === 1) {
-    return Object.keys(sampleTypeFamilies).map(type =>
-      <ShowIgvButton key={type} type={type} {...buttonProps} showReads={showReads(familyGuids[0])} />,
+    return Object.keys(sampleTypeFamilies).map(
+      type => <ShowIgvButton key={type} type={type} {...buttonProps} showReads={showReads(familyGuids[0])} />,
     )
   }
 
   return Object.entries(sampleTypeFamilies).reduce((acc, [type, fGuids]) => ([
     ...acc,
     <ShowIgvButton key={type} type={type} {...buttonProps} />,
-    ...fGuids.map(fGuid =>
+    ...fGuids.map(fGuid => (
       <ShowIgvButton
         key={`${fGuid}-${type}`}
         content={`| ${familiesByGuid[fGuid].familyId}`}
@@ -154,8 +157,8 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
         type={type}
         showReads={showReads(fGuid)}
         padding="0"
-      />,
-    ),
+      />
+    )),
   ]), [])
 
 })

@@ -74,16 +74,15 @@ const SORT_FILTER_FIELDS = [
 const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 const CASE_REVEIW_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 
-export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) =>
+export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) => (
   <FamilyLayout
     compact
     offset={offset}
     fields={fields}
     fieldDisplay={field => FAMILY_FIELD_NAME_LOOKUP[field.id]}
     rightContent={showVariantDetails ? 'Saved Variants' : null}
-  />,
-)
-
+  />
+))
 
 TableHeaderDetail.propTypes = {
   offset: PropTypes.bool,
@@ -93,8 +92,8 @@ TableHeaderDetail.propTypes = {
 
 const TableHeaderRow = React.memo((
   { visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTableField, showVariantDetails,
-  }) =>
+    updateFamiliesTableField, showVariantDetails },
+  ) => (
     <Table.Header fullWidth>
       <Table.Row>
         <RegularFontHeaderCell width={5}>
@@ -121,8 +120,8 @@ const TableHeaderRow = React.memo((
           </Table.HeaderCell>
         </Table.Row>
       }
-    </Table.Header>,
-)
+    </Table.Header>
+))
 
 TableHeaderRow.propTypes = {
   visibleFamiliesCount: PropTypes.number.isRequired,
@@ -140,13 +139,11 @@ const mapStateToProps = (state, ownProps) => ({
   familiesTableState: getFamiliesTableState(state, ownProps),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateFamiliesTableField: field => (value) => {
-      dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  updateFamiliesTableField: field => (value) => {
+    dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
+  },
+})
 
 export { TableHeaderRow as TableHeaderRowComponent }
 

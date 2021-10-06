@@ -5,8 +5,9 @@ import { createObjectsByIdReducer } from './reducerFactories'
 const UPDATE_MODAL_STATE = 'UPDATE_MODAL_STATE'
 
 // action creators
-export const openModal = modalName => dispatch =>
-  dispatch({ type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { open: true } } })
+export const openModal = modalName => dispatch => dispatch(
+  { type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { open: true } } },
+)
 
 export const closeModal = (modalName, confirmed) => (dispatch, getState) => {
   if (getState().modal[modalName].confirmOnClose && !confirmed) {
@@ -16,11 +17,13 @@ export const closeModal = (modalName, confirmed) => (dispatch, getState) => {
   }
 }
 
-export const cancelCloseModal = modalName => dispatch =>
-  dispatch({ type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { confirming: false } } })
+export const cancelCloseModal = modalName => dispatch => dispatch(
+  { type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { confirming: false } } },
+)
 
-export const setModalConfirm = (modalName, confirmMessage) => dispatch =>
-  dispatch({ type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { confirmOnClose: confirmMessage } } })
+export const setModalConfirm = (modalName, confirmMessage) => dispatch => dispatch(
+  { type: UPDATE_MODAL_STATE, updatesById: { [modalName]: { confirmOnClose: confirmMessage } } },
+)
 
 // root reducer
 export default {

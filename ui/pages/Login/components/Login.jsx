@@ -12,7 +12,7 @@ const FIELDS = [
   { name: 'password', label: 'Password', type: 'password', validate: validators.required },
 ]
 
-const Login = ({ onSubmit }) =>
+const Login = ({ onSubmit }) => (
   <UserFormContainer header="Login to seqr">
     <UserForm
       onSubmit={onSubmit}
@@ -21,7 +21,7 @@ const Login = ({ onSubmit }) =>
       submitButtonText="Log In"
     />
     <Link to="/login/forgot_password">Forgot Password?</Link>
-  </UserFormContainer>
+  </UserFormContainer>)
 
 
 Login.propTypes = {

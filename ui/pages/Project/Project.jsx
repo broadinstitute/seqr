@@ -13,8 +13,7 @@ import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 
-class Project extends React.PureComponent
-{
+class Project extends React.PureComponent {
   static propTypes = {
     project: PropTypes.object,
     match: PropTypes.object,

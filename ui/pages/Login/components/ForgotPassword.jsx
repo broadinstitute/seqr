@@ -10,7 +10,7 @@ const FIELDS = [
   { name: 'email', label: 'Email', validate: validators.required },
 ]
 
-const ForgotPassword = ({ onSubmit }) =>
+const ForgotPassword = ({ onSubmit }) => (
   <UserFormLayout
     header="Reset your Password"
     subheader="You will receive an email with a link to reset your password"
@@ -18,7 +18,7 @@ const ForgotPassword = ({ onSubmit }) =>
     successMessage="An email to reset your password has been sent. If you do not receive the email, please contact us."
     form="reset-password"
     fields={FIELDS}
-  />
+  />)
 
 ForgotPassword.propTypes = {
   onSubmit: PropTypes.func,

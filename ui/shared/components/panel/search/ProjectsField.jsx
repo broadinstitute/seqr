@@ -44,11 +44,11 @@ ProjectFilterContent.propTypes = {
 }
 
 
-export const ProjectFilter = React.memo(({ loading, load, ...props }) =>
+export const ProjectFilter = React.memo(({ loading, load, ...props }) => (
   <DataLoader contentId={props.value} loading={loading} load={load} content={props.project} hideError>
     <ProjectFilterContent {...props} />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 ProjectFilter.propTypes = {
   project: PropTypes.object,
@@ -60,7 +60,7 @@ ProjectFilter.propTypes = {
 const PROJECT_SEARCH_CATEGORIES = ['projects']
 const PROJECT_GROUP_SEARCH_CATEGORIES = ['project_groups']
 
-export const AddProjectButton = React.memo(({ addElement, addProjectGroup, processAddedElement }) =>
+export const AddProjectButton = React.memo(({ addElement, addProjectGroup, processAddedElement }) => (
   <div>
     <InlineHeader content="Add Project:" />
     <AwesomeBar
@@ -76,8 +76,8 @@ export const AddProjectButton = React.memo(({ addElement, addProjectGroup, proce
       inputwidth="400px"
       onResultSelect={result => addProjectGroup(result.key, addElement)}
     />
-  </div>,
-)
+  </div>
+))
 
 AddProjectButton.propTypes = {
   addElement: PropTypes.func,

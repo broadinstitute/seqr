@@ -29,17 +29,16 @@ const SUBMISSION_COLUMNS = [
   {
     name: 'individualId',
     content: 'Submitted Individual',
-    format: row =>
+    format: row => (
       <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
         {row.individualId}
-      </Link>,
+      </Link>),
   },
   { name: 'lastModifiedDate', content: 'Submitted Date', format: row => new Date(row.lastModifiedDate).toLocaleDateString() },
   {
     name: 'geneVariants',
     content: 'Genes',
-    format: row =>
-      <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
+    format: row => <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
   },
   { name: 'phenotypes',
     content: 'Phenotypes',
@@ -50,17 +49,17 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, user }) =>
+const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, user }) => (
   <div>
     {user.isAnalyst && <Header size="medium" content="Matchmaker Metrics:" /> }
     <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error} hideError={!user.isAnalyst}>
       <Table collapsing basic="very">
-        {METRICS_FIELDS.map(({ field, title, round }) =>
+        {METRICS_FIELDS.map(({ field, title, round }) => (
           <Table.Row key={field}>
             <Table.Cell textAlign="right"><b>{title}</b></Table.Cell>
             <Table.Cell>{round && metrics[field] ? metrics[field].toPrecision(3) : metrics[field]}</Table.Cell>
-          </Table.Row>,
-        )}
+          </Table.Row>
+        ))}
       </Table>
     </DataLoader>
     <Header size="medium" content="Matchmaker Submissions:" />
@@ -75,8 +74,8 @@ const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, use
       data={submissions}
       columns={SUBMISSION_COLUMNS}
     />
-  </div>,
-)
+  </div>
+))
 
 Matchmaker.propTypes = {
   metrics: PropTypes.object,

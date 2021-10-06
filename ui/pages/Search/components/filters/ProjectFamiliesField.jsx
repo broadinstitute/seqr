@@ -116,8 +116,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const ProjectFamiliesFilter = connect(mapStateToProps, mapDispatchToProps)(ProjectFilter)
 
-const AddProjectFamiliesButton = props =>
-  <AddProjectButton processAddedElement={result => ({ projectGuid: result.key })} {...props} />
+const AddProjectFamiliesButton = props => (
+  <AddProjectButton processAddedElement={result => ({ projectGuid: result.key })} {...props} />)
 
 const mapAddProjectDispatchToProps = {
   addProjectGroup: loadProjectGroupContext,

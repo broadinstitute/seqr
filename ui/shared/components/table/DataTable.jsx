@@ -106,9 +106,9 @@ class DataTable extends React.PureComponent {
     Object.values(this.props.selectedRows).every(isSelected => isSelected)
   )
 
-  someSelected = () =>
+  someSelected = () => (
     this.props.data.some(row => this.props.selectedRows[row[this.props.idField]]) &&
-    this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]])
+    this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]]))
 
   selectAll = () => {
     if (!this.props.selectRows) {
@@ -119,7 +119,8 @@ class DataTable extends React.PureComponent {
     this.props.selectRows(
       this.props.data.reduce((acc, row) => (
         { ...acc, [row[this.props.idField]]: (allSelected && this.props.includeSelectedRowData) ? row : allSelected }
-      ), {}))
+      ), {}),
+    )
   }
 
   handleSelect = rowId => () => {
@@ -188,14 +189,14 @@ class DataTable extends React.PureComponent {
       tableContent = sortedData.map(row => (
         <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={!!selectedRows[row[idField]]}>
           {selectRows && <Table.Cell content={<Checkbox checked={!!selectedRows[row[idField]]} />} />}
-          {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
+          {processedColumns.map(({ name, format, textAlign, verticalAlign }) => (
             <Table.Cell
               key={name}
               content={getRowColumnContent(row)({ format, name })}
               textAlign={textAlign}
               verticalAlign={verticalAlign}
-            />,
-          )}
+            />
+          ))}
         </Table.Row>
       ))
     }
@@ -223,14 +224,14 @@ class DataTable extends React.PureComponent {
               {selectRows &&
                 <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
               }
-              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) =>
+              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) => (
                 <Table.HeaderCell
                   key={name}
                   sorted={column === name ? direction : null}
                   onClick={this.handleSort(name)}
                   {...columnProps}
-                />,
-              )}
+                />
+              ))}
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -269,7 +270,7 @@ class DataTable extends React.PureComponent {
 export default DataTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = React.memo(({ value, onChange, error, data = [], ...props }) =>
+export const SelectableTableFormInput = React.memo(({ value, onChange, error, data = [], ...props }) => (
   <DataTable
     basic="very"
     fixed
@@ -277,8 +278,8 @@ export const SelectableTableFormInput = React.memo(({ value, onChange, error, da
     selectedRows={value || EMPTY_OBJECT}
     data={data}
     {...props}
-  />,
-)
+  />
+))
 
 SelectableTableFormInput.propTypes = {
   value: PropTypes.any,

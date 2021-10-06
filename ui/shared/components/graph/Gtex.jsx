@@ -134,9 +134,7 @@ class Gtex extends React.PureComponent {
       },
       () => {
         launchGtex(this.props.geneId)
-      },
-    ).get({ format: 'json', geneId: this.props.geneId })
-
+      }).get({ format: 'json', geneId: this.props.geneId })
   }
 }
 

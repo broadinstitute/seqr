@@ -7,8 +7,7 @@ import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 
-class BaseLocusListDropdown extends React.Component
-{
+class BaseLocusListDropdown extends React.Component {
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props
     return (
@@ -52,11 +51,11 @@ BaseLocusListDropdown.propTypes = {
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 
-const LocusListSelector = React.memo(({ value, ...props }) =>
+const LocusListSelector = React.memo(({ value, ...props }) => (
   <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
     <LocusListDropdown {...props} />
-  </LocusListItemsLoader>,
-)
+  </LocusListItemsLoader>
+))
 
 LocusListSelector.propTypes = {
   value: PropTypes.object,

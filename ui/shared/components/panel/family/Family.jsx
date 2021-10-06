@@ -91,8 +91,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     component: BaseFieldView,
     showEmptyValues: true,
-    fieldDisplay: (loadedSample, compact, familyGuid) =>
-      <FirstSample familyGuid={familyGuid} compact={compact} />,
+    fieldDisplay: (loadedSample, compact, familyGuid) => <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
@@ -115,7 +114,8 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
 const Family = React.memo((
   { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
-  }) => {
+  },
+) => {
   if (!family) {
     return <div>Family Not Found</div>
   }

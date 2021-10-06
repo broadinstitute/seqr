@@ -111,8 +111,8 @@ const COLUMNS = [
         return null
       }
       if (isExport) {
-        return Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples]) =>
-          `${sampleType}: ${numSamples}`,
+        return Object.entries(project.sampleTypeCounts).map(
+          ([sampleType, numSamples]) => `${sampleType}: ${numSamples}`,
         ).join(', ')
       }
       return Object.entries(project.sampleTypeCounts).map(
@@ -122,8 +122,10 @@ const COLUMNS = [
             <div key={sampleType}>
               <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
               {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
-            </div>)
-        })
+            </div>
+          )
+        },
+      )
     },
   },
   {
@@ -147,7 +149,8 @@ const COLUMNS = [
           project.analysisStatusCounts[d.value] ?
             [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
             acc
-        ), [])
+        ), [],
+      )
       if (isExport) {
         return statusData.map(({ name, count }) => `${name}: ${count}`).join(', ')
       }
@@ -187,7 +190,7 @@ const getColumns = (googleLoginEnabled, isAnvil, isSuperuser) => {
   return isSuperuser ? SUPERUSER_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
 }
 
-const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) => (
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -210,8 +213,8 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         downloadFileName="projects"
       />
     </ProjectTableContainer>
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 ProjectsTable.propTypes = {
   visibleProjects: PropTypes.array.isRequired,

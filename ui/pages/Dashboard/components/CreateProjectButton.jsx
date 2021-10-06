@@ -11,7 +11,7 @@ const DEFAULT_PROJECT = {
   genomeVersion: GENOME_VERSION_37,
 }
 
-const CreateProjectButton = React.memo(props =>
+const CreateProjectButton = React.memo(props => (
   <UpdateButton
     buttonText="Create Project"
     buttonFloated="right"
@@ -21,8 +21,8 @@ const CreateProjectButton = React.memo(props =>
     onSubmit={props.updateProject}
     initialValues={DEFAULT_PROJECT}
     formFields={PROJECT_FIELDS}
-  />,
-)
+  />
+))
 
 CreateProjectButton.propTypes = {
   updateProject: PropTypes.func.isRequired,

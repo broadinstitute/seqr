@@ -1,7 +1,7 @@
 import React from 'react'
 import { Segment, Grid } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <div>
     <Segment textAlign="center" size="huge" padded="very" basic>
       <Grid>
@@ -55,4 +55,4 @@ export default () =>
         </Grid.Column>
       </Grid.Row>
     </Grid>
-  </div>
+  </div>)

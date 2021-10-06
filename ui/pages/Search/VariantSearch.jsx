@@ -21,7 +21,7 @@ const SEARCH_RESULTS_PAGES = [
   SINGLE_VARIANT_RESULTS_PATH,
 ]
 
-const VariantSearch = ({ match }) =>
+const VariantSearch = ({ match }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -34,11 +34,11 @@ const VariantSearch = ({ match }) =>
       </Grid.Column>
     </Grid.Row>
     <Switch>
-      {SEARCH_RESULTS_PAGES.map(pagePath =>
-        <Route key={pagePath} path={`${match.url}/${pagePath}`} component={VariantSearchResults} />,
+      {SEARCH_RESULTS_PAGES.map(
+        pagePath => <Route key={pagePath} path={`${match.url}/${pagePath}`} component={VariantSearchResults} />,
       )}
     </Switch>
-  </Grid>
+  </Grid>)
 
 VariantSearch.propTypes = {
   match: PropTypes.object,

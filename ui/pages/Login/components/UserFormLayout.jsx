@@ -5,7 +5,7 @@ import { Segment, Header, Grid } from 'semantic-ui-react'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
-export const UserFormContainer = ({ header, subheader, children }) =>
+export const UserFormContainer = ({ header, subheader, children }) => (
   <Grid>
     <Grid.Column width={5} />
     <Grid.Column width={6}>
@@ -16,7 +16,7 @@ export const UserFormContainer = ({ header, subheader, children }) =>
       </Segment>
     </Grid.Column>
     <Grid.Column width={5} />
-  </Grid>
+  </Grid>)
 
 UserFormContainer.propTypes = {
   header: PropTypes.string,
@@ -24,14 +24,13 @@ UserFormContainer.propTypes = {
   children: PropTypes.node,
 }
 
-export const UserForm = props =>
-  <ReduxFormWrapper {...props} showErrorPanel noModal />
+export const UserForm = props => <ReduxFormWrapper {...props} showErrorPanel noModal />
 
-const UserFormLayout = React.memo(({ header, subheader, children, content, ...formProps }) =>
+const UserFormLayout = React.memo(({ header, subheader, children, content, ...formProps }) => (
   <UserFormContainer header={header} subheader={subheader}>
     <UserForm {...formProps} />
-  </UserFormContainer>,
-)
+  </UserFormContainer>
+))
 
 UserFormLayout.propTypes = {
   header: PropTypes.string,

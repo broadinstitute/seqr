@@ -33,8 +33,8 @@ const AcceptCookies = () => (
 
 const NO_COOKIE_PAGES = ['/matchmaker', '/privacy_policy', '/terms_of_service']
 
-export default () =>
+export default () => (
   <Switch>
     {NO_COOKIE_PAGES.map(page => <Route key={page} path={page} component={null} />)}
     <Route component={AcceptCookies} />
-  </Switch>
+  </Switch>)

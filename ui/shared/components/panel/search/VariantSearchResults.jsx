@@ -36,20 +36,21 @@ const FIELDS = [
   VARIANT_SEARCH_SORT_FIELD,
 ]
 
-export const DisplayVariants = React.memo(({ displayVariants }) =>
+export const DisplayVariants = React.memo(({ displayVariants }) => (
   <Grid.Row>
     <Grid.Column width={16}>
       <Variants variants={displayVariants} linkToSavedVariants />
     </Grid.Column>
-  </Grid.Row>,
-)
+  </Grid.Row>
+))
 
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
 const BaseVariantSearchResultsContent = React.memo((
-  { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants }) => {
+  { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants },
+) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
@@ -117,42 +118,39 @@ const mapContentStateToProps = (state, ownProps) => ({
   errorMessage: getSearchedVariantsErrorMessage(state),
 })
 
-const mapContentDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: (updates) => {
-      dispatch(loadSearchedVariants(ownProps.match.params, {
-        displayUpdates: updates,
-        ...ownProps,
-      }))
-    },
-  }
-}
+const mapContentDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: (updates) => {
+    dispatch(loadSearchedVariants(ownProps.match.params, {
+      displayUpdates: updates,
+      ...ownProps,
+    }))
+  },
+})
 
 const VariantSearchResultsContent = connect(mapContentStateToProps, mapContentDispatchToProps)(BaseVariantSearchResultsContent)
 
 const BaseVariantSearchResults = React.memo((
-  { match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent, ...props }) => {
-  return (
-    <DataLoader
-      contentId={match.params}
-      content={displayVariants}
-      loading={variantsLoading || contextLoading}
-      load={load}
-      unload={unload}
-      initialLoad={initialLoad}
-      reloadOnIdUpdate
-      errorMessage={errorMessage &&
-        <Grid.Row>
-          <Grid.Column width={16}>
-            <Message error content={errorMessage} />
-          </Grid.Column>
-        </Grid.Row>
-      }
-    >
-      {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
-    </DataLoader>
-  )
-})
+  { match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent, ...props },
+) => (
+  <DataLoader
+    contentId={match.params}
+    content={displayVariants}
+    loading={variantsLoading || contextLoading}
+    load={load}
+    unload={unload}
+    initialLoad={initialLoad}
+    reloadOnIdUpdate
+    errorMessage={errorMessage &&
+      <Grid.Row>
+        <Grid.Column width={16}>
+          <Message error content={errorMessage} />
+        </Grid.Column>
+      </Grid.Row>
+    }
+  >
+    {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
+  </DataLoader>
+))
 
 BaseVariantSearchResults.propTypes = {
   match: PropTypes.object,
@@ -172,16 +170,14 @@ const mapStateToProps = (state, ownProps) => ({
   displayVariants: getDisplayVariants(state, ownProps),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: (params) => {
-      dispatch((ownProps.loadVariants || loadSearchedVariants)(params, ownProps))
-    },
-    unload: () => {
-      dispatch(unloadSearchResults())
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  load: (params) => {
+    dispatch((ownProps.loadVariants || loadSearchedVariants)(params, ownProps))
+  },
+  unload: () => {
+    dispatch(unloadSearchResults())
+  },
+})
 
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 

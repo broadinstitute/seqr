@@ -18,7 +18,7 @@ import { updateCollaborator } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
 
-const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) =>
+const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) => (
   <DataLoader load={load} loading={false} content>
     <AddableSelect
       loading={loading}
@@ -27,8 +27,8 @@ const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, 
       value={value.username || value.email}
       {...props}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 CollaboratorEmailDropdown.propTypes = {
   load: PropTypes.func,
@@ -92,7 +92,7 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const CollaboratorRow = React.memo(({ collaborator, update }) =>
+const CollaboratorRow = React.memo(({ collaborator, update }) => (
   <CollaboratorContainer>
     {update &&
       <span>
@@ -128,8 +128,8 @@ const CollaboratorRow = React.memo(({ collaborator, update }) =>
     />
     {collaborator.displayName && `${collaborator.displayName} - `}
     <a href={`mailto:${collaborator.email}`}>{collaborator.email}</a>
-  </CollaboratorContainer>,
-)
+  </CollaboratorContainer>
+))
 
 CollaboratorRow.propTypes = {
   collaborator: PropTypes.object.isRequired,
@@ -137,7 +137,9 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc'])
+  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  ['desc', 'asc'],
+)
 
 const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
   const localCollabs = getSortedCollabs(project, false)

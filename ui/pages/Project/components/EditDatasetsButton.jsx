@@ -47,9 +47,7 @@ BaseUpdateDatasetForm.propTypes = {
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: (values) => {
-    return dispatch(SUBMIT_FUNCTIONS[ownProps.formType](values))
-  },
+  onSubmit: values => dispatch(SUBMIT_FUNCTIONS[ownProps.formType](values)),
 })
 
 const UpdateDatasetForm = connect(null, mapDispatchToProps)(BaseUpdateDatasetForm)
@@ -86,7 +84,7 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
-const IGVFileUploadField = React.memo(({ projectGuid, ...props }) =>
+const IGVFileUploadField = React.memo(({ projectGuid, ...props }) => (
   <FileUploadField
     clearTimeOut={0}
     dropzoneLabel={
@@ -126,8 +124,8 @@ const IGVFileUploadField = React.memo(({ projectGuid, ...props }) =>
     required
     styles={UPLOADER_STYLES}
     {...props}
-  />,
-)
+  />
+))
 
 IGVFileUploadField.propTypes = {
   projectGuid: PropTypes.string,
@@ -161,14 +159,14 @@ const PANES = [
   },
 ].map(({ title, formType, formFields, initialValues }) => ({
   menuItem: title,
-  render: () =>
+  render: () => (
     <Tab.Pane key={formType}>
       <UpdateDatasetForm
         formType={formType}
         formFields={formFields}
         initialValues={initialValues}
       />
-    </Tab.Pane>,
+    </Tab.Pane>),
 }))
 
 const IGV_ONLY_PANES = [PANES[1]]

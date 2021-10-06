@@ -24,7 +24,7 @@ const ContentGrid = styled(Grid)`
   align-content: flex-start;
 `
 
-const BaseLayout = ({ children }) =>
+const BaseLayout = ({ children }) => (
   <LayoutContainer>
     <Header />
     <ContentGrid>
@@ -40,7 +40,7 @@ const BaseLayout = ({ children }) =>
       </Grid.Row>
     </ContentGrid>
     <Footer />
-  </LayoutContainer>
+  </LayoutContainer>)
 
 export { BaseLayout as BaseLayoutComponent }
 

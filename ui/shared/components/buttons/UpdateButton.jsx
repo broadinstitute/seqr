@@ -8,7 +8,7 @@ import Modal from '../modal/Modal'
 const UpdateButton = React.memo((
   { onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
-) =>
+) => (
   <Modal
     title={modalTitle}
     modalName={modalId}
@@ -36,9 +36,8 @@ const UpdateButton = React.memo((
         confirmCloseIfNotSaved
       />
     ) }) }
-  </Modal>,
-)
-
+  </Modal>
+))
 
 UpdateButton.propTypes = {
   formFields: PropTypes.array,

@@ -29,27 +29,27 @@ import VariantTags from './VariantTags'
 import VariantTagTypeBar from './VariantTagTypeBar'
 
 
-const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit }) => {
-  return ([
-    <SectionHeader key="header">{label}</SectionHeader>,
-    <div key="content">
-      {loading ? <Loader key="content" inline active /> : children}
-    </div>,
-    editButton && (project.canEdit || collaboratorEdit) ? (
-      <div key="edit">
-        <VerticalSpacer height={15} />
-        {editButton}
-      </div>
-    ) : null,
-    linkText ? (
-      <div key="link">
-        <VerticalSpacer height={15} />
-        <HorizontalSpacer width={35} />
-        <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
-      </div>
-    ) : null,
-  ])
-})
+const ProjectSectionComponent = React.memo((
+  { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
+) => ([
+  <SectionHeader key="header">{label}</SectionHeader>,
+  <div key="content">
+    {loading ? <Loader key="content" inline active /> : children}
+  </div>,
+  editButton && (project.canEdit || collaboratorEdit) ? (
+    <div key="edit">
+      <VerticalSpacer height={15} />
+      {editButton}
+    </div>
+  ) : null,
+  linkText ? (
+    <div key="link">
+      <VerticalSpacer height={15} />
+      <HorizontalSpacer width={35} />
+      <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
+    </div>
+  ) : null,
+]))
 
 ProjectSectionComponent.propTypes = {
   loading: PropTypes.bool,

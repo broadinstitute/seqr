@@ -70,14 +70,9 @@ const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
 
 const LocusList = connect(mapStateToProps, mapDispatchToProps)(LocusListItem)
 
-export const GeneLists = React.memo(({ project }) =>
-  project.locusListGuids.map(locusListGuid =>
-    <LocusList
-      key={locusListGuid}
-      project={project}
-      locusListGuid={locusListGuid}
-    />,
-  ))
+export const GeneLists = React.memo(({ project }) => project.locusListGuids.map(
+  locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
+))
 
 GeneLists.propTypes = {
   project: PropTypes.object.isRequired,
@@ -110,11 +105,9 @@ class AddGeneLists extends React.PureComponent {
     )
   }
 
-  submit = () => {
-    return this.props.updateLocusLists({
-      locusListGuids: Object.keys(this.state.selected).filter(locusListGuid => this.state.selected[locusListGuid]),
-    })
-  }
+  submit = () => this.props.updateLocusLists({
+    locusListGuids: Object.keys(this.state.selected).filter(locusListGuid => this.state.selected[locusListGuid]),
+  })
 
   closeModal = () => {
     this.props.setModalConfirm(this.modalName, null)

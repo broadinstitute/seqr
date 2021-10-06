@@ -23,8 +23,8 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass = Popup }) =>
-  React.createElement(PopupClass, {
+const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass = Popup }) => React.createElement(
+  PopupClass, {
     hoverable: true,
     wide: 'very',
     position: 'right center',
@@ -38,8 +38,8 @@ const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass =
       </ColoredLink>
     ),
     content: <Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} disableInternalEdit useFullWidth disablePedigreeZoom />,
-  }),
-)
+  },
+))
 
 FamilyLink.propTypes = {
   family: PropTypes.object,

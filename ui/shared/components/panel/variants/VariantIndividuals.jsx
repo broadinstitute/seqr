@@ -73,8 +73,8 @@ const PAR_REGIONS = {
   },
 }
 
-const isHemiXVariant = (variant, individual) =>
-  individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
+const isHemiXVariant =
+  (variant, individual) => individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
 const missingParentVariant = variant => (parentGuid) => {
@@ -82,8 +82,8 @@ const missingParentVariant = variant => (parentGuid) => {
   return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
 }
 
-const isHemiUPDVariant = (numAlt, variant, individual) =>
-  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant))
+const isHemiUPDVariant = (numAlt, variant, individual) => (
+  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant)))
 
 const Allele = styled.div.attrs(({ isAlt, variant }) => ({ children: isAlt ? variant.alt : variant.ref }))`
   display: inline-block;
@@ -117,7 +117,7 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
     {warning &&
       <Popup
@@ -135,8 +135,8 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
         /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </Header.Content>
     }
-  </AlleleContainer>,
-)
+  </AlleleContainer>
+))
 
 Alleles.propTypes = {
   genotype: PropTypes.object,
@@ -164,14 +164,15 @@ const GENOTYPE_DETAILS = [
   { title: 'End', field: 'end' },
 ]
 
-const genotypeDetails = (genotype, variant) =>
-  GENOTYPE_DETAILS.map(({ shouldHide, title, field, variantField, format }) => {
+const genotypeDetails = (genotype, variant) => GENOTYPE_DETAILS.map(
+  ({ shouldHide, title, field, variantField, format }) => {
     const value = field ? genotype[field] : variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ?
       <div key={title}>
         {title}:<HorizontalSpacer width={10} /><b>{format ? format(value) : value}</b>
       </div> : null
-  }).filter(val => val)
+  },
+).filter(val => val)
 
 const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   if (!variant.genotypes) {
@@ -245,7 +246,7 @@ Genotype.propTypes = {
 
 const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet }) => (
   <IndividualsContainer>
-    {(individuals || []).map(individual =>
+    {(individuals || []).map(individual => (
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
         <PedigreeIcon
           sex={individual.sex}
@@ -258,8 +259,8 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
         />
         <br />
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} />
-      </IndividualCell>,
-    )}
+      </IndividualCell>
+    ))}
   </IndividualsContainer>
 ))
 
@@ -275,13 +276,13 @@ const mapStateToProps = (state, ownProps) => ({
 
 const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)
 
-const VariantIndividuals = React.memo(({ variant, isCompoundHet }) =>
+const VariantIndividuals = React.memo(({ variant, isCompoundHet }) => (
   <span>
-    {variant.familyGuids.map(familyGuid =>
-      <FamilyVariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
-    )}
-  </span>,
-)
+    {variant.familyGuids.map(familyGuid => (
+      <FamilyVariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />
+    ))}
+  </span>
+))
 
 
 VariantIndividuals.propTypes = {

@@ -22,7 +22,7 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
-const LandingPage = ({ googleLoginEnabled }) =>
+const LandingPage = ({ googleLoginEnabled }) => (
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
@@ -94,7 +94,7 @@ const LandingPage = ({ googleLoginEnabled }) =>
         </List.Item>
       </List>
     </PageSegment>
-  </Segment.Group>
+  </Segment.Group>)
 
 LandingPage.propTypes = {
   googleLoginEnabled: PropTypes.bool,

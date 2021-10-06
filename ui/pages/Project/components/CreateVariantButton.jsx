@@ -31,11 +31,11 @@ const FORMAT_RESPONSE_FIELDS = [
   GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
 ]
 
-const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) =>
+const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) => (
   <FormSection name={name}>
     <Divider horizontal>{title}</Divider>
     <Grid columns="equal">
-      {individuals.map((({ individualGuid, displayName }) =>
+      {individuals.map((({ individualGuid, displayName }) => (
         <Grid.Column key={individualGuid}>
           {configuredField({
             name: individualGuid,
@@ -44,10 +44,10 @@ const ZygosityInput = React.memo(({ individuals, name, title, individualField, e
             ...individualField,
           })}
         </Grid.Column>
-      ))}
+      )))}
     </Grid>
-  </FormSection>,
-)
+  </FormSection>
+))
 
 ZygosityInput.propTypes = {
   individuals: PropTypes.array,
@@ -73,8 +73,7 @@ const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
   content: { content: <SelectSavedVariantsTable {...props} /> },
 }])
 
-const SavedVariantToggle = props =>
-  <Accordion styled fluid panels={accordionPanels(props)} />
+const SavedVariantToggle = props => <Accordion styled fluid panels={accordionPanels(props)} />
 
 const mapSavedVariantsStateToProps = (state, ownProps) => {
   const familyGuid = getFormFamilyGuid(ownProps)
@@ -241,40 +240,38 @@ const mapStateToProps = state => ({
   initialValues: getCurrentProject(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: (values) => {
-      const variant = ownProps.formFields.map(({ name }) => name).filter(
-        name => !FORMAT_RESPONSE_FIELDS.includes(name),
-      ).reduce(
-        (acc, name) => ({ ...acc, [name]: values[name] }), {},
-      )
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: (values) => {
+    const variant = ownProps.formFields.map(({ name }) => name).filter(
+      name => !FORMAT_RESPONSE_FIELDS.includes(name),
+    ).reduce(
+      (acc, name) => ({ ...acc, [name]: values[name] }), {},
+    )
 
-      if (variant.svName) {
-        variant.variantId = values.svName
-      } else {
-        variant.variantId = `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`
-        variant.transcripts = {
-          [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
-            transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
-            [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
-            [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
-          }] : [],
-        }
+    if (variant.svName) {
+      variant.variantId = values.svName
+    } else {
+      variant.variantId = `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`
+      variant.transcripts = {
+        [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
+          transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
+          [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
+          [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
+        }] : [],
       }
+    }
 
-      const variants = Object.values(values[VARIANTS_FIELD_NAME] || {}).filter(v => v)
+    const variants = Object.values(values[VARIANTS_FIELD_NAME] || {}).filter(v => v)
 
-      const formattedValues = {
-        familyGuid: ownProps.family.familyGuid,
-        tags: values[TAG_FIELD_NAME],
-        variant: [variant, ...variants],
-      }
+    const formattedValues = {
+      familyGuid: ownProps.family.familyGuid,
+      tags: values[TAG_FIELD_NAME],
+      variant: [variant, ...variants],
+    }
 
-      return dispatch(updateVariantTags(formattedValues))
-    },
-  }
-}
+    return dispatch(updateVariantTags(formattedValues))
+  },
+})
 
 const CreateVariantButton = connect(mapStateToProps, mapDispatchToProps)(BaseCreateVariantButton)
 

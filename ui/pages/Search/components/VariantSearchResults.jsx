@@ -69,18 +69,15 @@ const mapStateToProps = (state, ownProps) => ({
   flattenCompoundHet: getFlattenCompoundHet(state),
 })
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    toggleUnpair: (updates) => {
-      dispatch(updateCompoundHetDisplay({
-        updates,
-      }))
-    },
-    initialLoad: (params) => {
-      dispatch(loadProjectFamiliesContext(params))
-    },
-  }
-}
-
+const mapDispatchToProps = dispatch => ({
+  toggleUnpair: (updates) => {
+    dispatch(updateCompoundHetDisplay({
+      updates,
+    }))
+  },
+  initialLoad: (params) => {
+    dispatch(loadProjectFamiliesContext(params))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)

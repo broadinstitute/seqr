@@ -91,8 +91,8 @@ const INHERITANCE_PANEL = {
       <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
         <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
-        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>
-          <Header key={value} content={text} subheader={detail} />,
+        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(
+          ({ value, text, detail }) => <Header key={value} content={text} subheader={detail} />,
         )}
 
         <Header size="small" content="Notes on inheritance searching:" />
@@ -155,7 +155,7 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
-const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
@@ -164,7 +164,7 @@ const SVFrequecyHeaderFilter = ({ value, onChange }) =>
       label="Callset"
       width={16}
     />
-  </Form.Group>
+  </Form.Group>)
 
 SVFrequecyHeaderFilter.propTypes = {
   value: PropTypes.any,
@@ -240,7 +240,8 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
           ...acc,
           [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
-      } }, {}),
+      }
+    }, {}),
   }
 }, {})
 

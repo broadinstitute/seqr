@@ -17,7 +17,6 @@ import {
 import { updateAnalysisGroup } from '../reducers'
 import { getProjectFamiliesByGuid, getCurrentProject } from '../selectors'
 
-
 const FAMILY_FIELDS = [
   { name: FAMILY_DISPLAY_NAME, width: 3, content: 'Family' },
   {
@@ -29,8 +28,7 @@ const FAMILY_FIELDS = [
   { name: FAMILY_FIELD_DESCRIPTION, width: 9, content: 'Description' },
 ]
 
-
-const FamilySelectorField = React.memo(({ value, onChange, families }) =>
+const FamilySelectorField = React.memo(({ value, onChange, families }) => (
   <div>
     <FileUploadField
       name="uploadedFamilyIds"
@@ -68,8 +66,8 @@ const FamilySelectorField = React.memo(({ value, onChange, families }) =>
       value={value.reduce((acc, key) => ({ ...acc, [key]: true }), {})}
       onChange={newValue => onChange(Object.keys(newValue).filter(key => newValue[key]))}
     />
-  </div>,
-)
+  </div>
+))
 
 FamilySelectorField.propTypes = {
   value: PropTypes.array,

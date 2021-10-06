@@ -85,8 +85,7 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
             trigger={row}
             content="Inheritance search is disabled for individuals with no loaded data"
           />
-        },
-      )}
+        })}
       </Table.Body>
     </Table>
   )

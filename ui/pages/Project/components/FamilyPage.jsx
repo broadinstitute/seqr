@@ -34,8 +34,9 @@ SearchLink.propTypes = {
 }
 
 const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
-    (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(
+    tag => (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol,
+  ).filter(val => val)
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
   ) : null
@@ -47,7 +48,7 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) =>
+const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) => (
   <div>
     <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
     <HorizontalSpacer width={10} />
@@ -72,7 +73,7 @@ const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, g
         }
       </div>
     }
-  </div>
+  </div>)
 
 BaseVariantDetail.propTypes = {
   family: PropTypes.object,
@@ -90,7 +91,7 @@ const mapVariantDetailStateToProps = (state, ownProps) => ({
 
 const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)
 
-const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) =>
+const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) => (
   <div>
     <Family
       family={family}
@@ -99,11 +100,7 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
       {...props}
     />
     {!compact && <FamilyReads
-      layout={({ reads, showReads }) =>
-        <div>
-          {showReads}
-          {reads}
-        </div>}
+      layout={({ reads, showReads }) => <div>{showReads}{reads}</div>}
       familyGuid={family.familyGuid}
       buttonProps={READ_BUTTON_PROPS}
     />}
@@ -112,10 +109,10 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
         key={individual.individualGuid}
         individual={individual}
         tableName={tableName}
-      />),
-    )}
-  </div>,
-)
+      />))
+    }
+  </div>
+))
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,
@@ -133,14 +130,14 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) =>
+const FamilyPage = ({ match }) => (
   <FamilyDetail
     familyGuid={match.params.familyGuid}
     showVariantDetails
     showDetails
     showIndividuals
     fields={FAMILY_DETAIL_FIELDS}
-  />
+  />)
 
 FamilyPage.propTypes = {
   match: PropTypes.object,

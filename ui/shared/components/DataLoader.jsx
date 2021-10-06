@@ -5,8 +5,7 @@ import { Loader, Dimmer } from 'semantic-ui-react'
 import { Error404 } from 'shared/components/page/Errors'
 
 
-class DataLoader extends React.PureComponent
-{
+class DataLoader extends React.PureComponent {
   static propTypes = {
     contentId: PropTypes.any,
     content: PropTypes.any,
@@ -36,14 +35,11 @@ class DataLoader extends React.PureComponent
     if (loading) {
       // Loader needs to be in an extra Dimmer to properly show up if it is in a modal (https://github.com/Semantic-Org/Semantic-UI-React/issues/879)
       return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
-    }
-    else if (errorMessage) {
+    } else if (errorMessage) {
       return errorMessage
-    }
-    else if (content) {
+    } else if (content) {
       return children
-    }
-    else if (!hideError) {
+    } else if (!hideError) {
       return <Error404 />
     }
     return null

@@ -79,7 +79,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FileLink = connect(mapStateToProps)(BaseFileLink)
 
-const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) =>
+const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) => (
   <Popup
     trigger={
       <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
@@ -88,32 +88,29 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
       <NoBorderTable>
         <Table.Body>
           {
-            downloads.map(({ name, ...downloadProps }) => {
-              return [
-                <Table.Row key={1}>
-                  <NameCell colSpan="2">
-                    <b>{name}:</b>
-                  </NameCell>
-                </Table.Row>,
-                <Table.Row key={2}>
-                  <LinkCell>
-                    <FileLink {...downloadProps} ext="xls" />
-                  </LinkCell>
-                  <LinkCell>
-                    <FileLink {...downloadProps} ext="tsv" /><br />
-                  </LinkCell>
-                </Table.Row>,
-              ]
-            })
+            downloads.map(({ name, ...downloadProps }) => ([
+              <Table.Row key={1}>
+                <NameCell colSpan="2">
+                  <b>{name}:</b>
+                </NameCell>
+              </Table.Row>,
+              <Table.Row key={2}>
+                <LinkCell>
+                  <FileLink {...downloadProps} ext="xls" />
+                </LinkCell>
+                <LinkCell>
+                  <FileLink {...downloadProps} ext="tsv" /><br />
+                </LinkCell>
+              </Table.Row>,
+            ]))
           }
         </Table.Body>
       </NoBorderTable>
     }
     on="click"
     position="bottom center"
-  />,
-)
-
+  />
+))
 
 ExportTableButton.propTypes = {
   /**

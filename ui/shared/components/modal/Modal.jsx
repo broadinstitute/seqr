@@ -6,8 +6,7 @@ import { Modal, Icon, Popup, Confirm } from 'semantic-ui-react'
 import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal } from 'redux/utils/modalReducer'
 import { ButtonLink } from '../StyledComponents'
 
-class CustomModal extends React.PureComponent
-{
+class CustomModal extends React.PureComponent {
   static propTypes = {
     trigger: PropTypes.node,
     popup: PropTypes.object,
@@ -64,20 +63,18 @@ const mapStateToProps = (state, ownProps) => ({
   confirmContent: getModalConfim(state, ownProps.modalName),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    open: (e) => {
-      e.preventDefault()
-      dispatch(openModal(ownProps.modalName))
-    },
-    close: (confirm) => {
-      dispatch(closeModal(ownProps.modalName, confirm))
-    },
-    cancelClose: () => {
-      dispatch(cancelCloseModal(ownProps.modalName))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  open: (e) => {
+    e.preventDefault()
+    dispatch(openModal(ownProps.modalName))
+  },
+  close: (confirm) => {
+    dispatch(closeModal(ownProps.modalName, confirm))
+  },
+  cancelClose: () => {
+    dispatch(cancelCloseModal(ownProps.modalName))
+  },
+})
 
 export { CustomModal as ModalComponent }
 

@@ -47,8 +47,7 @@ const FormContentContainer = styled.div`
 `
 
 
-class EditRecordsForm extends React.PureComponent
-{
+class EditRecordsForm extends React.PureComponent {
   static propTypes = {
     /* Object of records to be edited in this form */
     records: PropTypes.object.isRequired,
@@ -94,10 +93,9 @@ class EditRecordsForm extends React.PureComponent
 
     const getRowFilterVal = filterColumn ? row => row[filterColumn] : null
 
-    const submitRecords = values =>
-      onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
-        field => record[field] !== records[record[idField]][field],
-      )))
+    const submitRecords = values => onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
+      field => record[field] !== records[record[idField]][field],
+    )))
 
     return (
       <FormContentContainer>
@@ -150,12 +148,10 @@ class EditRecordsForm extends React.PureComponent
   }
 }
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    closeParentModal: () => {
-      dispatch(closeModal(ownProps.modalName, true))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  closeParentModal: () => {
+    dispatch(closeModal(ownProps.modalName, true))
+  },
+})
 
 export default connect(null, mapDispatchToProps)(EditRecordsForm)
