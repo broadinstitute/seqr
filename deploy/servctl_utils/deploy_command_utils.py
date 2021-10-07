@@ -24,7 +24,6 @@ DEPLOYMENT_TARGETS = [
     "secrets",
     "linkerd",
     "nginx",
-    "postgres",
     "elasticsearch",
     "kibana",
     "redis",
@@ -187,57 +186,6 @@ def deploy_linkerd(settings):
         run('linkerd install | kubectl apply -f -')
 
         run('linkerd check')
-
-
-def deploy_postgres(settings):
-    print_separator("postgres")
-
-    with open('deploy/secrets/gcloud/postgres/{}/password'.format(settings['DEPLOY_TO'])) as f:
-        password = f.read()
-
-    sql_instance_name = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
-    run(' '.join([
-        'gcloud beta sql instances create', sql_instance_name,
-        '--database-version=POSTGRES_{}'.format(settings['POSTGRES_VERSION']),
-        '--root-password={}'.format(password),
-        '--project={}'.format(settings['GCLOUD_PROJECT']),
-        '--zone={}'.format(settings['GCLOUD_ZONE']),
-        '--availability-type={}'.format(settings['CLOUDSQL_AVAILABILITY_TYPE']),
-        '--cpu=2', '--memory=4',
-        '--assign-ip',
-        '--backup',
-        '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',
-        '--require-ssl',
-        '--retained-backups-count=30',
-        '--storage-auto-increase',
-    ]), errors_to_ignore=['already exists'])
-
-    seqr_db_backup = settings.get('RESTORE_SEQR_DB_FROM_BACKUP')
-    reference_data_db_backup = settings.get('RESTORE_REFERENCE_DB_FROM_BACKUP')
-    reset_db = settings.get('RESET_DB')
-
-    if reset_db or seqr_db_backup:
-        run('gcloud sql databases delete seqrdb --instance={} --quiet'.format(sql_instance_name),
-            errors_to_ignore=['does not exist'])
-    if reset_db or reference_data_db_backup:
-        run('gcloud sql databases delete reference_data_db --instance={} --quiet'.format(sql_instance_name),
-            errors_to_ignore=['does not exist'])
-
-    run('gcloud sql databases create seqrdb --instance={}'.format(sql_instance_name),
-        errors_to_ignore=['already exists'])
-    run('gcloud sql databases create reference_data_db --instance={}'.format(sql_instance_name),
-        errors_to_ignore=['already exists'])
-
-    if seqr_db_backup:
-        run(' '.join([
-            'gcloud sql import sql', sql_instance_name, seqr_db_backup, '--database=seqrdb', '--user=postgres',
-            ' --quiet',
-        ]))
-    if reference_data_db_backup:
-        run(' '.join([
-            'gcloud sql import sql', sql_instance_name, reference_data_db_backup, '--database=reference_data_db',
-            '--user=postgres', ' --quiet',
-        ]))
 
 
 def deploy_redis(settings):
