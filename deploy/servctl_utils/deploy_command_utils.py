@@ -29,7 +29,6 @@ DEPLOYMENT_TARGETS = [
     "kibana",
     "redis",
     "seqr",
-    "elasticsearch-snapshot-infra",
     "elasticsearch-snapshot-config",
 ]
 
@@ -152,25 +151,6 @@ def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
-
-
-def deploy_elasticsearch_snapshot_infra(settings):
-    print_separator('elasticsearch snapshot infra')
-
-    if settings['ES_CONFIGURE_SNAPSHOTS']:
-        # create the bucket
-        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
-            errors_to_ignore=["already exists"])
-        # create the IAM user
-        run(" ".join([
-            "gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s",
-            "--display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s"]) % settings,
-            errors_to_ignore="already exists within project projects/seqr-project")
-        # grant storage admin permissions on the snapshot bucket
-        run(" ".join([
-            "gsutil iam ch",
-            "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
-            "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
 
 
 def deploy_elasticsearch_snapshot_config(settings):
