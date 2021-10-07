@@ -42,6 +42,7 @@ class RequestStatus extends React.PureComponent {
         return <ColoredIcon name="square outline" color="rgba(0, 0, 0, 0.0)" />
     }
   }
+
 }
 
 export default RequestStatus

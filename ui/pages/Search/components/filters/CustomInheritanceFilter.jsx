@@ -11,7 +11,6 @@ import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
 import { getSingleInputFamily } from '../../selectors'
 
-
 const CUSTOM_FILTERS = [
   { filterField: 'affected', options: AFFECTED_OPTIONS },
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
@@ -90,7 +89,6 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
     </Table>
   )
 })
-
 
 const mapStateToProps = state => ({
   family: getSingleInputFamily(state),

@@ -9,7 +9,6 @@ import { CLINSIG_SEVERITY, getPermissionedHgmdClass } from '../../../utils/const
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
-
 const StarsContainer = styled.span`
   margin-left: 10px;
 `
@@ -65,7 +64,6 @@ PathogenicityLink.propTypes = {
   href: PropTypes.string.isRequired,
 }
 
-
 const clinvarUrl = (clinvar) => {
   const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
   const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
@@ -112,9 +110,10 @@ Pathogenicity.propTypes = {
   showHgmd: PropTypes.bool,
 }
 
-
 const mapStateToProps = (state, ownProps) => ({
-  showHgmd: !!getPermissionedHgmdClass(ownProps.variant, getUser(state), getFamiliesByGuid(state), getProjectsByGuid(state)),
+  showHgmd: !!getPermissionedHgmdClass(
+    ownProps.variant, getUser(state), getFamiliesByGuid(state), getProjectsByGuid(state),
+  ),
 })
 
 export { Pathogenicity as BasePathogenicity }

@@ -45,7 +45,6 @@ const VariantTags = React.memo(({ project, analysisGroup }) => (
   </NoBorderTable>
 ))
 
-
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,

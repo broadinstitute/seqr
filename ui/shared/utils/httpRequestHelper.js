@@ -22,14 +22,13 @@ export class HttpRequestHelper {
    * @param onClear {function} optional handler called some time after the onSuccess or onError handler is called
    * @param delayBeforeClearing {number} milliseconds delay before calling the onClear handler
    */
-  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000, debug = false) {
+  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000) {
     this.url = url
     this.httpPostId = 0
     this.onSuccess = onSuccess
     this.onError = onError
     this.onClear = onClear
     this.delayBeforeClearing = delayBeforeClearing
-    this.debug = debug
   }
 
   /**
@@ -53,9 +52,6 @@ export class HttpRequestHelper {
    * @param jsonBody The request body.
    */
   post = (jsonBody = {}) => {
-    if (this.debug) {
-      console.log(`${this.url} httpHelder - request: `, jsonBody)
-    }
     const csrfToken = Cookies.get('csrf_token')
     const promise = fetch(this.url, {
       method: 'POST',
@@ -80,7 +76,6 @@ export class HttpRequestHelper {
       })
     }
     if (!response.ok) {
-      console.log('ERROR: ', response.statusText, response.status, response)
       const throwJsonError = (responseJson) => {
         const message = responseJson.error || responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
         const err = new Error(message)
@@ -96,26 +91,21 @@ export class HttpRequestHelper {
     }
   })
     .then((responseJson) => {
-      if (this.debug) {
-        console.log(`${this.url} httpHelder - response: `, responseJson)
-      }
       if (this.onSuccess) {
         this.onSuccess(responseJson, onSuccessArg)
       }
 
       if (this.onClear) {
-        this.httpPostId++
+        this.httpPostId += 1
         return delay(this.delayBeforeClearing, this.httpPostId)
       }
       return -1
     })
     .catch((exception) => {
-      console.log(exception)
       if (this.onError) {
         this.onError(exception)
       }
 
-      //this.httpPostId++
       return -1 // don't ever hide the error message
     })
     .then((httpPostId) => {
@@ -123,4 +113,5 @@ export class HttpRequestHelper {
         this.onClear(httpPostId)
       }
     })
+
 }

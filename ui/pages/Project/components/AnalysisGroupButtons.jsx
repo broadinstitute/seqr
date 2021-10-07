@@ -33,7 +33,7 @@ const FamilySelectorField = React.memo(({ value, onChange, families }) => (
     <FileUploadField
       name="uploadedFamilyIds"
       normalize={(newValue, previousValue) => {
-       if (newValue.errors) {
+        if (newValue.errors) {
           return { ...newValue, info: newValue.errors, errors: [] }
         }
         if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
@@ -75,7 +75,6 @@ FamilySelectorField.propTypes = {
   onChange: PropTypes.func,
 }
 
-
 const FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
   { name: 'description', label: 'Description' },
@@ -87,7 +86,9 @@ const FORM_FIELDS = [
   },
 ]
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
+export const UpdateAnalysisGroup = React.memo((
+  { project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly },
+) => {
   if (!project.canEdit) {
     return null
   }
@@ -116,7 +117,6 @@ UpdateAnalysisGroup.propTypes = {
   projectFamiliesByGuid: PropTypes.object,
   onSubmit: PropTypes.func,
 }
-
 
 export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
   project.canEdit ? <DeleteButton
@@ -149,4 +149,3 @@ const mapDispatchToProps = {
 
 export const UpdateAnalysisGroupButton = connect(mapStateToProps, mapDispatchToProps)(UpdateAnalysisGroup)
 export const DeleteAnalysisGroupButton = withRouter(connect(mapStateToProps, mapDispatchToProps)(DeleteAnalysisGroup))
-

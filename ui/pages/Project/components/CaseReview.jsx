@@ -39,7 +39,6 @@ const CaseReviewTable = React.memo((props) => {
   )
 })
 
-
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {

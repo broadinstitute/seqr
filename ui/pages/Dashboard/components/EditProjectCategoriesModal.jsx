@@ -9,7 +9,6 @@ import Modal from 'shared/components/modal/Modal'
 import { updateProject } from 'redux/rootReducer'
 import { getProjectCategoriesByGuid } from 'redux/selectors'
 
-
 const EditProjectCategoriesModal = React.memo((props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map(
     projectCategory => ({ value: projectCategory.guid, text: projectCategory.name }),

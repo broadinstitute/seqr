@@ -27,14 +27,15 @@ const ALL_UPLOAD_FORMATS = FILE_FORMATS.concat([
 const FAM_UPLOAD_FORMATS = [].concat(FILE_FORMATS)
 FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
-
 const mapStateToProps = (state, ownProps) => {
   const project = getCurrentProject(state)
   const fields = ownProps.requiredFields.concat(ownProps.optionalFields)
   return {
     project,
     exportConfig: {
-      getRawData: state2 => Object.values((ownProps.getRawData || getProjectAnalysisGroupIndividualsByGuid)(state2, ownProps)),
+      getRawData: state2 => Object.values(
+        (ownProps.getRawData || getProjectAnalysisGroupIndividualsByGuid)(state2, ownProps),
+      ),
       ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
     },
     blankExportConfig: ownProps.blankDownload && {
@@ -127,8 +128,9 @@ const mapIndividualsDispatchToProps = {
   onSubmit: updateIndividuals,
 }
 
-export const EditIndividualsBulkForm = connect(mapIndividualsStateToProps, mapIndividualsDispatchToProps)(IndividualsBulkForm)
-
+export const EditIndividualsBulkForm = connect(
+  mapIndividualsStateToProps, mapIndividualsDispatchToProps,
+)(IndividualsBulkForm)
 
 const IndividualMetadataBulkForm = React.memo(props => (
   <EditBulkForm
@@ -146,4 +148,6 @@ const mapIndividualMetadataDispatchToProps = {
   onSubmit: updateIndividualsMetadata,
 }
 
-export const EditIndividualMetadataBulkForm = connect(null, mapIndividualMetadataDispatchToProps)(IndividualMetadataBulkForm)
+export const EditIndividualMetadataBulkForm = connect(
+  null, mapIndividualMetadataDispatchToProps,
+)(IndividualMetadataBulkForm)

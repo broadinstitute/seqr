@@ -34,7 +34,7 @@ const SHORTCUT_TAGS = ['Review', 'Excluded']
 
 const VARIANT_NOTE_FIELDS = [{
   name: 'submitToClinvar',
-  label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>, //eslint-disable-line jsx-a11y/label-has-for
+  label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>,
   component: BooleanCheckbox,
   style: { paddingTop: '2em' },
 },
@@ -56,13 +56,15 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
       <div>
         {tag.createdBy || 'unknown user'}
         {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
-        {tag.metadata && !hideMetadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
+        {tag.metadata && !hideMetadata &&
+          <div>
+            {tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}
+          </div>}
         {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
       </div>
     }
   />
 )
-
 
 const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
@@ -83,7 +85,12 @@ const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantT
   return (
     <StyledForm inline hasSubmitButton={false}>
       {SHORTCUT_TAGS.map(tagName => (
-        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />
+        <ShortcutTagToggle
+          key={tagName}
+          label={tagName}
+          tag={tags.find(tag => tag.name === tagName)}
+          onChange={onSubmit(tagName)}
+        />
       ))}
     </StyledForm>
   )
@@ -93,7 +100,6 @@ ShortcutTags.propTypes = {
   variantTagNotes: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
-
 
 const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
   'Only 1 Discovery Tag can be added' : undefined
@@ -158,7 +164,6 @@ const FamilyLabel = React.memo(props => (
   </InlineHeader>
 ))
 
-
 FamilyLabel.propTypes = {
   family: PropTypes.object,
   disableEdit: PropTypes.bool,
@@ -170,11 +175,11 @@ export const LoadedFamilyLabel = connect((state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
 }))(FamilyLabel)
 
-const FamilyVariantTags = React.memo((
-  { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
-    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
-    linkToSavedVariants },
-) => (
+const FamilyVariantTags = React.memo(({
+  variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
+  dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
+  linkToSavedVariants,
+}) => (
   family ?
     <NoBorderTable basic="very" compact="very" celled>
       <Table.Body>

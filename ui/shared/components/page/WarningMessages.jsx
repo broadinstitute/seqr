@@ -6,7 +6,6 @@ import { connect } from 'react-redux'
 
 import { getWarningMessages } from 'redux/selectors'
 
-
 class WarningMessages extends React.PureComponent {
 
   static propTypes = {
@@ -33,6 +32,7 @@ class WarningMessages extends React.PureComponent {
       </Grid.Row>
     ))
   }
+
 }
 
 const mapStateToProps = state => ({

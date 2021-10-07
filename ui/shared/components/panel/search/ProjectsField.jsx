@@ -8,7 +8,9 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
-const ProjectFilterContent = React.memo(({ project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props }) => {
+const ProjectFilterContent = React.memo((
+  { project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props },
+) => {
   let filterInput
   if (Object.values(projectSamples || {}).some(sample => sample.isActive)) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
@@ -42,7 +44,6 @@ ProjectFilterContent.propTypes = {
   dispatch: PropTypes.func,
   filterInputComponent: PropTypes.elementType,
 }
-
 
 export const ProjectFilter = React.memo(({ loading, load, ...props }) => (
   <DataLoader contentId={props.value} loading={loading} load={load} content={props.project} hideError>

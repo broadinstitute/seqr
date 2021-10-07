@@ -46,8 +46,8 @@ const FormContentContainer = styled.div`
   marginBottom: ${props => (props.records && props.records.length > ROWS_PER_PAGE ? '50px' : '0px')};
 `
 
-
 class EditRecordsForm extends React.PureComponent {
+
   static propTypes = {
     /* Object of records to be edited in this form */
     records: PropTypes.object.isRequired,
@@ -81,9 +81,10 @@ class EditRecordsForm extends React.PureComponent {
     }
   }
 
-
   render() {
-    const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps } = this.props
+    const {
+      formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps
+    } = this.props
 
     const rowsToDelete = Object.entries(this.state.data).reduce((acc, [recordId, { toDelete }]) => (
       { ...acc, [recordId]: toDelete }
@@ -146,6 +147,7 @@ class EditRecordsForm extends React.PureComponent {
       ), {}),
     })
   }
+
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

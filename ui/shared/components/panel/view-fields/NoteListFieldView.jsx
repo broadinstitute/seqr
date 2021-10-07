@@ -23,7 +23,9 @@ const noteAnnotation = note => note.createdBy && (
   </i>
 )
 
-const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props }) => {
+const NoteListFieldView = React.memo((
+  { notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props },
+) => {
   const nonEmptyInitialValues = initialValues || {}
   const addField =
     <TextFieldView

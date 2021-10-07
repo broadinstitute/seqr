@@ -29,6 +29,7 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
 `
 
 class AwesomeBar extends React.PureComponent {
+
   static propTypes = {
     categories: PropTypes.array,
     newWindow: PropTypes.bool,
@@ -78,9 +79,8 @@ class AwesomeBar extends React.PureComponent {
     }
   }
 
-  handleHttpError = (response) => {
+  handleHttpError = () => {
     this.setState({ isLoading: false })
-    console.error(response)
   }
 
   resetComponent = () => {
@@ -108,6 +108,7 @@ class AwesomeBar extends React.PureComponent {
       this.props.history.push(href)
     }
   }
+
 }
 
 export { AwesomeBar as AwesomeBarComponent }
@@ -121,6 +122,4 @@ AwesomeBarFormInput.propTypes = {
   parseResultItem: PropTypes.func,
 }
 
-
 export default withRouter(AwesomeBar)
-

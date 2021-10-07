@@ -8,7 +8,7 @@ const COOKIE_ACTIONS = [{
   content: 'Accept',
   onClick: () => {
     Cookies.set('accepted_cookies', true)
-    window.location.href = window.location.href
+    window.location.href = window.location.href // eslint-disable-line no-self-assign
   },
 }]
 

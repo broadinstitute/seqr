@@ -19,7 +19,6 @@ const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 
-
 // Data actions
 
 export const loadCurrentProject = projectGuid => (dispatch, getState) => {
@@ -74,7 +73,9 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
       if (expectedFamilyGuids) {
         dispatch({
           type: RECEIVE_SAVED_VARIANT_FAMILIES,
-          updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: { loaded: true, noteVariants: loadNotes } }), {}),
+          updates: expectedFamilyGuids.reduce(
+            (acc, family) => ({ ...acc, [family]: { loaded: true, noteVariants: loadNotes } }), {},
+          ),
         })
       }
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
@@ -203,7 +204,9 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
     dispatch({ type: REQUEST_MME_MATCHES })
     new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${submissionGuid}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: { loaded: true, noteVariants: true } } })
+        dispatch({
+          type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: { loaded: true, noteVariants: true } },
+        })
         dispatch({
           type: RECEIVE_DATA,
           updatesById: responseJson,

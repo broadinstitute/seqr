@@ -62,8 +62,9 @@ const mapDispatchToProps = {
 
 export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
 
-
-const SavedSearches = React.memo(({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) => (
+const SavedSearches = React.memo((
+  { options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange },
+) => (
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
     <Select
       includeCategories
@@ -91,8 +92,8 @@ const mapDropdownStateToProps = state => ({
   savedSearchesByGuid: getSavedSearchesByGuid(state),
   selectedSearch: getCurrentSavedSearch(state),
   loading: getSavedSearchesIsLoading(state),
-  errorMessage: getSavedSearchesLoadingError(state) }
-)
+  errorMessage: getSavedSearchesLoadingError(state),
+})
 
 const mapDropdownDispatchToProps = {
   load: loadSavedSearches,

@@ -14,6 +14,7 @@ import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 
 class Project extends React.PureComponent {
+
   static propTypes = {
     project: PropTypes.object,
     match: PropTypes.object,
@@ -45,11 +46,13 @@ class Project extends React.PureComponent {
           <Route component={() => <Error404 />} />
         </Switch>
       )
-    } else if (this.props.loading) {
+    }
+    if (this.props.loading) {
       return <Loader inline="centered" active />
     }
     return <Error404 />
   }
+
 }
 
 const mapDispatchToProps = {

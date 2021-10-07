@@ -11,7 +11,6 @@ const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
 const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
 const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
-
 // Data actions
 export const loadElasticsearchStatus = () => (dispatch) => {
   dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })

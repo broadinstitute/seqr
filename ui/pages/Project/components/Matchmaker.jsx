@@ -350,7 +350,9 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) => (
+const BaseMatchmakerIndividual = React.memo((
+  { loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission },
+) => (
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />

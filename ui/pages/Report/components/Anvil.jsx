@@ -8,6 +8,7 @@ import { InlineHeader } from 'shared/components/StyledComponents'
 const SEARCH_CATEGORIES = ['projects']
 
 class Anvil extends React.PureComponent {
+
   constructor(props) {
     super(props)
     this.state = {}
@@ -45,6 +46,7 @@ class Anvil extends React.PureComponent {
       </div>
     )
   }
+
 }
 
 export default Anvil

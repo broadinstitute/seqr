@@ -138,12 +138,13 @@ export const loadSavedSearches = () => (dispatch, getState) => {
   }
 }
 
-
 // reducers
 
 export const reducers = {
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
-  multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
+  multiProjectSearchContextLoading: loadingReducer(
+    REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT,
+  ),
   flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
 }
 

@@ -19,8 +19,9 @@ import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getInputProjectsCount } from '../../selectors'
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
 
-
-const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
+const ProjectFamiliesFilterInput = React.memo((
+  { familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props },
+) => {
   const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
   const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
@@ -35,8 +36,12 @@ const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOpt
       const newGroupGuid = analysisGroups.find(analysisGroupGuid => !selectedAnalysisGroups.includes(analysisGroupGuid))
       onFamiliesChange([...new Set([...value.familyGuids, ...projectAnalysisGroupsByGuid[newGroupGuid].familyGuids])])
     } else if (analysisGroups.length < selectedAnalysisGroups.length) {
-      const removedGroupGuid = selectedAnalysisGroups.find(analysisGroupGuid => !analysisGroups.includes(analysisGroupGuid))
-      onFamiliesChange(value.familyGuids.filter(familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid)))
+      const removedGroupGuid = selectedAnalysisGroups.find(
+        analysisGroupGuid => !analysisGroups.includes(analysisGroupGuid),
+      )
+      onFamiliesChange(value.familyGuids.filter(
+        familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid),
+      ))
     }
   }
 
@@ -134,6 +139,7 @@ const PROJECT_FAMILIES_FIELD = {
 }
 
 class AllProjectFamiliesField extends React.PureComponent {
+
   state = { viewAllProjects: false }
 
   viewProjects = (e) => {
@@ -145,6 +151,7 @@ class AllProjectFamiliesField extends React.PureComponent {
     return this.props.numProjects < 20 || this.state.viewAllProjects ?
       configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${this.props.numProjects} searched projects`} />
   }
+
 }
 
 AllProjectFamiliesField.propTypes = {

@@ -33,7 +33,7 @@ export class BaseSemanticInput extends React.Component {
       if (nextProps.options.length !== (this.props.options || []).length) {
         return true
       }
-      Object.entries(nextProps.options).forEach(([i, opt]) => { //eslint-disable-line consistent-return
+      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
         if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== this.props.options[i][k])) {
           return true
         }
@@ -44,6 +44,7 @@ export class BaseSemanticInput extends React.Component {
     }
     return nextState !== this.state
   }
+
 }
 
 export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) => (
@@ -121,6 +122,7 @@ Select.propTypes = {
 }
 
 export class Multiselect extends React.PureComponent {
+
   static propTypes = {
     color: PropTypes.string,
     allowAdditions: PropTypes.bool,
@@ -136,6 +138,7 @@ export class Multiselect extends React.PureComponent {
       multiple
     />
   }
+
 }
 
 export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect {...props} />)`
@@ -154,6 +157,7 @@ export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect 
 `
 
 export class AddableSelect extends React.PureComponent {
+
   static propTypes = {
     options: PropTypes.array,
     allowAdditions: PropTypes.bool,
@@ -166,7 +170,9 @@ export class AddableSelect extends React.PureComponent {
 
     let { options } = props
     if (props.addValueOptions && props.value) {
-      const valueOptions = props.value.filter(val => !props.options.some(({ value }) => value === val)).map(value => ({ value }))
+      const valueOptions = props.value.filter(
+        val => !props.options.some(({ value }) => value === val),
+      ).map(value => ({ value }))
       options = [...options, ...valueOptions]
     }
     this.state = { options }
@@ -198,10 +204,11 @@ export class AddableSelect extends React.PureComponent {
       this.resetOptions()
     }
   }
+
 }
 
-
 export class SearchInput extends React.PureComponent {
+
   static propTypes = {
     onChange: PropTypes.func,
     options: PropTypes.array,
@@ -229,6 +236,7 @@ export class SearchInput extends React.PureComponent {
       onSearchChange={this.handleSearchChange}
     />
   }
+
 }
 
 const YEAR_OPTIONS = [...Array(130).keys()].map(i => ({ value: i + 1900 }))
@@ -237,7 +245,8 @@ const YEAR_OPTIONS_ALIVE = [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS_UNKNOW
 const yearOptions = (includeAlive, includeUnknown) => {
   if (includeAlive) {
     return YEAR_OPTIONS_ALIVE
-  } else if (includeUnknown) {
+  }
+  if (includeUnknown) {
     return YEAR_OPTIONS_UNKNOWN
   }
   return YEAR_OPTIONS
@@ -388,7 +397,14 @@ const RadioButtonGroup = styled(({ radioLabelStyle, ...props }) => <Button.Group
 
 export const ButtonRadioGroup = React.memo(({ label, radioLabelStyle, ...props }) => {
   const formGroupAs = groupProps => <RadioButtonGroup radioLabelStyle={radioLabelStyle} {...groupProps} />
-  return <BaseRadioGroup as={Button} formGroupAs={formGroupAs} getOptionProps={getButtonRadioOptionProps(label)} {...props} />
+  return (
+    <BaseRadioGroup
+      as={Button}
+      formGroupAs={formGroupAs}
+      getOptionProps={getButtonRadioOptionProps(label)}
+      {...props}
+    />
+  )
 })
 
 ButtonRadioGroup.propTypes = {
@@ -527,4 +543,3 @@ JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   onChange: PropTypes.func,
 }
-

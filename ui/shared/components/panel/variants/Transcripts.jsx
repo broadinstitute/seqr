@@ -12,7 +12,6 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence } from './Annotations'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
 
-
 export const TranscriptLink = styled.a.attrs(({ variant, transcript }) => ({
   target: '_blank',
   href: `http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`,
@@ -93,8 +92,10 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
                     <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
                   </AnnotationSection>
                   <AnnotationSection>
-                    <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
-                    <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
+                    <AnnotationLabel>HGVS.C</AnnotationLabel>
+                    {transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
+                    <AnnotationLabel>HGVS.P</AnnotationLabel>
+                    {transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
                   </AnnotationSection>
                 </Table.Cell>
               </Table.Row>
@@ -124,4 +125,3 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transcripts)
-

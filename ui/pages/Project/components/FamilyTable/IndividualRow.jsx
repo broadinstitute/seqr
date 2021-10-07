@@ -37,7 +37,6 @@ import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
-
 const Detail = styled.div`
   display: inline-block;
   padding: 5px 0 5px 5px;
@@ -236,10 +235,7 @@ GeneEntry.propTypes = {
 const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) => Object.values(getHpoTermsForCategory(
   (features || []).map((term, index) => ({ ...term, index })),
   nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
-)).reduce((acc, { categoryName, terms }) => {
-  terms[0].categoryName = categoryName
-  return [...acc, ...terms]
-}, [])
+)).reduce((acc, { categoryName, terms }) => [...acc, { ...terms[0], categoryName }, ...terms.slice(1)], [])
 
 const HPO_QUALIFIERS = [
   {
@@ -358,9 +354,9 @@ const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) => (
   <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
     {Object.values(hpoTerms || {}).length > 0 &&
       <Tab.Pane attached={false}>
-        {Object.values(hpoTerms).map(
-          term => <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />,
-        )}
+        {Object.values(hpoTerms).map(term => (
+          <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />
+        ))}
       </Tab.Pane>
     }
   </DataLoader>)
@@ -470,6 +466,7 @@ class HpoTermsEditor extends React.PureComponent {
       </div>
     )
   }
+
 }
 
 const YEAR_SELECTOR_PROPS = {
@@ -655,16 +652,18 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   candidateGenes: GENES_FIELD,
 }
 
-const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
-  const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-  const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
-  if (subFields) {
-    formattedField.formFields = subFields.map(subField => (
-      { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
-    ))
-  }
-  return formattedField
-})
+const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
+  ({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
+    const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
+    const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
+    if (subFields) {
+      formattedField.formFields = subFields.map(subField => (
+        { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
+      ))
+    }
+    return formattedField
+  },
+)
 
 const CASE_REVIEW_FIELDS = [
   {
@@ -767,7 +766,6 @@ const mapStateToProps = (state, ownProps) => ({
   samplesByGuid: getSamplesByGuid(state),
   mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
 })
-
 
 const mapDispatchToProps = {
   dispatchUpdateIndividual: updateIndividual,

@@ -39,7 +39,8 @@ const StyledDataTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
+const getRowColumnContent = (row, isExport) => col => (
+  (col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
 
 class DataTable extends React.PureComponent {
 
@@ -203,6 +204,7 @@ class DataTable extends React.PureComponent {
 
     const hasFooter = footer || isPaginated
     const filterInput = getRowFilterVal && <Form.Input label="Filter: " inline onChange={this.handleFilter} />
+    const rowSummary = `${((activePage - 1) * rowsPerPage) + 1}-${Math.min(activePage * rowsPerPage, totalRows)}`
 
     return (
       <TableContainer horizontalScroll={horizontalScroll}>
@@ -222,7 +224,16 @@ class DataTable extends React.PureComponent {
           <Table.Header>
             <Table.Row>
               {selectRows &&
-                <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
+                <Table.HeaderCell
+                  width={1}
+                  content={
+                    <Checkbox
+                      checked={this.allSelected()}
+                      indeterminate={this.someSelected()}
+                      onClick={this.selectAll}
+                    />
+                  }
+                />
               }
               {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) => (
                 <Table.HeaderCell
@@ -247,7 +258,7 @@ class DataTable extends React.PureComponent {
                 <Table.HeaderCell collapsing={!rowsPerPage} textAlign="right">
                   {isPaginated &&
                     <div>
-                      Showing rows {((activePage - 1) * rowsPerPage) + 1}-{Math.min(activePage * rowsPerPage, totalRows)}
+                      Showing rows {rowSummary}
                       &nbsp; &nbsp;
                       <Pagination
                         activePage={activePage}
@@ -265,6 +276,7 @@ class DataTable extends React.PureComponent {
       </TableContainer>
     )
   }
+
 }
 
 export default DataTable

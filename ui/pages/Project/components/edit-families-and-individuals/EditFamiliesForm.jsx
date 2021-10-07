@@ -8,7 +8,6 @@ import { FAMILY_FIELDS } from '../../constants'
 import { updateFamilies } from '../../reducers'
 import { getProjectFamiliesByGuid } from '../../selectors'
 
-
 const EditFamiliesForm = React.memo(props => (
   <EditRecordsForm
     formName="editFamilies"

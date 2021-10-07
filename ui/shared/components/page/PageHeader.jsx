@@ -16,7 +16,6 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
-
 const PageHeaderRow = styled(Grid.Row)`
   padding: 9px;
   background-color: #F7F7F7;
@@ -133,7 +132,6 @@ PageHeaderLayout.propTypes = {
   button: PropTypes.node,
   description: PropTypes.string,
 }
-
 
 const BaseGenePageHeader = React.memo(({ gene, match }) => (
   <PageHeaderLayout

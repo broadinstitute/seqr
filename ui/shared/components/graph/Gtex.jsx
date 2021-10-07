@@ -5,7 +5,6 @@ import { Segment } from 'semantic-ui-react'
 import { launch } from 'gtex-d3/src/GeneExpressionViolinPlot'
 import 'gtex-d3/css/violin.css'
 
-
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const GtexContainer = styled(Segment)`
@@ -136,6 +135,7 @@ class Gtex extends React.PureComponent {
         launchGtex(this.props.geneId)
       }).get({ format: 'json', geneId: this.props.geneId })
   }
+
 }
 
 export default Gtex

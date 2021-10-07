@@ -8,7 +8,6 @@ import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListTables from 'shared/components/table/LocusListTables'
 
-
 const LOCUS_LIST_TABLE_BUTTONS = { My: <CreateLocusListButton /> }
 
 const LocusLists = ({ match }) => (

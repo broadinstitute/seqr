@@ -9,7 +9,6 @@ import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
 
-
 const IndividualsContainer = styled.div`
   display: inline-block;
   padding: 0 10px;
@@ -243,7 +242,6 @@ Genotype.propTypes = {
   isCompoundHet: PropTypes.bool,
 }
 
-
 const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual => (
@@ -279,11 +277,15 @@ const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals
 const VariantIndividuals = React.memo(({ variant, isCompoundHet }) => (
   <span>
     {variant.familyGuids.map(familyGuid => (
-      <FamilyVariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />
+      <FamilyVariantIndividuals
+        key={familyGuid}
+        familyGuid={familyGuid}
+        variant={variant}
+        isCompoundHet={isCompoundHet}
+      />
     ))}
   </span>
 ))
-
 
 VariantIndividuals.propTypes = {
   variant: PropTypes.object,

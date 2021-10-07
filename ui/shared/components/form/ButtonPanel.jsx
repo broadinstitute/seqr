@@ -5,7 +5,6 @@ import styled from 'styled-components'
 import { Button } from 'semantic-ui-react'
 import RequestStatus from '../panel/RequestStatus'
 
-
 const ContainerDiv = styled.div`
   position: absolute;
   bottom: 0;
@@ -46,6 +45,7 @@ class ButtonPanel extends React.PureComponent {
         <StyledRequestStatus status={this.props.saveStatus} errorMessage={this.props.saveErrorMessage} />
       </ContainerDiv>)
   }
+
 }
 
 export default ButtonPanel

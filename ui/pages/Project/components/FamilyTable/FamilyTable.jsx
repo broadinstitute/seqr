@@ -15,7 +15,6 @@ import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
 
-
 const ExportContainer = styled.span`
   float: right;
   padding-bottom: 15px;
@@ -66,6 +65,7 @@ class FamilyTableRow extends React.PureComponent {
       </Table.Row>
     )
   }
+
 }
 
 FamilyTableRow.propTypes = {
@@ -126,7 +126,6 @@ const FamilyTable = React.memo((
     </Table>
   </div>
 ))
-
 
 export { FamilyTable as FamilyTableComponent }
 

@@ -45,7 +45,9 @@ const renderField = (props) => {
     onChange(data)
     submitForm({ [props.input.name]: data })
   } : onChange
-  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps })
+  return createElement(fieldComponent, {
+    error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps,
+  })
 }
 
 renderField.propTypes = {
@@ -57,13 +59,17 @@ renderField.propTypes = {
 
 export const helpLabel = (label, labelHelp) => (
   labelHelp ?
-    <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-    : label
+    <label>
+      {label}
+      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
+    </label> : label
 )
 
 export const configuredField = (field, formProps = {}) => {
-  const { component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
-    ...fieldProps } = field
+  const {
+    component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
+    ...fieldProps
+  } = field
   const baseProps = {
     key: key || name,
     name,
@@ -99,14 +105,14 @@ class ReduxFormWrapper extends React.Component {
 
   static propTypes = {
     /* A unique string identifier for the form */
-    form: PropTypes.string.isRequired, //eslint-disable-line react/no-unused-prop-types
+    form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
-    modalName: PropTypes.string, //eslint-disable-line react/no-unused-prop-types
+    modalName: PropTypes.string, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
-    /* Note that this is different from handleSubmit, which is a redux-form supplied handler that should never be overridden */
-    onSubmit: PropTypes.func.isRequired, //eslint-disable-line react/no-unused-prop-types
+    /* Note that this differs from handleSubmit, which is a redux-form supplied handler that shouldn't be overridden */
+    onSubmit: PropTypes.func.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback for when the cancel button is selected */
     handleClose: PropTypes.func.isRequired,
@@ -142,7 +148,7 @@ class ReduxFormWrapper extends React.Component {
 
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
-    fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
+    fields: PropTypes.arrayOf(PropTypes.object), // eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
     children: PropTypes.node,
@@ -263,7 +269,8 @@ class ReduxFormWrapper extends React.Component {
       return true
     }
     if (listUpdateProps.some(k => (
-      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ? nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
+      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ?
+        nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
     ))) {
       return true
     }
@@ -284,6 +291,7 @@ class ReduxFormWrapper extends React.Component {
       }
     }
   }
+
 }
 
 const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
@@ -301,7 +309,8 @@ const getValidationWarnings = createSelector(
 )
 
 // redux-form does not support throwing submission warnings so this is a work around
-const getSubmissionWarnings = (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
+const getSubmissionWarnings =
+  (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
 const getSubmissionErrors = (state, props) => props.error && props.error.filter(error => !error.warning)
 
 const getErrors = (submissionErrors, validationErrors) => (
@@ -318,7 +327,6 @@ const getWarningMessages = createSelector(
   getErrors,
 )
 
-
 const mapStateToProps = (state, ownProps) => ({
   errorMessages: getErrorMessages(state, ownProps),
   warningMessages: getWarningMessages(state, ownProps),
@@ -332,6 +340,5 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
   },
 })
-
 
 export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))

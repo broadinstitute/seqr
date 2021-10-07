@@ -6,10 +6,10 @@ import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { VEP_GROUP_SV } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
-const SearchResultsLink = (
-  { buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
-    familyGuids, projectFamilies, inheritanceMode, ...props },
-  ) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
+const SearchResultsLink = ({
+  buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
+  familyGuids, projectFamilies, inheritanceMode, ...props
+}) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
@@ -28,7 +28,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   openSearchResults: () => {
     const search = {
       ...(ownProps.initialSearch || {}),
-      locus: { rawItems: ownProps.location, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion },
+      locus: {
+        rawItems: ownProps.location, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion,
+      },
     }
     if (ownProps.svType) {
       search.annotations = { [VEP_GROUP_SV]: [ownProps.svType] }
@@ -43,6 +45,5 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     ))
   },
 })
-
 
 export default connect(null, mapDispatchToProps)(SearchResultsLink)

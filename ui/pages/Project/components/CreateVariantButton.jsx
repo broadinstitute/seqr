@@ -234,7 +234,6 @@ BaseCreateVariantButton.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-
 const mapStateToProps = state => ({
   user: getUser(state),
   initialValues: getCurrentProject(state),
@@ -275,7 +274,6 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 
 const CreateVariantButton = connect(mapStateToProps, mapDispatchToProps)(BaseCreateVariantButton)
 
-
 const CreateVariantButtons = React.memo(({ family }) => ([
   <CreateVariantButton key="SNV" family={family} variantType="Variant" formFields={SNV_FIELDS} />,
   <CreateVariantButton key="SV" family={family} variantType="SV" formFields={SV_FIELDS} />,
@@ -284,6 +282,5 @@ const CreateVariantButtons = React.memo(({ family }) => ([
 CreateVariantButtons.propTypes = {
   family: PropTypes.object,
 }
-
 
 export default CreateVariantButtons

@@ -15,9 +15,11 @@ import StateChangeForm from '../../form/StateChangeForm'
 import { HorizontalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import Variants from './Variants'
-import { getPairedSelectedSavedVariants, getPairedFilteredSavedVariants, getSavedVariantTableState,
+import {
+  getPairedSelectedSavedVariants, getPairedFilteredSavedVariants, getSavedVariantTableState,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
-  getVisibleSortedSavedVariants } from './selectors'
+  getVisibleSortedSavedVariants,
+} from './selectors'
 
 const ALL_FILTER = 'ALL'
 
@@ -133,6 +135,7 @@ class SavedVariants extends React.PureComponent {
       </Grid>
     )
   }
+
 }
 
 const mapStateToProps = (state, ownProps) => ({

@@ -36,11 +36,9 @@ const LoginError = ({ location, match }) => (
   </Segment>
 )
 
-
 LoginError.propTypes = {
   location: PropTypes.object,
   match: PropTypes.object,
 }
-
 
 export default LoginError

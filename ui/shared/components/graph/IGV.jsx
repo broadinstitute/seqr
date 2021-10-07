@@ -59,9 +59,9 @@ class IGV extends React.PureComponent {
       this.props.tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.loadTrack(track)
       })
-
     }
   }
+
 }
 
 export default IGV

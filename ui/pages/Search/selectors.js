@@ -38,19 +38,22 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
       projectGuid: params.projectGuid,
       familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
     }
-  } else if (params.analysisGroupGuid) {
+  }
+  if (params.analysisGroupGuid) {
     const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
     return analysisGroup ? {
       projectGuid: analysisGroup.projectGuid,
       familyGuids: analysisGroup.familyGuids,
     } : { analysisGroupGuid: params.analysisGroupGuid }
-  } else if (params.familyGuid || params.familyGuids) {
+  }
+  if (params.familyGuid || params.familyGuids) {
     const familyGuid = params.familyGuid || params.familyGuids[0]
     return {
       projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
       familyGuids: [familyGuid],
     }
-  } else if (params.searchHash) {
+  }
+  if (params.searchHash) {
     return params
   }
   return null
@@ -63,7 +66,6 @@ export const getIntitialSearch = createSelector(
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
   (urlParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
-
     if (searchParams) {
       return searchParams
     }
@@ -81,7 +83,9 @@ export const getSearchInput = state => formValueSelector(SEARCH_FORM_NAME)(state
 export const getCurrentSavedSearch = createSelector(
   getSearchInput,
   getSavedSearchesByGuid,
-  (search, savedSearchesByGuid) => Object.values(savedSearchesByGuid).find(savedSearch => savedSearch.search === search),
+  (search, savedSearchesByGuid) => Object.values(savedSearchesByGuid).find(
+    savedSearch => savedSearch.search === search,
+  ),
 )
 
 const createListEqualSelector = createSelectorCreator(

@@ -12,7 +12,6 @@ import DiscoverySheet from './components/DiscoverySheet'
 import SampleMetadata from './components/SampleMetadata'
 import SeqrStats from './components/SeqrStats'
 
-
 export const REPORT_PAGES = [
   { path: 'anvil', component: Anvil },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },

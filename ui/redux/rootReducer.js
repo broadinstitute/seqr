@@ -39,24 +39,21 @@ const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 
-
 // action creators
 
 // A helper action that handles create, update and delete requests
 export const updateEntity = (
   values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath,
 ) => (dispatch, getState) => {
-  if (getUrlPath) {
-    urlPath = getUrlPath(getState())
-  }
-
   let action = 'create'
+  let subPath = ''
   if (values[idField]) {
-    urlPath = `${urlPath}/${values[idField]}`
+    subPath = `/${values[idField]}`
     action = values.delete ? 'delete' : 'update'
   }
 
-  return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
+  const url = `${getUrlPath ? getUrlPath(getState()) : urlPath}${subPath}/${action}${actionSuffix || ''}`
+  return new HttpRequestHelper(url,
     (responseJson) => {
       dispatch({ type: receiveDataAction, updatesById: responseJson })
     },
@@ -64,7 +61,6 @@ export const updateEntity = (
       throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
-
 
 export const fetchProjects = () => (dispatch) => {
   dispatch({ type: REQUEST_PROJECTS })
@@ -189,7 +185,8 @@ export const loadLocusListItems = locusListId => (dispatch, getState) => {
     return
   }
   const locusList = getState().locusListsByGuid[locusListId]
-  const isLoaded = locusList && locusList.items && (!locusList.paLocusList || locusList.items.some(({ pagene }) => pagene))
+  const isLoaded = locusList && locusList.items &&
+    (!locusList.paLocusList || locusList.items.some(({ pagene }) => pagene))
   if (!isLoaded) {
     dispatch({ type: REQUEST_GENE_LIST })
     new HttpRequestHelper(`/api/locus_lists/${locusListId}`,
@@ -335,7 +332,7 @@ export const updateLocusList = values => (dispatch) => {
 }
 
 // root reducer
-const rootReducer = combineReducers(Object.assign({
+const rootReducer = combineReducers({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
@@ -378,6 +375,13 @@ const rootReducer = combineReducers(Object.assign({
     page: 1,
     recordsPerPage: 100,
   }, false),
-}, modalReducers, dashboardReducers, projectReducers, searchReducers, reportReducers, dataManagementReducers, summaryDataReducers))
+  ...modalReducers,
+  ...dashboardReducers,
+  ...projectReducers,
+  ...searchReducers,
+  ...reportReducers,
+  ...dataManagementReducers,
+  ...summaryDataReducers,
+})
 
 export default rootReducer

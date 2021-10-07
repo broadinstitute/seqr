@@ -145,4 +145,3 @@ HeaderFrequencyFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
 }
-

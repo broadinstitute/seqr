@@ -36,7 +36,9 @@ AddElementButton.propTypes = {
   addElement: PropTypes.func,
 }
 
-const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, ...props }) => {
+const ListFieldView = React.memo((
+  { addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, ...props },
+) => {
   const fields = [{
     name: props.field,
     isArrayField: true,

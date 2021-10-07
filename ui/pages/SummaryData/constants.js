@@ -9,8 +9,8 @@ const formatIDLink =
 const formatSuccessStoryTypes =
   row => row.success_story_types && row.success_story_types.map(tag => <div>{successStoryTypeDisplay(tag)}</div>)
 
-const formatDiscoveryTags =
-  row => row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
+const formatDiscoveryTags = row => row.extras_variant_tag_list &&
+  <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
 
 export const SUCCESS_STORY_COLUMNS = [
   { name: 'family_id', content: 'Family ID', format: formatIDLink, noFormatExport: true, style: { minWidth: '200px' } },

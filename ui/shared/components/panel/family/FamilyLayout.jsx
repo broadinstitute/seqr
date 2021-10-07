@@ -18,7 +18,9 @@ const getContentWidth = (useFullWidth, leftContent, rightContent) => {
   return 16
 }
 
-const FamilyLayout = React.memo(({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) => (
+const FamilyLayout = React.memo((
+  { leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact },
+) => (
   <div>
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
@@ -26,7 +28,10 @@ const FamilyLayout = React.memo(({ leftContent, rightContent, annotation, offset
         {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
         {compact ? fields.map(
           field => <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) :
+        <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>
+          {fields.map(field => fieldDisplay(field))}
+        </Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>

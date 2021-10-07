@@ -71,7 +71,9 @@ MetadataField.propTypes = {
   error: PropTypes.bool,
 }
 
-export const TagFieldDisplay = React.memo(({ displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata }) => (
+export const TagFieldDisplay = React.memo((
+  { displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata },
+) => (
   <span>
     {displayFieldValues.map((tag) => {
       let content = tag.name || tag.text
@@ -100,14 +102,16 @@ TagFieldDisplay.propTypes = {
   displayMetadata: PropTypes.bool,
 }
 
-const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props }) => {
+const TagFieldView = React.memo((
+  { simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props },
+) => {
   const fieldValues = (initialValues || {})[field] || []
 
-  tagOptions = tagOptions.map(
+  const tagSelectOptions = tagOptions.map(
     (tag, i) => ({ ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }),
   )
 
-  const tagOptionsMap = tagOptions.reduce((acc, tag) => ({ [tag.name]: tag, ...acc }), {})
+  const tagOptionsMap = tagSelectOptions.reduce((acc, tag) => ({ [tag.name]: tag, ...acc }), {})
 
   const mappedValues = {
     ...initialValues,
@@ -122,7 +126,11 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     {
       component: LargeMultiselect,
       defaultOpen: true,
-      normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
+      normalize: (value, previousValue, allValues, previousAllValues) => value.map(
+        option => previousAllValues[field].find(
+          prevFieldValue => prevFieldValue.name === option,
+        ) || tagOptionsMap[option],
+      ),
       format: options => options.map(tag => tag.name),
     }
 
@@ -130,7 +138,7 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
     formFieldProps.validate = validate
   }
 
-  const additionalFields = tagOptions.some(({ metadataTitle }) => metadataTitle) ? [{
+  const additionalFields = tagSelectOptions.some(({ metadataTitle }) => metadataTitle) ? [{
     name: field,
     key: 'test',
     isArrayField: true,
@@ -140,14 +148,19 @@ const TagFieldView = React.memo(({ simplifiedValue, initialValues, field, tagOpt
 
   return <OptionFieldView
     field={field}
-    tagOptions={tagOptions}
+    tagOptions={tagSelectOptions}
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
-    fieldDisplay={
-      displayFieldValues => <TagFieldDisplay displayFieldValues={displayFieldValues} popup={popup} tagAnnotation={tagAnnotation} displayMetadata={displayMetadata} />
-    }
+    fieldDisplay={displayFieldValues => (
+      <TagFieldDisplay
+        displayFieldValues={displayFieldValues}
+        popup={popup}
+        tagAnnotation={tagAnnotation}
+        displayMetadata={displayMetadata}
+      />
+    )}
     {...props}
   />
 })

@@ -10,7 +10,6 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
 
-
 const PredictionValue = styled.span`
   font-weight: bolder;
   color: black;
@@ -19,8 +18,9 @@ const PredictionValue = styled.span`
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
-
-const predictionFieldValue = (predictions, { field, dangerThreshold, warningThreshold, indicatorMap, noSeverity, infoField, infoTitle }) => {
+const predictionFieldValue = (
+  predictions, { field, dangerThreshold, warningThreshold, indicatorMap, noSeverity, infoField, infoTitle },
+) => {
   let value = predictions[field]
   if (noSeverity || value === null || value === undefined) {
     return { value }
@@ -39,7 +39,8 @@ const predictionFieldValue = (predictions, { field, dangerThreshold, warningThre
     return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
   }
 
-  return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } : PREDICTION_INDICATOR_MAP[value[0]]
+  return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } :
+    PREDICTION_INDICATOR_MAP[value[0]]
 }
 
 const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
@@ -66,7 +67,6 @@ const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshol
     </div>
   )
 }
-
 
 Prediction.propTypes = {
   field: PropTypes.string.isRequired,
@@ -97,6 +97,7 @@ const PREDICTOR_FIELDS = [
 ]
 
 class Predictions extends React.PureComponent {
+
   static propTypes = {
     variant: PropTypes.object,
     gene: PropTypes.object,
@@ -155,6 +156,7 @@ class Predictions extends React.PureComponent {
       </div>
     )
   }
+
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -162,4 +164,3 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 export default connect(mapStateToProps)(Predictions)
-

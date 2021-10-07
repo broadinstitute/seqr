@@ -28,7 +28,6 @@ import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 import VariantTagTypeBar from './VariantTagTypeBar'
 
-
 const ProjectSectionComponent = React.memo((
   { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
 ) => ([
@@ -139,4 +138,3 @@ const mapStateToProps = (state, ownProps) => ({
 export { ProjectPageUI as ProjectPageUIComponent }
 
 export default connect(mapStateToProps)(ProjectPageUI)
-

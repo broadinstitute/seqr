@@ -4,8 +4,9 @@ import PropTypes from 'prop-types'
 import { Select } from '../../form/Inputs'
 import BaseFieldView from './BaseFieldView'
 
-const OptionFieldView = React.memo(({ field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props }) => {
-
+const OptionFieldView = React.memo((
+  { field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props },
+) => {
   const tagSelectOptions = tagOptions.map(({ name, ...tag }) => ({ value: name, text: name, ...tag }))
 
   const fields = [

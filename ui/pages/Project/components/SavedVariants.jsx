@@ -175,7 +175,9 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       tagOptions={tagOptions}
       filters={NON_DISCOVERY_FILTER_FIELDS}
       discoveryFilters={FILTER_FIELDS}
-      additionalFilter={(project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null}
+      additionalFilter={
+        (project.canEdit && familyGuid) ? <LinkSavedVariants familyGuid={familyGuid} {...props} /> : null
+      }
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}

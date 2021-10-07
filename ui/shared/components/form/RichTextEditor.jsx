@@ -18,6 +18,7 @@ const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
  https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
  */
 class RichTextEditor extends React.PureComponent {
+
   static propTypes = {
     value: PropTypes.string,
     onChange: PropTypes.func,
@@ -111,6 +112,7 @@ class RichTextEditor extends React.PureComponent {
   componentDidMount() {
     this.editor.focus()
   }
+
 }
 
 const InlineStyleButtonPanel = React.memo(props => (

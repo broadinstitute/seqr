@@ -75,9 +75,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
   )
 })
 
-
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
-
 
 ProjectEllipsisMenu.propTypes = {
   user: PropTypes.object.isRequired,

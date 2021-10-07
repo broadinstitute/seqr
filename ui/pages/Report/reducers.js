@@ -14,7 +14,6 @@ const RECEIVE_SEARCH_HASH_CONTEXT = 'RECEIVE_SEARCH_HASH_CONTEXT'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
-
 // Data actions
 const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
   if (projectGuid === 'all') {
@@ -35,9 +34,6 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
           () => Promise.all(projectsChunk.map(cmgProjectGuid => new HttpRequestHelper(
             `/api/report/${urlPath}/${cmgProjectGuid}`,
             (responseJson) => {
-              if (responseJson.errors && responseJson.errors.length) {
-                console.log(responseJson.errors)
-              }
               rows.push(...responseJson.rows)
             },
             e => errors.add(e.message),
@@ -57,7 +53,6 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
     dispatch({ type: requestAction })
     new HttpRequestHelper(`/api/report/${urlPath}/${projectGuid}`,
       (responseJson) => {
-        console.log(responseJson.errors)
         dispatch({ type: receiveAction, newValue: responseJson.rows })
       },
       (e) => {
@@ -78,7 +73,7 @@ export const loadSeqrStats = () => (dispatch) => {
     },
     (e) => {
       dispatch({ type: RECEIVE_SEQR_STATS, error: e.message, newValue: {} })
-  }).get()
+    }).get()
 }
 
 export const loadSearchHashContext = searchHash => (dispatch, getState) => {

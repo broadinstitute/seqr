@@ -5,7 +5,6 @@ import { Confirm } from 'semantic-ui-react'
 import RequestStatus, { NONE, SUCCEEDED, ERROR, IN_PROGRESS } from '../panel/RequestStatus'
 import { ButtonLink } from '../StyledComponents'
 
-
 class DispatchRequestButton extends React.PureComponent {
 
   static propTypes = {
@@ -24,7 +23,7 @@ class DispatchRequestButton extends React.PureComponent {
 
     buttonContainer: PropTypes.node,
 
-    /** Optional callback when request succeeds **/
+    /** Optional callback when request succeeds */
     onSuccess: PropTypes.func,
 
     hideNoRequestStatus: PropTypes.bool,
@@ -41,22 +40,29 @@ class DispatchRequestButton extends React.PureComponent {
   }
 
   render() {
-    const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, hideNoRequestStatus, ...props } = this.props
-    return React.cloneElement(buttonContainer || <span />, { children: [
-      children ?
-        React.cloneElement(children, { onClick: this.handleButtonClick, key: 'button' }) :
-        <ButtonLink key="button" onClick={this.handleButtonClick} content={buttonContent} {...props} />,
-      (!hideNoRequestStatus || this.state.requestStatus !== NONE) ?
-        <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
-        : null,
-      <Confirm
-        key="confirm"
-        content={confirmDialog}
-        open={this.state.isConfirmDialogVisible}
-        onConfirm={this.performAction}
-        onCancel={() => this.setState({ isConfirmDialogVisible: false })}
-      />,
-    ] })
+    const {
+      buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, hideNoRequestStatus, ...props
+    } = this.props
+    return React.cloneElement(buttonContainer || <span />, {
+      children: [
+        children ?
+          React.cloneElement(children, { onClick: this.handleButtonClick, key: 'button' }) :
+          <ButtonLink key="button" onClick={this.handleButtonClick} content={buttonContent} {...props} />,
+        (!hideNoRequestStatus || this.state.requestStatus !== NONE) ?
+          <RequestStatus
+            key="status"
+            status={this.state.requestStatus}
+            errorMessage={this.state.requestErrorMessage}
+          /> : null,
+        <Confirm
+          key="confirm"
+          content={confirmDialog}
+          open={this.state.isConfirmDialogVisible}
+          onConfirm={this.performAction}
+          onCancel={() => this.setState({ isConfirmDialogVisible: false })}
+        />,
+      ],
+    })
   }
 
   handleButtonClick = (event) => {
@@ -88,13 +94,19 @@ class DispatchRequestButton extends React.PureComponent {
 
   handleRequestError = (error) => {
     if (this.state.requestStatus !== NONE) {
-      this.setState({ requestStatus: ERROR, requestErrorMessage: ((error.errors || {})._error || [])[0] || error.message }) //eslint-disable-line no-underscore-dangle
+      this.setState({
+        requestStatus: ERROR,
+        requestErrorMessage: (
+          (error.errors || {})._error || [] // eslint-disable-line no-underscore-dangle
+        )[0] || error.message,
+      })
     }
   }
 
   handleReset = () => {
     this.setState({ requestStatus: NONE, requestErrorMessage: null })
   }
+
 }
 
 export default DispatchRequestButton

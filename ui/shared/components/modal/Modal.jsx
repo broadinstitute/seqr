@@ -7,6 +7,7 @@ import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal }
 import { ButtonLink } from '../StyledComponents'
 
 class CustomModal extends React.PureComponent {
+
   static propTypes = {
     trigger: PropTypes.node,
     popup: PropTypes.object,
@@ -56,6 +57,7 @@ class CustomModal extends React.PureComponent {
       </Modal>
     )
   }
+
 }
 
 const mapStateToProps = (state, ownProps) => ({

@@ -63,7 +63,9 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = React.memo(({ locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps }) => (
+const BaseLocusListLabels = React.memo((
+  { locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps },
+) => (
   compact ?
     <GeneDetailSection
       compact
@@ -103,7 +105,6 @@ const mapLocusListStateToProps = state => ({
 })
 
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
-
 
 const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
@@ -233,7 +234,12 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containe
         />
       ))}
       {showLocusLists && gene.locusListGuids.length > 0 &&
-        <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} containerStyle={INLINE_STYLE} {...labelProps} />
+        <LocusListLabels
+          locusListGuids={gene.locusListGuids}
+          compact={compact}
+          containerStyle={INLINE_STYLE}
+          {...labelProps}
+        />
       }
       {omimDetails && (compact ?
         <GeneDetailSection compact details={omimDetails} {...OMIM_SECTION} {...labelProps} /> :
@@ -258,9 +264,9 @@ GeneDetails.propTypes = {
 }
 
 const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInlineDetails, areCompoundHets }) => {
-
   const geneTranscripts = variant.transcripts[geneId]
-  const geneConsequence = geneTranscripts && geneTranscripts.length > 0 && (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
+  const geneConsequence = geneTranscripts && geneTranscripts.length > 0 &&
+    (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
@@ -294,7 +300,9 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
         />
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
         <Popup
-          trigger={<SearchResultsLink location={gene.geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />}
+          trigger={
+            <SearchResultsLink location={geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />
+          }
           content="Search for all variants in this gene present in any affected individual"
           size="tiny"
         />
@@ -341,7 +349,6 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
-
 
 class VariantGenes extends React.PureComponent {
 
@@ -407,16 +414,16 @@ class VariantGenes extends React.PureComponent {
                 {...sectionConfig}
               />
             )
-        })}
+          })}
         </div>
       </div>
     )
   }
+
 }
 
 const mapAllGenesStateToProps = state => ({
   genesById: getGenesById(state),
 })
-
 
 export default connect(mapAllGenesStateToProps)(VariantGenes)

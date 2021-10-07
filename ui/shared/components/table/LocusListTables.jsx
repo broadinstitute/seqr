@@ -106,7 +106,6 @@ LocusListTables.propTypes = {
   dispatch: PropTypes.func,
 }
 
-
 const mapStateToProps = (state, ownProps) => ({
   tableData: getLocusListTableData(state, ownProps),
   loading: getLocusListsIsLoading(state),

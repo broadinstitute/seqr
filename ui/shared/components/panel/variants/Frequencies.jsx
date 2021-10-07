@@ -6,7 +6,6 @@ import { Popup } from 'semantic-ui-react'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
-
 const FreqValue = styled.span`
   color: black;
 `
@@ -119,7 +118,6 @@ const gnomadLink = ({ fieldTitle, ...props }) => {
   return <span><FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} /> {detail}</span>
 }
 
-
 gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
 }
@@ -191,8 +189,7 @@ const Frequencies = React.memo(({ variant }) => {
             <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>
           ))}
         </Popup.Content>
-      </Popup>
-      : freqContent
+      </Popup> : freqContent
   )
 })
 

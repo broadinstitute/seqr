@@ -62,7 +62,8 @@ export const FILE_FORMATS = [
     formatLinks: [
       { href: 'https://en.wikipedia.org/wiki/Tab-separated_values', linkExt: 'tsv' },
       { href: 'https://en.wikipedia.org/wiki/Comma-separated_values', linkExt: 'csv' },
-    ] },
+    ],
+  },
 ]
 
 const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
@@ -318,7 +319,6 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
   },
 }
 
-
 export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
@@ -363,7 +363,8 @@ export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
 ]
 
 export const INDIVIDUAL_EXPORT_DATA = [].concat(
-  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
+  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG],
+  INDIVIDUAL_HPO_EXPORT_DATA,
 )
 
 // CLINVAR
@@ -389,7 +390,6 @@ export const CLINSIG_SEVERITY = {
   DFP: 0,
   DP: 0,
 }
-
 
 // LOCUS LISTS
 
@@ -476,7 +476,6 @@ export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
-
 
 const VEP_SV_TYPES = [
   {
@@ -729,7 +728,7 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'NMD_transcript_variant',
     so: 'SO:0001621',
   },
-  //2 kinds of 'non_coding_transcript_exon_variant' text due to value change in Ensembl v77
+  // 2 kinds of 'non_coding_transcript_exon_variant' text due to value change in Ensembl v77
   {
     description: 'A sequence variant that changes non-coding exon sequence',
     text: 'Non-coding exon variant',
@@ -855,7 +854,6 @@ export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
 
-
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
@@ -940,7 +938,8 @@ const VARIANT_SORT_OPTONS = [
     value: SORT_BY_PATHOGENICITY,
     text: 'Pathogenicity',
     comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) => (
-      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid)),
+      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid)
+    ),
   },
   {
     value: SORT_BY_CONSTRAINT,
@@ -1060,12 +1059,12 @@ export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selec
       entry => entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
     ) || [])[0]
   }
-  if (Object.keys(transcripts).length === 1 && Object.values(transcripts)[0] && Object.values(transcripts)[0].length === 0) {
+  const transcriptList = Object.values(transcripts)
+  if (Object.keys(transcripts).length === 1 && transcriptList[0] && transcriptList[0].length === 0) {
     return Object.keys(transcripts)[0]
   }
   return null
 }
-
 
 export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => flatten(
   Object.values(transcripts),
@@ -1196,4 +1195,3 @@ export const USER_NAME_FIELDS = [
     inline: true,
   },
 ]
-

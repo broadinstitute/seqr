@@ -30,7 +30,6 @@ import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/Ed
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
 import EditDatasetsButton from './EditDatasetsButton'
 
-
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
@@ -116,9 +115,9 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
     <DetailSection
       title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
       content={
-        sortBy(Object.keys(familySizeHistogram)).map(
-          size => <div key={size}>{familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}</div>,
-        )
+        sortBy(Object.keys(familySizeHistogram)).map(size => (
+          <div key={size}>{familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}</div>
+        ))
       }
       button={editIndividualsButton}
     />
@@ -159,8 +158,7 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
             <MatchmakerSubmissionOverview />
           </Modal>
           {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
-        </div>
-        : 'No Submissions'
+        </div> : 'No Submissions'
       }
     />
   )
@@ -178,7 +176,6 @@ const mapMatchmakerStateToProps = (state, ownProps) => ({
 const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
 const Dataset = React.memo(({ project, samplesByType, user }) => {
-
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
@@ -215,7 +212,8 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
           }
         </div>
       ),
-      key: 'blank' })
+      key: 'blank',
+    })
   }
 
   return datasetSections.map((sectionProps, i) => (

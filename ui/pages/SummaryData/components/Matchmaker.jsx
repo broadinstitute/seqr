@@ -40,7 +40,8 @@ const SUBMISSION_COLUMNS = [
     content: 'Genes',
     format: row => <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
   },
-  { name: 'phenotypes',
+  {
+    name: 'phenotypes',
     content: 'Phenotypes',
     format: row => <Phenotypes phenotypes={row.phenotypes} maxWidth="400px" />,
   },
@@ -52,7 +53,13 @@ const getRowFilterVal = row => row.geneSymbols + row.label
 const Matchmaker = React.memo(({ metrics, submissions, error, loading, load, user }) => (
   <div>
     {user.isAnalyst && <Header size="medium" content="Matchmaker Metrics:" /> }
-    <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error} hideError={!user.isAnalyst}>
+    <DataLoader
+      load={load}
+      content={Object.keys(metrics).length}
+      loading={loading}
+      errorMessage={error}
+      hideError={!user.isAnalyst}
+    >
       <Table collapsing basic="very">
         {METRICS_FIELDS.map(({ field, title, round }) => (
           <Table.Row key={field}>

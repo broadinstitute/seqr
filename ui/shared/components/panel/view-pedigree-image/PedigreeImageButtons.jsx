@@ -43,6 +43,7 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
       </Modal>
     )
   }
+
 }
 
 BaseEditPedigreeImageButton.propTypes = {
@@ -79,7 +80,6 @@ const mapDeleteDispatchToProps = (dispatch, ownProps) => ({
 })
 
 export const DeletePedigreeImageButton = connect(null, mapDeleteDispatchToProps)(BaseDeletePedigreeImageButton)
-
 
 const BaseSavePedigreeDatasetButton = React.memo(({ onSubmit, onSuccess }) => (
   <DispatchRequestButton

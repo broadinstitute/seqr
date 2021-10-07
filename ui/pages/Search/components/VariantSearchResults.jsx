@@ -19,7 +19,9 @@ const COMPOUND_HET_TOGGLE_FIELDS = [{
   labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
 }]
 
-const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props }) => {
+const BaseVariantSearchResults = React.memo((
+  { inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props },
+) => {
   const resultProps = {
     loadVariants: loadSearchedVariants,
     flattenCompoundHet,

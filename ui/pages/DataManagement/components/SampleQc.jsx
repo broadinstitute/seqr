@@ -8,7 +8,6 @@ import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWr
 import { getQcUploadStats } from '../selectors'
 import { uploadQcPipelineOutput } from '../reducers'
 
-
 const UPLOAD_FIELDS = [
   {
     name: 'file',

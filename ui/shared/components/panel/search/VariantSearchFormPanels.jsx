@@ -124,7 +124,7 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
 
 const MAX_FREQ_COMPONENTS_PER_ROW = 6
 
-//Layout the frequency filter fields into two rows.
+// Layout the frequency filter fields into two rows.
 const freqFieldLayout = fieldComponents => (
   <Form.Field>
     <Form.Group widths="equal">
@@ -145,7 +145,9 @@ export const ANNOTATION_PANEL = {
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  fieldLayout: annotationFieldLayout([
+    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+  ]),
 }
 
 export const FREQUENCY_PANEL = {
@@ -199,7 +201,9 @@ HeaderContent.propTypes = {
 }
 
 const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
-  const fieldComponents = fields && configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
+  const fieldComponents = fields && configuredFields(
+    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) },
+  )
   return (
     <FormSection name={name}>
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
@@ -221,6 +225,7 @@ PanelContent.propTypes = {
 }
 
 class VariantSearchFormPanels extends React.PureComponent {
+
   state = { active: {} }
 
   expandAll = (e) => {
@@ -237,7 +242,6 @@ class VariantSearchFormPanels extends React.PureComponent {
     const { active } = this.state
     this.setState({ active: { ...active, [name]: !active[name] } })
   }
-
 
   render() {
     return (
@@ -287,6 +291,7 @@ class VariantSearchFormPanels extends React.PureComponent {
       </div>
     )
   }
+
 }
 
 VariantSearchFormPanels.propTypes = {

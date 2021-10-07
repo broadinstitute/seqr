@@ -25,7 +25,6 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
   font-weight: normal !important;
 `
 
-
 // Allows dropdowns to be visible inside table cell
 const OverflowHeaderCell = styled(Table.HeaderCell)`
   overflow: visible !important;
@@ -72,7 +71,9 @@ const SORT_FILTER_FIELDS = [
   },
 ]
 const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
-const CASE_REVEIW_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
+const CASE_REVEIW_FILTER_FIELDS = [
+  FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
+]
 
 export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) => (
   <FamilyLayout
@@ -90,37 +91,37 @@ TableHeaderDetail.propTypes = {
   showVariantDetails: PropTypes.bool,
 }
 
-const TableHeaderRow = React.memo((
-  { visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTableField, showVariantDetails },
-  ) => (
-    <Table.Header fullWidth>
+const TableHeaderRow = React.memo(({
+  visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState, updateFamiliesTableField,
+  showVariantDetails,
+}) => (
+  <Table.Header fullWidth>
+    <Table.Row>
+      <RegularFontHeaderCell width={5}>
+        Showing &nbsp;
+        {
+          visibleFamiliesCount !== totalFamiliesCount ?
+            <span><b>{visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span> :
+            <span>all <b>{totalFamiliesCount}</b></span>
+        }
+        &nbsp; families
+      </RegularFontHeaderCell>
+      <OverflowHeaderCell width={16} textAlign="right">
+        <StateChangeForm
+          initialValues={familiesTableState}
+          updateField={updateFamiliesTableField}
+          fields={(tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS)}
+        />
+      </OverflowHeaderCell>
+    </Table.Row>
+    {fields &&
       <Table.Row>
-        <RegularFontHeaderCell width={5}>
-          Showing &nbsp;
-          {
-            visibleFamiliesCount !== totalFamiliesCount ?
-              <span><b>{visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
-              : <span>all <b>{totalFamiliesCount}</b></span>
-          }
-          &nbsp; families
-        </RegularFontHeaderCell>
-        <OverflowHeaderCell width={16} textAlign="right">
-          <StateChangeForm
-            initialValues={familiesTableState}
-            updateField={updateFamiliesTableField}
-            fields={(tableName === CASE_REVIEW_TABLE_NAME ? CASE_REVEIW_FILTER_FIELDS : FILTER_FIELDS)}
-          />
-        </OverflowHeaderCell>
+        <Table.HeaderCell colSpan={2} textAlign="left">
+          <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
+        </Table.HeaderCell>
       </Table.Row>
-      {fields &&
-        <Table.Row>
-          <Table.HeaderCell colSpan={2} textAlign="left">
-            <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
-          </Table.HeaderCell>
-        </Table.Row>
-      }
-    </Table.Header>
+    }
+  </Table.Header>
 ))
 
 TableHeaderRow.propTypes = {

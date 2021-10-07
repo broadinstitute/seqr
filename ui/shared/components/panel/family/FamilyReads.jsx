@@ -17,9 +17,11 @@ import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/Annotations'
 import { AFFECTED } from '../../../utils/constants'
-import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
+import {
+  ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
-  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP } from './constants'
+  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
+} from './constants'
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
@@ -121,7 +123,9 @@ ShowIgvButton.propTypes = {
   showReads: PropTypes.func,
 }
 
-const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
+const ReadButtons = React.memo((
+  { variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads },
+) => {
   const familyGuids = variant ? variant.familyGuids : [familyGuid]
 
   const sampleTypeFamilies = familyGuids.reduce(
@@ -160,7 +164,6 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
       />
     )),
   ]), [])
-
 })
 
 ReadButtons.propTypes = {
@@ -172,8 +175,9 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
-
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences }) => {
+const IgvPanel = React.memo((
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences },
+) => {
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
@@ -196,7 +200,6 @@ IgvPanel.propTypes = {
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
 }
-
 
 class FamilyReads extends React.PureComponent {
 
@@ -269,7 +272,8 @@ class FamilyReads extends React.PureComponent {
       showReads={this.showReads}
     />
 
-    const igvSampleIndividuals = (this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
+    const igvSampleIndividuals = (
+      this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const reads = Object.keys(igvSampleIndividuals).length > 0 ?
@@ -328,6 +332,7 @@ class FamilyReads extends React.PureComponent {
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
+
 }
 
 const mapStateToProps = state => ({

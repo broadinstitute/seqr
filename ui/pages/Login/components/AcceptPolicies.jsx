@@ -9,7 +9,6 @@ import { validators } from 'shared/components/form/ReduxFormWrapper'
 import { updateUserPolicies } from '../reducers'
 import UserFormLayout from './UserFormLayout'
 
-
 const POLICY_FORM_FIELDS = [
   {
     name: 'acceptedPolicies',

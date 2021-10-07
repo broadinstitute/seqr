@@ -48,13 +48,15 @@ DisplayVariants.propTypes = {
   displayVariants: PropTypes.array,
 }
 
-const BaseVariantSearchResultsContent = React.memo((
-  { match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit, displayVariants },
-) => {
+const BaseVariantSearchResultsContent = React.memo(({
+  match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit,
+  displayVariants,
+}) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
-  const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
+  const paginationFields = totalVariantsCount > recordsPerPage ?
+    [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
 
   return [
@@ -127,11 +129,14 @@ const mapContentDispatchToProps = (dispatch, ownProps) => ({
   },
 })
 
-const VariantSearchResultsContent = connect(mapContentStateToProps, mapContentDispatchToProps)(BaseVariantSearchResultsContent)
+const VariantSearchResultsContent = connect(
+  mapContentStateToProps, mapContentDispatchToProps,
+)(BaseVariantSearchResultsContent)
 
-const BaseVariantSearchResults = React.memo((
-  { match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent, ...props },
-) => (
+const BaseVariantSearchResults = React.memo(({
+  match, displayVariants, load, unload, initialLoad, variantsLoading, contextLoading, errorMessage, contentComponent,
+  ...props
+}) => (
   <DataLoader
     contentId={match.params}
     content={displayVariants}
@@ -193,4 +198,3 @@ LoadedVariantSearchResults.propTypes = {
 }
 
 export default LoadedVariantSearchResults
-

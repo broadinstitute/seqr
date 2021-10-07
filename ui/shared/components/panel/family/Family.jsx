@@ -111,11 +111,10 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id, noteType }) => ({ ...acc, [id]: getNoteField(noteType) }), {}),
 }
 
-const Family = React.memo((
-  { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
-  },
-) => {
+const Family = React.memo(({
+  project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
+  showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
+}) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
@@ -182,7 +181,6 @@ Family.propTypes = {
   disableEdit: PropTypes.bool,
   disableInternalEdit: PropTypes.bool,
 }
-
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],

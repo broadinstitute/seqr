@@ -21,7 +21,6 @@ import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getVisibleProjects } from '../selectors'
 
-
 const ProjectTableContainer = styled.div`
   th {
     padding: 12px 10px 12px 3px !important; 

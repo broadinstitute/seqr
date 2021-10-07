@@ -72,8 +72,11 @@ const INHERITANCE_PANEL = {
         const { affected, genotype, ...coreFilter } = val.filter
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
-      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : {
+        mode: val,
+        filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] },
+        annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),
+      }),
     },
   },
   fields: [
@@ -233,12 +236,15 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   return {
     ...typeAcc,
     [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
-      const analystPanels = typePanels.map(({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]))
+      const analystPanels = typePanels.map(
+        ({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]),
+      )
       return {
         ...analystAcc,
         [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? analystPanels :
+            analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
       }
     }, {}),

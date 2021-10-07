@@ -28,23 +28,22 @@
     "import/no-cycle": 0, // TODO re-enable
     "import/no-useless-path-segments": 0, // TODO re-enable
     "import/prefer-default-export": 0,
-    "indent": 0, // TODO re-enable
-    "max-len": 0, //["warn", 80, 2],
-    "no-class-assign": 0,
-    "no-console": 0,
-    "no-else-return": 0, // TODO re-enable
-    "no-multi-str": 0,
-    "no-multiple-empty-lines": 0, // TODO re-enable
-    "no-param-reassign": 0,
-    "no-plusplus": 0,
-    "no-self-assign": 0, // TODO re-enable
-    "no-unused-vars": 0, // TODO re-enable
-    "object-curly-newline": 0,
-    "operator-linebreak": 0, // TODO should be [2, "after"],
-    "padded-blocks": 0,
-    "prefer-object-spread": 0,
+    "max-len": ["error", 120, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": false,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+    }],
+    "object-curly-newline": ["error", {
+      "ObjectExpression": { "multiline": true, "consistent": true },
+      "ObjectPattern": { "multiline": true, "consistent": true },
+      "ImportDeclaration": { "multiline": true, "consistent": true },
+      "ExportDeclaration": { "multiline": true, "consistent": true }
+    }],
+    "operator-linebreak": [2, "after"],
+    "padded-blocks": ["error", { "blocks": "never", "classes": "always", "switches": "never" }],
     "semi": ["error", "never"],
-    "spaced-comment": 0,
 
     "jsx-a11y/anchor-is-valid": 0,
     "jsx-a11y/click-events-have-key-events": 0,

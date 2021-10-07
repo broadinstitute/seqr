@@ -15,8 +15,9 @@ import {
 } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
-const PageHeader = React.memo(({ project, family, analysisGroup, breadcrumb, match, breadcrumbIdSections, entityLinks }) => {
-
+const PageHeader = React.memo((
+  { project, family, analysisGroup, breadcrumb, match, breadcrumbIdSections, entityLinks },
+) => {
   if (!project) {
     return null
   }
@@ -30,10 +31,10 @@ const PageHeader = React.memo(({ project, family, analysisGroup, breadcrumb, mat
       description = ''
       button = <EditProjectButton project={project} />
     } else {
-      description = family.description //eslint-disable-line prefer-destructuring
+      description = family.description // eslint-disable-line prefer-destructuring
     }
   } else if (match.params.breadcrumb === 'analysis_group') {
-    description = analysisGroup.description //eslint-disable-line prefer-destructuring
+    description = analysisGroup.description // eslint-disable-line prefer-destructuring
     button =
       <span>
         <UpdateAnalysisGroupButton analysisGroup={analysisGroup} />

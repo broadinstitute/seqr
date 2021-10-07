@@ -33,4 +33,3 @@ const mapDispatchToProps = {
 }
 
 export default connect(null, mapDispatchToProps)(CreateProjectButton)
-

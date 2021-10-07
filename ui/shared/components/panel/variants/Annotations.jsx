@@ -14,7 +14,6 @@ import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
 import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
 
-
 const SequenceContainer = styled.span`
   word-break: break-all;
   color: ${props => props.color || 'inherit'};
@@ -101,9 +100,9 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
     if (variant.ref) {
       variations.unshift(
-        `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
-        `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
-        `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
+        `${variant.pos}${variant.ref}/${variant.alt}`, // 179432185A/G
+        `${variant.pos}${variant.ref}>${variant.alt}`, // 179432185A>G
+        `g.${variant.pos}${variant.ref}>${variant.alt}`, // g.179432185A>G
       )
     }
 
@@ -118,10 +117,10 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     if (mainTranscript.hgvsc) {
       const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
-        `c.${hgvsc}`, //c.1282C>T
-        hgvsc, //1282C>T
-        (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
-        hgvsc.replace('>', '/'), //1282C/T
+        `c.${hgvsc}`, // c.1282C>T
+        hgvsc, // 1282C>T
+        (`c.${hgvsc}`).replace('>', '/'), // c.1282C/T
+        hgvsc.replace('>', '/'), // 1282C/T
       )
     }
   } else {
@@ -226,7 +225,8 @@ const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocu
 const svSizeDisplay = (size) => {
   if (size < 1000) {
     return `${size}bp`
-  } else if (size < 1000000) {
+  }
+  if (size < 1000000) {
     // dividing by 1 removes trailing 0s
     return `${((size) / 1000).toPrecision(3) / 1}kb`
   }
@@ -243,8 +243,9 @@ const Annotations = React.memo(({ variant }) => {
       return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
     }),
     mainTranscript.lofFlags === 'NAGNAG_SITE' ?
-      <div key="NAGNAG_SITE"><b>LOFTEE: NAGNAG site</b><br />This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
-      : null,
+      <div key="NAGNAG_SITE">
+        <b>LOFTEE: NAGNAG site</b><br />This acceptor site is rescued by another adjacent in-frame acceptor site.
+      </div> : null,
   ] : null
 
   const transcriptPopupProps = mainTranscript.transcriptId && {
@@ -326,10 +327,8 @@ const Annotations = React.memo(({ variant }) => {
         variant.liftedOverPos ?
           <div>
             hg19: <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
-          </div>
-          : <div>hg19: liftover failed</div>
-        )
-      }
+          </div> : <div>hg19: liftover failed</div>
+      )}
       {cpxIntervals && cpxIntervals.length > 0 &&
       [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e => (
         <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>))]}

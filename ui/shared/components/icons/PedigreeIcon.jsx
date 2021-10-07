@@ -46,7 +46,6 @@ const PedigreeIcon = React.memo((props) => {
   />
 })
 
-
 PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,
   affected: PropTypes.string.isRequired,

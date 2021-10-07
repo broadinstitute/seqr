@@ -52,12 +52,13 @@ const textWithLinks = (text) => {
   return (
     <span>
       {text && text.split(linkRegex).map((str, i) => {
-        for (const title of Object.keys(linkMap)) { // eslint-disable-line no-restricted-syntax
+        Object.keys(linkMap).forEach((title) => {
           if (str && str.startsWith(`${title}:`)) {
             const id = str.replace(`${title}:`, '')
             return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank">{id}</a></span>
           }
-        }
+          return null
+        })
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
           return <span key={i}><b>{str.replace('DISEASE:', '').replace('[', '')}</b> [</span>
         }
@@ -85,7 +86,11 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
       {fieldsToShow.map(({ value, label, rankField }) => value &&
         <span key={label}>
           {label}: {value.toPrecision(4)}
-          {rankField && <span> (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)</span>}
+          {rankField &&
+            <span>
+              (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)
+            </span>
+          }
           <br />
         </span>)}
       <i style={{ color: 'gray' }}>NOTE: {note}</i>
@@ -180,13 +185,11 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
             <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?
               <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank">
                 {phenotype.phenotypeDescription}
-              </a>
-              : phenotype.phenotypeDescription}
+              </a> : phenotype.phenotypeDescription}
               <br />
             </span>
           ))}
-        </div>
-        : <em>No disease associations</em>,
+        </div> : <em>No disease associations</em>,
     },
   ]
   if (gene.diseaseDesc) {
@@ -248,7 +251,9 @@ GeneDetailContent.propTypes = {
   user: PropTypes.object,
 }
 
-const GeneDetail = React.memo(({ geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) => (
+const GeneDetail = React.memo((
+  { geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote },
+) => (
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
       <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />

@@ -70,7 +70,9 @@ const PANELS = [
   INHERITANCE_PANEL, HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) => (
+const CustomSearch = React.memo((
+  { match, history, includeAllProjects, loadContext, loading, searchParams, ...props },
+) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>

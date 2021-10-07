@@ -104,7 +104,6 @@ LocusListDetail.propTypes = {
   locusListGuid: PropTypes.string,
 }
 
-
 const LoadedLocusListDetail = React.memo(({ locusListGuid, onSubmit }) => (
   <LocusListItemsLoader locusListGuid={locusListGuid}>
     <LocusListDetail onSubmit={onSubmit} />

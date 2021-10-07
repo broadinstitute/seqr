@@ -9,7 +9,6 @@ import DataLoader from 'shared/components/DataLoader'
 import { getAllUsers, getAllUsersLoading } from '../selectors'
 import { loadAllUsers } from '../reducers'
 
-
 const CheckIcon = () => <Icon color="green" name="check circle" />
 const XIcon = () => <Icon color="red" name="times circle" />
 
@@ -73,7 +72,6 @@ Users.propTypes = {
   load: PropTypes.func,
   hijak: PropTypes.bool,
 }
-
 
 const mapStateToProps = state => ({
   users: getAllUsers(state),

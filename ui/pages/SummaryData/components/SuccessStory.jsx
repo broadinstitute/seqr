@@ -53,7 +53,9 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       onSubmit={value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)}
       showIconOnly
       simplifiedValue
-      fieldDisplay={value => value.map(tag => <span>{successStoryTypeDisplay(tag)}<HorizontalSpacer width={4} /></span>)}
+      fieldDisplay={value => value.map(
+        tag => <span>{successStoryTypeDisplay(tag)}<HorizontalSpacer width={4} /></span>,
+      )}
     />
     or <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <VerticalSpacer height={15} />

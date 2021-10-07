@@ -21,7 +21,6 @@ const ItemContainer = styled.div`
   white-space: nowrap;
 `
 
-
 const LocusListItem = React.memo(({ project, locusList, updateLocusLists: onSubmit }) => {
   const submitValues = { locusListGuids: [locusList.locusListGuid] }
   return (
@@ -138,6 +137,7 @@ class AddGeneLists extends React.PureComponent {
       </Modal>
     )
   }
+
 }
 
 export const AddGeneListsButton = connect(null, mapDispatchToProps)(AddGeneLists)

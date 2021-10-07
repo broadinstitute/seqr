@@ -9,7 +9,6 @@ import VariantSearchFormContent from './VariantSearchFormContent'
 import { SEARCH_FORM_NAME } from '../constants'
 import { getIntitialSearch } from '../selectors'
 
-
 const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }) => (
   <div>
     <VariantSearchFormContainer

@@ -6,8 +6,8 @@ import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
-
 class BaseLocusListDropdown extends React.Component {
+
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props
     return (
@@ -37,6 +37,7 @@ class BaseLocusListDropdown extends React.Component {
       nextProps.locusList.locusListGuid !== this.props.locusList.locusListGuid ||
       (!!this.props.locusList.locusListGuid && nextProps.locusList.rawItems !== this.props.locusList.rawItems)
   }
+
 }
 
 const mapStateToProps = state => ({

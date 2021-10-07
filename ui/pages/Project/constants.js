@@ -57,13 +57,12 @@ const CASE_REVIEW_STATUS_NMI_REVIEW = 'N'
 const CASE_REVIEW_STATUS_LOST = 'L'
 const CASE_REVIEW_STATUS_INACTIVE = 'V'
 
-
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
   { value: CASE_REVIEW_STATUS_UNCERTAIN,                   name: 'Uncertain',             color: '#fddb28' },
   { value: CASE_REVIEW_STATUS_ACCEPTED,                    name: 'Accepted',              color: '#8BC34A' },
-  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
-  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
+  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },
+  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
   { value: CASE_REVIEW_STATUS_NMI_REVIEW,                  name: 'NMI Review',            color: '#3827c1' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
@@ -100,7 +99,6 @@ const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 const SHOW_CLOSED = 'SHOW_CLOSED'
 
-
 const SOLVED_STATUSES = new Set([
   FAMILY_STATUS_SOLVED,
   FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE,
@@ -128,7 +126,8 @@ const familyIsInReview = (family, individualsByGuid) => family.individualGuids.m
   individualGuid => individualsByGuid[individualGuid],
 ).every(individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW)
 
-const familyIsAssignedToMe = (family, user) => (family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
+const familyIsAssignedToMe = (family, user) => (
+  family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
 const IN_REVIEW_FAMILIES_FILTER = {
@@ -433,7 +432,9 @@ export const INHERITANCE_MODE_OPTIONS = [
   { value: 'F', text: 'Multifactorial inheritance' },
   { value: 'M', text: 'Mitochondrial inheritance' },
 ]
-export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
+export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce(
+  (acc, { text, value }) => ({ ...acc, [value]: text }), {},
+)
 
 export const AR_FIELDS = {
   arFertilityMeds: 'Fertility medications',
@@ -576,7 +577,6 @@ export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
   { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
   { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
-
 
 export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
 

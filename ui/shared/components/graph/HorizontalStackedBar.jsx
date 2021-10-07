@@ -35,12 +35,11 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: .2em .6em !important;`
 
-
 class HorizontalStackedBar extends React.PureComponent {
 
   static propTypes = {
     title: PropTypes.string.isRequired,
-    data: PropTypes.arrayOf(PropTypes.object), //an array of objects with keys: name, count, color, percent
+    data: PropTypes.arrayOf(PropTypes.object), // an array of objects with keys: name, count, color, percent
     width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     height: PropTypes.number,
     linkPath: PropTypes.string,
@@ -73,7 +72,6 @@ class HorizontalStackedBar extends React.PureComponent {
       ],
       [],
     )
-    //const colors = data.map(d => d.color) || Array(data.length).map(() => randomMC.getColor())
     let currCategory = null
     const popupData = dataWithPercents.reduce((acc, d) => {
       if (d.count <= 0 && !showAllPopupCategories) {
@@ -110,7 +108,9 @@ class HorizontalStackedBar extends React.PureComponent {
                         {!d.header &&
                           <TableCell collapsing textAlign="right">{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
                         }
-                        <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</TableCell>
+                        <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>
+                          {d.name}
+                        </TableCell>
                         {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
                       </TableRow>
                     ))
@@ -133,7 +133,7 @@ class HorizontalStackedBar extends React.PureComponent {
         />
       </BarContainer>)
   }
+
 }
 
 export default HorizontalStackedBar
-

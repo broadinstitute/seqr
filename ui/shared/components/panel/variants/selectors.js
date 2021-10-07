@@ -17,7 +17,6 @@ import {
   getFamiliesByGuid, getProjectsByGuid,
 } from 'redux/selectors'
 
-
 // Saved variant selectors
 export const getSavedVariantTableState = state => (
   state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
@@ -33,7 +32,8 @@ export const getPairedSelectedSavedVariants = createSelector(
   (state, props) => (props.project || {}).projectGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
-  (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid, tagsByGuid, notesByGuid) => {
+  (savedVariants, { tag, gene, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid,
+    projectGuid, tagsByGuid, notesByGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
       variants = variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
@@ -103,7 +103,8 @@ export const getPairedFilteredSavedVariants = createSelector(
   getSavedVariantTableState,
   getVariantTagsByGuid,
   (state, props) => props.match.params,
-  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter }, tagsByGuid, { tag, variantGuid }) => {
+  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter },
+    tagsByGuid, { tag, variantGuid }) => {
     if (variantGuid) {
       return savedVariants
     }
@@ -156,11 +157,13 @@ export const getVisibleSortedSavedVariants = createSelector(
   getVariantTagsByGuid,
   getFamiliesByGuid,
   getProjectsByGuid,
-  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid, familiesByGuid, projectsByGuid) => {
+  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid,
+    familiesByGuid, projectsByGuid) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => VARIANT_SORT_LOOKUP[sort](
-      Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid,
-      ) || (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos)
+      Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b,
+      genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid,
+    ) || (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos)
     return pairedFilteredSavedVariants.slice(...visibleIndices)
   },
 )

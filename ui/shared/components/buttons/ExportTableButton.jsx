@@ -36,19 +36,16 @@ const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : it
 
 export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
-  if (!linkContent) {
-    linkContent =
-      <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
-  }
 
   if (url) {
-    if (!url.includes('?')) {
-      url += '?'
-    }
-    if (!url.endsWith('?')) {
-      url += '&'
-    }
-    return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
+    const noQuery = !url.includes('?')
+    const endQuery = noQuery || url.endsWith('?')
+    return (
+      <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>
+        {linkContent ||
+        <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>}
+      </a>
+    )
   }
 
   let content = rawData.map(row => processRow(row).map(

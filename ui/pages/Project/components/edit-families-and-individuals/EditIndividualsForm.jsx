@@ -10,7 +10,6 @@ import { INDIVIDUAL_FIELDS } from '../../constants'
 import { updateIndividuals } from '../../reducers'
 import { getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
-
 const EditIndividualsForm = React.memo(props => (
   <EditRecordsForm
     formName="editIndividuals"

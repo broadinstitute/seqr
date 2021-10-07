@@ -17,7 +17,6 @@ import { USER_NAME_FIELDS } from 'shared/utils/constants'
 import { updateCollaborator } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
-
 const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) => (
   <DataLoader load={load} loading={false} content>
     <AddableSelect
@@ -70,7 +69,6 @@ const EDIT_FIELDS = [
     options: [{ value: false, text: 'Collaborator' }, { value: true, text: 'Manager' }],
   },
 ]
-
 
 const AddCollaboratorButton = React.memo(({ onSubmit }) => (
   <UpdateButton
@@ -145,7 +143,9 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
   const localCollabs = getSortedCollabs(project, false)
   const anvilCollabs = getSortedCollabs(project, true)
   return [
-    localCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />),
+    localCollabs.map(
+      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
+    ),
     ((project.canEdit && !project.workspaceName) ?
       <div key="addButton" >
         <br />
@@ -155,7 +155,6 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
     anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })
-
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,

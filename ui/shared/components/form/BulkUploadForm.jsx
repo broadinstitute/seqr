@@ -9,9 +9,10 @@ import { FILE_FIELD_NAME } from 'shared/utils/constants'
 
 const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxWidth: '700px', margin: 'auto' } }
 
-const BulkUploadForm = React.memo((
-  { url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig, blankExportConfig },
-) => (
+const BulkUploadForm = React.memo(({
+  url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig,
+  blankExportConfig,
+}) => (
   <div>
     <NoBorderTable compact>
       <Table.Body>

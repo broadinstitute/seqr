@@ -40,7 +40,6 @@ const mapStateToProps = state => ({
 
 const Home = connect(mapStateToProps)(BaseHome)
 
-
 ReactDOM.render(
   <Provider store={configureStore(rootReducer, window.initialJSON)}>
     <BrowserRouter>

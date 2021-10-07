@@ -45,7 +45,7 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
   const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
     if (!acc[category]) {
-      acc[category] = [] //init array of features
+      acc[category] = [] // init array of features
     }
     acc[category].push(hpoTerm)
     return acc
@@ -57,7 +57,7 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
         categoryTerm => CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
       ).sort().join(', ')
       if (!acc[category]) {
-        acc[category] = [] //init array of features
+        acc[category] = [] // init array of features
       }
 
       acc[category].push(term)

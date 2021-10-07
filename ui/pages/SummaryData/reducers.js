@@ -13,7 +13,6 @@ const RECEIVE_MME = 'RECEIVE_MME'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 
-
 // Data actions
 
 export const loadMme = () => (dispatch) => {
@@ -33,7 +32,6 @@ export const loadSuccessStory = successStoryTypes => (dispatch) => {
     dispatch({ type: REQUEST_SUCCESS_STORY })
     new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
       (responseJson) => {
-        console.log(responseJson.errors)
         dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
       },
       (e) => {
@@ -68,7 +66,8 @@ export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) =>
     }).get({ gene })
 }
 
-export const updateAllProjectSavedVariantTable = updates => ({ type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
+export const updateAllProjectSavedVariantTable = updates => (
+  { type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const reducers = {
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),

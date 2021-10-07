@@ -60,7 +60,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
   acc[entity.projectGuid][entityGuid] = entity
 
   return acc
-
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
@@ -170,17 +169,17 @@ export const getVariantId = variant => (
 const groupByVariantGuidFields = (variantTagNotes, objectsByGuid, savedVariantsByGuid, field) => Object.values(
   objectsByGuid,
 ).forEach((o) => {
-    const variantGuids = o.variantGuids.sort().join(',')
-    if (!variantTagNotes[variantGuids]) {
-      variantTagNotes[variantGuids] = {
-        variantGuids, variants: o.variantGuids.map(variantGuid => savedVariantsByGuid[variantGuid]),
-      }
+  const variantGuids = o.variantGuids.sort().join(',')
+  if (!variantTagNotes[variantGuids]) {
+    variantTagNotes[variantGuids] = { // eslint-disable-line no-param-reassign
+      variantGuids, variants: o.variantGuids.map(variantGuid => savedVariantsByGuid[variantGuid]),
     }
-    if (!variantTagNotes[variantGuids][field]) {
-      variantTagNotes[variantGuids][field] = []
-    }
-    variantTagNotes[variantGuids][field].push(o)
-  })
+  }
+  if (!variantTagNotes[variantGuids][field]) {
+    variantTagNotes[variantGuids][field] = [] // eslint-disable-line no-param-reassign
+  }
+  variantTagNotes[variantGuids][field].push(o)
+})
 
 export const getVariantTagNotesByFamilyVariants = createSelector(
   getVariantTagsByGuid,
@@ -305,7 +304,9 @@ export const getSearchGeneBreakdownValues = createSelector(
   ).map(([geneId, counts]) => ({
     numVariants: counts.total,
     numFamilies: Object.keys(counts.families).length,
-    families: Object.entries(counts.families).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
+    families: Object.entries(counts.families).map(
+      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
+    ),
     search: searchesByHash[searchHash].search,
     ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
   })),

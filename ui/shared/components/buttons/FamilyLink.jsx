@@ -37,7 +37,16 @@ const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass =
         {family.displayName}
       </ColoredLink>
     ),
-    content: <Family family={family} fields={FAMILY_FIELDS} disableEdit={disableEdit} disableInternalEdit useFullWidth disablePedigreeZoom />,
+    content: (
+      <Family
+        family={family}
+        fields={FAMILY_FIELDS}
+        disableEdit={disableEdit}
+        disableInternalEdit
+        useFullWidth
+        disablePedigreeZoom
+      />
+    ),
   },
 ))
 

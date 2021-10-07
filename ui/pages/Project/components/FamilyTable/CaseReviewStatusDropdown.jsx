@@ -63,7 +63,6 @@ const CaseReviewStatusDropdown = React.memo(props => (
   </StatusContainer>
 ))
 
-
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
 CaseReviewStatusDropdown.propTypes = {
@@ -81,8 +80,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     }))
   },
   updateIndividualDiscussion: (updates) => {
-    dispatch(updateIndividual({
-      individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_discussion', ...updates }))
+    dispatch(updateIndividual(
+      { individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_discussion', ...updates },
+    ))
   },
 })
 

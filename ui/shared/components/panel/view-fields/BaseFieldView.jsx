@@ -21,6 +21,7 @@ const FieldValue = styled.div`
 `
 
 class BaseFieldView extends React.PureComponent {
+
   constructor(props) {
     super(props)
     this.state = {
@@ -63,8 +64,7 @@ class BaseFieldView extends React.PureComponent {
                   icon={this.props.editIconName || 'write'}
                   content={this.props.editLabel}
                   onClick={this.toggleButtonVisibility}
-                />
-                :
+                /> :
                 <Segment compact>
                   <ReduxFormWrapper
                     noModal
@@ -79,8 +79,7 @@ class BaseFieldView extends React.PureComponent {
                   />
                 </Segment>
               }
-            </span>
-            :
+            </span> :
             <UpdateButton
               showInLine={this.props.showInLine}
               key="edit"
@@ -143,6 +142,7 @@ class BaseFieldView extends React.PureComponent {
         {!this.props.fieldName && buttons}
       </span>)
   }
+
 }
 
 BaseFieldView.propTypes = {

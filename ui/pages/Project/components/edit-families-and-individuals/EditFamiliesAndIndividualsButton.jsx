@@ -55,4 +55,3 @@ export default React.memo(() => (
   </Modal>
 
 ))
-

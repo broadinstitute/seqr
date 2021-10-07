@@ -158,10 +158,14 @@ class BasePedigreeImage extends React.PureComponent {
 
   componentDidUpdate(prevProps, prevState) {
     if (!this.props.family.pedigreeImage) { // If has an uploaded pedigree image, that is displayed so no need to draw
-      if (prevProps.family.pedigreeImage || // If uploaded pedigree image was deleted, draw
-        (prevProps.family.pedigreeDataset !== this.props.family.pedigreeDataset) || // If saved dataset was updated, redraw
-        (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) || // If individual data changed, redraw
-        (prevState.imgSrc && !this.state.imgSrc)) { // If computed image src was cleared, redraw
+      // If uploaded pedigree image was deleted, draw
+      if (prevProps.family.pedigreeImage ||
+        // If saved dataset was updated, redraw
+        (prevProps.family.pedigreeDataset !== this.props.family.pedigreeDataset) ||
+        // If individual data changed, redraw
+        (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) ||
+        // If computed image src was cleared, redraw
+        (prevState.imgSrc && !this.state.imgSrc)) {
         if (this.state.imgSrc) {
           this.unsetPedigreeImage() // Cannot redraw pedigree if not rendering the svg container, so unset image first
         } else {
@@ -199,7 +203,7 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   redrawPedigree = (opts, dataset) => {
-    opts.dataset = copyPedigreeDataset(this.yobToAge(dataset || opts.dataset))
+    opts.dataset = copyPedigreeDataset(this.yobToAge(dataset || opts.dataset)) // eslint-disable-line no-param-reassign
     try {
       validatePedigree(opts)
     } catch (err) {
@@ -254,9 +258,9 @@ class BasePedigreeImage extends React.PureComponent {
         }
       }
       if (indiv.mother) {
-        indiv.father = placeholderId
+        indiv.father = placeholderId // eslint-disable-line no-param-reassign
       } else {
-        indiv.mother = placeholderId
+        indiv.mother = placeholderId // eslint-disable-line no-param-reassign
       }
     })
 
@@ -273,11 +277,13 @@ class BasePedigreeImage extends React.PureComponent {
           Object.assign(data, newData)
           this.redrawPedigree(opts)
         },
-      } })
+      },
+    })
     this.props.openIndividualModal()
   }
 
   getPedigreeDataset = () => currentDataset(this.state.pedigreeOpts)
+
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -318,8 +324,8 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        image ? <span>{compact && `(${family.individualGuids.length}) `} {image}</span>
-          : <ButtonLink content="Edit Pedigree Image" icon="edit" />
+        image ? <span>{compact && `(${family.individualGuids.length}) `} {image}</span> :
+        <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">

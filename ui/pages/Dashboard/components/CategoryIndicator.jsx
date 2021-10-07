@@ -42,4 +42,3 @@ CategoryIndicator.propTypes = {
 }
 
 export default CategoryIndicator
-

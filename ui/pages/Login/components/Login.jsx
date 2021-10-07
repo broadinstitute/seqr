@@ -23,7 +23,6 @@ const Login = ({ onSubmit }) => (
     <Link to="/login/forgot_password">Forgot Password?</Link>
   </UserFormContainer>)
 
-
 Login.propTypes = {
   onSubmit: PropTypes.func,
 }
@@ -31,6 +30,5 @@ Login.propTypes = {
 const mapDispatchToProps = {
   onSubmit: login,
 }
-
 
 export default connect(null, mapDispatchToProps)(Login)
