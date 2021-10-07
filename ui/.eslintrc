@@ -27,7 +27,8 @@
     "arrow-parens": ["error", "as-needed", { "requireForBlockBody": true }],
     "import/no-cycle": 0, // TODO re-enable
     "import/no-useless-path-segments": 0, // TODO re-enable
-    "import/prefer-default-export": 0,
+    "import/prefer-default-export": 0, // TODO enable
+    "jsx-a11y/label-has-associated-control": 0,
     "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
       "ignoreComments": false,
@@ -44,12 +45,6 @@
     "operator-linebreak": [2, "after"],
     "padded-blocks": ["error", { "blocks": "never", "classes": "always", "switches": "never" }],
     "semi": ["error", "never"],
-
-    "jsx-a11y/anchor-is-valid": 0,
-    "jsx-a11y/click-events-have-key-events": 0,
-    "jsx-a11y/iframe-has-title": 0,
-    "jsx-a11y/label-has-associated-control": 0,
-    "jsx-a11y/tabindex-no-positive": 0,
 
     "react/destructuring-assignment": 0,
     "react/forbid-prop-types": 0,
