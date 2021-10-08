@@ -23,10 +23,6 @@ const DiscoverySheet = React.memo(props => (
 
 DiscoverySheet.propTypes = {
   match: PropTypes.object,
-  data: PropTypes.array,
-  loading: PropTypes.bool,
-  loadingError: PropTypes.string,
-  load: PropTypes.func,
 }
 
 const mapStateToProps = state => ({

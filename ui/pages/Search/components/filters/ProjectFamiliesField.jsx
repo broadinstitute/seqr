@@ -85,10 +85,10 @@ const ProjectFamiliesFilterInput = React.memo((
 })
 
 ProjectFamiliesFilterInput.propTypes = {
-  familyOptions: PropTypes.array,
-  analysisGroupOptions: PropTypes.array,
+  familyOptions: PropTypes.arrayOf(PropTypes.object),
+  analysisGroupOptions: PropTypes.arrayOf(PropTypes.object),
   projectAnalysisGroupsByGuid: PropTypes.object,
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
@@ -140,6 +140,10 @@ const PROJECT_FAMILIES_FIELD = {
 
 class AllProjectFamiliesField extends React.PureComponent {
 
+  static propTypes = {
+    numProjects: PropTypes.number,
+  }
+
   state = { viewAllProjects: false }
 
   viewProjects = (e) => {
@@ -148,14 +152,12 @@ class AllProjectFamiliesField extends React.PureComponent {
   }
 
   render() {
-    return this.props.numProjects < 20 || this.state.viewAllProjects ?
-      configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${this.props.numProjects} searched projects`} />
+    const { numProjects } = this.props
+    const { viewAllProjects } = this.state
+    return numProjects < 20 || viewAllProjects ?
+      configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${numProjects} searched projects`} />
   }
 
-}
-
-AllProjectFamiliesField.propTypes = {
-  numProjects: PropTypes.number,
 }
 
 const mapAllProjectFamiliesFieldStateToProps = state => ({

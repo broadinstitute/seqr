@@ -89,7 +89,7 @@ Matchmaker.propTypes = {
   loading: PropTypes.bool,
   error: PropTypes.string,
   load: PropTypes.func,
-  submissions: PropTypes.array,
+  submissions: PropTypes.arrayOf(PropTypes.object),
   user: PropTypes.object,
 }
 

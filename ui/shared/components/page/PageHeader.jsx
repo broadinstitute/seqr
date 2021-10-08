@@ -123,12 +123,12 @@ PageHeaderLayout.propTypes = {
   entityGuid: PropTypes.string,
   breadcrumb: PropTypes.string,
   breadcrumbId: PropTypes.string,
-  breadcrumbIdSections: PropTypes.array,
+  breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
   header: PropTypes.string,
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
-  entityLinks: PropTypes.array,
+  entityLinks: PropTypes.arrayOf(PropTypes.object),
   button: PropTypes.node,
   description: PropTypes.string,
 }
@@ -166,7 +166,7 @@ export const SimplePageHeader = ({ page, pages }) => ([
 
 SimplePageHeader.propTypes = {
   page: PropTypes.string,
-  pages: PropTypes.array,
+  pages: PropTypes.arrayOf(PropTypes.object),
 }
 
 const NO_HEADER_PAGES = [

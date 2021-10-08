@@ -87,7 +87,7 @@ export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetail
 
 TableHeaderDetail.propTypes = {
   offset: PropTypes.bool,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   showVariantDetails: PropTypes.bool,
 }
 
@@ -129,7 +129,7 @@ TableHeaderRow.propTypes = {
   totalFamiliesCount: PropTypes.number.isRequired,
   familiesTableState: PropTypes.object.isRequired,
   updateFamiliesTableField: PropTypes.func.isRequired,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
   showVariantDetails: PropTypes.bool,
 }

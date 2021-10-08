@@ -13,18 +13,27 @@ import { ButtonLink } from '../../StyledComponents'
 
 class BaseEditPedigreeImageButton extends React.PureComponent {
 
+  static propTypes = {
+    family: PropTypes.object,
+    onSuccess: PropTypes.func,
+  }
+
+  state = { error: null }
+
   constructor(props) {
     super(props)
-    this.state = { error: null }
     this.modalId = `uploadPedigree-${props.family.familyGuid}`
   }
 
-  onFinished = xhr => (
-    xhr.status === 200 ? this.props.onSuccess(JSON.parse(xhr.response), this.modalId) :
-      this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` }))
+  onFinished = (xhr) => {
+    const { onSuccess } = this.props
+    return xhr.status === 200 ? onSuccess(JSON.parse(xhr.response), this.modalId) :
+      this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` })
+  }
 
   render() {
     const { family } = this.props
+    const { error } = this.state
     return (
       <Modal
         title={`Upload Pedigree for Family ${family.familyId}`}
@@ -39,16 +48,11 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
           maxFiles={1}
           dropzoneLabel="Drag and drop or click to upload pedigree image"
         />
-        {this.state.error && <Message error content={this.state.error} />}
+        {error && <Message error content={error} />}
       </Modal>
     )
   }
 
-}
-
-BaseEditPedigreeImageButton.propTypes = {
-  family: PropTypes.object,
-  onSuccess: PropTypes.func,
 }
 
 const mapDispatchToProps = dispatch => ({

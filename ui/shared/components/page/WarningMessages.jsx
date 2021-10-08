@@ -9,21 +9,19 @@ import { getWarningMessages } from 'redux/selectors'
 class WarningMessages extends React.PureComponent {
 
   static propTypes = {
-    warningMessages: PropTypes.array,
+    warningMessages: PropTypes.arrayOf(PropTypes.object),
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {}
-  }
+  state = { hiddenMessages: {} }
 
   hide = message => () => {
-    this.setState({ [message]: true })
+    this.setState(prevState => ({ ...prevState.hiddenMessages, [message]: true }))
   }
 
   render() {
-    const warningMessages = (this.props.warningMessages || []).filter(({ message }) => !this.state[message])
+    const { warningMessages: allWarningMessages } = this.props
+    const { hiddenMessages } = this.state
+    const warningMessages = (allWarningMessages || []).filter(({ message }) => !hiddenMessages[message])
     return warningMessages.length > 0 && warningMessages.map(({ header, message }) => (
       <Grid.Row>
         <Grid.Column textAlign="center">

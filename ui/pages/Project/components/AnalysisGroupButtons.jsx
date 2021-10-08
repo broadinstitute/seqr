@@ -70,8 +70,8 @@ const FamilySelectorField = React.memo(({ value, onChange, families }) => (
 ))
 
 FamilySelectorField.propTypes = {
-  value: PropTypes.array,
-  families: PropTypes.array.isRequired,
+  value: PropTypes.arrayOf(PropTypes.string),
+  families: PropTypes.arrayOf(PropTypes.object).isRequired,
   onChange: PropTypes.func,
 }
 

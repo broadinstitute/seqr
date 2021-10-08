@@ -217,7 +217,7 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
 })
 
 PanelContent.propTypes = {
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   name: PropTypes.string.isRequired,
   fieldProps: PropTypes.object,
   helpText: PropTypes.node,
@@ -226,11 +226,16 @@ PanelContent.propTypes = {
 
 class VariantSearchFormPanels extends React.PureComponent {
 
+  static propTypes = {
+    panels: PropTypes.arrayOf(PropTypes.object),
+  }
+
   state = { active: {} }
 
   expandAll = (e) => {
+    const { panels } = this.props
     e.preventDefault()
-    this.setState({ active: this.props.panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
+    this.setState({ active: panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
   }
 
   collapseAll = (e) => {
@@ -244,6 +249,8 @@ class VariantSearchFormPanels extends React.PureComponent {
   }
 
   render() {
+    const { panels } = this.props
+    const { active } = this.state
     return (
       <div>
         <ExpandCollapseCategoryContainer>
@@ -254,12 +261,12 @@ class VariantSearchFormPanels extends React.PureComponent {
         <VerticalSpacer height={10} />
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
-            {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
-              const isActive = !!this.state.active[name]
+            {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+              const isActive = !!active[name]
               let attachedTitle = true
               if (i === 0) {
                 attachedTitle = 'top'
-              } else if (i === this.props.panels.length - 1 && !isActive) {
+              } else if (i === panels.length - 1 && !isActive) {
                 attachedTitle = 'bottom'
               }
               return [...acc,
@@ -278,7 +285,7 @@ class VariantSearchFormPanels extends React.PureComponent {
                   key={`${name}-content`}
                   active={isActive}
                   as={Segment}
-                  attached={i === this.props.panels.length - 1 ? 'bottom' : true}
+                  attached={i === panels.length - 1 ? 'bottom' : true}
                   padded
                   textAlign="center"
                 >
@@ -292,10 +299,6 @@ class VariantSearchFormPanels extends React.PureComponent {
     )
   }
 
-}
-
-VariantSearchFormPanels.propTypes = {
-  panels: PropTypes.array,
 }
 
 export default VariantSearchFormPanels

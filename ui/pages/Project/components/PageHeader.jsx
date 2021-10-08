@@ -67,8 +67,8 @@ PageHeader.propTypes = {
   analysisGroup: PropTypes.object,
   match: PropTypes.object,
   breadcrumb: PropTypes.string,
-  breadcrumbIdSections: PropTypes.array,
-  entityLinks: PropTypes.array,
+  breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
+  entityLinks: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapStateToProps = (state, ownProps) => ({

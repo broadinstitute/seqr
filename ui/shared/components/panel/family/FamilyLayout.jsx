@@ -41,7 +41,7 @@ const FamilyLayout = React.memo((
 
 FamilyLayout.propTypes = {
   fieldDisplay: PropTypes.func,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   useFullWidth: PropTypes.bool,
   compact: PropTypes.bool,
   offset: PropTypes.bool,

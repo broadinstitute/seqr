@@ -57,10 +57,9 @@ const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelPr
 
 GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
-  color: PropTypes.string,
-  popupHeader: PropTypes.string,
-  popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
-  showEmpty: PropTypes.bool,
+  popupHeader: PropTypes.string.isRequired,
+  popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
+  showEmpty: PropTypes.bool.isRequired,
 }
 
 const BaseLocusListLabels = React.memo((
@@ -94,10 +93,15 @@ const BaseLocusListLabels = React.memo((
     </div>))
 
 BaseLocusListLabels.propTypes = {
-  locusListGuids: PropTypes.array.isRequired,
+  locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
   compact: PropTypes.bool,
-  locusListsByGuid: PropTypes.object,
+  locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
+}
+
+BaseLocusListLabels.defaultProps = {
+  compact: false,
+  containerStyle: null,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -337,7 +341,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
 
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
-  gene: PropTypes.object,
+  gene: PropTypes.object.isRequired,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
@@ -353,16 +357,16 @@ export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
 class VariantGenes extends React.PureComponent {
 
   static propTypes = {
-    variant: PropTypes.object,
+    variant: PropTypes.object.isRequired,
     mainGeneId: PropTypes.string,
-    genesById: PropTypes.object,
+    genesById: PropTypes.object.isRequired,
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = { showAll: Object.keys(props.variant.transcripts || {}).length < 6 }
+  static defaultProps = {
+    mainGeneId: null,
   }
+
+  state = { showAll: false }
 
   showGenes = () => {
     this.setState({ showAll: true })
@@ -370,9 +374,10 @@ class VariantGenes extends React.PureComponent {
 
   render() {
     const { variant, genesById, mainGeneId } = this.props
+    const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
 
-    if (this.state.showAll) {
+    if (geneIds.length < 6 || showAll) {
       return (
         <div>
           {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId => (

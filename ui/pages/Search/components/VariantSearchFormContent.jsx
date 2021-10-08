@@ -170,7 +170,7 @@ const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   </Form.Group>)
 
 SVFrequecyHeaderFilter.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 

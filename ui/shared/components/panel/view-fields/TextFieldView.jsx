@@ -34,7 +34,7 @@ const TextFieldView = React.memo((props) => {
 })
 
 TextFieldView.propTypes = {
-  additionalEditFields: PropTypes.array,
+  additionalEditFields: PropTypes.arrayOf(PropTypes.object),
   field: PropTypes.string.isRequired,
   textAnnotation: PropTypes.node,
   textPopup: PropTypes.func,

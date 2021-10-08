@@ -51,10 +51,10 @@ const FamilyLink = React.memo(({ family, path, target, disableEdit, PopupClass =
 ))
 
 FamilyLink.propTypes = {
-  family: PropTypes.object,
+  family: PropTypes.object.isRequired,
   disableEdit: PropTypes.bool,
   path: PropTypes.string,
-  target: PropTypes.string,
+  target: PropTypes.string.isRequired,
   PopupClass: PropTypes.elementType,
 }
 

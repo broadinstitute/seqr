@@ -34,7 +34,7 @@ CollaboratorEmailDropdown.propTypes = {
   loading: PropTypes.bool,
   usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
-  value: PropTypes.any,
+  value: PropTypes.object,
 }
 
 const mapDropdownStateToProps = state => ({

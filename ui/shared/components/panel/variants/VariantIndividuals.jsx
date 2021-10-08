@@ -264,7 +264,7 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
 
 BaseVariantIndividuals.propTypes = {
   variant: PropTypes.object,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
   isCompoundHet: PropTypes.bool,
 }
 

@@ -38,9 +38,9 @@ const OptionFieldView = React.memo((
 OptionFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   initialValues: PropTypes.object.isRequired,
-  tagOptions: PropTypes.array.isRequired,
+  tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
   tagAnnotation: PropTypes.func,
-  additionalEditFields: PropTypes.array,
+  additionalEditFields: PropTypes.arrayOf(PropTypes.object),
   formFieldProps: PropTypes.object,
   fieldDisplay: PropTypes.func,
   compact: PropTypes.bool,

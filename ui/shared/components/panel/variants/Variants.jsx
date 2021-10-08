@@ -210,7 +210,7 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
 })
 
 CompoundHets.propTypes = {
-  variants: PropTypes.array,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 const Variants = React.memo(({ variants, ...props }) => (
@@ -223,7 +223,7 @@ const Variants = React.memo(({ variants, ...props }) => (
 ))
 
 Variants.propTypes = {
-  variants: PropTypes.array,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 export default Variants

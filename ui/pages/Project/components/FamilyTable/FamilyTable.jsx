@@ -32,20 +32,30 @@ const OverflowCell = styled(Table.Cell)`
 
 class FamilyTableRow extends React.PureComponent {
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showDetails: props.showDetails,
-    }
+  static propTypes = {
+    familyGuid: PropTypes.string.isRequired,
+    tableName: PropTypes.string,
+    detailFields: PropTypes.arrayOf(PropTypes.object),
+    noDetailFields: PropTypes.arrayOf(PropTypes.object),
+    showVariantDetails: PropTypes.bool,
+    showDetails: PropTypes.bool,
   }
 
+  state = { showDetails: null }
+
   toggle = () => {
-    this.setState({ showDetails: !this.state.showDetails })
+    const { showDetails } = this.props
+    this.setState(prevState => (
+      { showDetails: !(prevState.showDetails === null ? showDetails : prevState.showDetails) }
+    ))
   }
 
   render() {
-    const { familyGuid, showVariantDetails, detailFields, noDetailFields, tableName } = this.props
+    const {
+      familyGuid, showVariantDetails, detailFields, noDetailFields, tableName, showDetails: initialShowDetails,
+    } = this.props
+    const { showDetails } = this.state
+    const showFamilyDetails = showDetails === null ? initialShowDetails : showDetails
     return (
       <Table.Row>
         <OverflowCell>
@@ -55,26 +65,17 @@ class FamilyTableRow extends React.PureComponent {
             showFamilyPageLink
             showVariantDetails={showVariantDetails}
             tableName={tableName}
-            fields={this.state.showDetails ? detailFields : noDetailFields}
-            compact={!this.state.showDetails}
-            disableEdit={!this.state.showDetails}
-            annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-            showIndividuals={this.state.showDetails}
+            fields={showFamilyDetails ? detailFields : noDetailFields}
+            compact={!showFamilyDetails}
+            disableEdit={!showFamilyDetails}
+            annotation={detailFields && noDetailFields && <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+            showIndividuals={showFamilyDetails}
           />
         </OverflowCell>
       </Table.Row>
     )
   }
 
-}
-
-FamilyTableRow.propTypes = {
-  familyGuid: PropTypes.string.isRequired,
-  tableName: PropTypes.string,
-  detailFields: PropTypes.array,
-  noDetailFields: PropTypes.array,
-  showVariantDetails: PropTypes.bool,
-  showDetails: PropTypes.bool,
 }
 
 const FamilyTable = React.memo((
@@ -130,12 +131,12 @@ const FamilyTable = React.memo((
 export { FamilyTable as FamilyTableComponent }
 
 FamilyTable.propTypes = {
-  visibleFamilies: PropTypes.array.isRequired,
+  visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool,
   headerStatus: PropTypes.object,
-  exportUrls: PropTypes.array,
+  exportUrls: PropTypes.arrayOf(PropTypes.object),
   showVariantDetails: PropTypes.bool,
-  noDetailFields: PropTypes.array,
+  noDetailFields: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
   match: PropTypes.object,
 }

@@ -170,7 +170,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
 DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
-  loadedSamples: PropTypes.array,
+  loadedSamples: PropTypes.arrayOf(PropTypes.object),
 }
 
 const formatGene = gene => <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
@@ -410,7 +410,7 @@ HpoTermSelector.propTypes = {
 class HpoTermsEditor extends React.PureComponent {
 
   static propTypes = {
-    value: PropTypes.array,
+    value: PropTypes.arrayOf(PropTypes.object),
     name: PropTypes.string,
     onChange: PropTypes.func,
     header: PropTypes.object,
@@ -421,27 +421,28 @@ class HpoTermsEditor extends React.PureComponent {
 
   toggleShowDetails = id => (e) => {
     e.preventDefault()
-    const { showDetails } = this.state
-    this.setState({
-      showDetails: { ...showDetails, [id]: !showDetails[id] },
-    })
+    this.setState(prevState => ({
+      showDetails: { ...prevState.showDetails, [id]: !prevState.showDetails[id] },
+    }))
   }
 
   toggleShowAddItems = (e) => {
     e.preventDefault()
-    this.setState({
-      showAddItem: !this.state.showAddItem,
-    })
+    this.setState(prevState => ({
+      showAddItem: !prevState.showAddItem,
+    }))
   }
 
   addItem = (data) => {
-    this.props.onChange([...this.props.value, data])
+    const { onChange, value } = this.props
+    onChange([...value, data])
     this.setState({ showAddItem: false })
   }
 
   removeItem = (e, data) => {
+    const { onChange, value } = this.props
     e.preventDefault()
-    this.props.onChange(this.props.value.filter(({ id }) => id !== data.id))
+    onChange(value.filter(({ id }) => id !== data.id))
   }
 
   render() {

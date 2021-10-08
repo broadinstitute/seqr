@@ -70,7 +70,7 @@ const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesByI
 
 BaseSubmissionGeneVariants.propTypes = {
   genesById: PropTypes.object,
-  geneVariants: PropTypes.array,
+  geneVariants: PropTypes.arrayOf(PropTypes.object),
   modalId: PropTypes.string,
   dispatch: PropTypes.func,
 }
@@ -92,6 +92,6 @@ export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) =>
 ))
 
 Phenotypes.propTypes = {
-  phenotypes: PropTypes.array,
+  phenotypes: PropTypes.arrayOf(PropTypes.object),
   maxWidth: PropTypes.string,
 }

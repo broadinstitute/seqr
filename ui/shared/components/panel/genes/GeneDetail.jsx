@@ -37,7 +37,7 @@ const GeneSection = React.memo(({ details }) => (
 ))
 
 GeneSection.propTypes = {
-  details: PropTypes.array,
+  details: PropTypes.arrayOf(PropTypes.object),
 }
 
 const textWithLinks = (text) => {
@@ -99,7 +99,7 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
 
 ScoreDetails.propTypes = {
   scores: PropTypes.object,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   note: PropTypes.node,
   rankDescription: PropTypes.string,
 }

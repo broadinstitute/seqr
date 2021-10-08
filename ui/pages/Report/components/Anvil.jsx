@@ -9,10 +9,7 @@ const SEARCH_CATEGORIES = ['projects']
 
 class Anvil extends React.PureComponent {
 
-  constructor(props) {
-    super(props)
-    this.state = {}
-  }
+  state = {}
 
   onResultSelect = ({ title, key }) => {
     this.setState({ project: { title, guid: key } })

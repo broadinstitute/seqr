@@ -145,7 +145,15 @@ export class XHRUploaderWithEvents extends XHRUploader {
 
 class UploaderFieldComponent extends React.PureComponent {
 
-  onFinished = (xhr, uploaderState) => this.props.input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+  static propTypes = {
+    input: PropTypes.object,
+    uploaderProps: PropTypes.object,
+  }
+
+  onFinished = (xhr, uploaderState) => {
+    const { input } = this.props
+    input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+  }
 
   render() {
     const { input, uploaderProps } = this.props
@@ -164,11 +172,6 @@ class UploaderFieldComponent extends React.PureComponent {
     ])
   }
 
-}
-
-UploaderFieldComponent.propTypes = {
-  input: PropTypes.object,
-  uploaderProps: PropTypes.object,
 }
 
 export const uploadedFileHasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)

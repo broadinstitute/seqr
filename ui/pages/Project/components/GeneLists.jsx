@@ -86,34 +86,41 @@ class AddGeneLists extends React.PureComponent {
     closeModal: PropTypes.func,
   }
 
+  state = { selected: {} }
+
   constructor(props) {
     super(props)
 
-    this.state = {
-      selected: {},
-    }
     this.modalName = `${props.project.projectGuid}-add-gene-list`
   }
 
   selectList = (updatedSelected) => {
+    const { setModalConfirm: dispatchSetModalConfirm } = this.props
     this.setState({ selected: updatedSelected })
-    this.props.setModalConfirm(
+    dispatchSetModalConfirm(
       this.modalName,
       Object.values(updatedSelected).some(isSelected => isSelected) ?
         'Gene lists have not been added. Are you sure you want to close?' : null,
     )
   }
 
-  submit = () => this.props.updateLocusLists({
-    locusListGuids: Object.keys(this.state.selected).filter(locusListGuid => this.state.selected[locusListGuid]),
-  })
+  submit = () => {
+    const { updateLocusLists: dispatchUpdateLocusLists } = this.props
+    const { selected } = this.state
+    return dispatchUpdateLocusLists({
+      locusListGuids: Object.keys(selected).filter(locusListGuid => selected[locusListGuid]),
+    })
+  }
 
   closeModal = () => {
-    this.props.setModalConfirm(this.modalName, null)
-    this.props.closeModal(this.modalName)
+    const { setModalConfirm: dispatchSetModalConfirm, closeModal: dispatchCloseModal } = this.props
+    dispatchSetModalConfirm(this.modalName, null)
+    dispatchCloseModal(this.modalName)
   }
 
   render() {
+    const { project } = this.props
+    const { selected } = this.state
     return (
       <Modal
         title="Add Gene Lists"
@@ -122,12 +129,12 @@ class AddGeneLists extends React.PureComponent {
         size="large"
       >
         <LocusListsLoader>
-          Add an existing Gene List to {this.props.project.name} or <CreateLocusListButton />
+          Add an existing Gene List to {project.name} or <CreateLocusListButton />
           <LocusListTables
             basicFields
-            omitLocusLists={this.props.project.locusListGuids}
+            omitLocusLists={project.locusListGuids}
             selectRows={this.selectList}
-            selectedRows={this.state.selected}
+            selectedRows={selected}
           />
           <Divider />
           <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>

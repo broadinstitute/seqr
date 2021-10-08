@@ -116,7 +116,7 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
   showVariantDetails: PropTypes.bool,
   tableName: PropTypes.string,

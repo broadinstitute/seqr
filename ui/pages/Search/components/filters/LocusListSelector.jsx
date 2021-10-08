@@ -8,6 +8,28 @@ import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 class BaseLocusListDropdown extends React.Component {
 
+  static propTypes = {
+    locusList: PropTypes.object,
+    projectLocusListOptions: PropTypes.arrayOf(PropTypes.object),
+    onChange: PropTypes.func,
+  }
+
+  shouldComponentUpdate(nextProps) {
+    const { locusList, projectLocusListOptions, onChange } = this.props
+    return nextProps.projectLocusListOptions !== projectLocusListOptions ||
+      nextProps.onChange !== onChange ||
+      nextProps.locusList.locusListGuid !== locusList.locusListGuid ||
+      (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems)
+  }
+
+  componentWillUpdate(nextProps) {
+    const { locusList, onChange } = this.props
+    if (nextProps.locusList.rawItems !== locusList.rawItems) {
+      const { locusListGuid, rawItems } = nextProps.locusList
+      onChange({ locusListGuid, rawItems })
+    }
+  }
+
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props
     return (
@@ -24,31 +46,11 @@ class BaseLocusListDropdown extends React.Component {
     )
   }
 
-  componentWillUpdate(nextProps) {
-    if (nextProps.locusList.rawItems !== this.props.locusList.rawItems) {
-      const { locusListGuid, rawItems } = nextProps.locusList
-      this.props.onChange({ locusListGuid, rawItems })
-    }
-  }
-
-  shouldComponentUpdate(nextProps) {
-    return nextProps.projectLocusListOptions !== this.props.projectLocusListOptions ||
-      nextProps.onChange !== this.props.onChange ||
-      nextProps.locusList.locusListGuid !== this.props.locusList.locusListGuid ||
-      (!!this.props.locusList.locusListGuid && nextProps.locusList.rawItems !== this.props.locusList.rawItems)
-  }
-
 }
 
 const mapStateToProps = state => ({
   projectLocusListOptions: getSearchedProjectsLocusListOptions(state),
 })
-
-BaseLocusListDropdown.propTypes = {
-  locusList: PropTypes.object,
-  projectLocusListOptions: PropTypes.array,
-  onChange: PropTypes.func,
-}
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 

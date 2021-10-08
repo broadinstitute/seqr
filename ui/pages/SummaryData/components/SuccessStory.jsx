@@ -75,7 +75,7 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
 
 SuccessStory.propTypes = {
   match: PropTypes.object,
-  data: PropTypes.array,
+  data: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   loadingError: PropTypes.string,
   load: PropTypes.func,

@@ -88,7 +88,7 @@ const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => (
 ))
 
 BaseMatchmakerSubmissionOverview.propTypes = {
-  mmeSubmissions: PropTypes.array,
+  mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
@@ -166,7 +166,7 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
 
 Matchmaker.propTypes = {
   project: PropTypes.object.isRequired,
-  mmeSubmissions: PropTypes.array,
+  mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapMatchmakerStateToProps = (state, ownProps) => ({
@@ -266,7 +266,7 @@ const AnalysisStatus = React.memo(({ analysisStatusCounts }) => (
 ))
 
 AnalysisStatus.propTypes = {
-  analysisStatusCounts: PropTypes.array.isRequired,
+  analysisStatusCounts: PropTypes.arrayOf(PropTypes.object).isRequired,
 }
 
 const mapAnalysisStatusStateToProps = (state, ownProps) => ({

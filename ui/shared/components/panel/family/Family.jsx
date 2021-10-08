@@ -169,7 +169,7 @@ const Family = React.memo(({
 Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   rightContent: PropTypes.node,
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,

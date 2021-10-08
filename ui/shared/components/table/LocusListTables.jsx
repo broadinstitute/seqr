@@ -101,7 +101,7 @@ const LocusListTables = React.memo(
 LocusListTables.propTypes = {
   tableData: PropTypes.object,
   basicFields: PropTypes.bool,
-  omitLocusLists: PropTypes.array,
+  omitLocusLists: PropTypes.arrayOf(PropTypes.string),
   tableButtons: PropTypes.object,
   dispatch: PropTypes.func,
 }

@@ -51,7 +51,7 @@ PedigreeIcon.propTypes = {
   affected: PropTypes.string.isRequired,
   popupHeader: PropTypes.string,
   popupContent: PropTypes.node,
-  label: PropTypes.any,
+  label: PropTypes.node,
 }
 
 export default PedigreeIcon

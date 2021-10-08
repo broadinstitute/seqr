@@ -104,8 +104,8 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
 })
 
 FeatureSection.propTypes = {
-  features: PropTypes.array,
-  nonstandardFeatures: PropTypes.array,
+  features: PropTypes.arrayOf(PropTypes.object),
+  nonstandardFeatures: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
   color: PropTypes.string,
 }

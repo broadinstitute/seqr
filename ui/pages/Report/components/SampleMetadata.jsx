@@ -55,11 +55,6 @@ const SampleMetadata = React.memo(props => (
 
 SampleMetadata.propTypes = {
   match: PropTypes.object,
-  data: PropTypes.array,
-  columns: PropTypes.array,
-  loading: PropTypes.bool,
-  loadingError: PropTypes.string,
-  load: PropTypes.func,
 }
 
 const mapStateToProps = state => ({

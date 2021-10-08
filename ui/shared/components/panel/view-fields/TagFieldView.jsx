@@ -95,7 +95,7 @@ export const TagFieldDisplay = React.memo((
 ))
 
 TagFieldDisplay.propTypes = {
-  displayFieldValues: PropTypes.array.isRequired,
+  displayFieldValues: PropTypes.arrayOf(PropTypes.object).isRequired,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   displayAnnotationFirst: PropTypes.bool,
@@ -169,7 +169,7 @@ TagFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string.isRequired,
   initialValues: PropTypes.object,
-  tagOptions: PropTypes.array.isRequired,
+  tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
   onSubmit: PropTypes.func.isRequired,
   displayMetadata: PropTypes.bool,
   popup: PropTypes.func,

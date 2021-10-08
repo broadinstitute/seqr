@@ -17,7 +17,8 @@ class RequestStatus extends React.PureComponent {
   }
 
   render() {
-    switch (this.props.status) {
+    const { status, errorMessage } = this.props
+    switch (status) {
       case IN_PROGRESS:
         return <ColoredIcon loading name="spinner" color="#4183c4" />
       case SUCCEEDED:
@@ -34,7 +35,7 @@ class RequestStatus extends React.PureComponent {
           trigger={
             <ColoredIcon name="warning circle" color="#F00000" />
           }
-          content={`Error: ${this.props.errorMessage || ''}`}
+          content={`Error: ${errorMessage || ''}`}
           position="top center"
           size="small"
         />

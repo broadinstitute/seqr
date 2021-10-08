@@ -60,7 +60,7 @@ BaseAnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   onChange: PropTypes.func,
-  value: PropTypes.any,
+  value: PropTypes.object,
 }
 
 const mapDropdownStateToProps = state => ({
@@ -122,6 +122,6 @@ export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
 })
 
 AnalysedBy.propTypes = {
-  analysedByList: PropTypes.array,
+  analysedByList: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
 }

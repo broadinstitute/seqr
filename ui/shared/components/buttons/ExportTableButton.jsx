@@ -62,9 +62,9 @@ export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, fil
 BaseFileLink.propTypes = {
   ext: PropTypes.string.isRequired,
   url: PropTypes.string,
-  rawData: PropTypes.array,
+  rawData: PropTypes.arrayOf(PropTypes.object),
   processRow: PropTypes.func,
-  headers: PropTypes.array,
+  headers: PropTypes.arrayOf(PropTypes.string),
   filename: PropTypes.string,
   linkContent: PropTypes.node,
 }
@@ -114,7 +114,7 @@ ExportTableButton.propTypes = {
    * An array of urls with names:
    *  [{ name: 'table1', url: '/table1-export'},  { name: 'table2', url: '/table2-export' }]
    */
-  downloads: PropTypes.array.isRequired,
+  downloads: PropTypes.arrayOf(PropTypes.object).isRequired,
   buttonText: PropTypes.string,
 }
 

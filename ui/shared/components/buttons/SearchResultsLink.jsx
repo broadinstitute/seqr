@@ -18,8 +18,8 @@ SearchResultsLink.propTypes = {
   variantId: PropTypes.string,
   genomeVersion: PropTypes.string,
   svType: PropTypes.string,
-  familyGuids: PropTypes.array,
-  projectFamilies: PropTypes.array,
+  familyGuids: PropTypes.arrayOf(PropTypes.string),
+  projectFamilies: PropTypes.arrayOf(PropTypes.object),
   openSearchResults: PropTypes.func,
   inheritanceMode: PropTypes.string,
 }

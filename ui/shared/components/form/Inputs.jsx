@@ -16,33 +16,37 @@ export class BaseSemanticInput extends React.Component {
   static propTypes = {
     onChange: PropTypes.func,
     inputType: PropTypes.string.isRequired,
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    const { options } = this.props
+    if (nextProps.options) {
+      if (nextProps.options.length !== (options || []).length) {
+        return true
+      }
+      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
+        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== options[i][k])) {
+          return true
+        }
+      })
+    }
+    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
+      k => nextProps[k] !== this.props[k], // eslint-disable-line react/destructuring-assignment
+    )) {
+      return true
+    }
+    return nextState !== this.state
   }
 
   handleChange = (e, data) => {
-    this.props.onChange(data.value === undefined ? data : data.value)
+    const { onChange } = this.props
+    onChange(data.value === undefined ? data : data.value)
   }
 
   render() {
     const { inputType, ...props } = this.props
     return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
-  }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    if (nextProps.options) {
-      if (nextProps.options.length !== (this.props.options || []).length) {
-        return true
-      }
-      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
-        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== this.props.options[i][k])) {
-          return true
-        }
-      })
-    }
-    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(k => nextProps[k] !== this.props[k])) {
-      return true
-    }
-    return nextState !== this.state
   }
 
 }
@@ -111,14 +115,14 @@ export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
 ))
 
 Dropdown.propTypes = {
-  options: PropTypes.array,
+  options: PropTypes.arrayOf(PropTypes.object),
   includeCategories: PropTypes.bool,
 }
 
 export const Select = props => <Dropdown selection fluid {...props} />
 
 Select.propTypes = {
-  options: PropTypes.array,
+  options: PropTypes.arrayOf(PropTypes.object),
 }
 
 export class Multiselect extends React.PureComponent {
@@ -128,13 +132,17 @@ export class Multiselect extends React.PureComponent {
     allowAdditions: PropTypes.bool,
   }
 
-  renderLabel = data => ({ color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) })
+  renderLabel = (data) => {
+    const { color } = this.props
+    return { color, content: data.text || data.value, style: labelStyle(data.color) }
+  }
 
   render() {
+    const { allowAdditions, ...props } = this.props
     return <AddableSelect
-      {...this.props}
+      {...props}
       renderLabel={this.renderLabel}
-      allowAdditions={this.props.allowAdditions || false}
+      allowAdditions={allowAdditions || false}
       multiple
     />
   }
@@ -159,10 +167,10 @@ export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect 
 export class AddableSelect extends React.PureComponent {
 
   static propTypes = {
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
     allowAdditions: PropTypes.bool,
     addValueOptions: PropTypes.bool,
-    value: PropTypes.any,
+    value: PropTypes.arrayOf(PropTypes.string),
   }
 
   constructor(props) {
@@ -175,34 +183,37 @@ export class AddableSelect extends React.PureComponent {
       ).map(value => ({ value }))
       options = [...options, ...valueOptions]
     }
-    this.state = { options }
+    this.state = { options } // eslint-disable-line react/state-in-constructor
   }
 
-  handleAddition = (e, { value }) => {
-    this.setState({
-      options: [{ value }, ...this.state.options],
-    })
+  componentDidUpdate(prevProps) {
+    const { options } = this.props
+    if (options.length !== prevProps.options.length) {
+      this.resetOptions()
+    }
   }
 
   resetOptions = () => {
-    this.setState({ options: this.props.options })
+    const { options } = this.props
+    this.setState({ options })
+  }
+
+  handleAddition = (e, { value }) => {
+    this.setState(prevState => ({
+      options: [{ value }, ...prevState.options],
+    }))
   }
 
   render() {
     const { addValueOptions, ...props } = this.props
+    const { options } = this.state
     return <Select
       {...props}
-      options={this.state.options}
-      allowAdditions={this.props.allowAdditions !== false}
+      options={options}
+      allowAdditions={props.allowAdditions !== false}
       onAddItem={this.handleAddition}
       search
     />
-  }
-
-  componentDidUpdate(prevProps) {
-    if (this.props.options.length !== prevProps.options.length) {
-      this.resetOptions()
-    }
   }
 
 }
@@ -211,27 +222,30 @@ export class SearchInput extends React.PureComponent {
 
   static propTypes = {
     onChange: PropTypes.func,
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
   }
 
-  state = {
-    results: this.props.options,
-  }
+  state = { results: null }
 
-  handleResultSelect = (e, { result }) => this.props.onChange(e, result.title)
+  handleResultSelect = (e, { result }) => {
+    const { onChange } = this.props
+    onChange(e, result.title)
+  }
 
   handleSearchChange = (e, data) => {
+    const { options, onChange } = this.props
     this.setState({
-      results: this.props.options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+      results: options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
     })
-    this.props.onChange(e, data)
+    onChange(e, data)
   }
 
   render() {
     const { options, onChange, ...props } = this.props
+    const { results } = this.state
     return <Search
       {...props}
-      results={this.state.results}
+      results={results || options}
       onResultSelect={this.handleResultSelect}
       onSearchChange={this.handleSearchChange}
     />
@@ -314,8 +328,8 @@ export const CheckboxGroup = React.memo((props) => {
 })
 
 CheckboxGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+  options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
   groupLabel: PropTypes.string,
@@ -346,11 +360,11 @@ const BaseRadioGroup = React.memo((props) => {
 })
 
 BaseRadioGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+  options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
-  formGroupAs: PropTypes.any,
+  formGroupAs: PropTypes.elementType,
   margin: PropTypes.string,
   widths: PropTypes.string,
   getOptionProps: PropTypes.func,
@@ -423,7 +437,7 @@ export const BooleanCheckbox = React.memo((props) => {
 })
 
 BooleanCheckbox.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
   onChange: PropTypes.func,
 }
 
@@ -515,8 +529,8 @@ export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...p
 ))
 
 StepSlider.propTypes = {
-  value: PropTypes.any,
-  steps: PropTypes.array,
+  value: PropTypes.number,
+  steps: PropTypes.arrayOf(PropTypes.number),
   stepLabels: PropTypes.object,
   onChange: PropTypes.func,
 }

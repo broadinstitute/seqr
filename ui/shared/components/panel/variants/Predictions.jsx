@@ -70,8 +70,8 @@ const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshol
 
 Prediction.propTypes = {
   field: PropTypes.string.isRequired,
-  value: PropTypes.any.isRequired,
-  infoValue: PropTypes.any,
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  infoValue: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   infoTitle: PropTypes.string,
   color: PropTypes.string,
   warningThreshold: PropTypes.number,
@@ -103,29 +103,27 @@ class Predictions extends React.PureComponent {
     gene: PropTypes.object,
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = { showMore: false }
-  }
+  state = { showMore: false }
 
   toggleShowMore = () => {
-    this.setState({ showMore: !this.state.showMore })
+    this.setState(prevState => ({ showMore: !prevState.showMore }))
   }
 
   render() {
-    const { predictions } = this.props.variant
+    const { variant, gene } = this.props
+    const { predictions } = variant
+    const { showMore } = this.state
 
     if (!predictions) {
       return null
     }
 
     const genePredictors = {}
-    if (this.props.gene && this.props.gene.primateAi) {
+    if (gene && gene.primateAi) {
       genePredictors.primate_ai = {
         field: 'primate_ai',
-        warningThreshold: this.props.gene.primateAi.percentile25,
-        dangerThreshold: this.props.gene.primateAi.percentile75,
+        warningThreshold: gene.primateAi.percentile25,
+        dangerThreshold: gene.primateAi.percentile75,
       }
     }
 
@@ -143,13 +141,13 @@ class Predictions extends React.PureComponent {
           predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD &&
             <Transition.Group animation="fade down" duration="500">
               {
-                this.state.showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+                showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
                   <Prediction key={predictorField.field} {...predictorField} />
                 ))
               }
               <ButtonLink onClick={this.toggleShowMore}>
                 <HorizontalSpacer width={20} />
-                {this.state.showMore ? 'hide' : 'show more...'}
+                {showMore ? 'hide' : 'show more...'}
               </ButtonLink>
             </Transition.Group>
         }

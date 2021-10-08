@@ -505,7 +505,7 @@ const Matchmaker = React.memo(({ individuals, family }) => (
 
 Matchmaker.propTypes = {
   family: PropTypes.object,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapIndividualsStateToProps = (state, ownProps) => ({

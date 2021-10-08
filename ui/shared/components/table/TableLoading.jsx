@@ -14,7 +14,7 @@ const TableLoading = React.memo(({ numCols, inline = 'centered' }) => (
 
 TableLoading.propTypes = {
   numCols: PropTypes.number,
-  inline: PropTypes.any,
+  inline: PropTypes.bool,
 }
 
 export default TableLoading

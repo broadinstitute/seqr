@@ -161,8 +161,8 @@ class ReduxFormWrapper extends React.Component {
     submitFailed: PropTypes.bool,
     submitSucceeded: PropTypes.bool,
     dirty: PropTypes.bool,
-    errorMessages: PropTypes.array,
-    warningMessages: PropTypes.array,
+    errorMessages: PropTypes.arrayOf(PropTypes.string),
+    warningMessages: PropTypes.arrayOf(PropTypes.string),
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
   }
@@ -173,73 +173,7 @@ class ReduxFormWrapper extends React.Component {
     submitButtonText: 'Submit',
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      confirming: false,
-    }
-  }
-
-  handleUnconfirmedClose = () => this.props.handleClose()
-
-  showConfirmDialog = () => this.setState({ confirming: true })
-
-  hideConfirmDialog = () => this.setState({ confirming: false })
-
-  render() {
-    let saveStatus = NONE
-    if (this.props.submitSucceeded) {
-      saveStatus = SUCCEEDED
-    } else if (this.props.submitFailed) {
-      saveStatus = ERROR
-    }
-
-    const saveErrorMessage =
-      (this.props.errorMessages && this.props.errorMessages.length > 0 && this.props.errorMessages.join('; ')) ||
-      (this.props.warningMessages && this.props.warningMessages.length > 0 && this.props.warningMessages.join('; ')) ||
-      (this.props.submitFailed ? 'Error' : null)
-
-    const fieldComponents = this.props.children || configuredFields(this.props)
-
-    return (
-      <StyledForm
-        onSubmit={this.props.confirmDialog ? this.showConfirmDialog : this.props.handleSubmit}
-        size={this.props.size}
-        loading={this.props.submitting || this.props.loading}
-        hasSubmitButton={!this.props.submitOnChange}
-        inline={this.props.inline}
-      >
-        {fieldComponents}
-        {this.props.showErrorPanel && ['warning', 'error'].map(key => (
-          this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
-            <MessagePanel key={key} {...{ [key]: true }} visible list={this.props[`${key}Messages`]} /> : null
-        ))}
-        {this.props.submitSucceeded && this.props.successMessage &&
-          <MessagePanel success visible content={this.props.successMessage} />
-        }
-        {
-          !this.props.submitOnChange &&
-            <ButtonPanel
-              cancelButtonText={this.props.cancelButtonText}
-              submitButtonText={this.props.submitButtonText}
-              saveStatus={saveStatus}
-              saveErrorMessage={saveErrorMessage}
-              handleClose={this.props.onSubmitSucceeded || (this.props.noModal ? null : this.handleUnconfirmedClose)}
-            />
-        }
-        <Confirm
-          content={this.props.confirmDialog}
-          open={this.state.confirming}
-          onCancel={this.hideConfirmDialog}
-          onConfirm={() => {
-            this.hideConfirmDialog()
-            this.props.handleSubmit()
-          }}
-        />
-      </StyledForm>
-    )
-  }
+  state = { confirming: false }
 
   shouldComponentUpdate(nextProps, nextState) {
     const updateProps = [
@@ -265,11 +199,13 @@ class ReduxFormWrapper extends React.Component {
       'errorMessages',
       'warningMessages',
     ]
-    if (updateProps.some(k => nextProps[k] !== this.props[k])) {
+    if (updateProps.some(k => nextProps[k] !== this.props[k])) { // eslint-disable-line react/destructuring-assignment
       return true
     }
     if (listUpdateProps.some(k => (
+      // eslint-disable-next-line react/destructuring-assignment
       (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ?
+        // eslint-disable-next-line react/destructuring-assignment
         nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
     ))) {
       return true
@@ -278,18 +214,96 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
-    if (this.props.onSubmitSucceeded && nextProps.submitSucceeded) {
-      this.props.onSubmitSucceeded()
+    const {
+      onSubmitSucceeded, handleClose, confirmCloseIfNotSaved, dirty, setModalConfirm: dispatchSetModalConfirm,
+    } = this.props
+    if (onSubmitSucceeded && nextProps.submitSucceeded) {
+      onSubmitSucceeded()
     }
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
-      this.props.handleClose(true)
-    } else if (this.props.confirmCloseIfNotSaved) {
-      if (nextProps.dirty && !this.props.dirty) {
-        this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
-      } else if (!nextProps.dirty && this.props.dirty) {
-        this.props.setModalConfirm(null)
+      handleClose(true)
+    } else if (confirmCloseIfNotSaved) {
+      if (nextProps.dirty && !dirty) {
+        dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
+      } else if (!nextProps.dirty && dirty) {
+        dispatchSetModalConfirm(null)
       }
     }
+  }
+
+  showConfirmDialog = () => this.setState({ confirming: true })
+
+  hideConfirmDialog = () => this.setState({ confirming: false })
+
+  handleUnconfirmedClose = () => {
+    const { handleClose } = this.props
+    handleClose()
+  }
+
+  render() {
+    const {
+      submitSucceeded, submitFailed, errorMessages, warningMessages, children, confirmDialog, handleSubmit, size,
+      submitting, loading, submitOnChange, inline, showErrorPanel, successMessage, cancelButtonText, submitButtonText,
+      onSubmitSucceeded, noModal,
+    } = this.props
+    const { confirming } = this.state
+
+    let saveStatus = NONE
+    if (submitSucceeded) {
+      saveStatus = SUCCEEDED
+    } else if (submitFailed) {
+      saveStatus = ERROR
+    }
+
+    const populatedErrorMessages = (errorMessages || []).length > 0 && errorMessages
+    const populatedWarningMessages = (warningMessages || []).length > 0 && warningMessages
+
+    const saveErrorMessage =
+      (populatedErrorMessages && populatedErrorMessages.join('; ')) ||
+      (populatedWarningMessages && populatedWarningMessages.join('; ')) ||
+      (submitFailed ? 'Error' : null)
+
+    const errorPanel = showErrorPanel && [
+      populatedErrorMessages && <MessagePanel key="error" error visible list={populatedErrorMessages} />,
+      populatedWarningMessages && <MessagePanel key="warning" warning visible list={populatedWarningMessages} />,
+    ]
+
+    const fieldComponents = children || configuredFields(this.props)
+
+    return (
+      <StyledForm
+        onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
+        size={size}
+        loading={submitting || loading}
+        hasSubmitButton={!submitOnChange}
+        inline={inline}
+      >
+        {fieldComponents}
+        {errorPanel}
+        {submitSucceeded && successMessage &&
+          <MessagePanel success visible content={successMessage} />
+        }
+        {
+          !submitOnChange &&
+            <ButtonPanel
+              cancelButtonText={cancelButtonText}
+              submitButtonText={submitButtonText}
+              saveStatus={saveStatus}
+              saveErrorMessage={saveErrorMessage}
+              handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+            />
+        }
+        <Confirm
+          content={confirmDialog}
+          open={confirming}
+          onCancel={this.hideConfirmDialog}
+          onConfirm={() => {
+            this.hideConfirmDialog()
+            handleSubmit()
+          }}
+        />
+      </StyledForm>
+    )
   }
 
 }

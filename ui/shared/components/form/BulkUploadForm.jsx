@@ -100,9 +100,9 @@ const BulkUploadForm = React.memo(({
 BulkUploadForm.propTypes = {
   url: PropTypes.string,
   actionDescription: PropTypes.string.isRequired,
-  requiredFields: PropTypes.array.isRequired,
-  optionalFields: PropTypes.array.isRequired,
-  uploadFormats: PropTypes.array,
+  requiredFields: PropTypes.arrayOf(PropTypes.object).isRequired,
+  optionalFields: PropTypes.arrayOf(PropTypes.object).isRequired,
+  uploadFormats: PropTypes.arrayOf(PropTypes.object),
   details: PropTypes.node,
   name: PropTypes.string.isRequired,
   project: PropTypes.object,

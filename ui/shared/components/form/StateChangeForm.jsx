@@ -18,7 +18,7 @@ const StateChangeForm = React.memo(({ fields, initialValues, updateField }) => (
 StateChangeForm.propTypes = {
   initialValues: PropTypes.object,
   updateField: PropTypes.func,
-  fields: PropTypes.array.isRequired,
+  fields: PropTypes.arrayOf(PropTypes.object).isRequired,
 }
 
 export default StateChangeForm

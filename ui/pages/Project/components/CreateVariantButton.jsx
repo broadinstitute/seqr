@@ -50,7 +50,7 @@ const ZygosityInput = React.memo(({ individuals, name, title, individualField, e
 ))
 
 ZygosityInput.propTypes = {
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
   name: PropTypes.string,
   title: PropTypes.string,
   error: PropTypes.bool,
@@ -230,7 +230,7 @@ BaseCreateVariantButton.propTypes = {
   variantType: PropTypes.string,
   family: PropTypes.object,
   user: PropTypes.object,
-  formFields: PropTypes.array,
+  formFields: PropTypes.arrayOf(PropTypes.object),
   onSubmit: PropTypes.func,
 }
 

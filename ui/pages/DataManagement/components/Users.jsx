@@ -67,7 +67,7 @@ const Users = React.memo(({ users, loading, load, hijak }) => (
 ))
 
 Users.propTypes = {
-  users: PropTypes.array,
+  users: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   load: PropTypes.func,
   hijak: PropTypes.bool,

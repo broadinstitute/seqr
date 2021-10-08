@@ -78,7 +78,7 @@ const SavedSearches = React.memo((
 ))
 
 SavedSearches.propTypes = {
-  options: PropTypes.array,
+  options: PropTypes.arrayOf(PropTypes.object),
   savedSearchesByGuid: PropTypes.object,
   selectedSearch: PropTypes.object,
   loading: PropTypes.bool,

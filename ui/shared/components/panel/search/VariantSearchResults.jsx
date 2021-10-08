@@ -45,7 +45,7 @@ export const DisplayVariants = React.memo(({ displayVariants }) => (
 ))
 
 DisplayVariants.propTypes = {
-  displayVariants: PropTypes.array,
+  displayVariants: PropTypes.arrayOf(PropTypes.object),
 }
 
 const BaseVariantSearchResultsContent = React.memo(({
@@ -106,9 +106,9 @@ BaseVariantSearchResultsContent.propTypes = {
   match: PropTypes.object,
   onSubmit: PropTypes.func,
   variantSearchDisplay: PropTypes.object,
-  searchedVariantExportConfig: PropTypes.array,
+  searchedVariantExportConfig: PropTypes.arrayOf(PropTypes.object),
   totalVariantsCount: PropTypes.number,
-  displayVariants: PropTypes.array,
+  displayVariants: PropTypes.arrayOf(PropTypes.object),
   additionalDisplayEdit: PropTypes.node,
 }
 
@@ -165,7 +165,7 @@ BaseVariantSearchResults.propTypes = {
   variantsLoading: PropTypes.bool,
   contextLoading: PropTypes.bool,
   errorMessage: PropTypes.string,
-  displayVariants: PropTypes.array,
+  displayVariants: PropTypes.arrayOf(PropTypes.object),
   contentComponent: PropTypes.elementType,
 }
 

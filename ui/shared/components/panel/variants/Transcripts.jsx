@@ -111,7 +111,7 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
   genesById: PropTypes.object.isRequired,
-  updateMainTranscript: PropTypes.func,
+  updateMainTranscript: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({

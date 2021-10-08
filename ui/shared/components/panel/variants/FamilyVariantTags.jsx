@@ -72,7 +72,7 @@ const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
 })
 
 ShortcutTagToggle.propTypes = {
-  tag: PropTypes.object,
+  tag: PropTypes.object.isRequired,
 }
 
 const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
@@ -97,8 +97,8 @@ const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantT
 })
 
 ShortcutTags.propTypes = {
-  variantTagNotes: PropTypes.object,
-  dispatchUpdateFamilyVariantTags: PropTypes.func,
+  variantTagNotes: PropTypes.object.isRequired,
+  dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
 
 const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
@@ -127,8 +127,8 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
 ))
 
 VariantTagField.propTypes = {
-  variantTagNotes: PropTypes.object,
-  fieldName: PropTypes.string,
+  variantTagNotes: PropTypes.object.isRequired,
+  fieldName: PropTypes.string.isRequired,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
 }
@@ -152,9 +152,9 @@ const VariantLink = React.memo(({ variant, variantTagNotes, family }) => (
 ))
 
 VariantLink.propTypes = {
-  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variantTagNotes: PropTypes.object,
-  family: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  variantTagNotes: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
 const FamilyLabel = React.memo(props => (
@@ -165,10 +165,7 @@ const FamilyLabel = React.memo(props => (
 ))
 
 FamilyLabel.propTypes = {
-  family: PropTypes.object,
-  disableEdit: PropTypes.bool,
-  path: PropTypes.string,
-  target: PropTypes.string,
+  family: PropTypes.object.isRequired,
 }
 
 export const LoadedFamilyLabel = connect((state, ownProps) => ({
@@ -256,17 +253,22 @@ const FamilyVariantTags = React.memo(({
 ))
 
 FamilyVariantTags.propTypes = {
-  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variantTagNotes: PropTypes.object,
-  variantId: PropTypes.string,
-  family: PropTypes.object,
-  projectTagTypes: PropTypes.array,
-  projectFunctionalTagTypes: PropTypes.array,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  variantTagNotes: PropTypes.object.isRequired,
+  variantId: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
+  projectTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  projectFunctionalTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
   isCompoundHet: PropTypes.bool,
   linkToSavedVariants: PropTypes.bool,
-  dispatchUpdateVariantNote: PropTypes.func,
-  dispatchUpdateFamilyVariantTags: PropTypes.func,
-  dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func,
+  dispatchUpdateVariantNote: PropTypes.func.isRequired,
+  dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
+  dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func.isRequired,
+}
+
+FamilyVariantTags.defaultProps = {
+  isCompoundHet: false,
+  linkToSavedVariants: false,
 }
 
 const mapStateToProps = (state, ownProps) => {

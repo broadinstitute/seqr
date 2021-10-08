@@ -7,8 +7,8 @@ import { Error404 } from 'shared/components/page/Errors'
 class DataLoader extends React.PureComponent {
 
   static propTypes = {
-    contentId: PropTypes.any,
-    content: PropTypes.any,
+    contentId: PropTypes.string,
+    content: PropTypes.any, // eslint-disable-line react/forbid-prop-types
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func,
     unload: PropTypes.func,
@@ -30,6 +30,20 @@ class DataLoader extends React.PureComponent {
     }
   }
 
+  componentWillUpdate(nextProps) {
+    const { contentId } = this.props
+    if (nextProps.reloadOnIdUpdate && nextProps.contentId !== contentId) {
+      nextProps.load(nextProps.contentId)
+    }
+  }
+
+  componentWillUnmount() {
+    const { unload } = this.props
+    if (unload) {
+      unload()
+    }
+  }
+
   render() {
     const { loading, content, errorMessage, children, hideError } = this.props
     if (loading) {
@@ -46,18 +60,6 @@ class DataLoader extends React.PureComponent {
       return <Error404 />
     }
     return null
-  }
-
-  componentWillUpdate(nextProps) {
-    if (nextProps.reloadOnIdUpdate && nextProps.contentId !== this.props.contentId) {
-      nextProps.load(nextProps.contentId)
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.props.unload) {
-      this.props.unload()
-    }
   }
 
 }

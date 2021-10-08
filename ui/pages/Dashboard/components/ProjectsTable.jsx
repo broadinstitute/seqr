@@ -216,7 +216,7 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
 ))
 
 ProjectsTable.propTypes = {
-  visibleProjects: PropTypes.array.isRequired,
+  visibleProjects: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
   load: PropTypes.func,

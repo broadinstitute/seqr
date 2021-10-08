@@ -40,7 +40,7 @@ const BaseUpdateDatasetForm = React.memo(({ formType, formFields, initialValues,
 ))
 
 BaseUpdateDatasetForm.propTypes = {
-  formFields: PropTypes.array.isRequired,
+  formFields: PropTypes.arrayOf(PropTypes.object).isRequired,
   formType: PropTypes.string.isRequired,
   initialValues: PropTypes.object,
   onSubmit: PropTypes.func,

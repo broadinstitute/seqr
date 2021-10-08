@@ -65,7 +65,7 @@ const NoteListFieldView = React.memo((
 
 NoteListFieldView.propTypes = {
   initialValues: PropTypes.object,
-  notes: PropTypes.array,
+  notes: PropTypes.arrayOf(PropTypes.object),
   idField: PropTypes.string,
   fieldName: PropTypes.string,
   modalTitle: PropTypes.string,

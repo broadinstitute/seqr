@@ -28,31 +28,35 @@ class CustomModal extends React.PureComponent {
   }
 
   handleClose = () => {
-    this.props.close()
-    if (this.props.handleClose) {
-      this.props.handleClose()
+    const { close, handleClose } = this.props
+    close()
+    if (handleClose) {
+      handleClose()
     }
   }
 
   render() {
-    let trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.props.open }) : null
-    if (this.props.popup) {
-      trigger = <Popup trigger={trigger} {...this.props.popup} />
+    const {
+      trigger: triggerProp, popup, open, isOpen, size, title, children, confirmContent, cancelClose, close,
+    } = this.props
+    let trigger = triggerProp ? React.cloneElement(triggerProp, { onClick: open }) : null
+    if (popup) {
+      trigger = <Popup trigger={trigger} {...popup} />
     }
     return (
-      <Modal open={this.props.isOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
+      <Modal open={isOpen} trigger={trigger} onClose={this.handleClose} size={size}>
         <Modal.Header>
-          {this.props.title}
+          {title}
           <ButtonLink floated="right" onClick={this.handleClose} icon={<Icon name="remove" color="grey" />} />
         </Modal.Header>
         <Modal.Content>
-          {this.props.children}
+          {children}
         </Modal.Content>
         <Confirm
-          content={this.props.confirmContent}
-          open={this.props.confirmContent != null}
-          onCancel={this.props.cancelClose}
-          onConfirm={() => this.props.close(true)}
+          content={confirmContent}
+          open={confirmContent != null}
+          onCancel={cancelClose}
+          onConfirm={() => close(true)}
         />
       </Modal>
     )

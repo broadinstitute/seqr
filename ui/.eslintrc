@@ -28,7 +28,7 @@
     "import/no-cycle": 0, // TODO re-enable
     "import/no-useless-path-segments": 0, // TODO re-enable
     "import/prefer-default-export": 0, // TODO enable
-    "jsx-a11y/label-has-associated-control": 0,
+    "jsx-a11y/label-has-associated-control": "off",
     "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
       "ignoreComments": false,
@@ -42,20 +42,16 @@
       "ImportDeclaration": { "multiline": true, "consistent": true },
       "ExportDeclaration": { "multiline": true, "consistent": true }
     }],
-    "operator-linebreak": [2, "after"],
+    "operator-linebreak": ["error", "after"],
     "padded-blocks": ["error", { "blocks": "never", "classes": "always", "switches": "never" }],
     "semi": ["error", "never"],
 
-    "react/destructuring-assignment": 0,
-    "react/forbid-prop-types": 0,
-    "react/no-access-state-in-setstate": 0, // TODO re-enable
-    "react/no-deprecated": 0, // TODO re-enable
-    "react/prefer-stateless-function": 0,
-    "react/require-default-props": 0,
-    "react/require-optimization": 2,
-    "react/sort-comp": 0,  // more freedom in arranging class functions
-    "react/state-in-constructor": 0, // TODO re-enable
-    "react/static-property-placement": 0, // TODO should be [2, "static public field"],
+    "react/forbid-prop-types": ["error", { "forbid": ["any", "array"] }],
+    "react/no-deprecated": "off", // TODO re-enable with https://github.com/broadinstitute/seqr-private/issues/1057
+    "react/require-default-props": "off",
+    "react/require-optimization": "error",
+    "react/state-in-constructor": ["error", "never"], // TODO re-enable
+    "react/static-property-placement": ["error", "static public field"],
 
     "react/jsx-curly-newline": 0, // TODO re-enable
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],

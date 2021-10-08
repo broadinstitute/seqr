@@ -45,8 +45,8 @@ const getRowColumnContent = (row, isExport) => col => (
 class DataTable extends React.PureComponent {
 
   static propTypes = {
-    data: PropTypes.array,
-    columns: PropTypes.array,
+    data: PropTypes.arrayOf(PropTypes.object),
+    columns: PropTypes.arrayOf(PropTypes.object),
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
     defaultSortDescending: PropTypes.bool,
@@ -71,15 +71,11 @@ class DataTable extends React.PureComponent {
     selectedRows: {},
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      column: props.defaultSortColumn,
-      direction: props.defaultSortDescending ? DESCENDING : ASCENDING,
-      activePage: 1,
-      filter: null,
-    }
+  state = {
+    column: null,
+    direction: null,
+    activePage: 1,
+    filter: null,
   }
 
   handleSort = clickedColumn => () => {
@@ -101,40 +97,43 @@ class DataTable extends React.PureComponent {
     this.setState({ filter: data.value.toLowerCase() })
   }
 
-  allSelected = () => (
-    this.props.data.length > 0 &&
-    Object.keys(this.props.selectedRows).length === this.props.data.length &&
-    Object.values(this.props.selectedRows).every(isSelected => isSelected)
-  )
+  allSelected = () => {
+    const { data, selectedRows } = this.props
+    return data.length > 0 && Object.keys(selectedRows).length === data.length &&
+      Object.values(selectedRows).every(isSelected => isSelected)
+  }
 
-  someSelected = () => (
-    this.props.data.some(row => this.props.selectedRows[row[this.props.idField]]) &&
-    this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]]))
+  someSelected = () => {
+    const { data, selectedRows, idField } = this.props
+    return data.some(row => selectedRows[row[idField]]) && data.some(row => !selectedRows[row[idField]])
+  }
 
   selectAll = () => {
-    if (!this.props.selectRows) {
+    const { data, selectRows, includeSelectedRowData, idField } = this.props
+    if (!selectRows) {
       return
     }
 
     const allSelected = !this.allSelected()
-    this.props.selectRows(
-      this.props.data.reduce((acc, row) => (
-        { ...acc, [row[this.props.idField]]: (allSelected && this.props.includeSelectedRowData) ? row : allSelected }
+    selectRows(
+      data.reduce((acc, row) => (
+        { ...acc, [row[idField]]: (allSelected && includeSelectedRowData) ? row : allSelected }
       ), {}),
     )
   }
 
   handleSelect = rowId => () => {
-    if (!this.props.selectRows) {
+    const { data, selectRows, selectedRows, includeSelectedRowData, idField } = this.props
+    if (!selectRows) {
       return
     }
 
-    let newSelected = !this.props.selectedRows[rowId]
-    if (newSelected && this.props.includeSelectedRowData) {
-      newSelected = this.props.data.find(row => row[this.props.idField] === rowId)
+    let newSelected = !selectedRows[rowId]
+    if (newSelected && includeSelectedRowData) {
+      newSelected = data.find(row => row[idField] === rowId)
     }
 
-    this.props.selectRows({ ...this.props.selectedRows, [rowId]: newSelected })
+    selectRows({ ...selectedRows, [rowId]: newSelected })
   }
 
   render() {
@@ -144,10 +143,11 @@ class DataTable extends React.PureComponent {
       fixedWidth, includeSelectedRowData, filterContainer, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
+    const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
 
     let totalRows = data.length
-    let sortedData = data.sort(compareObjects(column))
-    if (direction === DESCENDING) {
+    let sortedData = data.sort(compareObjects(column || defaultSortColumn))
+    if (sortedDirection === DESCENDING) {
       sortedData = sortedData.reverse()
     }
 
@@ -238,7 +238,7 @@ class DataTable extends React.PureComponent {
               {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) => (
                 <Table.HeaderCell
                   key={name}
-                  sorted={column === name ? direction : null}
+                  sorted={(column || defaultSortColumn) === name ? sortedDirection : null}
                   onClick={this.handleSort(name)}
                   {...columnProps}
                 />
@@ -294,8 +294,8 @@ export const SelectableTableFormInput = React.memo(({ value, onChange, error, da
 ))
 
 SelectableTableFormInput.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
   error: PropTypes.bool,
-  data: PropTypes.array,
+  data: PropTypes.arrayOf(PropTypes.object),
 }

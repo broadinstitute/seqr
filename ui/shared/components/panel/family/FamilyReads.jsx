@@ -194,8 +194,8 @@ const IgvPanel = React.memo((
 
 IgvPanel.propTypes = {
   variant: PropTypes.object,
-  sampleTypes: PropTypes.array,
-  rnaReferences: PropTypes.array,
+  sampleTypes: PropTypes.arrayOf(PropTypes.string),
+  rnaReferences: PropTypes.arrayOf(PropTypes.object),
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -205,7 +205,7 @@ class FamilyReads extends React.PureComponent {
 
   static propTypes = {
     variant: PropTypes.object,
-    layout: PropTypes.any,
+    layout: PropTypes.elementType,
     familyGuid: PropTypes.string,
     buttonProps: PropTypes.object,
     projectsByGuid: PropTypes.object,
@@ -214,13 +214,10 @@ class FamilyReads extends React.PureComponent {
     igvSamplesByFamilySampleIndividual: PropTypes.object,
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      openFamily: null,
-      sampleTypes: [],
-      rnaReferences: [],
-    }
+  state = {
+    openFamily: null,
+    sampleTypes: [],
+    rnaReferences: [],
   }
 
   showReads = familyGuid => sampleTypes => () => {
@@ -262,6 +259,7 @@ class FamilyReads extends React.PureComponent {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
       projectsByGuid, ...props
     } = this.props
+    const { openFamily, sampleTypes, rnaReferences } = this.state
 
     const showReads = <ReadButtons
       variant={variant}
@@ -273,7 +271,7 @@ class FamilyReads extends React.PureComponent {
     />
 
     const igvSampleIndividuals = (
-      this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
+      openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const reads = Object.keys(igvSampleIndividuals).length > 0 ?
@@ -283,7 +281,7 @@ class FamilyReads extends React.PureComponent {
           { dnaTrackOptions.length > 0 &&
             <CheckboxGroup
               groupLabel="DNA Tracks"
-              value={this.state.sampleTypes}
+              value={sampleTypes}
               options={dnaTrackOptions}
               onChange={this.updateSampleTypes}
             />
@@ -292,22 +290,22 @@ class FamilyReads extends React.PureComponent {
             <div>
               <CheckboxGroup
                 groupLabel="RNA Tracks"
-                value={this.state.sampleTypes}
+                value={sampleTypes}
                 options={rnaTrackOptions}
                 onChange={this.updateSampleTypes}
               />
-              { this.state.sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) &&
+              { sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) &&
                 <div>
                   <b>RNA-seq Reference Tracks</b>
                   <CheckboxGroup
                     groupLabel="GTEx Tracks"
-                    value={this.state.rnaReferences}
+                    value={rnaReferences}
                     options={GTEX_TRACK_OPTIONS}
                     onChange={this.updateRnaReferences}
                   />
                   <CheckboxGroup
                     groupLabel="Mappability Tracks"
-                    value={this.state.rnaReferences}
+                    value={rnaReferences}
                     options={MAPPABILITY_TRACK_OPTIONS}
                     onChange={this.updateRnaReferences}
                   />
@@ -322,10 +320,10 @@ class FamilyReads extends React.PureComponent {
           <IgvPanel
             variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
-            sampleTypes={this.state.sampleTypes}
-            rnaReferences={this.state.rnaReferences}
+            sampleTypes={sampleTypes}
+            rnaReferences={rnaReferences}
             individualsByGuid={individualsByGuid}
-            project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
+            project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
         </Segment>
       </Segment.Group> : null

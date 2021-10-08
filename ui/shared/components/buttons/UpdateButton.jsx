@@ -42,7 +42,7 @@ const UpdateButton = React.memo(({
 ))
 
 UpdateButton.propTypes = {
-  formFields: PropTypes.array,
+  formFields: PropTypes.arrayOf(PropTypes.object),
   onSubmit: PropTypes.func,
   modalTitle: PropTypes.string,
   modalId: PropTypes.string.isRequired,

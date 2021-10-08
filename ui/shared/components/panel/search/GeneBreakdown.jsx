@@ -88,7 +88,7 @@ const GeneBreakdown = React.memo(({ searchHash, geneBreakdown, loading, loadingE
 
 GeneBreakdown.propTypes = {
   searchHash: PropTypes.string,
-  geneBreakdown: PropTypes.array,
+  geneBreakdown: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   loadingErrorMessage: PropTypes.string,
   load: PropTypes.func,
