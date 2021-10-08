@@ -4,7 +4,7 @@ import { Button, Icon, Modal } from 'semantic-ui-react'
 import AcmgScoreCriteria from './AcmgScoreCriteria'
 import AcmgCriteria from './AcmgCriteria'
 
-const getButonBackgroundColor = (classification) => {
+const getButtonBackgroundColor = (classification) => {
   const categoryColors = {
     Unknown: 'grey',
     Benign: 'blue',
@@ -24,7 +24,7 @@ const AcmgModal = (props) => {
   const [active, setActive] = useState(false)
   const [criteria, setCriteria] = useState(variant.acmgClassification ? variant.acmgClassification.criteria : [])
 
-  const buttonBackgroundColor = getButonBackgroundColor(acmgClassification)
+  const buttonBackgroundColor = getButtonBackgroundColor(acmgClassification)
 
   return (
     <div>
