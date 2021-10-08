@@ -178,7 +178,7 @@ def _get_access_token(user):
         if process.wait() == 0:
             access_token = next(process.stdout).decode('utf-8').strip()
             expires_in = _get_token_expiry(access_token)
-            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=expires_in-1)
+            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=expires_in-5)
     return access_token
 
 

@@ -44,7 +44,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token1')
         self.assertEqual(responses.calls[1].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3598)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3594)
         mock_subprocess.assert_has_calls([
             mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
             mock.call().wait(),
@@ -53,7 +53,8 @@ class IgvAPITest(AuthenticationTestCase):
         ])
 
         mock_get_redis.reset_mock()
-        mock_get_redis.return_value = None
+        mock_get_redis.return_value = 'token3'
+        mock_set_redis.reset_mock()
         mock_subprocess.reset_mock()
         responses.add(responses.GET, 'https://storage.googleapis.com/project_A/sample_1.bed.gz',
                       stream=True,
@@ -61,12 +62,12 @@ class IgvAPITest(AuthenticationTestCase):
         url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://project_A/sample_1.bed.gz'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(responses.calls[3].request.headers.get('Range'))
-        self.assertEqual(responses.calls[3].request.headers.get('Authorization'), 'Bearer token2')
-        self.assertIsNone(responses.calls[3].request.headers.get('x-goog-user-project'))
+        self.assertIsNone(responses.calls[2].request.headers.get('Range'))
+        self.assertEqual(responses.calls[2].request.headers.get('Authorization'), 'Bearer token3')
+        self.assertIsNone(responses.calls[2].request.headers.get('x-goog-user-project'))
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token2', expire=3598)
-        mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        mock_set_redis.assert_not_called()
+        mock_subprocess.assert_not_called()
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.utils.file_utils.open')
