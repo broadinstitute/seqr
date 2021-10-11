@@ -10,6 +10,12 @@ import { updateVariantClassification } from '../../../../redux/rootReducer'
 const FONT_STYLE_WRITING_MODE = { writingMode: 'sideways-lr', marginLeft: '-10px' }
 const TABLE_ROW_TOTAL_COLUMNS = 6
 const TABLE_COLUMN_COLOR = ['pink', 'blue', 'green', 'orange', 'red', 'red']
+const CATEGORY_CONFIGS = [
+  { classification: 'Pathogenic', isThisClassification: value => value >= 10 },
+  { classification: 'Likely Pathogenic', isThisClassification: value => value >= 6 && value <= 9 },
+  { classification: 'Uncertain', isThisClassification: value => value >= 0 && value <= 5 },
+  { classification: 'Likely Benign', isThisClassification: value => value >= -6 && value <= -1 },
+]
 
 export const getNewScoreValue = (criteria) => {
   let newScore = 0
@@ -142,17 +148,8 @@ class AcmgCriteria extends React.PureComponent {
   }
 
   getNewScore = (criteria) => {
-    const newScore = getNewScoreValue(criteria)
-    if (newScore >= 10) {
-      return 'Pathogenic'
-    } else if (newScore >= 6 && newScore <= 9) {
-      return 'Likely Pathogenic'
-    } else if (newScore >= 0 && newScore <= 5) {
-      return 'Uncertain'
-    } else if (newScore >= -6 && newScore <= -1) {
-      return 'Likely Benign'
-    }
-    return 'Benign'
+    const newCategory = CATEGORY_CONFIGS.find(category => category.isThisClassification(getNewScoreValue(criteria)) === true)
+    return newCategory ? newCategory.classification : 'Benign'
   }
 
   render() {
