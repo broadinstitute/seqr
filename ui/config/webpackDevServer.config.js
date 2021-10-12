@@ -4,7 +4,7 @@ module.exports = function(proxyConfig) {
   return {
     ...proxyConfig,
     //open the browser after server had been started.
-    // open: true,
+    open: true,
     // Allows to close dev server and exit the process on SIGINT and SIGTERM signals.
     setupExitSignals: true,
     client: {
