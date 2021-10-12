@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
-import UpdateButton from '../buttons/UpdateButton'
+import UpdateButton from './UpdateButton'
 import { EDITABLE_PROJECT_FIELDS, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from '../../utils/constants'
 
 const MATCHMAKER_PROJECT_FIELDS = [

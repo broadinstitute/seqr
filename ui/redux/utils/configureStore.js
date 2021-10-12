@@ -24,7 +24,7 @@ const enhancer = compose(
  * @param initialState
  * @returns {*}
  */
-export const configureStore = (
+export default (
   rootReducer = state => state,
   initialState = {},
 ) => {

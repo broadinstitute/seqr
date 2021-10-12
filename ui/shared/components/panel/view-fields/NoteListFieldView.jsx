@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { getUser } from 'redux/selectors'
-import TextFieldView from '../view-fields/TextFieldView'
+import TextFieldView from './TextFieldView'
 
 const noteRequired = value => (value ? undefined : 'Note is required')
 

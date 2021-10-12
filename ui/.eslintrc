@@ -65,8 +65,6 @@
     "react/static-property-placement": ["error", "static public field"],
 
     "import/no-cycle": 0, // TODO re-enable
-    "import/no-useless-path-segments": 0, // TODO re-enable
-    "import/prefer-default-export": 0, // TODO enable
 
     "react-perf/jsx-no-new-array-as-prop": 0, // TODO re-enable
     "react-perf/jsx-no-new-function-as-prop": 0, // TODO re-enable
