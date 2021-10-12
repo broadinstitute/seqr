@@ -39,7 +39,7 @@ const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
 
   return (
     <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank" rel="noreferrer">
-      {`${chrom}:${pos}${includeEnd && endOffset && `-${pos + endOffset}`}`}
+      {`${chrom}:${pos}${(includeEnd && endOffset) ? `-${pos + endOffset}` : ''}`}
     </a>
   )
 }

@@ -1,7 +1,6 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Icon } from 'semantic-ui-react'
 
 import { getSavedVariantsIsLoading } from 'redux/selectors'
 import { SelectableTableFormInput } from 'shared/components/table/DataTable'
@@ -9,18 +8,8 @@ import DataLoader from 'shared/components/DataLoader'
 import { ColoredLabel } from 'shared/components/StyledComponents'
 import { loadFamilySavedVariants } from '../reducers'
 
-const variantSummary = variant => (
-  <span>
-    {`${variant.chrom}:${variant.pos} `}
-    {variant.alt ? (
-      <span>
-        {variant.ref}
-        <Icon fitted name="angle right" />
-        {variant.alt}
-      </span>
-    ) : `-${variant.end}`}
-  </span>
-)
+const variantSummary =
+  variant => `${variant.chrom}:${variant.pos} ${variant.alt ? `${variant.ref} > ${variant.alt}` : `-${variant.end}`}`
 
 export const GENES_COLUMN = {
   name: 'genes',

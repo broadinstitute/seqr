@@ -26,12 +26,14 @@ const BulkUploadForm = React.memo(({
           <Table.Row key={title}>
             <Table.HeaderCell collapsing>
               {title}
-              {`(${formatLinks ? formatLinks.map(({ href, linkExt }, i) => (
+              &nbsp; (
+              {formatLinks ? formatLinks.map(({ href, linkExt }, i) => (
                 <span key={linkExt}>
                   {i > 0 && ' / '}
                   <a href={href} target="_blank" rel="noreferrer">{`.${linkExt}`}</a>
                 </span>
-              )) : `.${ext}`})`}
+              )) : `.${ext}`}
+              )
             </Table.HeaderCell>
             <Table.Cell>
               {ext && (
@@ -39,13 +41,13 @@ const BulkUploadForm = React.memo(({
                   download
                   {blankExportConfig && (
                     <span>
-                      &nbsp; template:
+                      &nbsp; template: &nbsp;
                       <FileLink {...blankExportConfig} ext={ext} linkContent="blank" />
                     </span>
                   )}
                   {exportConfig && (
                     <span>
-                      {blankExportConfig && ' or'}
+                      {blankExportConfig && ' or '}
                       <FileLink {...exportConfig} ext={ext} linkContent="current individuals" />
                     </span>
                   )}

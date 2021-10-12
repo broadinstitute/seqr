@@ -102,7 +102,7 @@ class SavedVariants extends React.PureComponent {
                 value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}
               />
-              {` variants ${!allShown && `(${totalVariantsCount} total)`}`}
+              {` variants ${allShown ? '' : `(${totalVariantsCount} total)`}`}
 
             </Grid.Column>
             <Grid.Column width={12} floated="right" textAlign="right">

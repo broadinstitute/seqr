@@ -54,7 +54,7 @@ FamilyLink.propTypes = {
   family: PropTypes.object.isRequired,
   disableEdit: PropTypes.bool,
   path: PropTypes.string,
-  target: PropTypes.string.isRequired,
+  target: PropTypes.string,
   PopupClass: PropTypes.elementType,
 }
 

@@ -37,7 +37,7 @@ const VARIANT_NOTE_FIELDS = [{
   label: (
     <label>
       Add to
-      <i style={{ color: 'red' }}>ClinVar</i>
+      <i style={{ color: 'red' }}>&nbsp; ClinVar &nbsp;</i>
       submission
     </label>
   ),
@@ -66,7 +66,7 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
           <div>
             {tag.metadataTitle ? (
               <span>
-                <b>{`${tag.metadataTitle}:`}</b>
+                <b>{`${tag.metadataTitle}: `}</b>
                 {tag.metadata}
               </span>
             ) : <i>{tag.metadata}</i>}
@@ -84,7 +84,7 @@ const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
 })
 
 ShortcutTagToggle.propTypes = {
-  tag: PropTypes.object.isRequired,
+  tag: PropTypes.object,
 }
 
 const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
@@ -195,7 +195,7 @@ const FamilyVariantTags = React.memo(({
         <Table.Row verticalAlign="top">
           {!isCompoundHet && (
             <Table.Cell collapsing rowSpan={2}>
-              <FamilyLabel family={family} path={linkToSavedVariants && `saved_variants/family/${family.familyGuid}`} />
+              <FamilyLabel family={family} path={linkToSavedVariants ? `saved_variants/family/${family.familyGuid}` : null} />
             </Table.Cell>
           )}
           <Table.Cell collapsing textAlign="right">

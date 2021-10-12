@@ -79,9 +79,9 @@ const FamiliesBulkForm = React.memo(props => (
       <div>
         If the Family ID in the table matches those of an existing family in the project,
         the matching families&apos;s data will be updated with values from the table. Otherwise, a new family
-        will be created. To edit an existing families&apos;s ID include a
+        will be created. To edit an existing families&apos;s ID include a &nbsp;
         <b>Previous Family ID</b>
-        column.
+        &nbsp; column.
       </div>
     }
     requiredFields={FAMILY_ID_EXPORT_DATA}
@@ -107,9 +107,9 @@ const IndividualsBulkForm = React.memo(({ user, ...props }) => (
       <div>
         If the Family ID and Individual ID in the table match those of an existing individual in the project,
         the matching individual&apos;s data will be updated with values from the table. Otherwise, a new individual
-        will be created. To edit an existing individual&apos;s ID include a
+        will be created. To edit an existing individual&apos;s ID include a &nbsp;
         <b>Previous Individual ID</b>
-        column.
+        &nbsp; column.
       </div>
     }
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}

@@ -11,6 +11,7 @@ import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
 
 const PredictionValue = styled.span`
+  margin-left: 5px;
   font-weight: bolder;
   color: black;
   text-transform: uppercase;

@@ -59,7 +59,7 @@ GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
   popupHeader: PropTypes.string.isRequired,
   popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
-  showEmpty: PropTypes.bool.isRequired,
+  showEmpty: PropTypes.bool,
 }
 
 const BaseLocusListLabels = React.memo((
@@ -150,7 +150,7 @@ const OMIM_SECTION = {
           content={phenotype.phenotypeInheritance ? (
             <span>
               {phenotype.phenotypeDescription}
-              <i>{`(${phenotype.phenotypeInheritance})`}</i>
+              <i>{` (${phenotype.phenotypeInheritance})`}</i>
             </span>
           ) : phenotype.phenotypeDescription}
           target="_blank"
@@ -301,6 +301,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
     summaryDetail = showInlineDetails ? (
       <span>
         {geneDetails}
+        &nbsp;
         {geneConsequence}
       </span>
     ) : geneConsequence
@@ -310,17 +311,13 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
         <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank" rel="noreferrer">
           Decipher
         </a>
-        <HorizontalSpacer width={5} />
-        |
-        <HorizontalSpacer width={5} />
+        &nbsp; | &nbsp;
         <Popup
           trigger={<NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
           content="Show all previously saved variants in this gene across all your seqr projects"
           size="tiny"
         />
-        <HorizontalSpacer width={5} />
-        |
-        <HorizontalSpacer width={5} />
+        &nbsp; | &nbsp;
         <Popup
           trigger={
             <SearchResultsLink location={geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />

@@ -108,7 +108,7 @@ const svGenotype = (genotype, isHemiX) => {
   if (!hasGenotype) {
     return (
       <span>
-        CN:
+        CN: &nbsp;
         {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}
       </span>
     )
@@ -120,7 +120,7 @@ const svGenotype = (genotype, isHemiX) => {
       {isAltCn && (
         <span>
           <br />
-          CN:
+          CN: &nbsp;
           <b><i>{genotype.cn}</i></b>
         </span>
       )}

@@ -39,10 +39,10 @@ const PedigreeIcon = React.memo((props) => {
       )}
       content={
         <div>
-          <b>Sex:</b>
+          <b>Sex: &nbsp;</b>
           {SEX_LOOKUP[props.sex] || 'INVALID'}
           <br />
-          <b>Status:</b>
+          <b>Status: &nbsp;</b>
           {AFFECTED_LOOKUP[props.affected] || 'INVALID'}
           {props.popupContent}
         </div>

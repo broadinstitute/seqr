@@ -30,7 +30,7 @@ const ProjectFilterContent = React.memo((
           trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
           content="Remove this project from search"
         />
-        Project:
+        Project: &nbsp;
         <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
       </Header>
       {filterInput}

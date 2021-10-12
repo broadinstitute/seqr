@@ -7,7 +7,7 @@ import { Error404 } from 'shared/components/page/Errors'
 class DataLoader extends React.PureComponent {
 
   static propTypes = {
-    contentId: PropTypes.string,
+    contentId: PropTypes.any, // eslint-disable-line react/forbid-prop-types
     content: PropTypes.any, // eslint-disable-line react/forbid-prop-types
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func,

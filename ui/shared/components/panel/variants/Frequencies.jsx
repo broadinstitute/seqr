@@ -129,6 +129,7 @@ const gnomadLink = ({ fieldTitle, ...props }) => {
   return (
     <span>
       <FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} />
+      &nbsp;
       {detail}
     </span>
   )
