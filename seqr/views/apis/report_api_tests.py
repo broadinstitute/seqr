@@ -33,7 +33,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      'endocrine_system': 'N', 'patient_cells': 'N', 'komp_early_release': 'N',
      'connective_tissue': 'N', 'prenatal_development_or_birth': 'N', 'rescue': 'N',
      'family_guid': 'F000001_1', 'immune_system': 'N',
-     'analysis_summary': '<b>\r\n                        F\xe5mily analysis summ\xe5ry.\r\n                    </b>',
+     'analysis_summary': '*\r\nF\u00e5mily analysis summ\u00e5ry.\r\n*; Some additional follow up',
      'gene_count': 'NA', 'gene_id': 'ENSG00000135953', 'abdomen': 'N', 'limbs': 'N',
      'blood': 'N', 'phenotype_class': 'KNOWN', 'submitted_to_mme': 'Y',
      'n_unrelated_kindreds_with_causal_variants_in_gene': '3',

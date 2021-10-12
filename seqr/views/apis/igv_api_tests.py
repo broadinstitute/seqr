@@ -2,10 +2,12 @@ import json
 import mock
 import responses
 import subprocess
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     igv_genomes_proxy
+from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -29,16 +31,47 @@ def Any(cls=object):
 class IgvAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
+    @responses.activate
     @mock.patch('seqr.views.apis.igv_api.file_iter')
-    def test_proxy_google_to_igv(self, mock_file_iter):
-        mock_file_iter.return_value = STREAMING_READS_CONTENT
+    @mock.patch('seqr.views.apis.igv_api.safe_redis_get_json')
+    @mock.patch('seqr.views.apis.igv_api.safe_redis_set_json')
+    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_file_iter):
+        mock_file_iter.return_value.stdout = iter([b'token1\n', b'token2\n'])
+        mock_file_iter.return_value.wait.side_effect = [-1, 0, 0]
+        mock_get_redis.return_value = None
 
-        url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://project_A/sample_1.bam.bai'])
+        responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-project_A/sample_1.bai',
+                      stream=True,
+                      body=b'\n'.join(STREAMING_READS_CONTENT), status=206)
+
+        url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://fc-secure-project_A/sample_1.bam.bai'])
         self.check_collaborator_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
-        self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True, user=Any(object))
+        self.assertEqual(next(response.streaming_content), b'\n'.join(STREAMING_READS_CONTENT))
+        self.assertEqual(responses.calls[0].request.headers.get('Range'), 'bytes=100-200')
+        self.assertEqual(responses.calls[0].request.headers.get('Authorization'), 'Bearer token1')
+        self.assertEqual(responses.calls[0].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
+        mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=EXPIRATION_TIME_IN_SECONDS)
+        mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True,
+                                          user=Any(object))
+
+        mock_get_redis.reset_mock()
+        mock_get_redis.return_value = None
+        mock_file_iter.reset_mock()
+        responses.add(responses.GET, 'https://storage.googleapis.com/project_A/sample_1.bed.gz',
+                      stream=True,
+                      body=b'\n'.join(STREAMING_READS_CONTENT), status=200)
+        url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://project_A/sample_1.bed.gz'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(responses.calls[1].request.headers.get('Range'))
+        self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token2')
+        self.assertIsNone(responses.calls[1].request.headers.get('x-goog-user-project'))
+        mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token2', expire=EXPIRATION_TIME_IN_SECONDS)
+        # mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
     @mock.patch('seqr.views.apis.igv_api.file_iter')
     def test_proxy_local_to_igv(self, mock_file_iter):

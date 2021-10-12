@@ -20,8 +20,8 @@ def _gcs_client():
     return gcs_client
 
 
-def _run_command(command, user=None):
-    logger.info("==> {}".format(command), user)
+def run_command(command, user=None):
+    logger.info('==> {}'.format(command), user)
     return subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
     )
@@ -29,29 +29,32 @@ def _run_command(command, user=None):
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None):
     #  Anvil buckets are requester-pays and we bill them to the anvil project
+    google_project = get_google_project(gs_path)
     project_arg = (
-        f"-u {ANVIL_BILLING_PROJECT} "
+        f"-u {google_project} "
         if gs_path.startswith(f"gs://{ANVIL_BUCKET_PREFIX}")
         else ""
     )
-    command = "gsutil {project_arg}{command} {gs_path}".format(
-        project_arg=project_arg,
-        command=command,
-        gs_path=gs_path,
+    command = 'gsutil {project_arg}{command} {gs_path}'.format(
+        project_arg=project_arg, command=command, gs_path=gs_path,
     )
     if gunzip:
         command += " | gunzip -c -q - "
 
-    return _run_command(command, user=user)
+    return run_command(command, user=user)
 
 
-def _is_google_bucket_file_path(file_path):
+def is_google_bucket_file_path(file_path):
     return file_path.startswith("gs://")
 
 
+def get_google_project(gs_path):
+    return 'anvil-datastorage' if gs_path.startswith('gs://fc-secure') else None
+
+
 def does_file_exist(file_path, user=None):
-    if _is_google_bucket_file_path(file_path):
-        process = _run_gsutil_command("ls", file_path, user=user)
+    if is_google_bucket_file_path(file_path):
+        process = _run_gsutil_command('ls', file_path, user=user)
         return process.wait() == 0
     return os.path.isfile(file_path)
 
@@ -60,7 +63,7 @@ def does_file_exist(file_path, user=None):
 def file_iter(file_path, byte_range=None, raw_content=False, user=None):
     """Note: the byte_range interval end is inclusive, i.e. the length is
     byte_range[1] - byte_range[0] + 1."""
-    if _is_google_bucket_file_path(file_path):
+    if is_google_bucket_file_path(file_path):
         path_segments = file_path.split("/")
         if len(path_segments) < 4:
             raise ValueError(f'Invalid GCS path: "{file_path}"')
@@ -99,23 +102,23 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
                 yield prev_line
                 break
     elif byte_range:
-        command = "dd skip={offset} count={size} bs=1 if={file_path}".format(
+        command = 'dd skip={offset} count={size} bs=1 if={file_path}'.format(
             offset=byte_range[0],
             size=byte_range[1] - byte_range[0],
             file_path=file_path,
         )
-        process = _run_command(command, user=user)
+        process = run_command(command, user=user)
         for line in process.stdout:
             yield line
     else:
-        mode = "rb" if raw_content else "r"
+        mode = 'rb' if raw_content else 'r'
         with open(file_path, mode) as f:
             for line in f:
                 yield line
 
 
 def mv_file_to_gs(local_path, gs_path, user=None):
-    if not _is_google_bucket_file_path(gs_path):
+    if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     command = 'mv {}'.format(local_path)
     process = _run_gsutil_command(command, gs_path, user=user)

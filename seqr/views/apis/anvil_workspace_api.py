@@ -156,7 +156,7 @@ def create_project_from_workspace(request, namespace, name):
     project = create_model_from_json(Project, project_args, user=request.user)
 
     # add families and individuals according to the uploaded individual records
-    _, updated_individuals = add_or_update_individuals_and_families(
+    updated_individuals, _, _ = add_or_update_individuals_and_families(
         project, individual_records=pedigree_records, user=request.user
     )
 

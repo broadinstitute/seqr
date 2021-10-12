@@ -8,7 +8,7 @@ import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
@@ -163,6 +163,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
   links.unshift(
     <Popup
+      key="seqr-search"
       trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
       content="Search for this variant across all your seqr projects"
       size="tiny"
@@ -232,7 +233,7 @@ const svSizeDisplay = (size) => {
     // dividing by 1 removes trailing 0s
     return `${((size) / 1000).toPrecision(3) / 1}kb`
   }
-  return `${(size / 1000000).toFixed(2) / 1}mb`
+  return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
 const Annotations = React.memo(({ variant }) => {
@@ -278,7 +279,14 @@ const Annotations = React.memo(({ variant }) => {
         </Modal>
       }
       {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
-      {Number.isInteger(numExon) && <b>, {numExon} exons</b>}
+      {Number.isInteger(numExon) &&
+        <b>, {numExon} exons
+          <Popup
+            trigger={<HelpIcon />}
+            content="CNV size and exon number are estimated from exome data and should be confirmed by an alternative method"
+          />
+        </b>
+      }
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />

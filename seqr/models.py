@@ -149,6 +149,14 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return queryset.delete()
 
 
+class WarningMessage(models.Model):
+    message =  models.TextField()
+    header = models.TextField(null=True, blank=True)
+
+    def json(self):
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+
+
 class UserPolicy(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     privacy_version = models.FloatField(null=True)
@@ -172,6 +180,8 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     has_case_review = models.BooleanField(default=False)
+    enable_hgmd = models.BooleanField(default=False)
+    all_user_demo = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -237,7 +247,7 @@ class Project(ModelWithGUID):
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
-            'workspace_namespace', 'workspace_name', 'has_case_review'
+            'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd'
         ]
 
 
@@ -303,10 +313,6 @@ class Family(ModelWithGUID):
     ), default=list)
     success_story = models.TextField(null=True, blank=True)
 
-    mme_notes = models.TextField(null=True, blank=True)
-    analysis_notes = models.TextField(null=True, blank=True)
-    analysis_summary = models.TextField(null=True, blank=True)
-
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
     pubmed_ids = ArrayField(models.TextField(), default=list)
@@ -330,9 +336,8 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'assigned_analyst', 'mme_notes', 'pedigree_dataset',
+            'guid', 'family_id', 'display_name', 'description', 'analysis_status', 'pedigree_image', 'created_date',
+            'post_discovery_omim_number', 'assigned_analyst', 'pedigree_dataset', 'coded_phenotype',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
@@ -352,6 +357,27 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
+
+
+class FamilyNote(ModelWithGUID):
+    NOTE_TYPE_CHOICES = (
+        ('M', 'mme'),
+        ('C', 'case'),
+        ('A', 'analysis'),
+    )
+
+    family = models.ForeignKey(Family, on_delete=models.CASCADE)
+    note = models.TextField()
+    note_type = models.CharField(max_length=1, choices=NOTE_TYPE_CHOICES,)
+
+    def __unicode__(self):
+        return '{}_{}_{}'.format(self.family.family_id, self.note_type, self.note)[:20]
+
+    def _compute_guid(self):
+        return 'FAN{:06d}_{}'.format(self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'note_type', 'last_modified_date', 'created_by']
 
 
 class YearField(models.PositiveSmallIntegerField):

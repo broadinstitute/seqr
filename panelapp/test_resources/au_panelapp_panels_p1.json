@@ -1,0 +1,40 @@
+{
+  "count": 1,
+  "next": "https://test-panelapp.url.au/api/panels/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 260,
+      "hash_id": null,
+      "name": "Hereditary Haemorrhagic Telangiectasia",
+      "disease_group": "Vascular disorders",
+      "disease_sub_group": "",
+      "status": "public",
+      "version": "1.0",
+      "version_created": "2021-01-21T10:54:52.442904Z",
+      "relevant_disorders": [],
+      "stats": {
+        "number_of_genes": 6,
+        "number_of_strs": 0,
+        "number_of_regions": 0
+      },
+      "types": [
+        {
+          "name": "Victorian Clinical Genetics Services",
+          "slug": "victorian-clinical-genetics-services",
+          "description": "Panel used by VCGS."
+        },
+        {
+          "name": "Royal Melbourne Hospital",
+          "slug": "royal-melbourne-hospital",
+          "description": "Royal Melbourne Hospital"
+        },
+        {
+          "name": "Rare Disease",
+          "slug": "rare-disease",
+          "description": "Rare disease panels"
+        }
+      ]
+    }
+  ]
+}
