@@ -9,18 +9,7 @@ import { updateVariantMainTranscript } from 'redux/rootReducer'
 import { VerticalSpacer } from '../../Spacers'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
-import { ProteinSequence } from './Annotations'
-import { GENOME_VERSION_37 } from '../../../utils/constants'
-
-
-export const TranscriptLink = styled.a.attrs(({ variant, transcript }) => ({
-  target: '_blank',
-  href: `http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`,
-  children: transcript.transcriptId,
-}))`
-  font-size: 1.3em;
-  font-weight: normal;
-`
+import { ProteinSequence, TranscriptLink } from './VariantUtils'
 
 const AnnotationSection = styled.div`
   display: inline-block;
