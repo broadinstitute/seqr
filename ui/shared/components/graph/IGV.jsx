@@ -43,8 +43,11 @@ class IGV extends React.PureComponent {
 
   componentDidMount() {
     if (this.container) {
-      igv.createBrowser(this.container, { ...this.props }).then((browser) => {
+      igv.createBrowser(this.container, { ...this.props, tracks: [] }).then((browser) => {
         this.browser = browser
+        this.props.tracks.forEach((track) => {
+          browser.loadTrack(track, false)
+        })
       })
     }
   }
@@ -59,7 +62,7 @@ class IGV extends React.PureComponent {
       })
 
       this.props.tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
-        this.browser.loadTrack(track)
+        this.browser.loadTrack(track, false)
       })
 
     }

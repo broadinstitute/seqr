@@ -33,7 +33,7 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
-const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
+const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, variant) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -178,7 +178,7 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
     variant.end && variant.end - variant.pos,
   )
 
-  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))
+  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes, variant))
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
