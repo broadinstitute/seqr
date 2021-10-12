@@ -162,7 +162,9 @@ class DatasetAPITest(object):
             'datasetType': 'VARIANTS',
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
+        self.assertDictEqual(response.json(), {'errors': [
+            'Must contain 2 columns. Got 3 columns on line #1: NA19678_1, NA19678, metadata'
+        ]})
 
         # Send valid request
         urllib3_responses.replace_json('/{}/_search?size=0'.format(INDEX_NAME), {'aggregations': {
