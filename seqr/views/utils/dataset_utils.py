@@ -63,7 +63,7 @@ def _load_mapping_file(file_content):
         if not line:
             continue
         if len(line) != 2:
-            raise ValueError(f"Must contain 2 columns. Got {len(line)} columns on line #{i+1}: " + ', '.join(line))
+            raise ValueError(f"Must contain 2 columns. Received {len(line)} columns on line #{i+1}: " + ', '.join(line))
         id_mapping[line[0]] = line[1]
     return id_mapping
 
